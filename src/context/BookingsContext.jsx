@@ -34,8 +34,12 @@ export function BookingsProvider({ children }) {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
   };
 
+  const toggleGst = (id) => {
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, gstApplicable: !b.gstApplicable } : b));
+  };
+
   return (
-    <BookingsContext.Provider value={{ bookings, addBooking, updateBooking, deleteBooking, updateStatus }}>
+    <BookingsContext.Provider value={{ bookings, addBooking, updateBooking, deleteBooking, updateStatus, toggleGst }}>
       {children}
     </BookingsContext.Provider>
   );

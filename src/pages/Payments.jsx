@@ -30,6 +30,14 @@ export default function Payments() {
   const totalBalance  = confirmed.reduce((s, b) => s + (b.totalAmount - b.advance), 0);
   const pendingAmount = pending.reduce((s, b) => s + (b.totalAmount - b.advance), 0);
 
+  // GST — only bookings with gstApplicable !== false
+  const gstBookings   = confirmed.filter(b => b.gstApplicable !== false);
+  const gstBase       = gstBookings.reduce((s, b) => s + b.totalAmount, 0);
+  const totalCGST     = Math.round(gstBase * 0.09);
+  const totalSGST     = Math.round(gstBase * 0.09);
+  const totalGST      = totalCGST + totalSGST;
+  const exemptCount   = confirmed.filter(b => b.gstApplicable === false).length;
+
   const handleMarkPaid = (id) => {
     setPaid(p => ({ ...p, [id]: true }));
     updateStatus(id, "Confirmed");
@@ -219,23 +227,24 @@ export default function Payments() {
             GST Summary
           </h3>
           {[
-            { label: "Gross Revenue",  value: `₹${totalRevenue.toLocaleString()}`,                          color: "#111827" },
-            { label: "CGST (9%)",      value: `₹${Math.round(totalRevenue * 0.09).toLocaleString()}`,        color: "#D4A017" },
-            { label: "SGST (9%)",      value: `₹${Math.round(totalRevenue * 0.09).toLocaleString()}`,        color: "#D4A017" },
-            { label: "Total GST",      value: `₹${Math.round(totalRevenue * 0.18).toLocaleString()}`,        color: "#C0392B" },
-            { label: "Net Revenue",    value: `₹${Math.round(totalRevenue * 0.82).toLocaleString()}`,        color: "#1B4332" },
+            { label: "Gross Revenue (All)",      value: `₹${totalRevenue.toLocaleString()}`,         color: "#111827" },
+            { label: `GST Taxable Base (${gstBookings.length} bookings)`, value: `₹${gstBase.toLocaleString()}`, color: "#374151" },
+            { label: "CGST Payable @ 9%",        value: `₹${totalCGST.toLocaleString()}`,            color: "#D4A017" },
+            { label: "SGST Payable @ 9%",        value: `₹${totalSGST.toLocaleString()}`,            color: "#D4A017" },
+            { label: "Total GST Payable",        value: `₹${totalGST.toLocaleString()}`,             color: "#C0392B" },
+            { label: `GST Exempt Bookings`,      value: `${exemptCount} bookings`,                   color: "#15803d" },
           ].map((row, i) => (
-            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 4 ? "1px solid #f3f4f6" : "none" }}>
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 5 ? "1px solid #f3f4f6" : "none" }}>
               <span style={{ fontSize: 12, color: "#6b7280" }}>{row.label}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: row.color }}>{row.value}</span>
             </div>
           ))}
           <div style={{ marginTop: 16, padding: 14, background: "#F0F4EF", borderRadius: 10, textAlign: "center" }}>
-            <p style={{ fontSize: 11, color: "#6b7280" }}>Q2 FY 2025-26</p>
+            <p style={{ fontSize: 11, color: "#6b7280" }}>Q2 FY 2025-26 · SAC 997212</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: "#1B4332", marginTop: 4 }}>
-              ₹{Math.round(totalRevenue * 0.82).toLocaleString()}
+              ₹{(totalRevenue + totalGST).toLocaleString()}
             </p>
-            <p style={{ fontSize: 11, color: "#6b7280" }}>Net Taxable Revenue</p>
+            <p style={{ fontSize: 11, color: "#6b7280" }}>Total Revenue incl. GST</p>
           </div>
         </div>
       </div>
