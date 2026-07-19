@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, User, Phone, CalendarDays, Building2, Users, IndianRupee, FileText, CheckCircle, Tag } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, User, Phone, CalendarDays, Building2, Users, IndianRupee, FileText, CheckCircle, Tag, MapPin } from "lucide-react";
 import { useToast } from "./Toast";
 import { useBookings } from "../context/BookingsContext";
 import { settingsAPI } from "../services/api";
@@ -23,103 +23,83 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
   const [form, setForm] = useState({
     customerName: editData?.customerName ?? "",
     phone: editData?.phone ?? "",
+    gender: editData?.gender ?? "Male",
+    place: editData?.place ?? "",
+    address: editData?.address ?? "",
     eventType: editData?.eventType ?? "Wedding",
     hall: editData?.hall ?? "Main Hall",
     date: editData?.date ?? prefillDate,
     session: editData?.session ?? "Full Day",
     guests: editData?.guests ?? "",
-    advance: editData?.advance ?? "0",
-    totalAmount: editData?.totalAmount ?? "",
     notes: editData?.notes ?? "",
-    status: editData?.status ?? "Enquiry",
+    status: "Enquiry",
   });
 
   const [settings, setSettings] = useState(null);
+  const [places, setPlaces] = useState(["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"]);
+  const [placeQuery, setPlaceQuery] = useState(editData?.place ?? "");
+  const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
+  const placeRef = useRef(null);
 
   useEffect(() => {
-    settingsAPI.get().then(res => setSettings(res.data)).catch(console.error);
+    settingsAPI.get().then(res => {
+      setSettings(res.data);
+      if (res.data?.places && res.data.places.length > 0) {
+        setPlaces(res.data.places);
+      }
+    }).catch(console.error);
   }, []);
 
-  const STATUS_OPTIONS = [
-    { value: "Enquiry", emoji: "🔵", color: "#3b82f6", bg: "#dbeafe" },
-    { value: "Pending Payment", emoji: "🟡", color: "#d97706", bg: "#fef3c7" },
-    { value: "Confirmed", emoji: "🟢", color: "#15803d", bg: "#dcfce7" },
-  ];
+  useEffect(() => {
+    function handleClick(e) {
+      if (placeRef.current && !placeRef.current.contains(e.target)) {
+        setShowPlaceDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   if (!settings) return null;
 
-  const eventTypeOptions = settings.eventTypes.map(e => ({ label: e, value: e }));
-  const hallOptions = settings.halls;
-  const sessionOptions = settings.sessions;
+  const eventTypeOptions = (settings.eventTypes || []).map(e => ({ label: e, value: e }));
+  const hallOptions = settings.halls || [];
+  const sessionOptions = settings.sessions || [];
 
   const selectedHall = hallOptions.find(h => h.name === form.hall);
+
+  const filteredPlaces = (places || []).filter(p => {
+    if (typeof p !== 'string') return false;
+    return p.toLowerCase().includes((placeQuery || "").toLowerCase());
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => {
-      const updated = { ...prev, [name]: value };
-      
-      // Auto-calculate Total Amount on Hall/Session change
-      if (name === "hall" || name === "session") {
-        const hall = hallOptions.find(h => h.name === updated.hall);
-        if (hall) {
-          updated.totalAmount = String(hall.price * (updated.session === "Full Day" ? 2 : 1));
-        }
-      }
-
-      // Automatically update Booking Status based on payments
-      if (name === "advance" || name === "totalAmount" || name === "hall" || name === "session") {
-        const adv = Number(updated.advance || 0);
-        const tot = Number(updated.totalAmount || 0);
-        if (tot > 0) {
-          if (adv >= tot) {
-            updated.status = "Confirmed";
-          } else if (adv > 0) {
-            updated.status = "Pending Payment";
-          } else {
-            updated.status = "Enquiry";
-          }
-        }
-      }
-
-      return updated;
+      return { ...prev, [name]: value };
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.customerName || !form.phone || !form.date || !form.guests || !form.totalAmount) {
+    if (!form.customerName || !form.phone || !form.date || !form.guests) {
       addToast("Please fill all required fields", "error");
       return;
     }
     
-    const adv = Number(form.advance || 0);
-    const tot = Number(form.totalAmount || 0);
     const gst = Number(form.guests || 0);
 
     if (gst < 1) {
       addToast("Expected guests must be at least 1", "error");
       return;
     }
-    if (adv < 0) {
-      addToast("Advance payment cannot be negative", "error");
-      return;
-    }
-    if (tot <= 0) {
-      addToast("Total amount must be greater than 0", "error");
-      return;
-    }
-    if (adv > tot) {
-      addToast("Advance payment cannot exceed total amount", "error");
-      return;
-    }
 
     if (editData) {
       updateBooking(editData.id, form);
-      addToast("Booking updated successfully! ✏️", "success");
+      addToast("Enquiry updated successfully! ✏️", "success");
     } else {
-      addBooking({ ...form, status: form.status || "Enquiry" });
-      addToast("Booking saved successfully! 🎉", "success");
+      addBooking({ ...form, status: "Enquiry", advance: 0, totalAmount: 0 });
+      addToast("Enquiry saved successfully! 🎉", "success");
     }
     onClose();
   };
@@ -132,8 +112,8 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
         <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "22px 24px", borderRadius: "20px 20px 0 0", position: "sticky", top: 0, zIndex: 2 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff", margin: 0 }}>{editData ? "Edit Booking" : "New Booking"}</h3>
-              <p style={{ fontSize: 12, color: "rgba(212,160,23,0.9)", marginTop: 3 }}>{editData ? `Editing booking ${editData.id}` : "Fill in the details to create a booking"}</p>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff", margin: 0 }}>{editData ? "Edit Enquiry" : "New Enquiry"}</h3>
+              <p style={{ fontSize: 12, color: "rgba(212,160,23,0.9)", marginTop: 3 }}>{editData ? `Editing enquiry ${editData.id}` : "Capture details for a new lead"}</p>
             </div>
             <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
               <X size={16} />
@@ -163,6 +143,84 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
                   onFocus={e => e.target.style.borderColor = "#1B4332"}
                   onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
               </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+              <div>
+                <label style={labelSt}>Gender</label>
+                <select name="gender" value={form.gender} onChange={handleChange}
+                  style={{ ...iStyle, cursor: "pointer" }}
+                  onFocus={e => e.target.style.borderColor = "#1B4332"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Place with autocomplete */}
+              <div ref={placeRef} style={{ position: "relative" }}>
+                <label style={labelSt}>
+                  <MapPin size={10} style={{ display: "inline", marginRight: 3 }} /> Place / Area
+                </label>
+                <input
+                  type="text"
+                  name="place"
+                  value={placeQuery || form.place}
+                  onChange={e => {
+                    setPlaceQuery(e.target.value);
+                    setForm(prev => ({ ...prev, place: e.target.value }));
+                    setShowPlaceDropdown(true);
+                  }}
+                  onFocus={() => setShowPlaceDropdown(true)}
+                  placeholder="e.g. Kannur"
+                  style={iStyle}
+                  autoComplete="off"
+                />
+                {showPlaceDropdown && filteredPlaces.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+                    background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
+                  }}>
+                    {filteredPlaces.map(p => (
+                      <div
+                        key={p}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, place: p }));
+                          setPlaceQuery(p);
+                          setShowPlaceDropdown(false);
+                        }}
+                        style={{
+                          padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 8,
+                          borderBottom: "1px solid #f3f4f6"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                      >
+                        <MapPin size={13} color="#1B4332" />
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <label style={labelSt}>Address</label>
+              <textarea
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                rows={2}
+                placeholder="House / Building, Street, Town..."
+                style={{ ...iStyle, resize: "none", lineHeight: 1.6 }}
+                onFocus={e => e.target.style.borderColor = "#1B4332"}
+                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+              />
             </div>
           </div>
 
@@ -208,7 +266,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
                   }}>
                   <div style={{ fontSize: 22, marginBottom: 4 }}>{h.icon}</div>
                   <p style={{ fontSize: 12, fontWeight: 700, color: form.hall === h.name ? "#1B4332" : "#374151", margin: 0 }}>{h.name}</p>
-                  <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>₹{h.price.toLocaleString()} / session</p>
+                  <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>₹{(h.price || 0).toLocaleString()} / session</p>
                   <p style={{ fontSize: 10, color: "#9ca3af" }}>Up to {h.capacity} guests</p>
                   {form.hall === h.name && <CheckCircle size={14} style={{ color: "#1B4332", marginTop: 4 }} />}
                 </button>
@@ -235,12 +293,12 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
             </div>
           </div>
 
-          {/* ── SECTION: Payment ── */}
+          {/* ── SECTION: Additional Details ── */}
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-              <IndianRupee size={13} /> Guests & Payment
+              <Users size={13} /> Additional Details
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
               <div>
                 <label style={labelSt}><Users size={11} /> Expected Guests *</label>
                 <input type="number" name="guests" value={form.guests} onChange={handleChange}
@@ -248,30 +306,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
                   onFocus={e => e.target.style.borderColor = "#1B4332"}
                   onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
               </div>
-              <div>
-                <label style={labelSt}><IndianRupee size={11} /> Advance (₹) *</label>
-                <input type="number" name="advance" value={form.advance} onChange={handleChange}
-                  placeholder="0" style={iStyle} required min="0"
-                  onFocus={e => e.target.style.borderColor = "#1B4332"}
-                  onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-              </div>
-              <div>
-                <label style={labelSt}><IndianRupee size={11} /> Total Amount (₹) *</label>
-                <input type="number" name="totalAmount" value={form.totalAmount} onChange={handleChange}
-                  placeholder="Auto-calculated" style={{ ...iStyle, background: "#f9fafb" }} required min="1"
-                  onFocus={e => e.target.style.borderColor = "#1B4332"}
-                  onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-              </div>
             </div>
-            {/* Auto-calc hint */}
-            {selectedHall && (
-              <div style={{ background: "#f0faf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 12px", marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 16 }}>💡</span>
-                <p style={{ fontSize: 11, color: "#15803d", margin: 0 }}>
-                  <strong>{selectedHall.name}</strong> — {form.session}: ₹{(selectedHall.price * (form.session === "Full Day" ? 2 : 1)).toLocaleString()} (auto-calculated)
-                </p>
-              </div>
-            )}
           </div>
 
           {/* ── SECTION: Notes ── */}
@@ -284,27 +319,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
               onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
           </div>
 
-          {/* ── SECTION: Status ── */}
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-              <Tag size={13} /> Booking Status
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              {STATUS_OPTIONS.map(s => (
-                <label key={s.value} style={{
-                  flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 10, cursor: "pointer",
-                  border: `2px solid ${form.status === s.value ? s.color : "#e5e7eb"}`,
-                  background: form.status === s.value ? s.bg : "#fff",
-                  color: form.status === s.value ? s.color : "#6b7280",
-                  fontSize: 11, fontWeight: 700, transition: "all 0.15s",
-                }}>
-                  <input type="radio" name="status" value={s.value} checked={form.status === s.value}
-                    onChange={handleChange} style={{ display: "none" }} />
-                  {s.emoji} {s.value}
-                </label>
-              ))}
-            </div>
-          </div>
+
 
           {/* ── ACTIONS ── */}
           <div style={{ display: "flex", gap: 12 }}>
@@ -324,7 +339,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
             }}
               onMouseEnter={e => e.currentTarget.style.opacity = "0.92"}
               onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-              ✅ {editData ? "Update Booking" : "Save Booking"}
+              ✅ {editData ? "Update Enquiry" : "Save Enquiry"}
             </button>
           </div>
         </form>

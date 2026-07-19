@@ -13,7 +13,7 @@ export function BookingsProvider({ children }) {
     try {
       setLoading(true);
       const { data } = await bookingsAPI.getAll();
-      setBookings(data);
+      setBookings(data.data || []);
       setError(null);
     } catch (err) {
       console.warn("API not available, using empty state:", err.message);
@@ -35,9 +35,9 @@ export function BookingsProvider({ children }) {
 
   const addBooking = async (data) => {
     try {
-      const { data: newBooking } = await bookingsAPI.create(data);
-      setBookings(prev => [newBooking, ...prev]);
-      return newBooking;
+      const { data: resData } = await bookingsAPI.create(data);
+      setBookings(prev => [resData.data, ...prev]);
+      return resData.data;
     } catch (err) {
       // Fallback: create locally if API unavailable
       const localBooking = {
@@ -55,8 +55,8 @@ export function BookingsProvider({ children }) {
 
   const updateBooking = async (id, data) => {
     try {
-      const { data: updated } = await bookingsAPI.update(id, data);
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, ...updated } : b));
+      const { data: resData } = await bookingsAPI.update(id, data);
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, ...resData.data } : b));
     } catch {
       // Fallback: update locally
       setBookings(prev => prev.map(b => b.id === id

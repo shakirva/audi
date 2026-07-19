@@ -15,16 +15,12 @@ createRoot(document.getElementById("root")).render(
   </StrictMode>
 );
 
-// Register Service Worker for PWA
+// Unregister Service Workers in Dev to prevent caching issues
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then(
-      (registration) => {
-        console.log("Service Worker registered with scope:", registration.scope);
-      },
-      (error) => {
-        console.error("Service Worker registration failed:", error);
-      }
-    );
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (let registration of registrations) {
+      registration.unregister();
+      console.log("Service Worker unregistered to clear cache.");
+    }
   });
 }

@@ -1,176 +1,170 @@
-import { useState, useMemo } from "react";
-import { Search, Phone, MessageCircle, ChevronDown, ChevronUp, User } from "lucide-react";
-import { useBookings } from "../context/BookingsContext";
+import React, { useState, useEffect, useCallback } from "react";
+import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, RefreshCw, Loader } from "lucide-react";
+import { motion } from "framer-motion";
+import { customersAPI } from "../services/api";
+import { useToast } from "../components/Toast";
+import PageHeader from "../components/ui/PageHeader";
 
-// Build unique customers from bookings
-const buildCustomers = (bookings) => {
-  const map = {};
-  bookings.forEach(b => {
-    if (!map[b.phone]) {
-      map[b.phone] = { name: b.customerName, phone: b.phone, bookings: [] };
-    }
-    map[b.phone].bookings.push(b);
-  });
-  return Object.values(map).sort((a, b) => b.bookings.length - a.bookings.length);
-};
-
-const STATUS_DOT = {
-  Confirmed: "#22c55e", "Pending Payment": "#eab308",
-  Enquiry: "#3b82f6", Completed: "#9ca3af", Cancelled: "#ef4444",
-};
+function CustomerSkeleton() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 16, background: "#f1f5f9", animation: "pulse 1.5s infinite" }} />
+      </div>
+      <div style={{ height: 16, background: "#f1f5f9", borderRadius: 6, width: "70%", marginBottom: 8, animation: "pulse 1.5s infinite" }} />
+      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, width: "45%", marginBottom: 16, animation: "pulse 1.5s infinite" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16, padding: "12px 0", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>
+        <div style={{ height: 28, background: "#f1f5f9", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
+        <div style={{ height: 28, background: "#f1f5f9", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
+      </div>
+      <div style={{ height: 36, background: "#f1f5f9", borderRadius: 12, animation: "pulse 1.5s infinite" }} />
+    </div>
+  );
+}
 
 export default function Customers() {
-  const { bookings } = useBookings();
-  const customers = useMemo(() => buildCustomers(bookings), [bookings]);
+  const { addToast } = useToast();
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState(null);
 
-  const filtered = customers.filter(c =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
-  );
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      const res = await customersAPI.getAll(params);
+      setCustomers(res.data.data || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to load customers";
+      setError(msg);
+      addToast(msg, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
 
-  const toggle = (phone) => setExpanded(e => e === phone ? null : phone);
+  useEffect(() => {
+    const timer = setTimeout(() => fetchCustomers(), 300); // debounce search
+    return () => clearTimeout(timer);
+  }, [fetchCustomers]);
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+      
+      <PageHeader 
+        title="Customer Directory" 
+        subtitle="Manage relationships, view lifetime value, and track interactions."
+        icon={Users}
+        color="#1B4332"
+      />
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 140 }}>
-          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search customers…"
-            style={{ width: "100%", height: 36, paddingLeft: 32, borderRadius: 9, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, color: "#374151", outline: "none", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
-          />
-        </div>
-        <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>{filtered.length}</div>
-      </div>
-
-      {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 14 }}>
-        {[
-          { label: "Total Customers", value: customers.length, icon: "👥", color: "#1B4332", bg: "#f0faf4" },
-          { label: "Total Bookings",  value: bookings.length, icon: "📅", color: "#D4A017", bg: "#fffbeb" },
-          { label: "Total Revenue",   value: "₹" + (bookings.filter(b=>b.status==="Confirmed"||b.status==="Completed").reduce((s,b)=>s+b.totalAmount,0) / 100000).toFixed(1) + "L", icon: "💰", color: "#1d4ed8", bg: "#eff6ff" },
-        ].map(s => (
-          <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 22 }}>{s.icon}</span>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 8, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{s.label}</p>
-              <p style={{ fontSize: 14, fontWeight: 800, color: s.color, marginTop: 1, margin: 0 }}>{s.value}</p>
-            </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ position: "relative" }}>
+            <Search size={18} style={{ position: "absolute", left: 16, top: 14, color: "#94a3b8" }} />
+            <input type="text" placeholder="Search by name or phone..." value={search} onChange={e => setSearch(e.target.value)}
+              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
-        ))}
+          <button
+            onClick={fetchCustomers}
+            style={{ padding: "12px 16px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#475569", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+          {!loading && `${customers.length} customer${customers.length !== 1 ? "s" : ""}`}
+        </div>
       </div>
 
-      {/* Customer Cards */}
-      <div className="hm-customer-grid">
-        {filtered.map(c => {
-          const isOpen = expanded === c.phone;
-          const totalSpent = c.bookings.filter(b => b.status === "Confirmed" || b.status === "Completed").reduce((s, b) => s + b.totalAmount, 0);
-          const lastEvent  = [...c.bookings].sort((a, b) => b.date.localeCompare(a.date))[0];
-          const initials   = c.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+      {/* Error State */}
+      {error && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
+          <AlertCircle size={20} color="#ef4444" />
+          <span style={{ color: "#dc2626", fontWeight: 600 }}>{error}</span>
+          <button onClick={fetchCustomers} style={{ marginLeft: "auto", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+        </div>
+      )}
 
-          return (
-            <div key={c.phone} style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", overflow: "hidden", border: "1px solid #f3f4f6" }}>
-              {/* Card header - Desktop view */}
-              <div className="hm-customer-desktop" style={{ alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer", backgroundColor: "#fafafa" }}
-                onClick={() => toggle(c.phone)}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+        {loading ? (
+          [1,2,3,4,5,6].map(i => <CustomerSkeleton key={i} />)
+        ) : customers.length === 0 && !error ? (
+          <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
+            <Users size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+            <p style={{ fontSize: 18, fontWeight: 700, color: "#374151" }}>No customers yet</p>
+            <p style={{ fontSize: 14 }}>Customers are created automatically when enquiries are submitted.</p>
+          </div>
+        ) : (
+          customers.map((c, i) => {
+            const totalSpent = c.totalBookingValue || c.lifetimeValue || 0;
+            const bookingCount = c.bookingCount || c.totalBookings || 0;
+            const name = c.name || c.customerName || "Unknown";
+            const phone = c.phone || c.mobile || "";
+            const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+            const isVIP = totalSpent > 500000 || bookingCount >= 3;
+
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.5) }}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.06)" }}
+                style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", boxShadow: "0 10px 30px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column" }}
               >
-                {/* Avatar */}
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-                  {initials}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: "#111827", margin: 0 }}>{c.name}</p>
-                  <p style={{ fontSize: 11, color: "#6b7280", marginTop: 2, margin: 0 }}>{c.phone}</p>
-                </div>
-
-                {/* Stats */}
-                <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: "#1B4332", margin: 0 }}>{c.bookings.length}</p>
-                    <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, margin: 0 }}>BOOKINGS</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 16, background: isVIP ? "linear-gradient(135deg, #f97316, #ea580c)" : "#f1f5f9", color: isVIP ? "#fff" : "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>
+                    {initials}
                   </div>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: "#D4A017", margin: 0 }}>₹{(totalSpent / 100000).toFixed(1)}L</p>
-                    <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, margin: 0 }}>SPENT</p>
+                  {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
+                </div>
+                
+                <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{name}</h3>
+                <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+                  <MapPin size={13} /> {c.city || c.location || "Local Client"}
+                </p>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16, padding: "12px 0", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>Bookings</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#334155" }}>{bookingCount}</div>
                   </div>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: "#374151", margin: 0 }}>{lastEvent ? new Date(lastEvent.date).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "-"}</p>
-                    <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, margin: 0 }}>LAST</p>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>Lifetime Value</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#f97316" }}>
+                      {totalSpent > 0 ? `₹${(totalSpent / 100000).toFixed(1)}L` : "—"}
+                    </div>
                   </div>
                 </div>
 
-                {/* WhatsApp */}
-                <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "#25D366", color: "#fff", textDecoration: "none", flexShrink: 0 }}
-                  title="WhatsApp"
-                >
-                  <MessageCircle size={14} />
-                </a>
-
-                {/* Expand chevron */}
-                <div style={{ color: "#9ca3af", marginLeft: 4 }}>
-                  {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                  <a
+                    href={`https://wa.me/91${phone.replace(/\D/g, "")}`}
+                    target="_blank" rel="noreferrer"
+                    style={{ flex: 1, padding: "10px", background: "#25D366", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", textDecoration: "none", fontWeight: 700, fontSize: 14, gap: 8 }}
+                  >
+                    <MessageCircle size={16} /> WhatsApp
+                  </a>
+                  {c.email && (
+                    <a
+                      href={`mailto:${c.email}`}
+                      style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", textDecoration: "none" }}
+                    >
+                      <Mail size={16} />
+                    </a>
+                  )}
+                  {!c.email && (
+                    <button style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
+                      <Mail size={16} />
+                    </button>
+                  )}
                 </div>
-              </div>
-
-              {/* Card header - Mobile view */}
-              <div className="hm-customer-mobile" style={{ alignItems: "center", gap: 10, padding: "12px 12px", cursor: "pointer", backgroundColor: "#fafafa" }}
-                onClick={() => toggle(c.phone)}
-              >
-                {/* Avatar */}
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
-                  {initials}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: 12, color: "#111827", margin: 0 }}>{c.name}</p>
-                  <p style={{ fontSize: 10, color: "#6b7280", marginTop: 1, margin: 0 }}>{c.phone}</p>
-                </div>
-
-                {/* Quick stat */}
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#1B4332", margin: 0 }}>{c.bookings.length}</p>
-                  <p style={{ fontSize: 8, color: "#9ca3af", margin: 0 }}>bookings</p>
-                </div>
-
-                {/* Expand chevron */}
-                <div style={{ color: "#9ca3af", marginLeft: 2 }}>
-                  {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </div>
-              </div>
-
-              {/* Expanded booking history */}
-              {isOpen && (
-                <div style={{ padding: "0 12px 12px", borderTop: "1px solid #f9fafb" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 0 8px", margin: 0 }}>Booking History</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {c.bookings.sort((a, b) => b.date.localeCompare(a.date)).map(b => (
-                      <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "#f9fafb" }}>
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: STATUS_DOT[b.status] || "#9ca3af", flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#374151" }}>{b.eventType}</span>
-                          <span style={{ fontSize: 9, color: "#9ca3af", marginLeft: 6 }}>{b.hall}</span>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <span style={{ fontSize: 10, color: "#6b7280" }}>{new Date(b.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#1B4332", marginLeft: 6 }}>₹{(b.totalAmount / 100000).toFixed(1)}L</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+              </motion.div>
+            );
+          })
+        )}
       </div>
     </div>
   );

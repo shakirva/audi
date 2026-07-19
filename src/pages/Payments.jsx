@@ -1,386 +1,158 @@
-import { useState, useMemo, useEffect } from "react";
-import { CheckCircle, MessageCircle, TrendingUp, IndianRupee, AlertCircle, Bell } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { IndianRupee, Search, Filter, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
+import PageHeader from "../components/ui/PageHeader";
+import MetricCard from "../components/ui/MetricCard";
+import { paymentsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
-import { useBookings } from "../context/BookingsContext";
-import { settingsAPI } from "../services/api";
 
-const today = new Date();
-
-function daysDue(dateStr) {
-  const d = new Date(dateStr);
-  return Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-}
-
-function urgencyStyle(days) {
-  if (days < 0)   return { bg: "#fee2e2", color: "#b91c1c", label: "Overdue" };
-  if (days <= 7)  return { bg: "#fee2e2", color: "#b91c1c", label: `${days}d left` };
-  if (days <= 15) return { bg: "#fef9c3", color: "#a16207", label: `${days}d left` };
-  return              { bg: "#dcfce7", color: "#15803d", label: `${days}d left` };
+function PaymentSkeleton() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: "#f1f5f9", animation: "pulse 1.5s infinite" }} />
+        <div>
+          <div style={{ height: 18, background: "#f1f5f9", borderRadius: 6, width: 120, marginBottom: 8, animation: "pulse 1.5s infinite" }} />
+          <div style={{ height: 14, background: "#f1f5f9", borderRadius: 6, width: 200, animation: "pulse 1.5s infinite" }} />
+        </div>
+      </div>
+      <div style={{ textAlign: "right" }}>
+        <div style={{ height: 24, background: "#f1f5f9", borderRadius: 6, width: 100, marginBottom: 6, animation: "pulse 1.5s infinite" }} />
+        <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, width: 60, marginLeft: "auto", animation: "pulse 1.5s infinite" }} />
+      </div>
+    </div>
+  );
 }
 
 export default function Payments() {
   const { addToast } = useToast();
-  const { bookings, updateStatus } = useBookings();
-  const [paid, setPaid]                   = useState({});
-  const [historyFilter, setHistoryFilter] = useState("All");
-  const [reminderDays, setReminderDays]   = useState([3, 7]);
-  const [sentReminders, setSentReminders] = useState({});
+  const [search, setSearch] = useState("");
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchPayments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      const res = await paymentsAPI.getAll(params);
+      setPayments(res.data.data || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to load payments";
+      setError(msg);
+      addToast(msg, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
 
   useEffect(() => {
-    settingsAPI.get()
-      .then(res => { if (res.data.reminderDays && res.data.reminderDays.length > 0) setReminderDays(res.data.reminderDays); })
-      .catch(console.error);
-  }, []);
+    const timer = setTimeout(() => fetchPayments(), 300);
+    return () => clearTimeout(timer);
+  }, [fetchPayments]);
 
-  const pending   = useMemo(() => bookings.filter(b => b.status === "Pending Payment"), [bookings]);
-  const confirmed = useMemo(() => bookings.filter(b => b.status === "Confirmed" || b.status === "Completed"), [bookings]);
-
-  const totalRevenue  = useMemo(() => confirmed.reduce((s, b) => s + Number(b.totalAmount || 0), 0), [confirmed]);
-  const totalAdvance  = useMemo(() => confirmed.reduce((s, b) => s + Number(b.advance || 0), 0), [confirmed]);
-  const totalBalance  = useMemo(() => pending.reduce((s, b) => s + (Number(b.totalAmount || 0) - Number(b.advance || 0)), 0), [pending]);
-
-  // Bookings that fall within ANY of the configured reminder windows
-  const urgentReminders = useMemo(() => {
-    const maxDays = reminderDays.length > 0 ? Math.max(...reminderDays) : 7;
-    return pending.filter(b => !paid[b.id] && daysDue(b.date) >= 0 && daysDue(b.date) <= maxDays);
-  }, [pending, paid, reminderDays]);
-
-  // History filter
-  const EVENT_TYPES = useMemo(() => ["All", ...new Set(confirmed.map(b => b.eventType).filter(Boolean))], [confirmed]);
-  const historyList = useMemo(() =>
-    historyFilter === "All" ? confirmed : confirmed.filter(b => b.eventType === historyFilter),
-    [confirmed, historyFilter]
-  );
-
-  const handleMarkPaid = (id) => {
-    setPaid(p => ({ ...p, [id]: true }));
-    updateStatus(id, "Confirmed");
-    addToast("Payment marked as received ✅", "success");
+  const getStatusColor = (s) => {
+    switch(s) {
+      case "Collected": case "Completed": return { bg: "#dcfce7", text: "#166534", icon: ArrowDownRight };
+      case "Pending": return { bg: "#fee2e2", text: "#b91c1c", icon: ArrowUpRight };
+      default: return { bg: "#f1f5f9", text: "#475569", icon: Wallet };
+    }
   };
 
-  const handleSendReminder = (b, isAuto = false) => {
-    const balance  = Number(b.totalAmount || 0) - Number(b.advance || 0);
-    const days     = daysDue(b.date);
-    const eventDate = new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-    const reminderLine = days <= 0
-      ? "Please make the payment at the earliest."
-      : `Kindly make the balance payment ${days === 1 ? "tomorrow" : `within ${days} days`} (by ${eventDate}).`;
-    const msg = encodeURIComponent(
-      `Dear ${b.customerName},\n\nThis is a gentle reminder that a balance payment of \u20b9${balance.toLocaleString()} is pending for your upcoming ${b.eventType} on ${eventDate} at ${b.hall}.\n\n${reminderLine}\n\nThank you! 🙏\n— Sreelakshmi Convention Centre`
-    );
-    window.open(`https://wa.me/91${b.phone}?text=${msg}`, "_blank");
-    setSentReminders(prev => ({ ...prev, [b.id]: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) }));
-    addToast(`${isAuto ? "Auto-reminder" : "Reminder"} sent to ${b.customerName} 📱`, "success");
+  const formatAmount = (val) => {
+    if (!val) return "—";
+    return `₹${Number(val).toLocaleString("en-IN")}`;
   };
 
-  const fmtL  = (n) => `₹${(n / 100000).toFixed(1)}L`;
-  const fmtK  = (n) => `₹${(n / 1000).toFixed(0)}k`;
-  const card  = { background: "#fff", borderRadius: 14, boxShadow: "0 1px 8px rgba(0,0,0,0.06)", padding: 16 };
+  const totalCollected = payments.filter(p => p.status === "Collected" || p.status === "Completed").reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+      
+      <PageHeader 
+        title="Payment Operations" 
+        subtitle="Track incoming cash flow, pending balances, and generate receipts."
+        icon={Wallet}
+        color="#1B4332"
+      />
 
-      {/* ── STAT CARDS (2 only) ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 20 }}>
-        {[
-          {
-            label: "Total Revenue",
-            value: fmtL(totalRevenue),
-            sub: `from ${confirmed.length} confirmed`,
-            icon: IndianRupee,
-            bg: "linear-gradient(135deg, #f0faf4, #dcfce7)",
-            border: "#86efac",
-            color: "#1B4332",
-          },
-          {
-            label: "Advance Collected",
-            value: fmtL(totalAdvance),
-            sub: `${totalRevenue > 0 ? Math.round((totalAdvance / totalRevenue) * 100) : 0}% of total`,
-            icon: TrendingUp,
-            bg: "linear-gradient(135deg, #fffbeb, #fef9c3)",
-            border: "#fde047",
-            color: "#D4A017",
-          },
-          {
-            label: "Balance Due",
-            value: `₹${totalBalance.toLocaleString()}`,
-            sub: `from ${pending.length} pending bookings`,
-            icon: AlertCircle,
-            bg: "linear-gradient(135deg, #fff1f2, #fee2e2)",
-            border: "#fca5a5",
-            color: "#b91c1c",
-          },
-        ].map(s => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 14, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon size={22} color={s.color} />
-              </div>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>{s.label}</p>
-                <p style={{ fontSize: 22, fontWeight: 800, color: s.color, margin: "2px 0 0", lineHeight: 1 }}>{s.value}</p>
-                <p style={{ fontSize: 10, color: "#6b7280", margin: "3px 0 0" }}>{s.sub}</p>
-              </div>
-            </div>
-          );
-        })}
+      {/* Metrics Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 40 }}>
+        <MetricCard title="Total Collected (Filtered)" value={formatAmount(totalCollected)} icon={ArrowDownRight} color="#10b981" delay={0.1} />
+        <MetricCard title="Outstanding Balance" value="—" icon={ArrowUpRight} color="#ef4444" delay={0.2} />
+        <MetricCard title="Processing" value="—" icon={Wallet} color="#3b82f6" delay={0.3} />
       </div>
 
-      {/* ── URGENT REMINDER BANNER ── */}
-      {urgentReminders.length > 0 && (
-        <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 18 }}>⚠️</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "#15803d", margin: 0 }}>
-                {urgentReminders.length} balance payment{urgentReminders.length > 1 ? "s" : ""} due within your reminder window ({reminderDays.sort((a,b)=>a-b).map(d=>`${d}d`).join(", ")} before event)
-              </p>
-              <p style={{ fontSize: 10, color: "#6b7280", margin: "2px 0 0" }}>Reminder days configured in Settings → WhatsApp Reminder Schedule</p>
-            </div>
-            <button
-              onClick={() => urgentReminders.forEach(b => handleSendReminder(b, true))}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-              <Bell size={12} /> Send All Reminders
-            </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ position: "relative" }}>
+            <Search size={18} style={{ position: "absolute", left: 16, top: 14, color: "#94a3b8" }} />
+            <input type="text" placeholder="Search payments..." value={search} onChange={e => setSearch(e.target.value)} 
+              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {urgentReminders.map(b => (
-              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 8, padding: "8px 12px", border: "1px solid #bbf7d0", justifyContent: "space-between" }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: 0 }}>{b.customerName}</p>
-                  <p style={{ fontSize: 10, color: "#15803d", margin: "1px 0 0" }}>
-                    {b.eventType} · {b.hall} · {new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · Balance: ₹{(Number(b.totalAmount||0)-Number(b.advance||0)).toLocaleString()}
-                  </p>
-                  {sentReminders[b.id] && <p style={{ fontSize: 9, color: "#9ca3af", margin: "1px 0 0" }}>Last sent at {sentReminders[b.id]}</p>}
-                </div>
-                <button onClick={() => handleSendReminder(b)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
-                  <MessageCircle size={12} /> {sentReminders[b.id] ? "Resend" : "Remind"}
-                </button>
-              </div>
-            ))}
-          </div>
+          <button onClick={fetchPayments} style={{ padding: "12px 16px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#475569" }}>
+            <RefreshCw size={16} />
+          </button>
+        </div>
+        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+          {!loading && `${payments.length} record${payments.length !== 1 ? "s" : ""}`}
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
+          <AlertCircle size={20} color="#ef4444" />
+          <span style={{ color: "#dc2626", fontWeight: 600 }}>{error}</span>
         </div>
       )}
 
-      {/* ── PENDING DUES TABLE ── */}
-      <div style={{ ...card, marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>
-            Pending Payments
-          </h3>
-          <span style={{ fontSize: 11, fontWeight: 700, background: pending.filter(b => !paid[b.id]).length > 0 ? "#fee2e2" : "#dcfce7", color: pending.filter(b => !paid[b.id]).length > 0 ? "#b91c1c" : "#15803d", padding: "3px 12px", borderRadius: 20 }}>
-            {pending.filter(b => !paid[b.id]).length} pending
-          </span>
-        </div>
-
-        {pending.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "32px 0", color: "#9ca3af" }}>
-            <p style={{ fontSize: 32, marginBottom: 8 }}>🎉</p>
-            <p style={{ fontSize: 13, fontWeight: 600 }}>All payments cleared!</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {loading ? (
+          [1,2,3,4].map(i => <PaymentSkeleton key={i} />)
+        ) : payments.length === 0 && !error ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
+            <Wallet size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+            <p style={{ fontSize: 18, fontWeight: 700, color: "#374151" }}>No payments found</p>
           </div>
         ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hm-desktop-only" style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f9fafb" }}>
-                    {["Customer", "Event & Hall", "Date", "Total Amount", "Advance Paid", "Balance Due", "Due In", "Action"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", borderBottom: "1px solid #f3f4f6" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pending.map(b => {
-                    const isPaid = paid[b.id];
-                    const days   = daysDue(b.date);
-                    const urg    = urgencyStyle(days);
-                    return (
-                      <tr key={b.id} style={{ borderBottom: "1px solid #f9fafb", background: isPaid ? "#f0faf4" : "#fff" }}
-                        onMouseEnter={e => { if (!isPaid) e.currentTarget.style.background = "#f9fafb"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = isPaid ? "#f0faf4" : "#fff"; }}>
-                        <td style={{ padding: "12px 14px" }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{b.customerName}</p>
-                          <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0" }}>{b.phone}</p>
-                        </td>
-                        <td style={{ padding: "12px 14px", fontSize: 12, color: "#374151" }}>{b.eventType} · {b.hall}</td>
-                        <td style={{ padding: "12px 14px", fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>
-                          {new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                        </td>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 800, color: "#111827", whiteSpace: "nowrap" }}>
-                          ₹{Number(b.totalAmount || 0).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#15803d", whiteSpace: "nowrap" }}>
-                          ₹{Number(b.advance || 0).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 800, color: "#b91c1c", whiteSpace: "nowrap" }}>
-                          ₹{(Number(b.totalAmount || 0) - Number(b.advance || 0)).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, background: urg.bg, color: urg.color, padding: "3px 10px", borderRadius: 10 }}>{urg.label}</span>
-                        </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          {isPaid ? (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#15803d", fontWeight: 600 }}>
-                              <CheckCircle size={14} /> Paid
-                            </span>
-                          ) : (
-                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                              <button onClick={() => handleMarkPaid(b.id)}
-                                style={{ padding: "5px 14px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}
-                                onMouseEnter={e => e.currentTarget.style.background = "#163829"}
-                                onMouseLeave={e => e.currentTarget.style.background = "#1B4332"}>
-                                Mark Paid
-                              </button>
-                              <button onClick={() => handleSendReminder(b)}
-                                style={{ padding: "5px 10px", borderRadius: 8, background: sentReminders[b.id] ? "#e5e7eb" : "#25D366", color: sentReminders[b.id] ? "#374151" : "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
-                                <MessageCircle size={11} /> {sentReminders[b.id] ? `Resent ${sentReminders[b.id]}` : "Remind"}
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="hm-mobile-only">
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {pending.map(b => {
-                  const isPaid = paid[b.id];
-                  const days   = daysDue(b.date);
-                  const urg    = urgencyStyle(days);
-                  return (
-                    <div key={b.id} style={{ background: isPaid ? "#f0faf4" : "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{b.customerName}</p>
-                          <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0" }}>{b.phone} · {b.eventType} · {b.hall}</p>
-                        </div>
-                        <span style={{ fontSize: 10, fontWeight: 700, background: urg.bg, color: urg.color, padding: "2px 8px", borderRadius: 10, flexShrink: 0 }}>{urg.label}</span>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                        <div style={{ background: "#fff", borderRadius: 8, padding: "8px 10px", border: "1px solid #e5e7eb" }}>
-                          <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", margin: 0 }}>Total</p>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: "#111827", margin: "2px 0 0" }}>₹{Number(b.totalAmount || 0).toLocaleString()}</p>
-                        </div>
-                        <div style={{ background: "#fff", borderRadius: 8, padding: "8px 10px", border: "1px solid #e5e7eb" }}>
-                          <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", margin: 0 }}>Advance</p>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: "#15803d", margin: "2px 0 0" }}>₹{Number(b.advance || 0).toLocaleString()}</p>
-                        </div>
-                        <div style={{ background: "#fff", borderRadius: 8, padding: "8px 10px", border: "1.5px solid #fca5a5" }}>
-                          <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", margin: 0 }}>Balance</p>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: "#b91c1c", margin: "2px 0 0" }}>₹{(Number(b.totalAmount || 0) - Number(b.advance || 0)).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        {isPaid ? (
-                          <div style={{ flex: 1, background: "#dcfce7", borderRadius: 8, padding: 8, textAlign: "center" }}>
-                            <span style={{ fontSize: 12, color: "#15803d", fontWeight: 700 }}>✓ Paid</span>
-                          </div>
-                        ) : (
-                          <>
-                            <button onClick={() => handleMarkPaid(b.id)}
-                              style={{ flex: 1, padding: 8, borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                              Mark Paid
-                            </button>
-                            {days <= 7 && (
-                              <button onClick={() => handleSendReminder(b)}
-                                style={{ flex: 1, padding: 8, borderRadius: 8, background: "#25D366", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                                <MessageCircle size={13} /> Remind
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
+          payments.map((p, i) => {
+            const st = getStatusColor(p.status);
+            const Icon = st.icon;
+            const customerName = p.Customer?.name || p.customerName || "Unknown";
+            
+            return (
+              <motion.div 
+                key={p.id}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i * 0.05, 0.5) }}
+                whileHover={{ scale: 1.01, boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}
+                style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: st.bg, color: st.text, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={24} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{customerName}</h3>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", fontSize: 14, color: "#64748b", fontWeight: 500 }}>
+                      <span>{p.paymentType || "Payment"}</span> • <span>{p.paymentMode}</span> • <span>{new Date(p.paymentDate || p.createdAt).toLocaleDateString("en-IN")}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── PAYMENT HISTORY & GST SUMMARY ── */}
-      <div className="hm-history-grid">
-
-        {/* Payment History */}
-        <div style={card}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>
-              Payment History
-            </h3>
-            <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-              {EVENT_TYPES.map(t => (
-                <button key={t} onClick={() => setHistoryFilter(t)} style={{
-                  padding: "4px 10px", borderRadius: 20, border: `1.5px solid ${historyFilter === t ? "#1B4332" : "#e5e7eb"}`,
-                  background: historyFilter === t ? "#1B4332" : "#fff",
-                  color: historyFilter === t ? "#fff" : "#6b7280",
-                  fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-                }}>{t}</button>
-              ))}
-            </div>
-          </div>
-
-          {historyList.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", padding: "24px 0" }}>No records yet.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {historyList.slice(0, 12).map((b, idx) => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < historyList.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 9, background: b.status === "Completed" ? "#f3f4f6" : "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <CheckCircle size={15} color={b.status === "Completed" ? "#9ca3af" : "#15803d"} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>{b.customerName}</p>
-                    <p style={{ fontSize: 10, color: "#6b7280", margin: "2px 0 0" }}>
-                      {b.eventType} · {b.hall} · {new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 800, color: "#1B4332", margin: 0 }}>₹{Number(b.totalAmount || 0).toLocaleString()}</p>
-                    <p style={{ fontSize: 9, color: "#9ca3af", margin: "2px 0 0", textTransform: "uppercase" }}>{b.status}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* GST Summary */}
-        <div style={card}>
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 14, margin: 0 }}>
-            GST Summary
-          </h3>
-          <div style={{ marginTop: 14 }}>
-            {[
-              { label: "Gross Revenue",  value: `₹${totalRevenue.toLocaleString()}`,                                   color: "#111827" },
-              { label: "CGST (9%)",      value: `₹${Math.round(totalRevenue * 0.09).toLocaleString()}`,                color: "#D4A017" },
-              { label: "SGST (9%)",      value: `₹${Math.round(totalRevenue * 0.09).toLocaleString()}`,                color: "#D4A017" },
-              { label: "Total GST",      value: `₹${Math.round(totalRevenue * 0.18).toLocaleString()}`,                color: "#C0392B" },
-              { label: "Net Revenue",    value: `₹${Math.round(totalRevenue * 0.82).toLocaleString()}`,                color: "#1B4332" },
-            ].map((row, i) => (
-              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < 4 ? "1px solid #f3f4f6" : "none" }}>
-                <span style={{ fontSize: 12, color: "#6b7280" }}>{row.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: row.color }}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 14, padding: "12px 16px", background: "#F0F4EF", borderRadius: 10, textAlign: "center" }}>
-            <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>
-              {new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })} — Net Taxable
-            </p>
-            <p style={{ fontSize: 20, fontWeight: 800, color: "#1B4332", marginTop: 4, margin: "4px 0 0" }}>
-              ₹{Math.round(totalRevenue * 0.82).toLocaleString()}
-            </p>
-          </div>
-        </div>
+                
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: p.status === "Pending" ? "#ef4444" : "#0f172a", marginBottom: 4 }}>
+                    {formatAmount(p.amount)}
+                  </div>
+                  <div style={{ color: st.text, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                    {p.status}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })
+        )}
       </div>
     </div>
   );

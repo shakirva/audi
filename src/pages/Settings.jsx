@@ -66,6 +66,7 @@ export default function Settings() {
   const [eventTypes, setEventTypes]           = useState([]);
   const [sessions, setSessions]               = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
+  const [places, setPlaces]                   = useState(["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"]);
 
   const [testerCreds, setTesterCreds] = useState(null);
   const [testerForm, setTesterForm] = useState({ name: "", email: "", password: "" });
@@ -96,6 +97,7 @@ export default function Settings() {
       if (data.eventTypes) setEventTypes(data.eventTypes);
       if (data.sessions) setSessions(data.sessions);
       if (data.expenseCategories) setExpenseCategories(data.expenseCategories);
+      if (data.places && data.places.length > 0) setPlaces(data.places);
       if (data.reminderDays && data.reminderDays.length > 0) setReminderDays(data.reminderDays);
       if (data.staff) setStaff(data.staff);
       setManagerRevenueEnabled(data.managerRevenueEnabled !== false);
@@ -180,7 +182,7 @@ export default function Settings() {
 
   const handleSaveLists = async () => {
     try {
-      await settingsAPI.update({ eventTypes, sessions, expenseCategories });
+      await settingsAPI.update({ eventTypes, sessions, expenseCategories, places });
       addToast("Lists saved successfully! ✅", "success");
     } catch (e) { addToast("Failed to save lists", "error"); }
   };
@@ -843,6 +845,7 @@ export default function Settings() {
         <ListEditor title="Event Types" desc="Available events in booking forms" items={eventTypes} setItems={setEventTypes} />
         <SessionEditor title="Sessions" desc="Available time slots for bookings with specific timings" items={sessions} setItems={setSessions} />
         <ListEditor title="Expense Categories" desc="Categories for tracking auditorium expenses" items={expenseCategories} setItems={setExpenseCategories} />
+        <ListEditor title="📍 Places / Areas" desc="Customer locations shown as suggestions in the New Enquiry form (e.g. Kannur, Thalassery)" items={places} setItems={setPlaces} />
 
         <button onClick={handleSaveLists} style={{
           display: "flex", alignItems: "center", gap: 7,

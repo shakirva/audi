@@ -1,281 +1,230 @@
-import { NavLink } from "react-router-dom";
-import { useState, useEffect } from "react";
-import {
-  LayoutDashboard, CalendarDays, Users, CreditCard,
-  BarChart3, BookOpen, Settings, LogOut, X, Wallet, Building2,
-} from "lucide-react";
-import Logo from "./Logo";
-import { useToast } from "./Toast";
+import { Link, useLocation } from "react-router-dom";
+import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent } from "lucide-react";
 import { useRole } from "../context/RoleContext";
-import { useBookings } from "../context/BookingsContext";
-import { ROLE_COLORS } from "../context/rolePermissions";
-import { settingsAPI } from "../services/api";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Logo from "./Logo"; // Bring back the new logo component if it exists, or use the brand icon.
 
-export default function Sidebar({ open, onClose }) {
-  const { addToast } = useToast();
-  const { role, user, logout, can } = useRole();
-  const { bookings } = useBookings();
-  const rc = ROLE_COLORS[role] || ROLE_COLORS.Staff;
-  
-  const [venueInfo, setVenueInfo] = useState({
-    name: "Sreelakshmi Convention Centre",
-    location: "Kerala, India",
-    ownerName: "Rajan P.K."
-  });
+export default function Sidebar() {
+  const location = useLocation();
+  const { role, user, logout } = useRole();
+  const [collapsed, setCollapsed] = useState(false);
+  const [openGroup, setOpenGroup] = useState("");
 
-  useEffect(() => {
-    settingsAPI.get().then(({ data }) => {
-      if (data) {
-        setVenueInfo({
-          name: data.venueName || "Sreelakshmi Convention Centre",
-          location: data.location || "Kerala, India",
-          ownerName: data.ownerName || "Rajan P.K."
-        });
-      }
-    }).catch(() => {});
-  }, []);
-  
-  const enquiryCount = bookings.filter(b => b.status === "Enquiry").length;
-  const pendingCount = bookings.filter(b => b.status === "Pending Payment").length;
+  const PRIMARY_COLOR = "#0D2418";
+  const ACCENT_COLOR = "#D4A017";
 
-  const allNavItems = [
-    { to: "/",          icon: LayoutDashboard, label: "Dashboard",  badge: null,          permission: null },
-    { to: "/bookings",  icon: BookOpen,         label: "Bookings",   badge: enquiryCount,  permission: null },
-    { to: "/calendar",  icon: CalendarDays,     label: "Calendar",   badge: null,          permission: null },
-    { to: "/customers", icon: Users,            label: "Customers",  badge: null,          permission: null },
-    { to: "/payments",  icon: CreditCard,       label: "Payments",   badge: pendingCount,  permission: "canViewPayments" },
-    { to: "/expenses",  icon: Wallet,           label: "Expenses",   badge: null,          permission: "canViewReports" },
-    { to: "/reports",   icon: BarChart3,        label: "Reports",    badge: null,          permission: "canViewReports" },
-    { to: "/superadmin/tenants", icon: Building2, label: "Tenants",  badge: null,          permission: "canManageTenants" },
+  const NAVIGATION = [
+    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { 
+      type: "group", label: "CRM", icon: Users, id: "crm",
+      children: [
+        { path: "/crm", label: "Enquiries" },
+        { path: "/customers", label: "Customers" }
+      ]
+    },
+    { 
+      type: "group", label: "Bookings", icon: CalendarDays, id: "bookings",
+      children: [
+        { path: "/calendar", label: "Calendar" },
+        { path: "/bookings", label: "Bookings" },
+        { path: "/agreements", label: "Agreements" }
+      ]
+    },
+    { 
+      type: "group", label: "Operations", icon: Briefcase, id: "ops",
+      children: [
+        { path: "/jobs", label: "Job Management" }
+      ]
+    },
+    { 
+      type: "group", label: "Finance", icon: CreditCard, id: "finance",
+      children: [
+        { path: "/payments", label: "Payments & Receipts" },
+        { path: "/accounts", label: "Accounts Lite" }
+      ]
+    },
+    { 
+      type: "group", label: "External & HR", icon: UsersRound, id: "external",
+      children: [
+        { path: "/vendors", label: "Vendors" },
+        { path: "/purchases", label: "Purchases" },
+        { path: "/staff", label: "Staff & HR" }
+      ]
+    },
+    { 
+      type: "group", label: "Reports Center", icon: BarChart3, id: "reports",
+      children: [
+        { path: "/reports", label: "Report Dashboard" },
+        { path: "/reports/sales", label: "Sales Reports 🔒" },
+        { path: "/reports/booking", label: "Booking Reports 🔒" },
+        { path: "/reports/accounts", label: "Accounts Reports 🔒" },
+        { path: "/reports/hall", label: "Hall Reports 🔒" }
+      ]
+    },
+    { 
+      type: "group", label: "System", icon: Settings, id: "system",
+      children: [
+        { path: "/settings", label: "Masters" },
+        { path: "/roadmap", label: "ERP Roadmap" }
+      ]
+    }
   ];
 
-  const navItems = allNavItems.filter(item => !item.permission || can(item.permission));
-
   return (
-    <>
-      {/* Mobile overlay */}
-      {open && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 40, backdropFilter: "blur(4px)" }}
-          onClick={onClose}
-        />
+    <motion.div 
+      initial={false}
+      animate={{ width: collapsed ? 80 : 280 }}
+      style={{ 
+        background: PRIMARY_COLOR, 
+        color: "#fff", 
+        height: "100vh", 
+        display: "flex", 
+        flexDirection: "column", 
+        fontFamily: "'Inter', 'DM Sans', sans-serif",
+        position: "sticky",
+        top: 0,
+        boxShadow: "10px 0 30px rgba(0,0,0,0.1)",
+        overflow: "hidden"
+      }}
+    >
+      
+      {/* Brand */}
+      <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
+        <div style={{ width: 40, height: 40, background: ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR }}>
+          <Tent size={24} />
+        </div>
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>Laural Garden</div>
+              <div style={{ fontSize: 11, color: ACCENT_COLOR, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Auditorium</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div style={{ margin: "0 24px 16px", height: 1, background: "rgba(255,255,255,0.1)" }} />
+
+      {/* Navigation */}
+      <div style={{ flex: 1, padding: "0 16px", display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
+        {NAVIGATION.map(item => {
+          if (item.type === "link") {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link key={item.path} to={item.path} style={{ textDecoration: "none" }}>
+                <motion.div 
+                  whileHover={{ background: "rgba(255,255,255,0.1)" }}
+                  style={{ 
+                    display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", borderRadius: 12,
+                    background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: isActive ? "#fff" : "rgba(255,255,255,0.7)",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <item.icon size={20} color={isActive ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0 }} />
+                  {!collapsed && <span style={{ fontSize: 15, fontWeight: isActive ? 700 : 500 }}>{item.label}</span>}
+                </motion.div>
+              </Link>
+            );
+          }
+
+          if (item.type === "group") {
+            const hasActiveChild = item.children.some(c => location.pathname === c.path);
+            // Open if explicitly selected, OR (has active child AND hasn't been explicitly closed)
+            const isOpen = openGroup === item.id || (openGroup === "" && hasActiveChild);
+
+            return (
+              <div key={item.id}>
+                <motion.div 
+                  whileHover={{ background: "rgba(255,255,255,0.05)" }}
+                  onClick={() => { 
+                    if (!collapsed) {
+                      setOpenGroup(isOpen ? "NONE" : item.id);
+                    }
+                  }}
+                  style={{ 
+                    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
+                    color: hasActiveChild ? "#fff" : "rgba(255,255,255,0.7)",
+                    marginBottom: 2
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <item.icon size={20} color={hasActiveChild ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0 }} />
+                    {!collapsed && <span style={{ fontSize: 15, fontWeight: hasActiveChild ? 700 : 500 }}>{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <motion.div animate={{ rotate: isOpen ? 90 : 0 }}><ChevronRight size={16} /></motion.div>
+                  )}
+                </motion.div>
+                
+                <AnimatePresence>
+                  {!collapsed && isOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 44, paddingBottom: 8 }}>
+                        {item.children.map(child => {
+                          const isChildActive = location.pathname === child.path;
+                          return (
+                            <Link key={child.path} to={child.path} style={{ textDecoration: "none" }}>
+                              <div style={{ 
+                                padding: "8px 12px", borderRadius: 8, fontSize: 14, 
+                                color: isChildActive ? ACCENT_COLOR : "rgba(255,255,255,0.6)",
+                                fontWeight: isChildActive ? 700 : 500,
+                                background: isChildActive ? "rgba(212,160,23,0.1)" : "transparent"
+                              }}>
+                                {child.label}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          }
+        })}
+      </div>
+
+      <div style={{ margin: "16px 24px 0", height: 1, background: "rgba(255,255,255,0.1)" }} />
+
+      {/* Development Preview Badge */}
+      {!collapsed && (
+        <div style={{ margin: "16px 24px 0", padding: "8px 12px", background: "rgba(212,160,23,0.1)", borderRadius: 8, border: "1px dashed rgba(212,160,23,0.3)" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: ACCENT_COLOR, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Demo Version</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Version 2.0 Development Preview</div>
+        </div>
       )}
 
-      <aside style={{
-        position: "fixed", top: 0, left: 0, width: 260, height: "100vh", zIndex: 50,
-        display: "flex", flexDirection: "column",
-        background: "linear-gradient(180deg, #0D2418 0%, #0a1e12 60%, #071510 100%)",
-        boxShadow: "4px 0 30px rgba(0,0,0,0.4)",
-        fontFamily: "'DM Sans', sans-serif",
-        transform: open ? "translateX(0)" : "translateX(-100%)",
-        transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
-      }} className="hallmaster-sidebar">
-
-        {/* ── LOGO ── */}
-        <div style={{ padding: "22px 20px 18px", borderBottom: "1px solid rgba(212,160,23,0.15)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Logo size={44} />
-            <div style={{ flex: 1 }}>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1.2, margin: 0 }}>
-                Venueza
-              </h1>
-              <p style={{ fontSize: 11, color: "#D4A017", letterSpacing: 1, marginTop: 2, margin: 0 }}>വെന്യൂസ</p>
-            </div>
-            <button
-              onClick={onClose}
-              style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, padding: 6, cursor: "pointer", color: "rgba(255,255,255,0.5)", display: "flex" }}
-              className="sidebar-close-btn"
-            >
-              <X size={16} />
-            </button>
+      {/* User Profile Footer */}
+      <div style={{ padding: "16px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: ACCENT_COLOR, color: PRIMARY_COLOR, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, flexShrink: 0 }}>
+            {user?.name?.charAt(0) || "U"}
           </div>
-        </div>
-
-        {/* ── VENUE CARD ── */}
-        <div style={{ padding: "12px 14px 6px", flexShrink: 0 }}>
-          <div style={{
-            background: "linear-gradient(135deg, rgba(212,160,23,0.1), rgba(27,67,50,0.35))",
-            border: "1px solid rgba(212,160,23,0.18)",
-            borderRadius: 12, padding: "11px 13px",
-            display: "flex", alignItems: "center", gap: 10,
-          }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #1B4332, #2D6A4F)",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 16 }}>🏛️</span>
-            </div>
+          {!collapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {venueInfo.name}
-              </p>
-              <p style={{ fontSize: 10, color: "rgba(212,160,23,0.8)", margin: "2px 0 0" }}>
-                📍 {venueInfo.location}
-              </p>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || "Venueza User"}</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{role}</div>
             </div>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
-          </div>
+          )}
         </div>
-
-        {/* ── NAV LABEL ── */}
-        <p style={{ fontSize: 9, letterSpacing: 2.5, color: "rgba(255,255,255,0.22)", fontWeight: 700, padding: "12px 20px 5px", margin: 0, flexShrink: 0 }}>
-          NAVIGATION
-        </p>
-
-        {/* ── NAV ITEMS ── */}
-        <nav style={{ flex: 1, padding: "0 10px 8px", overflowY: "auto" }}>
-          {navItems.map((item) => {
-            const NavIcon = item.icon;
-            const { to, label, badge } = item;
-            return (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              onClick={onClose}
-              style={({ isActive }) => ({
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 12px", borderRadius: 11,
-                fontSize: 13.5, fontWeight: isActive ? 600 : 500,
-                textDecoration: "none", marginBottom: 3,
-                transition: "all 0.18s ease",
-                ...(isActive
-                  ? {
-                      background: "linear-gradient(135deg, rgba(27,67,50,0.95), rgba(45,106,79,0.5))",
-                      color: "#fff",
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-                      borderLeft: "3px solid #D4A017",
-                      paddingLeft: 9,
-                    }
-                  : {
-                      color: "rgba(255,255,255,0.58)",
-                      borderLeft: "3px solid transparent",
-                    }
-                ),
-              })}
-              onMouseEnter={e => {
-                if (!e.currentTarget.style.borderLeftColor.includes("D4A017")) {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                  e.currentTarget.style.color = "#fff";
-                }
-              }}
-              onMouseLeave={e => {
-                if (!e.currentTarget.style.borderLeftColor.includes("D4A017")) {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "rgba(255,255,255,0.58)";
-                }
-              }}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "rgba(255,255,255,0.06)",
-              }}>
-                <NavIcon size={16} />
-              </div>
-              <span style={{ flex: 1 }}>{label}</span>
-              {badge > 0 && (
-                <span style={{
-                  background: "#D4A017", color: "#0D2418", fontSize: 10, fontWeight: 800,
-                  borderRadius: 20, padding: "2px 7px", lineHeight: 1.4,
-                }}>
-                  {badge}
-                </span>
-              )}
-            </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* ── DIVIDER ── */}
-        <div style={{ height: 1, background: "rgba(212,160,23,0.1)", margin: "0 16px", flexShrink: 0 }} />
-
-        {/* ── USER PROFILE + ACTIONS ── */}
-        <div style={{ padding: "12px 14px 16px", flexShrink: 0 }}>
-          {/* Profile row */}
-          <div style={{
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 12, padding: "10px 12px",
-            display: "flex", alignItems: "center", gap: 10, marginBottom: 10,
-          }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: "linear-gradient(135deg, #1B4332, #40916C)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 15, fontWeight: 800, color: "#D4A017", flexShrink: 0,
-            }}>
-              {(user?.name || venueInfo.ownerName || "?").charAt(0).toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0 }}>{user?.role === "Tester" && user?.name === "Sandbox Auditor" ? "Manager" : user?.name || venueInfo.ownerName}</p>
-              {/* Role badge */}
-              <span style={{ fontSize: 9, fontWeight: 800, background: rc.bg, color: rc.text, borderRadius: 6, padding: "2px 7px", letterSpacing: "0.06em", textTransform: "uppercase", display: "inline-block", marginTop: 3 }}>
-                ● {role === "Tester" ? "Manager" : role}
-              </span>
-            </div>
-          </div>
-
-          {/* Role badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: rc.dot, background: `${rc.dot}22`, border: `1px solid ${rc.dot}44`, padding: "3px 10px", borderRadius: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              {role === "Tester" ? "MANAGER" : role}
-            </span>
-          </div>
-
-          {/* Settings & Logout */}
+        
+        {!collapsed && (
           <div style={{ display: "flex", gap: 8 }}>
-            {can("canViewSettings") && (
-              <NavLink
-                to="/settings"
-                onClick={onClose}
-                style={({ isActive }) => ({
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  padding: "9px 0", borderRadius: 9,
-                  background: isActive ? "rgba(212,160,23,0.15)" : "rgba(255,255,255,0.05)",
-                  border: isActive ? "1px solid rgba(212,160,23,0.3)" : "1px solid rgba(255,255,255,0.08)",
-                  cursor: "pointer", fontSize: 11.5, fontWeight: 500, textDecoration: "none",
-                  color: isActive ? "#D4A017" : "rgba(255,255,255,0.48)", transition: "all 0.15s",
-                  fontFamily: "'DM Sans', sans-serif",
-                })}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "rgba(255,255,255,0.48)"; }}
-              >
-                <Settings size={13} /> Settings
-              </NavLink>
-            )}
-            <button
-              onClick={() => { logout(); addToast("Logged out successfully 👋", "info"); }}
-              style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "9px 0", borderRadius: 9,
-                background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.18)",
-                cursor: "pointer", fontSize: 11.5, fontWeight: 500,
-                color: "rgba(255,110,90,0.8)", transition: "all 0.15s",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(192,57,43,0.22)"; e.currentTarget.style.color = "#ff7b6b"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(192,57,43,0.1)"; e.currentTarget.style.color = "rgba(255,110,90,0.8)"; }}
-            >
-              <LogOut size={13} /> Logout
+            <Link to="/settings" style={{ flex: 1, textDecoration: "none" }}>
+              <button style={{ width: "100%", padding: "8px", background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Settings size={14} /> Settings
+              </button>
+            </Link>
+            <button onClick={logout} style={{ padding: "8px", background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: 8, color: "#ef4444", cursor: "pointer" }}>
+              <LogOut size={14} />
             </button>
           </div>
-        </div>
-      </aside>
+        )}
+      </div>
 
-      {/* Desktop spacer — keeps content from going under sidebar */}
-      <div className="hallmaster-spacer" style={{ width: 260, flexShrink: 0 }} />
-
-      <style>{`
-        @media (max-width: 1023px) {
-          .hallmaster-spacer { display: none !important; }
-          .sidebar-close-btn { display: flex !important; }
-        }
-        @media (min-width: 1024px) {
-          .hallmaster-sidebar { transform: translateX(0) !important; }
-          .sidebar-close-btn { display: none !important; }
-        }
-      `}</style>
-    </>
+    </motion.div>
   );
 }

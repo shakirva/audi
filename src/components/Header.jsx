@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, Bell, ChevronDown, Monitor, Database, AlertTriangle } from "lucide-react";
+import { Menu, Bell, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 const notifications = [];
@@ -16,6 +16,7 @@ export default function Header({ title, onMenuClick }) {
 
   const [showEnvDropdown, setShowEnvDropdown] = useState(false);
   const [showSandboxConfirm, setShowSandboxConfirm] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const handleEnterSandbox = () => {
     setShowSandboxConfirm(false);
@@ -103,6 +104,18 @@ export default function Header({ title, onMenuClick }) {
         )}
       </div>
 
+      {/* Feedback Button */}
+      <button
+        onClick={() => setShowFeedbackModal(true)}
+        style={{
+          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
+          background: "rgba(212,160,23,0.15)", color: "#a16207", marginRight: 8
+        }}
+      >
+        <MessageSquarePlus size={16} />
+        Feedback
+      </button>
+
       {/* Environment Switcher */}
       {canSwitch && (
         <div style={{ position: "relative", marginRight: 8 }}>
@@ -173,6 +186,26 @@ export default function Header({ title, onMenuClick }) {
                 Enter Sandbox
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: "#fff", width: 500, borderRadius: 20, padding: 24, boxShadow: "0 25px 80px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: 0 }}>What would you like to improve?</h3>
+              <button onClick={() => setShowFeedbackModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}><X size={20} /></button>
+            </div>
+            <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 16 }}>Your feedback helps us shape the next phase of Venueza ERP.</p>
+            <textarea
+              placeholder="Describe your ideas, workflows, or requested features here..."
+              style={{ width: "100%", height: 120, padding: 16, borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 14, resize: "none", marginBottom: 16, fontFamily: "inherit" }}
+            />
+            <button onClick={() => setShowFeedbackModal(false)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
+              Submit Feedback
+            </button>
           </div>
         </div>
       )}

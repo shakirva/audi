@@ -227,7 +227,7 @@ export default function Calendar() {
                   onClick={() => setShowModal(true)}
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0 }}
                 >
-                  <Plus size={12} /> Add
+                  <Plus size={12} /> New Enquiry
                 </button>
               </div>
 

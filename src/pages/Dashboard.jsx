@@ -1,494 +1,329 @@
-import { useState, useEffect } from "react";
-import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer,
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { 
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, RadialBarChart, RadialBar, Legend,
+  FunnelChart, Funnel, LabelList
 } from "recharts";
-import { Calendar, Users, IndianRupee, Clock, MessageCircle, Database } from "lucide-react";
-import StatCard from "../components/StatCard";
-import BookingModal from "../components/BookingModal";
-import { useNavigate } from "react-router-dom";
-import { useBookings } from "../context/BookingsContext";
+import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
 import { useRole } from "../context/RoleContext";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED COMPONENTS & MOCK DATA
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BRAND = {
+  primary: "#1B4332",
+  primaryLight: "#2D6A4F",
+  accent: "#D4A017",
+  success: "#10b981",
+  warning: "#f59e0b",
+  info: "#0ea5e9",
+  danger: "#ef4444"
+};
+
+const revenueData = [ { name: "Jan", uv: 4500 }, { name: "Feb", uv: 5200 }, { name: "Mar", uv: 3800 }, { name: "Apr", uv: 2100 }, { name: "May", uv: 6800 }, { name: "Jun", uv: 8500 } ];
+const eventDistData = [ { name: "Wedding", value: 65, color: BRAND.primary }, { name: "Reception", value: 45, color: BRAND.primaryLight }, { name: "Corporate", value: 20, color: BRAND.accent }, { name: "Birthday", value: 10, color: BRAND.info } ];
+const occupancyData = [ { name: "Hall A", uv: 88, fill: BRAND.success }, { name: "Hall B", uv: 72, fill: BRAND.warning } ];
+const funnelData = [ { name: "Enquiry", value: 100, fill: "#e2e8f0" }, { name: "Booking", value: 25, fill: BRAND.success } ];
+
+const GradientCard = ({ title, value, gradient, delay }) => (
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4 }} whileHover={{ y: -5, scale: 1.02 }}
+    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, padding: 20, borderRadius: 20, color: "#fff", display: "flex", flexDirection: "column", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8, marginBottom: 4 }}>{title}</div>
+    <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
+  </motion.div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. MANAGER / OWNER MODE (Executive Cockpit)
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { bookingsAPI } from "../services/api";
 
-const todayStr = new Date().toISOString().split("T")[0];
-const PIE_COLORS = ["#1B4332", "#2D6A4F", "#D4A017", "#40916C", "#74C69D", "#95d5b2"];
-
-function getDateRange(filter) {
-  const now = new Date();
-  const pad = (d) => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().split("T")[0]; };
-  
-  if (filter === "Today") return { from: pad(now), to: pad(now) };
-  if (filter === "Week") {
-    const mon = new Date(now); mon.setDate(now.getDate() - now.getDay() + 1);
-    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-    return { from: pad(mon), to: pad(sun) };
-  }
-  if (filter === "Year") {
-    return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-12-31` };
-  }
-  // Month (default)
-  const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, "0");
-  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
-  return { from: `${y}-${m}-01`, to: `${y}-${m}-${lastDay}` };
-}
-
-function getPrevDateRange(filter) {
-  const now = new Date();
-  const pad = (d) => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().split("T")[0]; };
-
-  if (filter === "Today") {
-    const yest = new Date(now); yest.setDate(yest.getDate() - 1);
-    return { from: pad(yest), to: pad(yest) };
-  }
-  if (filter === "Week") {
-    const prevMon = new Date(now); prevMon.setDate(now.getDate() - now.getDay() + 1 - 7);
-    const prevSun = new Date(prevMon); prevSun.setDate(prevMon.getDate() + 6);
-    return { from: pad(prevMon), to: pad(prevSun) };
-  }
-  if (filter === "Year") {
-    return { from: `${now.getFullYear()-1}-01-01`, to: `${now.getFullYear()-1}-12-31` };
-  }
-  // Month
-  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0");
-  const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
-  return { from: `${y}-${m}-01`, to: `${y}-${m}-${lastDay}` };
-}
-
-const calcTrend = (curr, prev) => {
-  if (prev === 0) return curr > 0 ? "+100%" : "0%";
-  const pct = Math.round(((curr - prev) / prev) * 100);
-  return pct >= 0 ? `+${pct}%` : `${pct}%`;
-};
-
-const S = {
-  card: {
-    background: "#fff",
-    borderRadius: 16,
-    boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
-    padding: 24,
-  },
-  sectionTitle: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 16,
-  },
-};
-
-export default function Dashboard() {
-  const [showModal, setShowModal] = useState(false);
-  const [dateFilter, setDateFilter] = useState("Month");
-  const [comparisonStats, setComparisonStats] = useState(null);
-  const navigate = useNavigate();
-  const { bookings } = useBookings();
-  const { can, role } = useRole();
-
-  useEffect(() => {
-    if (role === "Owner" || role === "SuperAdmin") {
-      bookingsAPI.getComparisonStats()
-        .then(res => setComparisonStats(res.data))
-        .catch(err => console.error(err));
-    }
-  }, [role]);
-
-  const { from, to } = getDateRange(dateFilter);
-  const { from: prevFrom, to: prevTo } = getPrevDateRange(dateFilter);
-
-  const getDs = (d) => (d ? d.split("T")[0] : "");
-
-  const filtered = bookings.filter((b) => getDs(b.date) >= from && getDs(b.date) <= to);
-  const prevFiltered = bookings.filter((b) => getDs(b.date) >= prevFrom && getDs(b.date) <= prevTo);
-
-  const pending = filtered.filter((b) => b.status === "Pending Payment").length;
-  const totalRevenue = filtered
-    .filter((b) => b.status === "Confirmed" || b.status === "Completed")
-    .reduce((s, b) => s + Number(b.totalAmount || 0), 0);
-    
-  const prevRevenue = prevFiltered
-    .filter((b) => b.status === "Confirmed" || b.status === "Completed")
-    .reduce((s, b) => s + Number(b.totalAmount || 0), 0);
-
-  const customersCount = new Set(filtered.map((b) => b.phone)).size;
-  const prevCustomersCount = new Set(prevFiltered.map((b) => b.phone)).size;
-
-  const todayBookings = bookings.filter((b) => getDs(b.date) === todayStr);
-  const upcoming = [...bookings]
-    .filter((b) => getDs(b.date) >= todayStr && b.status !== "Cancelled")
-    .sort((a, b) => getDs(a.date).localeCompare(getDs(b.date)))
-    .slice(0, 6);
-
-  const DATE_FILTERS = ["Today", "Week", "Month", "Year"];
-
-  // Compute Event Types
-  const eventTypeMap = {};
-  filtered.forEach(b => {
-    eventTypeMap[b.eventType] = (eventTypeMap[b.eventType] || 0) + 1;
+function ExecutiveCockpit() {
+  const [stats, setStats] = React.useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    confirmedCount: 0,
+    pendingCount: 0,
+    enquiryCount: 0,
   });
-  const eventTypes = Object.keys(eventTypeMap).map(k => ({ name: k, value: eventTypeMap[k] }));
 
-  // Compute Monthly Revenue (for the past 6 months based on bookings)
-  const revenueMap = {};
-  bookings.forEach(b => {
-    if (b.status === "Confirmed" || b.status === "Completed") {
-      const monthStr = new Date(getDs(b.date)).toLocaleString('default', { month: 'short' });
-      revenueMap[monthStr] = (revenueMap[monthStr] || 0) + Number(b.totalAmount || 0);
-    }
-  });
-  
-  // Create an array of the last 6 months
-  const monthlyRevenue = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const m = d.toLocaleString('default', { month: 'short' });
-    monthlyRevenue.push({ month: m, revenue: revenueMap[m] || 0 });
-  }
+  React.useEffect(() => {
+    bookingsAPI.getStats()
+      .then(res => {
+        if (res.data?.data) {
+          setStats(res.data.data);
+        }
+      })
+      .catch(err => console.error("Failed to load dashboard stats", err));
+  }, []);
 
-  const quickActions = [
-    { label: "New Booking", emoji: "📅", color: "#1B4332", onClick: () => setShowModal(true),       permission: "canAddBooking" },
-    { label: "Calendar",    emoji: "📆", color: "#2D6A4F", onClick: () => navigate("/calendar"),     permission: null },
-    { label: "Payments",    emoji: "💰", color: "#b45309", onClick: () => navigate("/payments"),     permission: "canViewPayments" },
-    { label: "Reports",     emoji: "📊", color: "#1d4ed8", onClick: () => navigate("/reports"),      permission: "canViewReports" },
-  ];
+  const formatLakhs = (val) => `₹${(val / 100000).toFixed(1)}L`;
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", maxWidth: 1400 }}>
-
-      {/* ── DATE FILTER TOGGLE ── */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16, gap: 4, overflowX: "auto", paddingBottom: 8 }}>
-        {DATE_FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setDateFilter(f)}
-            style={{
-              padding: "6px 16px", borderRadius: 20, border: "1.5px solid",
-              borderColor: dateFilter === f ? "#1B4332" : "#e5e7eb",
-              background: dateFilter === f ? "#1B4332" : "#fff",
-              color: dateFilter === f ? "#fff" : "#6b7280",
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s",
-              whiteSpace: "nowrap", flexShrink: 0,
-            }}
-          >{f}</button>
-        ))}
-      </div>
-
-      {/* ── STAT CARDS ── */}
-      <div className="hm-stat-grid">
-        <StatCard title="Total Bookings" value={filtered.length}  sub={dateFilter}          icon={Calendar}      color="green" trend={calcTrend(filtered.length, prevFiltered.length)} trendUp={filtered.length >= prevFiltered.length} />
-        {can("canViewRevenue") && <StatCard title="Revenue"       value={`₹${(totalRevenue / 1000).toFixed(1)}k`} sub="Confirmed" icon={IndianRupee} color="gold" trend={calcTrend(totalRevenue, prevRevenue)} trendUp={totalRevenue >= prevRevenue} />}
-        {can("canViewRevenue") && <StatCard title="Pending"       value={pending}         sub="Awaiting payment"   icon={Clock}         color="red"   trend={`${pending} due`} trendUp={false} />}
-        <StatCard title="Customers"       value={customersCount} sub="Unique clients" icon={Users}  color="blue"  trend={`${customersCount - prevCustomersCount >= 0 ? "+" : ""}${customersCount - prevCustomersCount} new`} trendUp={customersCount >= prevCustomersCount} />
-      </div>
-
-      {/* ── DASHBOARD MAIN (FLEX WRAPPER FOR MOBILE ORDERING) ── */}
-      <div className="hm-dashboard-main">
-        {/* ── CHARTS ROW ── */}
-        <div className="hm-charts-grid">
-
-        {/* Bar Chart — Owner/Manager only */}
-        {can("canViewRevenue") && (
-        <div style={S.card}>
-          <p style={S.sectionTitle}>Monthly Revenue (₹)</p>
-          <ResponsiveContainer width="100%" height={280} className="hm-mobile-chart">
-            <BarChart data={monthlyRevenue} barCategoryGap="30%">
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}k`} />
-              <Tooltip
-                formatter={(v) => [`₹${v.toLocaleString()}`, "Revenue"]}
-                contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.12)", fontSize: 12 }}
-                cursor={{ fill: "rgba(27,67,50,0.05)" }}
-              />
-              <Bar dataKey="revenue" fill="#1B4332" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+    <>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px", color: "#0f172a", letterSpacing: "-1px" }}>Good Morning, Shakir 👋</h1>
+          <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
         </div>
-        )}
-
-        {/* Pie Chart */}
-        <div style={S.card}>
-          <p style={S.sectionTitle}>Event Types</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={eventTypes} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={42} paddingAngle={3}>
-                {eventTypes.map((_, i) => (
-                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-            {eventTypes.map((e, i) => (
-              <div key={e.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 9, height: 9, borderRadius: "50%", background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>{e.name}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{e.value}</span>
-              </div>
-            ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Health Score</div>
+            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><TrendingUp size={14}/> +4% this week</div>
+          </div>
+          <div style={{ position: "relative", width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="60" height="60" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+              <motion.circle cx="50" cy="50" r="40" fill="none" stroke={BRAND.success} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * 0.06} />
+            </svg>
+            <div style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>94%</div>
           </div>
         </div>
+      </motion.div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 24, marginBottom: 24 }}>
+        <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
+        <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
+        <GradientCard title="Confirmed" value={stats.confirmedCount} gradient={["#40916C", "#52B788"]} delay={0.3} />
+        <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.4} />
+        <GradientCard title="Pending Pmt" value={stats.pendingCount} gradient={["#d97706", "#f59e0b"]} delay={0.5} />
+        <GradientCard title="Upcoming" value="14" gradient={["#0ea5e9", "#38bdf8"]} delay={0.6} />
       </div>
 
-      {/* ── BOTTOM ROW ── */}
-      <div className="hm-bottom-grid">
-
-        {/* Today's Events + Upcoming */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* Today's Events */}
-          <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-              <p style={{ ...S.sectionTitle, marginBottom: 0 }}>Today's Events</p>
-              <span style={{ fontSize: 11, fontWeight: 700, background: "#F0F4EF", color: "#1B4332", padding: "3px 12px", borderRadius: 20 }}>
-                {todayBookings.length} booked
-              </span>
-            </div>
-            {todayBookings.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "28px 0", color: "#d1d5db" }}>
-                <Calendar size={36} style={{ margin: "0 auto 10px" }} />
-                <p style={{ fontSize: 13, color: "#9ca3af" }}>No events scheduled for today</p>
-              </div>
-            ) : (
-              todayBookings.map((b) => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F0F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {b.eventType === "Wedding" ? "💍" : b.eventType === "Conference" ? "💼" : b.eventType === "Birthday" ? "🎂" : "🎉"}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 150 }}>
-                    <p style={{ fontWeight: 600, fontSize: 12, color: "#111827" }}>{b.customerName}</p>
-                    <p style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}>{b.eventType} · {b.session} · {b.hall}</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#1B4332" }}>{b.guests} guests</p>
-                    {can("canViewRevenue") && <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>₹{b.totalAmount.toLocaleString()}</p>}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Upcoming Bookings */}
-          <div style={S.card}>
-            <p style={S.sectionTitle}>Upcoming Bookings</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {upcoming.map((b, idx) => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: idx < upcoming.length - 1 ? "1px solid #f3f4f6" : "none", flexWrap: "wrap" }}>
-                  <div style={{ textAlign: "center", minWidth: 38, background: "#F0F4EF", borderRadius: 8, padding: "4px 6px", flexShrink: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 800, color: "#1B4332", lineHeight: 1 }}>{new Date(b.date).getDate()}</p>
-                    <p style={{ fontSize: 8, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>
-                      {new Date(b.date).toLocaleString("en", { month: "short" })}
-                    </p>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 140 }}>
-                    <p style={{ fontWeight: 600, fontSize: 12, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.customerName}</p>
-                    <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>{b.eventType} · {b.hall}</p>
-                  </div>
-                  {can("canViewRevenue") && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#1B4332", background: "#F0F4EF", padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
-                    ₹{(b.totalAmount / 1000).toFixed(0)}k
-                  </span>
-                  )}
-                </div>
-              ))}
-            </div>
+      {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 24 }}>
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Revenue Trend</h3>
+          <div style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `₹${val/1000}k`} />
+                <Tooltip />
+                <Area type="monotone" dataKey="uv" stroke={BRAND.primary} strokeWidth={4} fill="url(#colorUv)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div style={S.card}>
-          <p style={S.sectionTitle}>Quick Actions</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 10 }}>
-            {quickActions.filter(a => !a.permission || can(a.permission)).map((a) => (
-              <button
-                key={a.label}
-                onClick={a.onClick}
-                style={{
-                  padding: "20px 10px",
-                  borderRadius: 14,
-                  border: "1.5px solid " + a.color + "22",
-                  background: a.color + "0a",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: a.color,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 8,
-                  transition: "all 0.15s",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = a.color + "18";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 4px 16px " + a.color + "22";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = a.color + "0a";
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                <span style={{ fontSize: 26 }}>{a.emoji}</span>
-                {a.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Summary stats */}
-          <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid #f3f4f6" }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: "#9ca3af", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {dateFilter === "Today" ? "Today" : dateFilter === "Week" ? "This Week" : dateFilter === "Year" ? "This Year" : "This Month"}
-            </p>
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.accent} /> Today's Events</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
-              { label: "New bookings",   value: filtered.length, color: "#1B4332" },
-              ...(can("canViewRevenue") ? [{ label: "Revenue", value: "₹" + filtered.filter(b => b.status === "Confirmed" || b.status === "Completed").reduce((s,b)=>s+b.totalAmount,0).toLocaleString(), color: "#D4A017" }] : []),
-              { label: "Pending dues",   value: pending + " bookings", color: "#C0392B" },
-            ].map(item => (
-              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: "#6b7280" }}>{item.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: item.color }}>{item.value}</span>
+              { title: "Wedding - Emerald Hall", time: "09:00 AM - 04:00 PM", host: "Amina & Shanid", status: "Ongoing" },
+              { title: "Corporate - Royal Hall", time: "11:00 AM - 02:00 PM", host: "ABC Builders", status: "Ongoing" },
+              { title: "Birthday - Orchid Hall", time: "02:00 PM - 06:00 PM", host: "Ayaan", status: "Upcoming" },
+              { title: "Reception - Emerald Hall", time: "05:00 PM - 10:00 PM", host: "Rashid & Sameeha", status: "Upcoming" }
+            ].map((evt, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{evt.title}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 2 }}>{evt.host}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{evt.time}</div>
+                </div>
+                <div style={{ background: evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
+                  {evt.status}
+                </div>
               </div>
             ))}
           </div>
+        </div>
+      </div>
 
-          {/* Sandbox vs Production Comparison (Owner/SuperAdmin only) */}
-          {comparisonStats && (
-            <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid #f3f4f6" }}>
-              <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#1B4332", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                <Database size={14} /> Environment Overview
-              </p>
-              
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {/* Production */}
-                <div style={{ background: "#f0fdf4", padding: "12px", borderRadius: 10, border: "1px solid #bbf7d0" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: "#166534", margin: "0 0 6px 0", textTransform: "uppercase" }}>Production</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Revenue</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#1B4332" }}>₹{(comparisonStats.production.revenue / 1000).toFixed(1)}k</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Bookings</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#1B4332" }}>{comparisonStats.production.bookings}</span>
-                  </div>
-                </div>
-
-                {/* Sandbox */}
-                <div style={{ background: "#fffbeb", padding: "12px", borderRadius: 10, border: "1px solid #fde68a" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: "#b45309", margin: "0 0 6px 0", textTransform: "uppercase" }}>Sandbox</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Revenue</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309" }}>₹{(comparisonStats.sandbox.revenue / 1000).toFixed(1)}k</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Bookings</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309" }}>{comparisonStats.sandbox.bookings}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Row 2: Event Distribution (4 cols) + Urgent Enquiries (8 cols) */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24 }}>
+        
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Event Distribution</h3>
+          <div style={{ height: 180 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={eventDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                  {eventDistData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-      </div>
-
-      {/* ── WHATSAPP FOLLOW-UP REMINDERS ── */}
-      {(() => {
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        const threeDaysAgoStr = threeDaysAgo.toISOString().split("T")[0];
-
-        const followUps = bookings.filter(b =>
-          (b.status === "Enquiry" || b.status === "Pending Payment") &&
-          b.createdAt && b.createdAt.split("T")[0] <= threeDaysAgoStr
-        );
-
-        // Also include bookings without createdAt but with old dates
-        const followUpsByDate = bookings.filter(b =>
-          (b.status === "Enquiry" || b.status === "Pending Payment") &&
-          !b.createdAt && getDs(b.date) <= threeDaysAgoStr
-        );
-
-        const allFollowUps = [...followUps, ...followUpsByDate];
-
-        if (allFollowUps.length === 0) return null;
-
-        const getWhatsAppUrl = (b) => {
-          const msg = b.status === "Enquiry"
-            ? `Hi ${b.customerName.split(" ")[0]}, this is from Sreelakshmi Convention Centre. You had enquired about our ${b.hall} for your ${b.eventType} on ${b.date}. Would you like to confirm the booking? We'd be happy to assist! 🏛️`
-            : `Hi ${b.customerName.split(" ")[0]}, this is from Sreelakshmi Convention Centre. Your booking for ${b.eventType} on ${b.date} at ${b.hall} has a pending payment of ₹${(b.totalAmount - b.advance).toLocaleString()}. Kindly complete the payment at your earliest convenience. Thank you! 🙏`;
-          const phone = b.phone.replace(/[^0-9]/g, "");
-          const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-          return `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
-        };
-
-        return (
-          <div style={{ ...S.card, border: "1.5px solid #bbf7d0", background: "linear-gradient(135deg, #f0fdf4, #fefffe)", marginTop: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <MessageCircle size={18} color="#15803d" />
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><MessageCircle size={18} color={BRAND.primary} /> Urgent Enquiries</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {[
+              { id: "5 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
+              { id: "3 Quotations", details: "Pending Signature", status: "Waiting" },
+              { id: "2 Advances", details: "Payment Pending", status: "Action Needed" }
+            ].map((enq, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{enq.id}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{enq.details}</div>
+                </div>
+                <div style={{ background: enq.status === "Urgent" ? "#fee2e2" : "#f1f5f9", color: enq.status === "Urgent" ? "#b91c1c" : "#475569", padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
+                  {enq.status}
+                </div>
               </div>
-              <div>
-                <p style={{ ...S.sectionTitle, marginBottom: 0, color: "#15803d" }}>WhatsApp Follow-Up</p>
-                <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>{allFollowUps.length} booking{allFollowUps.length !== 1 ? "s" : ""} need follow-up (3+ days old)</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {allFollowUps.slice(0, 5).map(b => {
-                const statusColor = b.status === "Enquiry" ? { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6" }
-                  : { bg: "#fef3c7", color: "#92400e", dot: "#f59e0b" };
-                return (
-                  <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: 0 }}>{b.customerName}</p>
-                        <span style={{ fontSize: 9, fontWeight: 700, background: statusColor.bg, color: statusColor.color, padding: "1px 6px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                          <span style={{ width: 4, height: 4, borderRadius: "50%", background: statusColor.dot }} />
-                          {b.status}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>{b.eventType} · {b.hall} · {b.date}</p>
-                    </div>
-                    <a
-                      href={getWhatsAppUrl(b)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "flex", alignItems: "center", gap: 5,
-                        padding: "7px 14px", borderRadius: 8, border: "none",
-                        background: "#25D366", color: "#fff",
-                        fontSize: 11, fontWeight: 700, textDecoration: "none",
-                        cursor: "pointer", flexShrink: 0,
-                        transition: "all 0.15s",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#1da851"}
-                      onMouseLeave={e => e.currentTarget.style.background = "#25D366"}
-                    >
-                      <MessageCircle size={13} /> Send
-                    </a>
-                  </div>
-                );
-              })}
-            </div>
-
-            {allFollowUps.length > 5 && (
-              <p style={{ fontSize: 11, color: "#6b7280", marginTop: 10, textAlign: "center" }}>
-                +{allFollowUps.length - 5} more bookings need follow-up
-              </p>
-            )}
+            ))}
           </div>
-        );
-      })()}
-
+        </div>
+        
       </div>
-      {/* ── END DASHBOARD MAIN ── */}
+    </>
+  );
+}
 
-      {showModal && <BookingModal onClose={() => setShowModal(false)} />}
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. RECEPTION MODE (Sales & Enquiries)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ReceptionCockpit() {
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 32 }}>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 20px 40px rgba(13,36,24,0.2)" }}>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px" }}>Reception Desk 👋</h1>
+          <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Fast creation and calendar view.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <button style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Plus size={20} /> New Enquiry
+            </button>
+            <button style={{ padding: "16px", background: "#fff", color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Calendar size={20} /> Check Availability
+            </button>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Today's Live Events</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { title: "Wedding - Emerald Hall", time: "09:00 AM - 04:00 PM", host: "Amina & Shanid", status: "Ongoing" },
+              { title: "Corporate - Royal Hall", time: "11:00 AM - 02:00 PM", host: "ABC Builders", status: "Ongoing" }
+            ].map((evt, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.title}</div>
+                  <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.host} • {evt.time}</div>
+                </div>
+                <div style={{ background: evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
+                  {evt.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Follow-up Queue (CRM)</h3>
+        {/* Mock Kanban style for reception */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
+          {["Call Back", "Visit Scheduled", "Quotation Sent"].map((status, i) => (
+            <div key={i} style={{ background: "#f1f5f9", borderRadius: 24, padding: 24, minHeight: 300 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "#64748b", marginBottom: 16, letterSpacing: 1 }}>{status}</div>
+              <div style={{ background: "#fff", padding: 16, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", marginBottom: 12 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Enquiry ENQ-10{i}</div>
+                <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Needs callback regarding catering.</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. OPERATIONS MODE (Jobs & Vendors)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function OperationsCockpit() {
+  return (
+    <>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div>
+          <h1 style={{ fontSize: 40, fontWeight: 800, margin: "0 0 16px", color: "#0f172a", letterSpacing: "-1px" }}>Operations Command 🛠️</h1>
+          <p style={{ margin: 0, fontSize: 18, color: "#64748b", fontWeight: 500 }}>Track live jobs, vendors, and hall logistics.</p>
+        </div>
+      </motion.div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
+        <GradientCard title="Active Jobs" value="8" gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
+        <GradientCard title="Vendor Arrivals" value="12" gradient={["#D4A017", "#f59e0b"]} delay={0.2} />
+        <GradientCard title="Checklists Pending" value="4" gradient={["#52B788", "#74C69D"]} delay={0.3} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 32 }}>
+        <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px", display: "flex", alignItems: "center", gap: 8 }}><Workflow size={20} color="#0ea5e9"/> Job Board</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { id: "JOB-1142", title: "Wedding Logistics", hall: "Emerald Hall", progress: 85 },
+              { id: "JOB-1143", title: "Corporate Setup", hall: "Royal Hall", progress: 60 }
+            ].map(job => (
+              <div key={job.id} style={{ border: "1px solid #e2e8f0", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#0ea5e9", marginBottom: 4 }}>{job.id}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{job.title}</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><MapPin size={16}/> {job.hall}</div>
+                </div>
+                <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${job.progress}%` }} transition={{ duration: 1 }} style={{ height: "100%", background: "#0ea5e9" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px", display: "flex", alignItems: "center", gap: 8 }}><Truck size={20} color="#f59e0b"/> Vendors</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { name: "Alpha Catering", eta: "Arrived", color: "#10b981" },
+              { name: "Lumina Decorators", eta: "ETA 2:00 PM", color: "#f59e0b" }
+            ].map((v, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{v.name}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: v.color }}>{v.eta}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN EXPORT
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function Dashboard() {
+  const { role } = useRole();
+
+  return (
+    <div style={{ padding: "24px 32px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+      {role === "Owner" || role === "Manager" || role === "Admin" ? (
+        <ExecutiveCockpit />
+      ) : role === "Sales" ? (
+        <ReceptionCockpit />
+      ) : role === "Operations" ? (
+        <OperationsCockpit />
+      ) : (
+        <ExecutiveCockpit />
+      )}
     </div>
   );
 }

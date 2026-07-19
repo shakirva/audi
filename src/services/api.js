@@ -30,7 +30,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("hm_token");
       localStorage.removeItem("hm_user");
-      // Don't force redirect here — let the context handle it
     }
     return Promise.reject(error);
   }
@@ -49,39 +48,127 @@ export const authAPI = {
 // BOOKINGS
 // ═══════════════════════════════════
 export const bookingsAPI = {
-  getAll: (params) => api.get("/bookings", { params }),
-  getById: (id) => api.get(`/bookings/${id}`),
-  create: (data) => api.post("/bookings", data),
-  createEnquiry: (data) => api.post("/bookings/enquiry", data),
-  update: (id, data) => api.put(`/bookings/${id}`, data),
-  updateStatus: (id, status) => api.patch(`/bookings/${id}/status`, { status }),
-  remove: (id) => api.delete(`/bookings/${id}`),
-  getStats: () => api.get("/bookings/stats/dashboard"),
-  getComparisonStats: () => api.get("/bookings/stats/comparison"),
+  getAll: (params) => api.get("/v1/bookings", { params }),
+  getById: (id) => api.get(`/v1/bookings/${id}`),
+  create: (data) => api.post("/v1/bookings", data),
+  createEnquiry: (data) => api.post("/v1/bookings/enquiry", data),
+  update: (id, data) => api.put(`/v1/bookings/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/v1/bookings/${id}/status`, { status }),
+  remove: (id) => api.delete(`/v1/bookings/${id}`),
+  getStats: () => api.get("/v1/bookings/stats/dashboard"),
+  getComparisonStats: () => api.get("/v1/bookings/stats/comparison"),
 };
 
 // ═══════════════════════════════════
 // EXPENSES
 // ═══════════════════════════════════
 export const expensesAPI = {
-  getAll: (params) => api.get("/expenses", { params }),
-  create: (data) => api.post("/expenses", data),
-  update: (id, data) => api.put(`/expenses/${id}`, data),
-  remove: (id) => api.delete(`/expenses/${id}`),
+  getAll: (params) => api.get("/v1/expenses", { params }),
+  create: (data) => api.post("/v1/expenses", data),
+  update: (id, data) => api.put(`/v1/expenses/${id}`, data),
+  remove: (id) => api.delete(`/v1/expenses/${id}`),
 };
 
 // ═══════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════
 export const settingsAPI = {
-  get: () => api.get("/settings"),
-  getPublic: (slug) => api.get(`/settings/public/${slug}`),
-  update: (data) => api.put("/settings", data),
-  getCustomers: () => api.get("/settings/customers"),
-  resetSandbox: () => api.post("/settings/sandbox/reset"),
-  generateTester: (data) => api.post("/settings/tester", data),
+  get: () => api.get("/v1/settings"),
+  getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
+  update: (data) => api.put("/v1/settings", data),
+  getCustomers: () => api.get("/v1/settings/customers"),
+  resetSandbox: () => api.post("/v1/settings/sandbox/reset"),
+  generateTester: (data) => api.post("/v1/settings/tester", data),
 };
 
+// ═══════════════════════════════════
+// ENQUIRIES (CRM)
+// ═══════════════════════════════════
+export const enquiriesAPI = {
+  getAll: (params) => api.get("/v1/enquiries", { params }),
+  getById: (id) => api.get(`/v1/enquiries/${id}`),
+  create: (data) => api.post("/v1/enquiries", data),
+  update: (id, data) => api.put(`/v1/enquiries/${id}`, data),
+  updateStatus: (id, status) => api.put(`/v1/enquiries/${id}`, { status }),
+  remove: (id) => api.delete(`/v1/enquiries/${id}`),
+};
+
+// ═══════════════════════════════════
+// CUSTOMERS
+// ═══════════════════════════════════
+export const customersAPI = {
+  getAll: (params) => api.get("/v1/customers", { params }),
+  getById: (id) => api.get(`/v1/customers/${id}`),
+  create: (data) => api.post("/v1/customers", data),
+  update: (id, data) => api.put(`/v1/customers/${id}`, data),
+  findOrCreate: (data) => api.post("/v1/customers/find-or-create", data),
+};
+
+// ═══════════════════════════════════
+// AGREEMENTS
+// ═══════════════════════════════════
+export const agreementsAPI = {
+  getAll: (params) => api.get("/v1/agreements", { params }),
+  getById: (id) => api.get(`/v1/agreements/${id}`),
+  create: (data) => api.post("/v1/agreements", data),
+  update: (id, data) => api.put(`/v1/agreements/${id}`, data),
+  generate: (bookingId) => api.post(`/v1/agreements/generate/${bookingId}`),
+};
+
+// ═══════════════════════════════════
+// PAYMENTS
+// ═══════════════════════════════════
+export const paymentsAPI = {
+  getAll: (params) => api.get("/v1/payments", { params }),
+  getById: (id) => api.get(`/v1/payments/${id}`),
+  create: (data) => api.post("/v1/payments", data),
+  getReceipt: (id) => api.get(`/v1/payments/${id}/receipt`),
+};
+
+// ═══════════════════════════════════
+// JOBS
+// ═══════════════════════════════════
+export const jobsAPI = {
+  getAll: (params) => api.get("/v1/jobs", { params }),
+  getById: (id) => api.get(`/v1/jobs/${id}`),
+  create: (data) => api.post("/v1/jobs", data),
+  update: (id, data) => api.put(`/v1/jobs/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/v1/jobs/${id}`, { status }),
+  updateChecklist: (id, data) => api.put(`/v1/jobs/${id}/checklist`, data),
+};
+
+// ═══════════════════════════════════
+// MASTERS (Halls, Event Types, etc.)
+// ═══════════════════════════════════
+export const mastersAPI = {
+  getAll: (params) => api.get("/v1/masters", { params }),
+  getByType: (type) => api.get("/v1/masters", { params: { type } }),
+  create: (data) => api.post("/v1/masters", data),
+  update: (id, data) => api.put(`/v1/masters/${id}`, data),
+  remove: (id) => api.delete(`/v1/masters/${id}`),
+};
+
+// ═══════════════════════════════════
+// FOLLOW-UPS
+// ═══════════════════════════════════
+export const followupsAPI = {
+  getAll: (params) => api.get("/v1/followups", { params }),
+  create: (data) => api.post("/v1/followups", data),
+  update: (id, data) => api.put(`/v1/followups/${id}`, data),
+};
+
+// ═══════════════════════════════════
+// ACCOUNTS (Cash Book / Bank Book)
+// ═══════════════════════════════════
+export const accountsAPI = {
+  getCashBook: (params) => api.get("/v1/accounts/cash", { params }),
+  getBankBook: (params) => api.get("/v1/accounts/bank", { params }),
+  getStatement: (customerId) => api.get(`/v1/accounts/statement/${customerId}`),
+};
+
+// ═══════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════
 export const adminAPI = {
   getTenants: () => api.get("/admin/tenants"),
   createTenant: (data) => api.post("/admin/tenants", data),

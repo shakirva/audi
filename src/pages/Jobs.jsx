@@ -1,0 +1,376 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileText, CheckSquare, Plus, ArrowLeft, RefreshCw, AlertCircle, Printer } from "lucide-react";
+import { jobsAPI } from "../services/api";
+import { useToast } from "../components/Toast";
+
+function JobSkeleton() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #eaeaea", padding: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div>
+          <div style={{ height: 16, background: "#f1f5f9", borderRadius: 6, width: 80, marginBottom: 8, animation: "pulse 1.5s infinite" }} />
+          <div style={{ height: 20, background: "#f1f5f9", borderRadius: 6, width: 150, marginBottom: 4, animation: "pulse 1.5s infinite" }} />
+          <div style={{ height: 14, background: "#f1f5f9", borderRadius: 6, width: 100, animation: "pulse 1.5s infinite" }} />
+        </div>
+        <div style={{ height: 20, background: "#f1f5f9", borderRadius: 10, width: 70, animation: "pulse 1.5s infinite" }} />
+      </div>
+      <div style={{ height: 36, background: "#f1f5f9", borderRadius: 8, marginBottom: 20, animation: "pulse 1.5s infinite" }} />
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ height: 16, background: "#f1f5f9", borderRadius: 6, width: 60, animation: "pulse 1.5s infinite" }} />
+        <div style={{ height: 16, background: "#f1f5f9", borderRadius: 6, width: 40, animation: "pulse 1.5s infinite" }} />
+      </div>
+    </div>
+  );
+}
+
+function printAgreement(agr) {
+  const customerName = agr.Booking?.Customer?.name || agr.customerName || "";
+  const phone = agr.Booking?.Customer?.phone || "";
+  const address = agr.Booking?.Customer?.address || "";
+  const eventType = agr.Booking?.eventType || "";
+  const dateStr = agr.Booking?.date ? new Date(agr.Booking.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
+  const session = agr.Booking?.session || "";
+  const total = agr.totalAmount || agr.Booking?.totalAmount || 0;
+  const advance = agr.advanceAmount || agr.Booking?.advance || 0;
+  const balance = agr.balanceAmount || (total - advance) || 0;
+  const guests = agr.Booking?.guestCount || "";
+  const agNum = agr.agreementNumber || `AGR-${String(agr.id || "").padStart(3,"0")}`;
+  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
+
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
+    .page-border { border: 4px solid #d32f2f; padding: 4px; }
+    .inner-border { border: 2px solid #d32f2f; padding: 20px; }
+    .header { text-align: center; color: #d32f2f; }
+    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; }
+    .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
+    .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
+    .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px 0; font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
+    .label { font-weight: bold; }
+    .value { border-bottom: 1px dashed #000; font-family: 'Caveat', cursive; font-size: 18px; padding-left: 10px; }
+    .footer-note { text-align: center; color: #d32f2f; font-weight: bold; font-style: italic; margin-bottom: 40px; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; text-align: center; }
+    .sig-line { border-top: 1px dashed #000; padding-top: 5px; width: 300px; }
+    @media print { body { padding: 0; margin: 10px; } .page-border { border: 2px solid #d32f2f; } }
+  </style></head><body>
+  <div class="page-border"><div class="inner-border">
+    <div class="header">
+      <h1>LAUREL GARDEN</h1>
+      <div class="sub-header">GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN</div>
+    </div>
+    <div class="title">CONTRACT AGREEMENT</div>
+    <div class="meta">
+      <div>REF NO: <span>${agNum}</span></div>
+      <div>Date: <span style="border-bottom: 1px dashed #000; padding: 0 20px;">${today}</span></div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${customerName}</div>
+      <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
+      <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
+      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phone}</div>
+      <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
+      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}</div>
+      
+      <div style="grid-column: 1 / -1; height: 15px;"></div>
+      
+      <div class="label">Bride Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Groom Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Total Amount (Estimated)</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
+      <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
+      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
+      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; </div>
+    </div>
+
+    <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
+
+    <div class="signatures">
+      <div class="sig-line">Name & Signature of Host with Date</div>
+      <div class="sig-line">Name & Signature of Laurel Garden<br>Representative with Date</div>
+    </div>
+  </div></div>
+  <script>window.onload=()=>{window.print();}</script>
+  </body></html>`);
+  w.document.close();
+}
+
+export default function Jobs() {
+  const { addToast } = useToast();
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [search, setSearch] = useState("");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchJobs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      const res = await jobsAPI.getAll(params);
+      setJobs(res.data.data || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to load jobs";
+      setError(msg);
+      addToast(msg, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchJobs(), 300);
+    return () => clearTimeout(timer);
+  }, [fetchJobs]);
+
+  const getCustomerName = (job) => {
+    if (job.Customer?.name) return job.Customer.name;
+    if (job.Booking?.customerName) return job.Booking.customerName;
+    return "Unknown Customer";
+  };
+
+  const getEventType = (job) => {
+    if (job.Booking?.eventType) return job.Booking.eventType;
+    return "Event";
+  };
+
+  if (selectedJob) {
+    const jobNum = selectedJob.jobNumber || `JOB${String(selectedJob.id).padStart(4, "0")}`;
+    const customer = getCustomerName(selectedJob);
+    const eventType = getEventType(selectedJob);
+    const hall = selectedJob.hall || selectedJob.Booking?.hall || "Main Hall";
+    const date = new Date(selectedJob.eventDate || selectedJob.Booking?.date || selectedJob.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
+    
+    // Fallback data if arrays are missing
+    const checklists = selectedJob.Checklists || [];
+    const completedTasks = checklists.filter(c => c.isCompleted).length;
+    const totalTasks = checklists.length;
+    const staff = selectedJob.Staff || [];
+    const timeline = selectedJob.Timeline || [];
+
+    return (
+      <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+        <button 
+          onClick={() => setSelectedJob(null)}
+          style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#666", cursor: "pointer", marginBottom: 20, fontWeight: 600 }}
+        >
+          <ArrowLeft size={16} /> Back to Jobs
+        </button>
+        
+        {/* Job Header */}
+        <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 24, color: "#111" }}>{customer} - {eventType}</h1>
+              <span style={{ background: "#e0f2fe", color: "#0284c7", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{selectedJob.status}</span>
+            </div>
+            <div style={{ display: "flex", gap: 24, color: "#666", fontSize: 14 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Clock size={16} /> {date}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Briefcase size={16} /> {hall}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}><FileText size={16} /> {jobNum}</span>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>Total Value</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#1B4332", marginBottom: 8 }}>{amount}</div>
+            <button
+              onClick={() => printAgreement(selectedJob)}
+              style={{ padding: "6px 12px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, display: "inline-flex", justifyContent: "center", alignItems: "center", cursor: "pointer", fontSize: 12, fontWeight: 600, gap: 6 }}
+            >
+              <Printer size={14} /> Print Agreement
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 24 }}>
+          {/* Left Column */}
+          <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Checklist */}
+            <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><CheckSquare size={18} /> Operational Checklist</h3>
+                <span style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>{completedTasks}/{totalTasks} Completed</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {totalTasks === 0 ? (
+                  <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
+                ) : checklists.map((task, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8 }}>
+                    <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
+                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Staff Assigned */}
+            <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><UserCircle size={18} /> Staff Assignments</h3>
+                <button style={{ background: "none", border: "none", color: "#D4A017", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ Assign</button>
+              </div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {staff.length === 0 ? (
+                  <div style={{ padding: 20, color: "#999", fontSize: 13, textAlign: "center", width: "100%" }}>No staff assigned yet.</div>
+                ) : staff.map((s, i) => (
+                  <div key={i} style={{ border: "1px solid #eaeaea", padding: 12, borderRadius: 8, display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 200 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                      {s.User?.name?.charAt(0) || "?"}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || "Unknown"}</div>
+                      <div style={{ fontSize: 12, color: "#666" }}>{s.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column (Timeline) */}
+          <div style={{ flex: 1 }}>
+            <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea", minHeight: 400 }}>
+              <h3 style={{ margin: "0 0 24px", fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><Clock size={18} /> Job Timeline</h3>
+              <div style={{ position: "relative", paddingLeft: 16, borderLeft: "2px solid #eaeaea", display: "flex", flexDirection: "column", gap: 24 }}>
+                {timeline.length === 0 ? (
+                  <div style={{ padding: 20, color: "#999", fontSize: 13 }}>No timeline events found.</div>
+                ) : timeline.map((entry, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <div style={{ position: "absolute", left: -21, top: 2, width: 10, height: 10, borderRadius: "50%", background: "#1B4332", border: "2px solid #fff" }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 2 }}>{entry.action}</div>
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>
+                      {new Date(entry.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#666" }}>{entry.details}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Job Listing View
+  return (
+    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px", color: "#0D2418" }}>Job Management</h1>
+          <p style={{ color: "#666", margin: 0, fontSize: 14 }}>Track operational events, staff assignments, and checklists.</p>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={fetchJobs} style={{
+            background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8,
+            padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
+          }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        <div style={{ flex: 1, position: "relative" }}>
+          <Search size={18} style={{ position: "absolute", left: 12, top: 11, color: "#999" }} />
+          <input
+            type="text"
+            placeholder="Search jobs..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: "100%", padding: "10px 10px 10px 40px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none" }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
+          <AlertCircle size={20} color="#ef4444" />
+          <span style={{ color: "#dc2626", fontWeight: 600 }}>{error}</span>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+        {loading ? (
+          [1,2,3,4,5,6].map(i => <JobSkeleton key={i} />)
+        ) : jobs.length === 0 && !error ? (
+          <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
+            <Briefcase size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+            <p style={{ fontSize: 18, fontWeight: 700, color: "#374151" }}>No jobs found</p>
+            <p style={{ fontSize: 14 }}>Jobs are automatically created when a booking is confirmed.</p>
+          </div>
+        ) : (
+          jobs.map((job, i) => {
+            const jobNum = job.jobNumber || `JOB${String(job.id).padStart(4, "0")}`;
+            const customer = getCustomerName(job);
+            const eventType = getEventType(job);
+            const hall = job.hall || job.Booking?.hall || "Main Hall";
+            const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+            const staffCount = job.Staff?.length || 0;
+            const checklists = job.Checklists || [];
+            const completedTasks = checklists.filter(c => c.isCompleted).length;
+            const totalTasks = checklists.length;
+
+            return (
+              <div key={job.id} onClick={() => setSelectedJob(job)} style={{
+                background: "#fff", borderRadius: 12, border: "1px solid #eaeaea",
+                padding: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", cursor: "pointer",
+                transition: "all 0.2s", ":hover": { transform: "translateY(-4px)", boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#1B4332", letterSpacing: 0.5, background: "rgba(27,67,50,0.1)", padding: "4px 8px", borderRadius: 6 }}>{jobNum}</span>
+                    <h3 style={{ margin: "8px 0 4px", fontSize: 18, color: "#111" }}>{customer}</h3>
+                    <p style={{ margin: 0, fontSize: 13, color: "#666" }}>{eventType}</p>
+                  </div>
+                  <span style={{
+                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    background: job.status === "Event Running" ? "#fef08a" : job.status === "Planning" ? "#e0f2fe" : "#f1f5f9",
+                    color: job.status === "Event Running" ? "#a16207" : job.status === "Planning" ? "#0284c7" : "#475569"
+                  }}>
+                    {job.status}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, background: "#f8f9fa", padding: 12, borderRadius: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#444", fontSize: 13, fontWeight: 600 }}>
+                    <Clock size={14} color="#666" /> {date}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#444", fontSize: 13, fontWeight: 600 }}>
+                    <Briefcase size={14} color="#666" /> {hall}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: -8 }}>
+                    {staffCount === 0 ? (
+                      <span style={{ fontSize: 12, color: "#999" }}>No staff</span>
+                    ) : (
+                      <>
+                        {[...Array(Math.min(staffCount, 3))].map((_, idx) => (
+                          <div key={idx} style={{ width: 28, height: 28, borderRadius: "50%", background: "#D4A017", border: "2px solid #fff", marginLeft: idx > 0 ? -10 : 0 }} />
+                        ))}
+                        <span style={{ fontSize: 12, color: "#666", marginLeft: 8 }}>{staffCount} Staff</span>
+                      </>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, color: totalTasks > 0 && completedTasks === totalTasks ? "#22c55e" : "#666", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                    <CheckCircle size={14} /> {completedTasks}/{totalTasks}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
