@@ -1,0 +1,193 @@
+/**
+ * Booking Service — all booking business logic lives here.
+ * Controllers call services; services call repositories.
+ * Routes/controllers remain thin.
+ */
+
+const bookingRepository = require("../repositories/booking.repository");
+const customerService = require("./customer.service");
+const { NotFoundError, BadRequestError } = require("../helpers/errors");
+
+class BookingService {
+  /**
+   * List all bookings with filters.
+   */
+  async listBookings({ tenantId, environmentId, status, month, hall, search, query }) {
+    const { rows, total, page, limit } = await bookingRepository.findAllFiltered({
+      tenantId,
+      environmentId,
+      status,
+      month,
+      hall,
+      search,
+      query,
+    });
+
+    // Map for frontend compatibility (id = bookingId, _id = pk)
+    const data = rows.map((b) => ({
+      id: b.bookingId,
+      _id: b.id,
+      customerName: b.customerName,
+      phone: b.phone,
+      eventType: b.eventType,
+      hall: b.hall,
+      date: b.date,
+      session: b.session,
+      guests: b.guests,
+      advance: b.advance,
+      totalAmount: b.totalAmount,
+      status: b.status,
+      notes: b.notes,
+      createdAt: b.createdAt,
+    }));
+
+    return { data, total, page, limit };
+  }
+
+  /**
+   * Get a single booking by its bookingId (e.g., "BK001").
+   */
+  async getBooking(bookingId, { tenantId, environmentId }) {
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+    return booking;
+  }
+
+  /**
+   * Get dashboard statistics.
+   */
+  async getDashboardStats({ tenantId, environmentId }) {
+    return bookingRepository.getDashboardStats({ tenantId, environmentId });
+  }
+
+  /**
+   * Create a new booking.
+   */
+  async createBooking(data, { tenantId, environmentId }) {
+    if (!data.customerName || !data.phone || !data.date) {
+      throw new BadRequestError("Customer name, phone, and date are required");
+    }
+
+    let customerId = null;
+    try {
+      const cust = await customerService.findOrCreate({
+        name: data.customerName,
+        phone: data.phone,
+        gender: data.gender,
+        place: data.place,
+        address: data.address,
+      }, { tenantId, environmentId });
+      customerId = cust.id;
+    } catch (e) {
+      console.error("Failed to create customer for booking:", e);
+    }
+
+    const booking = await bookingRepository.create({
+      tenantId,
+      environmentId,
+      customerId,
+      customerName: data.customerName,
+      phone: data.phone,
+      address: data.address || "",
+      eventType: data.eventType,
+      hall: data.hall,
+      date: data.date,
+      session: data.session || "Full Day",
+      guests: Number(data.guests) || 0,
+      advance: Number(data.advance) || 0,
+      totalAmount: Number(data.totalAmount) || 0,
+      status: data.status || "Enquiry",
+      notes: data.notes || "",
+      // Extended Contract Fields
+      brideName: data.brideName || "",
+      groomName: data.groomName || "",
+      fatherName: data.fatherName || "",
+      motherName: data.motherName || "",
+      email: data.email || "",
+      whatsapp: data.whatsapp || "",
+      decoration: data.decoration || "",
+      catering: data.catering || "",
+      sound: data.sound || "",
+      specialInstructions: data.specialInstructions || "",
+      package: data.package || "",
+      discount: Number(data.discount) || 0,
+    });
+
+    return {
+      id: booking.bookingId,
+      _id: booking.id,
+      customerName: booking.customerName,
+      phone: booking.phone,
+      eventType: booking.eventType,
+      hall: booking.hall,
+      date: booking.date,
+      session: booking.session,
+      guests: booking.guests,
+      advance: booking.advance,
+      totalAmount: booking.totalAmount,
+      status: booking.status,
+      notes: booking.notes,
+      createdAt: booking.createdAt,
+    };
+  }
+
+  /**
+   * Update an existing booking.
+   */
+  async updateBooking(bookingId, data, { tenantId, environmentId }) {
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+
+    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes"];
+    const updateData = {};
+    fields.forEach((f) => {
+      if (data[f] !== undefined) {
+        updateData[f] = ["guests", "advance", "totalAmount"].includes(f)
+          ? Number(data[f])
+          : data[f];
+      }
+    });
+
+    const updated = await bookingRepository.update(booking, updateData);
+
+    return {
+      id: updated.bookingId,
+      _id: updated.id,
+      customerName: updated.customerName,
+      phone: updated.phone,
+      eventType: updated.eventType,
+      hall: updated.hall,
+      date: updated.date,
+      session: updated.session,
+      guests: updated.guests,
+      advance: updated.advance,
+      totalAmount: updated.totalAmount,
+      status: updated.status,
+      notes: updated.notes,
+    };
+  }
+
+  /**
+   * Update booking status only.
+   */
+  async updateBookingStatus(bookingId, status, { tenantId, environmentId }) {
+    if (!status) throw new BadRequestError("Status required");
+
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+
+    const updated = await bookingRepository.update(booking, { status });
+    return { id: updated.bookingId, status: updated.status };
+  }
+
+  /**
+   * Delete a booking.
+   */
+  async deleteBooking(bookingId, { tenantId, environmentId }) {
+    const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
+    if (!deleted) throw new NotFoundError("Booking");
+    return { message: "Booking deleted", id: bookingId };
+  }
+}
+
+module.exports = new BookingService();
