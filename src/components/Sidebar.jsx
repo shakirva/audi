@@ -239,5 +239,6 @@ export default function Sidebar({ open, onClose }) {
       </div>
 
     </motion.div>
+    </>
   );
 }
