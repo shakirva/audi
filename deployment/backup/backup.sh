@@ -74,9 +74,9 @@ elif [ "$TYPE" = "monthly" ]; then
     ls -dt $BACKUP_DIR/*_config.tar.gz | tail -n +13 | xargs -r rm -f
 fi
 
-# 5. External Storage Hook (For AWS S3, Cloudflare R2, etc.)
-# If you configure AWS CLI, uncomment the line below:
-# aws s3 sync $BACKUP_ROOT s3://your-venueza-backup-bucket/
+# 5. External Cloud Storage (Cloudflare R2)
+log "Syncing backups to Cloudflare R2..."
+aws s3 sync $BACKUP_ROOT s3://enueza-backups/ --endpoint-url https://a735819921a82ae9b6641dd90ede6905.r2.cloudflarestorage.com
 
 log "Backup $TYPE completed successfully."
 echo "---------------------------------------------------" >> "$LOG_FILE"
