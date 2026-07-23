@@ -5,6 +5,7 @@
 const expenseRepository = require("../repositories/expense.repository");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 const accountingEngine = require("./accountingEngine.service");
+const { sequelize } = require("../models");
 
 class ExpenseService {
   /**
@@ -30,26 +31,24 @@ class ExpenseService {
       throw new BadRequestError("Category, description, amount, and date required");
     }
 
-    const expense = await expenseRepository.create({
-      tenantId,
-      environmentId,
-      category: data.category,
-      description: data.description,
-      amount: Number(data.amount),
-      date: data.date,
-      recurring: !!data.recurring,
-    });
-
-    // Hook into accounting engine
-    try {
-      await accountingEngine.onExpenseCreated(expense, {
-        tenantId, environmentId,
-        createdBy: data.createdBy || null,
+    const expense = await sequelize.transaction(async (t) => {
+      const exp = await expenseRepository.create({
+        tenantId,
+        environmentId,
+        category: data.category,
+        description: data.description,
+        amount: Number(data.amount),
+        date: data.date,
+        recurring: !!data.recurring,
+        bookingId: data.bookingId || null,
         paymentMode: data.paymentMode || "Cash",
-      });
-    } catch (e) {
-      console.error("[ExpenseService] Failed to create accounting entry:", e);
-    }
+      }, { transaction: t });
+
+      // Hook into accounting engine
+      await accountingEngine.recordExpense(exp.id, tenantId, environmentId, t);
+
+      return exp;
+    });
 
     return expense;
   }

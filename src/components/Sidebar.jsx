@@ -41,7 +41,22 @@ export default function Sidebar() {
       type: "group", label: "Finance", icon: CreditCard, id: "finance",
       children: [
         { path: "/payments", label: "Payments & Receipts" },
-        { path: "/accounts", label: "Accounts Lite" },
+        { path: "/finance", label: "Accounts & Finance Overview" },
+        { path: "/finance/daily-collections", label: "Daily Collections" },
+        { path: "/finance/outstanding", label: "Outstanding Receivables" },
+        { path: "/finance/vendor-outstanding", label: "Vendor Outstanding" },
+        { path: "/finance/booking-profit", label: "Booking Profit Report" },
+        { path: "/finance/expense-categories", label: "Expense Categories" },
+        { path: "/finance/payment-history", label: "Payment History" },
+        { path: "/finance/cash-closing", label: "Cash Closing Report" },
+        { path: "/finance/daily-summary", label: "Daily Business Summary" },
+        { path: "/finance/cash-book", label: "Cash Book" },
+        { path: "/finance/bank-book", label: "Bank Book" },
+        { path: "/finance/journals", label: "Journal Entries" },
+        { path: "/finance/general-ledger", label: "General Ledger" },
+        { path: "/finance/trial-balance", label: "Trial Balance" },
+        { path: "/finance/profit-and-loss", label: "Profit & Loss" },
+        { path: "/finance/balance-sheet", label: "Balance Sheet" },
         { path: "/vendors", label: "Vendors" },
         { path: "/purchases", label: "Purchases" }
       ]

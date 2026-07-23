@@ -18,9 +18,10 @@ const ChartOfAccount = sequelize.define("ChartOfAccount", {
     references: { model: "Environments", key: "id" },
   },
   code: { type: DataTypes.STRING, allowNull: false },        // e.g. "1001", "2001", "3001"
+  systemKey: { type: DataTypes.STRING, allowNull: true },    // e.g. "CASH_IN_HAND", "ACCOUNTS_RECEIVABLE"
   name: { type: DataTypes.STRING, allowNull: false },         // e.g. "Cash Account", "Bank Account"
   type: {
-    type: DataTypes.ENUM("Asset", "Liability", "Income", "Expense"),
+    type: DataTypes.ENUM("Asset", "Liability", "Income", "Expense", "Equity"),
     allowNull: false,
   },
   subType: { type: DataTypes.STRING, allowNull: true },       // e.g. "Current Asset", "Fixed Asset"

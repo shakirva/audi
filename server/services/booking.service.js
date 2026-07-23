@@ -9,6 +9,7 @@ const customerService = require("./customer.service");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 const paymentService = require("./payment.service");
 const accountingEngine = require("./accountingEngine.service");
+const { sequelize } = require("../models");
 
 class BookingService {
   /**
@@ -84,45 +85,45 @@ class BookingService {
       console.error("Failed to create customer for booking:", e);
     }
 
-    const booking = await bookingRepository.create({
-      tenantId,
-      environmentId,
-      customerId,
-      customerName: data.customerName,
-      phone: data.phone,
-      address: data.address || "",
-      eventType: data.eventType,
-      hall: data.hall,
-      date: data.date,
-      session: data.session || "Full Day",
-      guests: Number(data.guests) || 0,
-      advance: Number(data.advance) || 0,
-      totalAmount: Number(data.totalAmount) || 0,
-      status: data.status || "Enquiry",
-      notes: data.notes || "",
-      // Extended Contract Fields
-      brideName: data.brideName || "",
-      groomName: data.groomName || "",
-      fatherName: data.fatherName || "",
-      motherName: data.motherName || "",
-      email: data.email || "",
-      whatsapp: data.whatsapp || "",
-      decoration: data.decoration || "",
-      catering: data.catering || "",
-      sound: data.sound || "",
-      specialInstructions: data.specialInstructions || "",
-      package: data.package || "",
-      discount: Number(data.discount) || 0,
+    const booking = await sequelize.transaction(async (t) => {
+      const b = await bookingRepository.create({
+        tenantId,
+        environmentId,
+        customerId,
+        customerName: data.customerName,
+        phone: data.phone,
+        address: data.address || "",
+        eventType: data.eventType,
+        hall: data.hall,
+        date: data.date,
+        session: data.session || "Full Day",
+        guests: Number(data.guests) || 0,
+        advance: Number(data.advance) || 0,
+        totalAmount: Number(data.totalAmount) || 0,
+        status: data.status || "Enquiry",
+        notes: data.notes || "",
+        brideName: data.brideName || "",
+        groomName: data.groomName || "",
+        fatherName: data.fatherName || "",
+        motherName: data.motherName || "",
+        email: data.email || "",
+        whatsapp: data.whatsapp || "",
+        decoration: data.decoration || "",
+        catering: data.catering || "",
+        sound: data.sound || "",
+        specialInstructions: data.specialInstructions || "",
+        package: data.package || "",
+        discount: Number(data.discount) || 0,
+      }, { transaction: t });
+
+      // Create accounting journal entry strictly inside the transaction
+      if (b.status !== "Enquiry" && b.status !== "Cancelled") {
+        await accountingEngine.recordBooking(b.id, tenantId, environmentId, t);
+      }
+
+      return b;
     });
 
-    // Create accounting journal entry (Customer Outstanding ↔ Hall Booking Income)
-    try {
-      await accountingEngine.onBookingCreated(booking, {
-        tenantId, environmentId, createdBy: data.createdBy || null,
-      });
-    } catch (e) {
-      console.error("[BookingService] Accounting engine error:", e);
-    }
     if (Number(data.advance) > 0 && data.paymentMethod) {
       try {
         await paymentService.recordPayment({

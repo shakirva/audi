@@ -24,6 +24,7 @@ const agreementRoutes = require("./agreements");
 const paymentRoutes = require("./payments");
 const jobRoutes = require("./jobs");
 const accountRoutes = require("./accounts");
+const financeRoutes = require("./finance");
 
 // Mount routes
 router.use("/bookings", bookingRoutes);
@@ -39,6 +40,7 @@ router.use("/agreements", agreementRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/jobs", jobRoutes);
 router.use("/accounts", accountRoutes);
+router.use("/finance", financeRoutes);
 
 // Future v1 routes will be added here:
 // router.use("/enquiries", enquiryRoutes);

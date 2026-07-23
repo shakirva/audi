@@ -29,6 +29,26 @@ import Vendors from "./pages/Vendors";
 import Purchases from "./pages/Purchases";
 import Staff from "./pages/Staff";
 import AccountsLite from "./pages/AccountsLite";
+import FinanceDashboard from "./pages/Finance/FinanceDashboard";
+import BookingFinancialCenter from "./pages/Finance/BookingFinancialCenter";
+import CustomerStatement from "./pages/Finance/CustomerStatement";
+import Receipt from "./pages/Finance/Receipt";
+import TaxInvoice from "./pages/Finance/TaxInvoice";
+import CashBook from "./pages/Finance/CashBook";
+import BankBook from "./pages/Finance/BankBook";
+import JournalEntries from "./pages/Finance/JournalEntries";
+import GeneralLedger from "./pages/Finance/GeneralLedger";
+import TrialBalance from "./pages/Finance/TrialBalance";
+import ProfitLoss from "./pages/Finance/ProfitLoss";
+import BalanceSheet from "./pages/Finance/BalanceSheet";
+import CustomerOutstanding from "./pages/Finance/CustomerOutstanding";
+import DailyCollectionReport from "./pages/Finance/DailyCollectionReport";
+import BookingProfitReport from "./pages/Finance/BookingProfitReport";
+import VendorOutstanding from "./pages/Finance/VendorOutstanding";
+import ExpenseCategories from "./pages/Finance/ExpenseCategories";
+import PaymentHistory from "./pages/Finance/PaymentHistory";
+import CashClosingReport from "./pages/Finance/CashClosingReport";
+import DailyBusinessSummary from "./pages/Finance/DailyBusinessSummary";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -99,6 +119,26 @@ function AdminLayout() {
             <Route path="/purchases" element={<Purchases />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/accounts" element={<AccountsLite />} />
+            <Route path="/finance" element={<ProtectedRoute permission="canViewReports"><FinanceDashboard /></ProtectedRoute>} />
+            <Route path="/finance/booking/:id" element={<ProtectedRoute permission="canViewReports"><BookingFinancialCenter /></ProtectedRoute>} />
+            <Route path="/finance/statement/:id" element={<ProtectedRoute permission="canViewReports"><CustomerStatement /></ProtectedRoute>} />
+            <Route path="/finance/receipt/:id" element={<ProtectedRoute permission="canViewReports"><Receipt /></ProtectedRoute>} />
+            <Route path="/finance/invoice/:id" element={<ProtectedRoute permission="canViewReports"><TaxInvoice /></ProtectedRoute>} />
+            <Route path="/finance/cash-book" element={<ProtectedRoute permission="canViewReports"><CashBook /></ProtectedRoute>} />
+            <Route path="/finance/bank-book" element={<ProtectedRoute permission="canViewReports"><BankBook /></ProtectedRoute>} />
+            <Route path="/finance/journals" element={<ProtectedRoute permission="canViewReports"><JournalEntries /></ProtectedRoute>} />
+            <Route path="/finance/general-ledger" element={<ProtectedRoute permission="canViewReports"><GeneralLedger /></ProtectedRoute>} />
+            <Route path="/finance/trial-balance" element={<ProtectedRoute permission="canViewReports"><TrialBalance /></ProtectedRoute>} />
+            <Route path="/finance/profit-and-loss" element={<ProtectedRoute permission="canViewReports"><ProfitLoss /></ProtectedRoute>} />
+            <Route path="/finance/balance-sheet" element={<ProtectedRoute permission="canViewReports"><BalanceSheet /></ProtectedRoute>} />
+            <Route path="/finance/outstanding" element={<ProtectedRoute permission="canViewReports"><CustomerOutstanding /></ProtectedRoute>} />
+            <Route path="/finance/vendor-outstanding" element={<ProtectedRoute permission="canViewReports"><VendorOutstanding /></ProtectedRoute>} />
+            <Route path="/finance/daily-collections" element={<ProtectedRoute permission="canViewReports"><DailyCollectionReport /></ProtectedRoute>} />
+            <Route path="/finance/booking-profit" element={<ProtectedRoute permission="canViewReports"><BookingProfitReport /></ProtectedRoute>} />
+            <Route path="/finance/expense-categories" element={<ProtectedRoute permission="canViewReports"><ExpenseCategories /></ProtectedRoute>} />
+            <Route path="/finance/payment-history" element={<ProtectedRoute permission="canViewReports"><PaymentHistory /></ProtectedRoute>} />
+            <Route path="/finance/cash-closing" element={<ProtectedRoute permission="canViewReports"><CashClosingReport /></ProtectedRoute>} />
+            <Route path="/finance/daily-summary" element={<ProtectedRoute permission="canViewReports"><DailyBusinessSummary /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>

@@ -8,6 +8,7 @@ const Subscription = require("./Subscription");
 const User = require("./User");
 const Booking = require("./Booking");
 const Expense = require("./Expense");
+const Vendor = require("./Vendor");
 const Settings = require("./Settings");
 const AuditLog = require("./AuditLog");
 const Customer = require("./Customer");
@@ -29,7 +30,9 @@ const CashBook = require("./CashBook");
 const BankBook = require("./BankBook");
 const ChartOfAccount = require("./ChartOfAccount");
 const JournalEntry = require("./JournalEntry");
+const JournalEntryLine = require("./JournalEntryLine");
 const Voucher = require("./Voucher");
+const FinancialPeriod = require("./FinancialPeriod");
 const {
   MasterHall, MasterPackage, MasterService, MasterEventType,
   MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory,
@@ -40,6 +43,7 @@ Tenant.hasMany(Environment, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(User, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Booking, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Expense, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Vendor, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasOne(Settings, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Subscription, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Customer, { foreignKey: "tenantId", onDelete: "CASCADE" });
@@ -66,6 +70,7 @@ Tenant.hasMany(Voucher, { foreignKey: "tenantId", onDelete: "CASCADE" });
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(Expense, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(Vendor, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasOne(Settings, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(Customer, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(Enquiry, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -95,6 +100,9 @@ Customer.hasMany(Payment, { foreignKey: "customerId", onDelete: "CASCADE" });
 Customer.hasMany(Receipt, { foreignKey: "customerId", onDelete: "CASCADE" });
 Customer.hasMany(Job, { foreignKey: "customerId", onDelete: "CASCADE" });
 Customer.hasMany(AccountStatement, { foreignKey: "customerId", onDelete: "CASCADE" });
+
+// ── Vendor has many ──
+Vendor.hasMany(Expense, { foreignKey: "vendorId", onDelete: "SET NULL" });
 
 // ── Enquiry has many ──
 Enquiry.hasMany(FollowUp, { foreignKey: "enquiryId", onDelete: "CASCADE" });
@@ -132,6 +140,7 @@ Environment.belongsTo(Tenant, { foreignKey: "tenantId" });
 User.belongsTo(Tenant, { foreignKey: "tenantId" });
 Booking.belongsTo(Tenant, { foreignKey: "tenantId" });
 Expense.belongsTo(Tenant, { foreignKey: "tenantId" });
+Vendor.belongsTo(Tenant, { foreignKey: "tenantId" });
 Settings.belongsTo(Tenant, { foreignKey: "tenantId" });
 Subscription.belongsTo(Tenant, { foreignKey: "tenantId" });
 Customer.belongsTo(Tenant, { foreignKey: "tenantId" });
@@ -181,18 +190,19 @@ JournalEntry.belongsTo(Environment, { foreignKey: "environmentId" });
 Voucher.belongsTo(Environment, { foreignKey: "environmentId" });
 
 // ── Journal/Voucher associations ──
-JournalEntry.belongsTo(ChartOfAccount, { as: "DebitAccount", foreignKey: "debitAccountId" });
-JournalEntry.belongsTo(ChartOfAccount, { as: "CreditAccount", foreignKey: "creditAccountId" });
+
 JournalEntry.belongsTo(Voucher, { foreignKey: "voucherId" });
 JournalEntry.belongsTo(Customer, { foreignKey: "customerId" });
 JournalEntry.belongsTo(Booking, { foreignKey: "bookingId" });
 Voucher.hasMany(JournalEntry, { foreignKey: "voucherId" });
 Voucher.belongsTo(Customer, { foreignKey: "customerId" });
 Voucher.belongsTo(Booking, { foreignKey: "bookingId" });
-ChartOfAccount.hasMany(JournalEntry, { as: "DebitEntries", foreignKey: "debitAccountId" });
-ChartOfAccount.hasMany(JournalEntry, { as: "CreditEntries", foreignKey: "creditAccountId" });
+
 
 // ── Other BelongsTo ──
+Expense.belongsTo(Booking, { foreignKey: "bookingId" });
+Expense.belongsTo(Vendor, { foreignKey: "vendorId" });
+
 Booking.belongsTo(Customer, { foreignKey: "customerId" });
 Enquiry.belongsTo(Customer, { foreignKey: "customerId" });
 Enquiry.belongsTo(User, { as: "SalesExecutive", foreignKey: "salesExecutiveId" });
@@ -229,12 +239,19 @@ JobDocument.belongsTo(User, { as: "UploadedByUser", foreignKey: "uploadedBy" });
 
 AccountStatement.belongsTo(Customer, { foreignKey: "customerId" });
 
+// ── Journal Entry relationships ──
+ChartOfAccount.hasMany(JournalEntryLine, { foreignKey: "accountId", onDelete: "RESTRICT" });
+JournalEntryLine.belongsTo(ChartOfAccount, { as: "account", foreignKey: "accountId" });
+
+JournalEntry.hasMany(JournalEntryLine, { foreignKey: "journalEntryId", onDelete: "CASCADE", as: "lines" });
+JournalEntryLine.belongsTo(JournalEntry, { foreignKey: "journalEntryId" });
+
 module.exports = { 
-  Tenant, Environment, Subscription, User, Booking, Expense, Settings, AuditLog, Customer, Enquiry, FollowUp,
+  Tenant, Environment, Subscription, User, Booking, Expense, Vendor, Settings, AuditLog, Customer, Enquiry, FollowUp,
   Agreement, AgreementTemplate, AgreementVersion, Payment, Receipt,
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
   AccountStatement, CashBook, BankBook,
-  ChartOfAccount, JournalEntry, Voucher,
+  ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, FinancialPeriod,
   MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory 
 };
 

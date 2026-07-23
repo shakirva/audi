@@ -1290,6 +1290,37 @@ export default function Settings() {
       </div>
       )}
 
+      {/* ── ADDITIONAL PR-1 PLACEHOLDERS ── */}
+      {isAdminRole && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 28 }}>
+          
+          <div style={cardSt}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center" }}><IndianRupee size={16} color="#166534" /></div>
+              <p style={{ ...sectionTitle, marginBottom: 0 }}>Payment Methods</p>
+            </div>
+            <p style={{ fontSize: 12, color: "#6b7280" }}>Configure UPI, Bank Transfer details, and Razorpay integration. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
+          </div>
+
+          <div style={cardSt}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={16} color="#1d4ed8" /></div>
+              <p style={{ ...sectionTitle, marginBottom: 0 }}>Receipt & Invoice Templates</p>
+            </div>
+            <p style={{ fontSize: 12, color: "#6b7280" }}>Customize PDF headers, footers, and default Terms & Conditions. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
+          </div>
+
+          <div style={cardSt}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={16} color="#be123c" /></div>
+              <p style={{ ...sectionTitle, marginBottom: 0 }}>Tax & GST Settings</p>
+            </div>
+            <p style={{ fontSize: 12, color: "#6b7280" }}>Set default GST brackets (18%, 12%) for Hall and Food services. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
+          </div>
+
+        </div>
+      )}
+
       {/* ── APP INFO ── */}
       <div style={{ ...cardSt, background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
