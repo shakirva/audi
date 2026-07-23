@@ -154,7 +154,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
             {/* ── CONTACT ── */}
             <div>
               <p style={sectionHead}><User size={14} /> Contact Details</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Customer Name *</label>
                   {inp("customerName", { required: true, placeholder: "Customer name" })}
@@ -196,7 +196,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Father Name</label>{inp("brideFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
@@ -210,7 +210,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Father Name</label>{inp("groomFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
@@ -287,7 +287,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Advance Paid (₹)</label>
                   <input type="number" min={0} value={form.advance || ""}
@@ -338,7 +338,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                   );
                 })}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {form.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>

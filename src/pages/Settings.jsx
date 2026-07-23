@@ -622,7 +622,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label style={labelSt}><Building2 size={11} /> Auditorium Name</label>
             <input name="name" value={venue.name} onChange={handleVenueChange} style={iStyle}
@@ -1178,7 +1178,7 @@ export default function Settings() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelSt}>{newMedia.type === "image" ? "🖼️ Image URL" : "🎬 YouTube URL"}</label>
               <input

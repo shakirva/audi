@@ -283,7 +283,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
             {activeView === "customer" && (
               <motion.div key="customer" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Customer Profile</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 16px" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Name</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.customerName || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Phone</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.phone || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>WhatsApp</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.whatsapp || "—"}</div></div>
@@ -324,7 +324,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
                 
                 <div style={{ marginTop: 32 }}>
                   <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment Info</h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 16px" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Payment Method</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.paymentMethod || "—"}</div></div>
                     <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Received By</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.receivedBy || "—"}</div></div>
                   </div>
@@ -336,7 +336,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
             {activeView === "services" && (
               <motion.div key="services" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Services & Logistics</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 16px" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Event Type</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.eventType || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Date</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.date ? new Date(booking.date).toLocaleDateString() : "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Hall</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.hall || "—"}</div></div>

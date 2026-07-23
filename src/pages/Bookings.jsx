@@ -144,7 +144,7 @@ export default function Bookings() {
                 </div>
 
                 {/* Meta row */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14, padding: "12px 0", borderTop: "1px solid #f8fafc", borderBottom: "1px solid #f8fafc" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <Calendar size={13} color="#94a3b8" />
                     <div>

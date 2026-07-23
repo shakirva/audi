@@ -3,9 +3,9 @@ import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Set
 import { useRole } from "../context/RoleContext";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Logo from "./Logo"; // Bring back the new logo component if it exists, or use the brand icon.
+import Logo from "./Logo";
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }) {
   const location = useLocation();
   const { role, user, logout } = useRole();
   const [collapsed, setCollapsed] = useState(false);
@@ -74,25 +74,36 @@ export default function Sidebar() {
   ];
 
   return (
-    <motion.div 
-      initial={false}
-      animate={{ width: collapsed ? 80 : 280 }}
-      style={{ 
-        background: PRIMARY_COLOR, 
-        color: "#fff", 
-        height: "100vh", 
-        display: "flex", 
-        flexDirection: "column", 
-        fontFamily: "'Inter', 'DM Sans', sans-serif",
-        position: "sticky",
-        top: 0,
-        boxShadow: "10px 0 30px rgba(0,0,0,0.1)",
-        overflow: "hidden"
-      }}
-    >
-      
-      {/* Brand */}
-      <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
+    <>
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div 
+        initial={false}
+        animate={{ 
+          width: collapsed ? 80 : 280,
+          x: 0 // handled by CSS transform on mobile
+        }}
+        className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:top-0 h-screen flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        style={{ 
+          background: PRIMARY_COLOR, 
+          color: "#fff", 
+          fontFamily: "'Inter', 'DM Sans', sans-serif",
+        }}
+      >
+        
+        {/* Brand */}
+        <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
         <div style={{ width: 40, height: 40, background: ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR }}>
           <Tent size={24} />
         </div>

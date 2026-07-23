@@ -179,7 +179,7 @@ export default function BookingFinancialDashboard() {
         {activeTab === "overview" && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 24px", color: "#0f172a" }}>Financial Overview</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 32 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div style={{ padding: 20, background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 8 }}>Booking Amount</div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</div>
@@ -198,7 +198,7 @@ export default function BookingFinancialDashboard() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div style={{ padding: 24, border: "1px solid #e2e8f0", borderRadius: 12 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#334155" }}>Booking Details</h3>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14 }}>
@@ -410,7 +410,7 @@ export default function BookingFinancialDashboard() {
         {activeTab === "documents" && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 24px", color: "#0f172a" }}>Documents & Attachments</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {["Quotation", "Booking Agreement", "Receipts", "Final Invoice", "Attachments"].map(doc => (
                 <div key={doc} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
                   <FileText size={24} color="#94a3b8" />

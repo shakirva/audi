@@ -94,7 +94,7 @@ function ExecutiveCockpit() {
       </div>
 
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 24 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Revenue Trend</h3>
           <div style={{ height: 220 }}>
@@ -140,7 +140,7 @@ function ExecutiveCockpit() {
       </div>
 
       {/* Row 2: Event Distribution (4 cols) + Urgent Enquiries (8 cols) */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
         
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Event Distribution</h3>
@@ -158,7 +158,7 @@ function ExecutiveCockpit() {
 
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><MessageCircle size={18} color={BRAND.primary} /> Urgent Enquiries</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {[
               { id: "5 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
               { id: "3 Quotations", details: "Pending Signature", status: "Waiting" },
@@ -189,11 +189,11 @@ function ExecutiveCockpit() {
 function ReceptionCockpit() {
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 32 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 20px 40px rgba(13,36,24,0.2)" }}>
           <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px" }}>Reception Desk 👋</h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Fast creation and calendar view.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <button style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Plus size={20} /> New Enquiry
             </button>
@@ -257,13 +257,13 @@ function OperationsCockpit() {
         </div>
       </motion.div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <GradientCard title="Active Jobs" value="8" gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Vendor Arrivals" value="12" gradient={["#D4A017", "#f59e0b"]} delay={0.2} />
         <GradientCard title="Checklists Pending" value="4" gradient={["#52B788", "#74C69D"]} delay={0.3} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 32 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
         <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px", display: "flex", alignItems: "center", gap: 8 }}><Workflow size={20} color="#0ea5e9"/> Job Board</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

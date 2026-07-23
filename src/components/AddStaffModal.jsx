@@ -81,7 +81,7 @@ export default function AddStaffModal({ open, onClose, onSave }) {
           <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Name & Phone row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label style={labelSt}><User size={10} style={{ display: "inline", marginRight: 4 }} />Full Name *</label>
                 <input name="name" value={form.name} onChange={handleChange} placeholder="e.g. Rajan P.K." style={iStyle}
@@ -117,7 +117,7 @@ export default function AddStaffModal({ open, onClose, onSave }) {
             {/* Role selection */}
             <div>
               <label style={labelSt}><ShieldCheck size={10} style={{ display: "inline", marginRight: 4 }} />Access Role *</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {ROLES_INFO.map(r => (
                   <div key={r.value} onClick={() => setForm(prev => ({ ...prev, role: r.value }))}
                     style={{

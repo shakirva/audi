@@ -44,7 +44,7 @@ export default function FinanceReports() {
       {loading && !report ? (
         <div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>Loading report data...</div>
       ) : report ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Revenue */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
             <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>

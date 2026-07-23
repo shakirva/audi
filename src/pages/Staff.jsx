@@ -43,7 +43,7 @@ export default function Staff() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 32 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>
             <Users size={24} />

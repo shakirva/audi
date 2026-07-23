@@ -339,7 +339,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </p>
 
               {/* Row 1: Name + Phone */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Enquired By *</label>
                   <input name="name" value={form.name} onChange={handleChange}
@@ -357,7 +357,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </div>
 
               {/* Row 2: Gender + Place */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Gender *</label>
                   <select required name="gender" value={form.gender} onChange={handleChange}
@@ -463,7 +463,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Calendar size={12} /> Event Details
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Event Type *</label>
                   <select required name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
@@ -632,7 +632,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Building2 size={12} /> Assignment & Remarks
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Salesman (Assigned To) *</label>
                   <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}

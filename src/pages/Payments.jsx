@@ -157,7 +157,7 @@ export default function Payments() {
       />
 
       {/* Top Level Dashboard Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 32 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard title="Total Collected" value={dashboardMetrics ? formatMoney(dashboardMetrics.todayCollection) : "Loading..."} icon={ArrowDownRight} color="#10b981" delay={0.1} />
         <MetricCard title="Outstanding Balance" value={dashboardMetrics ? formatMoney(dashboardMetrics.outstanding) : "Loading..."} icon={ArrowUpRight} color="#ef4444" delay={0.2} />
         <MetricCard title="Cash Balance" value={dashboardMetrics ? formatMoney(dashboardMetrics.cashBalance) : "Loading..."} icon={Wallet} color="#3b82f6" delay={0.3} />
@@ -281,7 +281,7 @@ export default function Payments() {
                   <button onClick={() => setSelectedBooking(null)} style={{ background: "#e2e8f0", border: "none", width: 32, height: 32, borderRadius: 16, cursor: "pointer", fontWeight: 800 }}>✕</button>
                 </div>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div style={{ background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
                     <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Total Collected</p>
                     <p style={{ margin: "4px 0 0", fontSize: 20, color: "#16a34a", fontWeight: 800 }}>{formatMoney(selectedBooking.totalPaid)}</p>

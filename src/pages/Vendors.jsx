@@ -47,7 +47,7 @@ export default function Vendors() {
       </div>
 
       {/* KPI ROW */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 30 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
           { label: "Total Vendors", val: DEMO_VENDORS.length, color: "#1B4332", bg: "#eefcf4" },
           { label: "Active Partners", val: DEMO_VENDORS.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
@@ -116,7 +116,7 @@ export default function Vendors() {
             </div>
 
             {/* Info Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569" }}>
                 <Phone size={14} color="#94a3b8" /> {vendor.phone}
               </div>

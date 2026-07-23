@@ -96,7 +96,7 @@ export default function BookingReports() {
       </div>
 
       {/* Charts */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
         
         {/* Booking Volume */}
         <div style={cardSt}>
