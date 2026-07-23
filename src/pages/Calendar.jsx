@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Ban } from "lucide-react";
 const hallColors = { "Main Hall": { hex: "#1B4332" }, "Mini Hall": { hex: "#2563eb" }, "Open Stage": { hex: "#D4A017" } };
-import BookingModal from "../components/BookingModal";
+import NewEnquiryModal from "../components/NewEnquiryModal";
 import { useBookings } from "../context/BookingsContext";
 import { settingsAPI } from "../services/api";
 
@@ -24,7 +24,7 @@ const STATUS_STYLE = {
 
 export default function Calendar() {
   const now = new Date();
-  const { bookings } = useBookings();
+  const { bookings, refetch } = useBookings();
   const [year,  setYear]          = useState(now.getFullYear());
   const [month, setMonth]         = useState(now.getMonth());
   const [selected, setSelected]   = useState(null);
@@ -289,7 +289,15 @@ export default function Calendar() {
       </div>
 
       {showModal && selectedDateStr && !blackoutDates.includes(selectedDateStr) && (
-        <BookingModal onClose={() => setShowModal(false)} prefillDate={selectedDateStr} />
+        <NewEnquiryModal 
+          open={showModal} 
+          onClose={() => setShowModal(false)} 
+          prefillDate={selectedDateStr} 
+          onSuccess={() => {
+            setShowModal(false);
+            if (refetch) refetch();
+          }} 
+        />
       )}
     </div>
   );

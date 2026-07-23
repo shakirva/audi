@@ -4,6 +4,7 @@
 
 const expenseRepository = require("../repositories/expense.repository");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
+const accountingEngine = require("./accountingEngine.service");
 
 class ExpenseService {
   /**
@@ -29,7 +30,7 @@ class ExpenseService {
       throw new BadRequestError("Category, description, amount, and date required");
     }
 
-    return expenseRepository.create({
+    const expense = await expenseRepository.create({
       tenantId,
       environmentId,
       category: data.category,
@@ -38,6 +39,19 @@ class ExpenseService {
       date: data.date,
       recurring: !!data.recurring,
     });
+
+    // Hook into accounting engine
+    try {
+      await accountingEngine.onExpenseCreated(expense, {
+        tenantId, environmentId,
+        createdBy: data.createdBy || null,
+        paymentMode: data.paymentMode || "Cash",
+      });
+    } catch (e) {
+      console.error("[ExpenseService] Failed to create accounting entry:", e);
+    }
+
+    return expense;
   }
 
   /**

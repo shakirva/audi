@@ -28,6 +28,7 @@ const Settings = sequelize.define("Settings", {
   eventTypes: { type: DataTypes.JSONB, defaultValue: ["Wedding", "Reception", "Engagement", "Birthday", "Conference", "Anniversary", "Baptism", "Other"] },
   sessions: { type: DataTypes.JSONB, defaultValue: [{ name: "Morning", time: "09:00 AM - 02:00 PM" }, { name: "Evening", time: "04:00 PM - 10:00 PM" }, { name: "Full Day", time: "09:00 AM - 10:00 PM" }] },
   expenseCategories: { type: DataTypes.JSONB, defaultValue: ["Staff Salaries", "Maintenance", "Utilities", "Catering Prep", "Miscellaneous"] },
+  places: { type: DataTypes.JSONB, defaultValue: ["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"] },
   
   managerRevenueEnabled: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {

@@ -3,7 +3,7 @@ const sequelize = require("./db");
 const { 
   Tenant, Environment, Subscription, User, 
   Customer, Enquiry, Booking, Agreement, Payment, Receipt, 
-  Job, JobTimeline, JobStaff, Expense, Settings 
+  Job, JobTimeline, JobStaff, JobChecklist, Expense, Settings 
 } = require("./models");
 
 const DEFAULT_TENANT = {
@@ -213,6 +213,21 @@ async function seed() {
           tenantId: tenant.id, environmentId: prodEnv.id,
           jobId: job.id, userId: createdUsers[Math.floor(Math.random() * createdUsers.length)].id, role: "Event Manager", assignedBy: adminUserId
         });
+
+        // Add 3 Checklists
+        const tasks = ["Confirm Stage Decorator", "Check Audio System", "Finalize Catering Menu", "Arrange Valet Parking", "Clean Hall"];
+        for (let j = 0; j < 3; j++) {
+          const isCompleted = j === 0 || (isPast && j < 2);
+          await JobChecklist.create({
+            tenantId: tenant.id, environmentId: prodEnv.id,
+            jobId: job.id,
+            taskName: tasks[Math.floor(Math.random() * tasks.length)] + ` ${j}`,
+            isCompleted: isCompleted,
+            completedAt: isCompleted ? new Date().toISOString() : null,
+            completedBy: isCompleted ? adminUserId : null,
+            createdBy: adminUserId
+          });
+        }
       }
     }
 

@@ -80,7 +80,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 sequelize
-  .sync() // creates tables if they don't exist
+  .sync({ alter: true }) // creates tables if they don't exist
   .then(() => {
     console.log("✅ Connected to PostgreSQL & synced tables");
     app.listen(PORT, () => {

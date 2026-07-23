@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database } from "lucide-react";
+import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit } from "lucide-react";
 import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
-import { settingsAPI } from "../services/api";
+import { authAPI, settingsAPI } from "../services/api";
+import { usersAPI } from "../services/api";
+import CreateHallModal from "../components/CreateHallModal";
+import AddStaffModal from "../components/AddStaffModal";
 
 const INIT_HALLS = [
   { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup" },
@@ -50,6 +53,10 @@ export default function Settings() {
     email:    "",
     gstin:    "",
   });
+  const [showCreateHallModal, setShowCreateHallModal] = useState(false);
+  const [editHallIndex, setEditHallIndex] = useState(null);
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [dbUsers, setDbUsers] = useState([]);
 
   // ── Hall Pricing ──
   const [halls, setHalls] = useState(INIT_HALLS);
@@ -80,7 +87,8 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const { data } = await settingsAPI.get();
+      const response = await settingsAPI.get();
+      const data = response.data.data;
       setSettingsId(data.id);
       setVenue({
         name: data.venueName || "",
@@ -112,11 +120,25 @@ export default function Settings() {
   };
 
   const handleHallChange = (idx, field, value) => {
-    setHalls(prev => prev.map((h, i) => i === idx ? { ...h, [field]: field === "price" || field === "capacity" ? Number(value) : value } : h));
+    setHalls(prev => prev.map((h, i) => {
+      if (i !== idx) return h;
+      const updated = { ...h, [field]: field === "price" || field === "pricePerPax" || field === "capacity" ? Number(value) : value };
+      if (field === "pricingType") {
+         if (value === "flat") { updated.pricePerPax = 0; updated.slabs = []; }
+         else if (value === "per_pax") { updated.price = 0; updated.slabs = []; }
+      }
+      return updated;
+    }));
   };
 
   const handleAddHall = () => {
-    setHalls(prev => [...prev, { name: "New Hall", icon: "✨", price: 0, capacity: 0, description: "" }]);
+    setEditHallIndex(null);
+    setShowCreateHallModal(true);
+  };
+
+  const handleEditHall = (idx) => {
+    setEditHallIndex(idx);
+    setShowCreateHallModal(true);
   };
 
   const handleDeleteHall = (idx) => {
@@ -182,7 +204,7 @@ export default function Settings() {
 
   const handleSaveLists = async () => {
     try {
-      await settingsAPI.update({ eventTypes, sessions, expenseCategories, places });
+      await settingsAPI.update({ eventTypes, sessions, places });
       addToast("Lists saved successfully! ✅", "success");
     } catch (e) { addToast("Failed to save lists", "error"); }
   };
@@ -247,14 +269,21 @@ export default function Settings() {
       <div style={{ marginBottom: 20 }}>
         <label style={labelSt}>{title}</label>
         <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, marginTop: -2 }}>{desc}</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-          {items.map(item => (
-            <div key={item} style={{ padding: "5px 12px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, fontWeight: 600, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>
-              {item}
-              <button onClick={() => setItems(items.filter(i => i !== item))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={12} color="#C0392B" /></button>
-            </div>
-          ))}
-        </div>
+        {items.length === 0 && (
+          <div style={{ padding: "16px", textAlign: "center", background: "#f9fafb", borderRadius: 10, border: "1px dashed #d1d5db", fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+            No items added yet.
+          </div>
+        )}
+        {items.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+            {items.map(item => (
+              <div key={item} style={{ padding: "5px 12px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, fontWeight: 600, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>
+                {item}
+                <button onClick={() => setItems(items.filter(i => i !== item))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={12} color="#C0392B" /></button>
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8 }}>
           <input value={newVal} onChange={e => setNewVal(e.target.value)} style={{ ...iStyle, flex: 1 }} placeholder="Type new option..." onKeyDown={e => { if(e.key === "Enter") { e.preventDefault(); if(newVal && !items.includes(newVal)){ setItems([...items, newVal]); setNewVal(""); } } }} />
           <button onClick={() => { if(newVal && !items.includes(newVal)){ setItems([...items, newVal]); setNewVal(""); } }} style={{ padding: "8px 16px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Add</button>
@@ -263,31 +292,118 @@ export default function Settings() {
     );
   };
 
-  const StaffAdder = () => {
-    const [newStaff, setNewStaff] = useState({ name: "", email: "", role: "Staff", access: "View Only" });
-    const add = () => {
-      if (!newStaff.name || !newStaff.email) return;
-      const updated = [...staff, newStaff];
-      setStaff(updated);
-      handleSaveStaff(updated);
-      setNewStaff({ name: "", email: "", role: "Staff", access: "View Only" });
-    };
+  const EventTypeEditor = ({ title, desc, items, setItems, globalSessions }) => {
+    const [newName, setNewName] = useState("");
+    
+    // Normalize items to objects if they are strings, and convert old pill sessions to object array
+    const normalizedItems = items.map(item => {
+      if (typeof item === "string") return { name: item, sessions: [] };
+      if (!item.sessions) {
+        const oldAllowed = item.allowedSessions || [];
+        const mappedSessions = oldAllowed.map(sName => {
+          const match = globalSessions.find(s => s.name === sName);
+          return { name: sName, time: match ? match.time : "" };
+        });
+        return { ...item, sessions: mappedSessions };
+      }
+      return item;
+    });
+
     return (
-      <div style={{ display: "flex", gap: 10, marginBottom: 18, alignItems: "center", flexWrap: "wrap", background: "#f9fafb", padding: 12, borderRadius: 12, border: "1px solid #e5e7eb" }}>
-        <input value={newStaff.name} onChange={e => setNewStaff(p => ({ ...p, name: e.target.value }))} placeholder="Name" style={{ ...iStyle, width: 140 }} />
-        <input value={newStaff.email} onChange={e => setNewStaff(p => ({ ...p, email: e.target.value }))} placeholder="Email" style={{ ...iStyle, width: 180 }} />
-        <select value={newStaff.role} onChange={e => setNewStaff(p => ({ ...p, role: e.target.value, access: e.target.value === "Owner" ? "Full" : e.target.value === "Manager" ? "Bookings & Reports" : "View Only" }))} style={{ ...iStyle, width: 120 }}>
-          <option value="Owner">Owner</option>
-          <option value="Manager">Manager</option>
-          <option value="Staff">Staff</option>
-        </select>
-        <button onClick={add} style={{
-          padding: "10px 16px", borderRadius: 8, border: "none",
-          background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
-        }}>+ Invite Member</button>
+      <div style={{ marginBottom: 20 }}>
+        <label style={labelSt}>{title}</label>
+        <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, marginTop: -2 }}>{desc}</p>
+        {normalizedItems.length === 0 && (
+          <div style={{ padding: "16px", textAlign: "center", background: "#f9fafb", borderRadius: 10, border: "1px dashed #d1d5db", fontSize: 12, color: "#6b7280", marginBottom: 14 }}>
+            No event types added yet.
+          </div>
+        )}
+        {normalizedItems.length > 0 && (
+          <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+            {normalizedItems.map(item => (
+              <div key={item.name} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#fff", padding: "14px", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{item.name}</span>
+                  <button onClick={() => setItems(normalizedItems.filter(i => i.name !== item.name))} style={{ background: "none", border: "none", padding: 4, cursor: "pointer" }}>
+                    <X size={14} color="#C0392B" />
+                  </button>
+                </div>
+                
+                <div style={{ paddingLeft: 12, borderLeft: "2px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {item.sessions && item.sessions.length > 0 ? item.sessions.map((sess, idx) => (
+                    <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#374151", minWidth: 80 }}>{sess.name}</span>
+                      <input 
+                        value={sess.time || ""}
+                        onChange={(e) => {
+                          const newSessions = [...item.sessions];
+                          newSessions[idx] = { ...sess, time: e.target.value };
+                          setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
+                        }}
+                        style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }}
+                        placeholder="Time (e.g. 9am - 1pm)"
+                      />
+                      <button onClick={() => {
+                        const newSessions = item.sessions.filter((_, i) => i !== idx);
+                        setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
+                      }} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={12} color="#C0392B" /></button>
+                    </div>
+                  )) : (
+                    <span style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>No sessions configured for this event.</span>
+                  )}
+                  
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <input id={`sess_name_${item.name}`} placeholder="New Session Name (e.g. Morning)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} />
+                    <input id={`sess_time_${item.name}`} placeholder="Time (e.g. 9am - 2pm)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const sName = document.getElementById(`sess_name_${item.name}`).value;
+                        const sTime = document.getElementById(`sess_time_${item.name}`).value;
+                        if (sName) {
+                          const newSessions = [...(item.sessions || []), { name: sName, time: sTime }];
+                          setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
+                          document.getElementById(`sess_name_${item.name}`).value = "";
+                          document.getElementById(`sess_time_${item.name}`).value = "";
+                        }
+                      }
+                    }} />
+                    <button onClick={() => {
+                      const sName = document.getElementById(`sess_name_${item.name}`).value;
+                      const sTime = document.getElementById(`sess_time_${item.name}`).value;
+                      if (sName) {
+                        const newSessions = [...(item.sessions || []), { name: sName, time: sTime }];
+                        setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
+                        document.getElementById(`sess_name_${item.name}`).value = "";
+                        document.getElementById(`sess_time_${item.name}`).value = "";
+                      }
+                    }} style={{ padding: "4px 10px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 11, cursor: "pointer", fontWeight: 600, color: "#374151" }}>Add</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={newName} onChange={e => setNewName(e.target.value)} style={{ ...iStyle, flex: 1 }} placeholder="Type new event type..." onKeyDown={e => { if(e.key === "Enter") { e.preventDefault(); if(newName && !normalizedItems.find(i => i.name === newName)){ setItems([...normalizedItems, { name: newName, sessions: [] }]); setNewName(""); } } }} />
+          <button onClick={() => { if(newName && !normalizedItems.find(i => i.name === newName)){ setItems([...normalizedItems, { name: newName, sessions: [] }]); setNewName(""); } }} style={{ padding: "8px 16px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Add Event Type</button>
+        </div>
       </div>
     );
   };
+
+  const StaffAdder = () => (
+    <button
+      onClick={() => setShowAddStaffModal(true)}
+      style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "10px 18px", borderRadius: 10, border: "none",
+        background: "linear-gradient(135deg, #4c1d95, #7c3aed)",
+        color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+        boxShadow: "0 4px 12px rgba(124,58,237,0.25)", marginBottom: 18,
+      }}>
+      + Add Staff / Create User
+    </button>
+  );
 
   const ReminderDayAdder = () => {
     const [newDay, setNewDay] = useState("");
@@ -316,32 +432,7 @@ export default function Settings() {
     );
   };
 
-  const SessionEditor = ({ title, desc, items, setItems }) => {
-    const [newName, setNewName] = useState("");
-    const [newTime, setNewTime] = useState("");
-    return (
-      <div style={{ marginBottom: 20 }}>
-        <label style={labelSt}>{title}</label>
-        <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, marginTop: -2 }}>{desc}</p>
-        <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
-          {items.map(item => (
-            <div key={item.name} style={{ padding: "8px 12px", background: "#f3f4f6", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.name}</span>
-                <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 8 }}>{item.time}</span>
-              </div>
-              <button onClick={() => setItems(items.filter(i => i.name !== item.name))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={14} color="#C0392B" /></button>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={newName} onChange={e => setNewName(e.target.value)} style={{ ...iStyle, flex: 1 }} placeholder="Name (e.g. Morning)" />
-          <input value={newTime} onChange={e => setNewTime(e.target.value)} style={{ ...iStyle, flex: 1 }} placeholder="Time (e.g. 09:00 AM - 02:00 PM)" onKeyDown={e => { if(e.key === "Enter") { e.preventDefault(); if(newName && newTime && !items.find(i=>i.name===newName)){ setItems([...items, {name: newName, time: newTime}]); setNewName(""); setNewTime(""); } } }} />
-          <button onClick={() => { if(newName && newTime && !items.find(i=>i.name===newName)){ setItems([...items, {name: newName, time: newTime}]); setNewName(""); setNewTime(""); } }} style={{ padding: "8px 16px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Add</button>
-        </div>
-      </div>
-    );
-  };
+
 
   return (
     <div className="hm-settings-container" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -583,16 +674,16 @@ export default function Settings() {
       </div>
       )}
 
-      {/* ── HALL PRICING CARD (Owner & Manager) ── */}
+      {/* ── HALL MANAGEMENT (Owner & Manager) ── */}
       {isAdminRole && (
       <div style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <IndianRupee size={18} color="#D4A017" />
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Building2 size={18} color="#4b5563" />
           </div>
           <div>
-            <p style={sectionTitle}>Hall Pricing & Capacity</p>
-            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Set per-session pricing and guest limits</p>
+            <p style={sectionTitle}>Hall Management</p>
+            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Create halls and define their capacities</p>
           </div>
         </div>
 
@@ -602,46 +693,53 @@ export default function Settings() {
               border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "16px 18px",
               background: "#fafafa", position: "relative"
             }}>
-              <button onClick={() => handleDeleteHall(idx)} title="Delete Hall" style={{ position: "absolute", top: 12, right: 12, background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
-                <Trash2 size={14} color="#ef4444" />
-              </button>
+              <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 8 }}>
+                <button onClick={() => handleEditHall(idx)} title="Edit Hall" style={{ background: "#e0f2fe", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                  <Edit size={14} color="#0284c7" />
+                </button>
+                <button onClick={() => handleDeleteHall(idx)} title="Delete Hall" style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                  <Trash2 size={14} color="#ef4444" />
+                </button>
+              </div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, alignItems: "end", paddingRight: 32 }}>
-                <div style={{ maxWidth: 80 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 12, paddingRight: 32 }}>
+                <div style={{ width: 60 }}>
                   <label style={labelSt}>Icon</label>
                   <input value={hall.icon} onChange={e => handleHallChange(idx, "icon", e.target.value)}
                     style={{...iStyle, textAlign: "center", fontSize: 16}}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
-                <div style={{ gridColumn: "span 2" }}>
+                <div style={{ flex: "1 1 180px" }}>
                   <label style={labelSt}>Hall Name</label>
                   <input value={hall.name} onChange={e => handleHallChange(idx, "name", e.target.value)}
                     style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
-                <div style={{ gridColumn: "span 3" }}>
-                  <label style={labelSt}>Description</label>
-                  <input value={hall.description} onChange={e => handleHallChange(idx, "description", e.target.value)}
-                    style={{ ...iStyle, fontSize: 12 }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-                </div>
-                <div style={{ gridColumn: "span 2" }}>
-                  <label style={labelSt}><IndianRupee size={11} /> Price (₹)</label>
-                  <input type="number" value={hall.price} onChange={e => handleHallChange(idx, "price", e.target.value)}
-                    style={iStyle}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-                </div>
-                <div style={{ gridColumn: "span 2" }}>
-                  <label style={labelSt}><Users size={11} /> Max Guests</label>
+                <div style={{ flex: "1 1 100px" }}>
+                  <label style={labelSt}><Users size={11} /> Guests Cap.</label>
                   <input type="number" value={hall.capacity} onChange={e => handleHallChange(idx, "capacity", e.target.value)}
                     style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
+                <div style={{ flex: "1 1 120px" }}>
+                  <label style={labelSt}>Pricing Model</label>
+                  <select value={hall.pricingType || "flat"} onChange={e => handleHallChange(idx, "pricingType", e.target.value)}
+                    style={{ ...iStyle, cursor: "pointer" }}>
+                    <option value="flat">Flat Rate</option>
+                    <option value="per_pax">Per Pax Rate</option>
+                    <option value="slab">Slab / Package Wise</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ paddingRight: 32 }}>
+                <label style={labelSt}>Description</label>
+                <input value={hall.description} onChange={e => handleHallChange(idx, "description", e.target.value)}
+                  style={{ ...iStyle, fontSize: 12 }}
+                  onFocus={e => e.target.style.borderColor = "#1B4332"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
               </div>
             </div>
           ))}
@@ -650,12 +748,139 @@ export default function Settings() {
         <div style={{ display: "flex", gap: 12 }}>
           <button onClick={handleAddHall} style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "10px 16px", borderRadius: 10, border: "1.5px solid #D4A017",
-            background: "#fffbeb", color: "#b4860b", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            padding: "10px 16px", borderRadius: 10, border: "1.5px solid #d1d5db",
+            background: "#f3f4f6", color: "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}>
             + Add New Hall
           </button>
           
+          <button onClick={handleSaveHalls} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "10px 20px", borderRadius: 10, border: "none",
+            background: "#4b5563", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+            boxShadow: "0 2px 10px rgba(75,85,99,0.3)",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "#374151"}
+            onMouseLeave={e => e.currentTarget.style.background = "#4b5563"}>
+            <Save size={14} /> Save Halls
+          </button>
+        </div>
+      </div>
+      )}
+
+      {/* ── HALL PRICING CONFIGURATION (Owner & Manager) ── */}
+      {isAdminRole && (
+      <div style={cardSt}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <IndianRupee size={18} color="#D4A017" />
+          </div>
+          <div>
+            <p style={sectionTitle}>Hall Pricing Configuration</p>
+            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Configure specific rates and slab pricing based on models</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
+          {halls.map((hall, idx) => (
+            <div key={idx} style={{
+              border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "16px 18px",
+              background: "#fafafa"
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1B4332", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                <span>{hall.icon}</span> {hall.name} 
+                <span style={{ fontSize: 10, color: "#6b7280", background: "#e5e7eb", padding: "2px 6px", borderRadius: 4 }}>
+                  {hall.pricingType === "slab" ? "Slab Wise" : hall.pricingType === "per_pax" ? "Per Pax" : "Flat Rate"}
+                </span>
+              </div>
+              
+              {(!hall.pricingType || hall.pricingType === "flat") && (
+                <div style={{ width: 200 }}>
+                  <label style={labelSt}><IndianRupee size={11} /> Flat Rate per Session</label>
+                  <input type="number" value={hall.price} onChange={e => handleHallChange(idx, "price", e.target.value)} style={iStyle} />
+                </div>
+              )}
+
+              {hall.pricingType === "per_pax" && (
+                <div style={{ width: 200 }}>
+                  <label style={labelSt}><IndianRupee size={11} /> Rate per Pax</label>
+                  <input type="number" value={hall.pricePerPax || 0} onChange={e => handleHallChange(idx, "pricePerPax", e.target.value)} style={iStyle} />
+                </div>
+              )}
+
+              {hall.pricingType === "slab" && (
+                <div>
+                  <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>Configure guest slabs (e.g. Up to 300 guests = Rs. 390,000)</p>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {(hall.slabs || []).map((slab, sIdx) => (
+                      <div key={sIdx} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 10, color: "#6b7280" }}>Up to Guests</label>
+                          <input type="number" value={slab.guests || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].guests = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 10, color: "#6b7280" }}>Total Amount (₹)</label>
+                          <input type="number" value={slab.totalAmount || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].totalAmount = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 10, color: "#6b7280" }}>Hall Price</label>
+                          <input type="number" value={slab.baseAmount || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].baseAmount = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} placeholder="₹" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 10, color: "#6b7280" }}>Per Person</label>
+                          <input type="number" value={slab.perPerson || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].perPerson = Number(e.target.value);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} placeholder="₹" />
+                        </div>
+                        <button onClick={() => {
+                          const newSlabs = (hall.slabs || []).filter((_, i) => i !== sIdx);
+                          handleHallChange(idx, "slabs", newSlabs);
+                        }} style={{ padding: 8, background: "#fee2e2", border: "none", borderRadius: 8, cursor: "pointer", height: 35 }}>
+                          <Trash2 size={14} color="#ef4444" />
+                        </button>
+                      </div>
+                    ))}
+                    <button onClick={() => {
+                      const newSlabs = [...(hall.slabs || []), { guests: 0, totalAmount: 0, baseAmount: 0, perPerson: 0 }];
+                      handleHallChange(idx, "slabs", newSlabs);
+                    }} style={{ padding: "6px 12px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer", width: "fit-content", marginTop: 4 }}>
+                      + Add Slab
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex" }}>
           <button onClick={handleSaveHalls} style={{
             display: "flex", alignItems: "center", gap: 7,
             padding: "10px 20px", borderRadius: 10, border: "none",
@@ -664,7 +889,7 @@ export default function Settings() {
           }}
             onMouseEnter={e => e.currentTarget.style.background = "#b8890e"}
             onMouseLeave={e => e.currentTarget.style.background = "#D4A017"}>
-            <Save size={14} /> Update Hall Pricing
+            <Save size={14} /> Save Pricing Configuration
           </button>
         </div>
       </div>
@@ -841,10 +1066,7 @@ export default function Settings() {
             <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Manage options for forms throughout the app</p>
           </div>
         </div>
-
-        <ListEditor title="Event Types" desc="Available events in booking forms" items={eventTypes} setItems={setEventTypes} />
-        <SessionEditor title="Sessions" desc="Available time slots for bookings with specific timings" items={sessions} setItems={setSessions} />
-        <ListEditor title="Expense Categories" desc="Categories for tracking auditorium expenses" items={expenseCategories} setItems={setExpenseCategories} />
+        <EventTypeEditor title="Event Types" desc="Available events in booking forms and their specific sessions" items={eventTypes} setItems={setEventTypes} globalSessions={sessions} />
         <ListEditor title="📍 Places / Areas" desc="Customer locations shown as suggestions in the New Enquiry form (e.g. Kannur, Thalassery)" items={places} setItems={setPlaces} />
 
         <button onClick={handleSaveLists} style={{
@@ -1089,6 +1311,33 @@ export default function Settings() {
         </div>
       </div>
 
+      <CreateHallModal
+        open={showCreateHallModal}
+        editData={editHallIndex !== null ? halls[editHallIndex] : null}
+        onClose={() => {
+          setShowCreateHallModal(false);
+          setEditHallIndex(null);
+        }}
+        onSave={async (newHall) => {
+          let updatedHalls = [];
+          if (editHallIndex !== null) {
+            updatedHalls = halls.map((h, i) => i === editHallIndex ? { ...h, ...newHall } : h);
+            setHalls(updatedHalls);
+            addToast(`${newHall.name} updated successfully!`, "success");
+          } else {
+            updatedHalls = [...halls, newHall];
+            setHalls(updatedHalls);
+            addToast(`${newHall.name} added successfully!`, "success");
+          }
+          setEditHallIndex(null);
+          
+          try {
+            await settingsAPI.update({ halls: updatedHalls });
+          } catch(e) {
+            console.error("Failed to auto-save halls to db", e);
+          }
+        }}
+      />
     </div>
   );
 }

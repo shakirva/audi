@@ -27,6 +27,9 @@ const JobDocument = require("./JobDocument");
 const AccountStatement = require("./AccountStatement");
 const CashBook = require("./CashBook");
 const BankBook = require("./BankBook");
+const ChartOfAccount = require("./ChartOfAccount");
+const JournalEntry = require("./JournalEntry");
+const Voucher = require("./Voucher");
 const {
   MasterHall, MasterPackage, MasterService, MasterEventType,
   MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory,
@@ -56,6 +59,9 @@ Tenant.hasMany(JobDocument, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(AccountStatement, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(CashBook, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(BankBook, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(ChartOfAccount, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(JournalEntry, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Voucher, { foreignKey: "tenantId", onDelete: "CASCADE" });
 
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -78,6 +84,9 @@ Environment.hasMany(JobDocument, { foreignKey: "environmentId", onDelete: "CASCA
 Environment.hasMany(AccountStatement, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(CashBook, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(BankBook, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(ChartOfAccount, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(JournalEntry, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(Voucher, { foreignKey: "environmentId", onDelete: "CASCADE" });
 
 // ── Customer has many ──
 Customer.hasMany(Booking, { foreignKey: "customerId", onDelete: "SET NULL" });
@@ -142,6 +151,9 @@ JobDocument.belongsTo(Tenant, { foreignKey: "tenantId" });
 AccountStatement.belongsTo(Tenant, { foreignKey: "tenantId" });
 CashBook.belongsTo(Tenant, { foreignKey: "tenantId" });
 BankBook.belongsTo(Tenant, { foreignKey: "tenantId" });
+ChartOfAccount.belongsTo(Tenant, { foreignKey: "tenantId" });
+JournalEntry.belongsTo(Tenant, { foreignKey: "tenantId" });
+Voucher.belongsTo(Tenant, { foreignKey: "tenantId" });
 
 // ── Belongs to Environment ──
 Booking.belongsTo(Environment, { foreignKey: "environmentId" });
@@ -164,6 +176,21 @@ JobDocument.belongsTo(Environment, { foreignKey: "environmentId" });
 AccountStatement.belongsTo(Environment, { foreignKey: "environmentId" });
 CashBook.belongsTo(Environment, { foreignKey: "environmentId" });
 BankBook.belongsTo(Environment, { foreignKey: "environmentId" });
+ChartOfAccount.belongsTo(Environment, { foreignKey: "environmentId" });
+JournalEntry.belongsTo(Environment, { foreignKey: "environmentId" });
+Voucher.belongsTo(Environment, { foreignKey: "environmentId" });
+
+// ── Journal/Voucher associations ──
+JournalEntry.belongsTo(ChartOfAccount, { as: "DebitAccount", foreignKey: "debitAccountId" });
+JournalEntry.belongsTo(ChartOfAccount, { as: "CreditAccount", foreignKey: "creditAccountId" });
+JournalEntry.belongsTo(Voucher, { foreignKey: "voucherId" });
+JournalEntry.belongsTo(Customer, { foreignKey: "customerId" });
+JournalEntry.belongsTo(Booking, { foreignKey: "bookingId" });
+Voucher.hasMany(JournalEntry, { foreignKey: "voucherId" });
+Voucher.belongsTo(Customer, { foreignKey: "customerId" });
+Voucher.belongsTo(Booking, { foreignKey: "bookingId" });
+ChartOfAccount.hasMany(JournalEntry, { as: "DebitEntries", foreignKey: "debitAccountId" });
+ChartOfAccount.hasMany(JournalEntry, { as: "CreditEntries", foreignKey: "creditAccountId" });
 
 // ── Other BelongsTo ──
 Booking.belongsTo(Customer, { foreignKey: "customerId" });
@@ -207,6 +234,7 @@ module.exports = {
   Agreement, AgreementTemplate, AgreementVersion, Payment, Receipt,
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
   AccountStatement, CashBook, BankBook,
+  ChartOfAccount, JournalEntry, Voucher,
   MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory 
 };
 

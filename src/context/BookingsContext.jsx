@@ -12,7 +12,7 @@ export function BookingsProvider({ children }) {
   const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await bookingsAPI.getAll();
+      const { data } = await bookingsAPI.getAll({ limit: 1000 });
       setBookings(data.data || []);
       setError(null);
     } catch (err) {

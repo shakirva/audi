@@ -7,6 +7,8 @@
 const bookingRepository = require("../repositories/booking.repository");
 const customerService = require("./customer.service");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
+const paymentService = require("./payment.service");
+const accountingEngine = require("./accountingEngine.service");
 
 class BookingService {
   /**
@@ -112,6 +114,31 @@ class BookingService {
       package: data.package || "",
       discount: Number(data.discount) || 0,
     });
+
+    // Create accounting journal entry (Customer Outstanding ↔ Hall Booking Income)
+    try {
+      await accountingEngine.onBookingCreated(booking, {
+        tenantId, environmentId, createdBy: data.createdBy || null,
+      });
+    } catch (e) {
+      console.error("[BookingService] Accounting engine error:", e);
+    }
+    if (Number(data.advance) > 0 && data.paymentMethod) {
+      try {
+        await paymentService.recordPayment({
+          bookingId: booking.id,
+          customerId: booking.customerId,
+          amount: Number(data.advance),
+          paymentMode: data.paymentMethod,
+          paymentDate: new Date().toISOString(),
+          referenceNumber: data.upiId || data.accountName || "",
+          notes: data.paymentRemarks || data.receivedBy || "Advance payment at booking",
+          bankId: null // Optional depending on schema
+        }, { tenantId, environmentId, createdBy: data.createdBy || null });
+      } catch (e) {
+        console.error("Failed to record advance payment during booking:", e);
+      }
+    }
 
     return {
       id: booking.bookingId,

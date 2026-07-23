@@ -150,11 +150,11 @@ export default function Jobs() {
     const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
     
     // Fallback data if arrays are missing
-    const checklists = selectedJob.Checklists || [];
+    const checklists = selectedJob.JobChecklists || selectedJob.Checklists || [];
     const completedTasks = checklists.filter(c => c.isCompleted).length;
     const totalTasks = checklists.length;
-    const staff = selectedJob.Staff || [];
-    const timeline = selectedJob.Timeline || [];
+    const staff = selectedJob.JobStaffs || selectedJob.Staff || [];
+    const timeline = selectedJob.JobTimelines || selectedJob.Timeline || [];
 
     return (
       <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -314,8 +314,8 @@ export default function Jobs() {
             const eventType = getEventType(job);
             const hall = job.hall || job.Booking?.hall || "Main Hall";
             const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-            const staffCount = job.Staff?.length || 0;
-            const checklists = job.Checklists || [];
+            const staffCount = job.JobStaffs?.length || job.Staff?.length || 0;
+            const checklists = job.JobChecklists || job.Checklists || [];
             const completedTasks = checklists.filter(c => c.isCompleted).length;
             const totalTasks = checklists.length;
 

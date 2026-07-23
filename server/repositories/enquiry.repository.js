@@ -26,7 +26,7 @@ class EnquiryRepository extends BaseRepository {
       environmentId,
       where,
       include: [
-        { model: Customer, attributes: ["id", "name", "phone", "email"] },
+        { model: Customer, attributes: ["id", "name", "phone", "email", "address", "city"] },
         { model: User, as: "SalesExecutive", attributes: ["id", "name"] }
       ],
       order: [["createdAt", "DESC"]],
@@ -38,7 +38,7 @@ class EnquiryRepository extends BaseRepository {
     return this.model.findOne({
       where: { id, tenantId, environmentId },
       include: [
-        { model: Customer, attributes: ["id", "name", "phone", "email", "customerType"] },
+        { model: Customer, attributes: ["id", "name", "phone", "email", "address", "city", "customerType"] },
         { model: User, as: "SalesExecutive", attributes: ["id", "name"] }
       ]
     });

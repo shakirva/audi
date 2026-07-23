@@ -18,6 +18,19 @@ class JobRepository extends BaseRepository {
       include: [
         { model: Customer, attributes: ["id", "name", "phone"] },
         { model: Booking, attributes: ["id", "bookingId", "totalAmount"] },
+        { 
+          model: JobStaff, 
+          include: [{ model: User, attributes: ["id", "name", "email"] }]
+        },
+        { 
+          model: JobChecklist,
+          include: [{ model: User, as: "CompletedByUser", attributes: ["id", "name"] }]
+        },
+        { 
+          model: JobTimeline,
+          include: [{ model: User, attributes: ["id", "name"] }],
+          order: [["createdAt", "DESC"]]
+        }
       ],
       order: [["eventDate", "ASC"], ["createdAt", "DESC"]],
       query,

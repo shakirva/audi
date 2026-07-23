@@ -65,6 +65,33 @@ class SettingsController {
       next(err);
     }
   }
+
+  async users(req, res, next) {
+    try {
+      const result = await settingsService.getUsers(req.tenantId);
+      return sendSuccess(res, { data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async toggleUserActive(req, res, next) {
+    try {
+      const result = await settingsService.toggleUserActive(req.params.id, req.tenantId);
+      return sendSuccess(res, { data: result, message: `User ${result.active ? 'activated' : 'deactivated'} successfully` });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteUser(req, res, next) {
+    try {
+      const result = await settingsService.deleteUser(req.params.id, req.tenantId);
+      return sendSuccess(res, { data: result, message: "User removed successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new SettingsController();

@@ -15,10 +15,18 @@ class CustomerService {
     return { data: rows, total, page, limit };
   }
 
-  async findOrCreateCustomer({ name, phone, email, city }, { tenantId, environmentId, createdBy }) {
+  async findOrCreateCustomer({ name, phone, email, address, place, gender }, { tenantId, environmentId, createdBy }) {
     const existing = await customerRepository.findByPhone(phone, { tenantId, environmentId });
     if (existing) {
-      return { customer: existing, created: false };
+      // Update the customer's info with the latest data provided
+      const updated = await customerRepository.update(existing, {
+        name: name || existing.name,
+        address: address || existing.address,
+        city: place || existing.city,
+        email: email || existing.email,
+        updatedBy: createdBy,
+      });
+      return { customer: updated, created: false };
     }
     const customer = await customerRepository.create({
       tenantId,
@@ -26,7 +34,8 @@ class CustomerService {
       name,
       phone,
       email: email || null,
-      city: city || null,
+      address: address || null,
+      city: place || null,
       createdBy,
     });
     return { customer, created: true };

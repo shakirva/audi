@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown } from "lucide-react";
+import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2 } from "lucide-react";
 import { enquiriesAPI, customersAPI, settingsAPI } from "../services/api";
 import { useToast } from "./Toast";
 
@@ -22,7 +22,7 @@ const HALLS = ["Emerald Hall", "Royal Hall", "Orchid Hall"];
 const LEAD_SCORES = ["Hot", "Warm", "Cold"];
 const GENDERS = ["Male", "Female", "Other"];
 
-export default function NewEnquiryModal({ open, onClose, onSuccess }) {
+export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate = "", editData = null }) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -33,34 +33,153 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
   const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
   const placeRef = useRef(null);
 
+  const [users, setUsers] = useState([]);
+  
+  // Custom confirmation popup state
+  const [placeToConfirm, setPlaceToConfirm] = useState(null);
+  
+  // Dynamic settings
+  const [settingsHalls, setSettingsHalls] = useState([]);
+  const [settingsEventTypes, setSettingsEventTypes] = useState([]);
+  const [settingsSessions, setSettingsSessions] = useState([]);
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
-    gender: "Male",
+    gender: "",
     address: "",
     place: "",
-    eventType: "Wedding",
-    tentativeDate: "",
-    session: "Full Day",
-    hallPreference: "Emerald Hall",
+    eventType: "",
+    tentativeDate: prefillDate,
+    session: "",
+    hallPreference: "",
     guestCount: "",
     budget: "",
-    leadScore: "Warm",
+    leadScore: "",
     remarks: "",
-    source: "Walk-in",
+    source: "",
+    salesExecutiveId: "",
   });
 
-  // Load places from settings
+  // When editData changes, pre-fill the form
+  useEffect(() => {
+    if (editData && open) {
+      setForm({
+        name: editData.Customer?.name || editData.name || "",
+        phone: editData.Customer?.phone || editData.phone || "",
+        gender: editData.Customer?.gender || "",
+        address: editData.Customer?.address || "",
+        place: editData.Customer?.city || "",
+        eventType: editData.eventType || "",
+        tentativeDate: editData.tentativeDate ? editData.tentativeDate.split("T")[0] : "",
+        session: editData.session || "",
+        hallPreference: editData.hallPreference || "",
+        guestCount: editData.guestCount || "",
+        budget: editData.budget || "",
+        leadScore: editData.leadScore || "",
+        remarks: editData.remarks || "",
+        source: editData.source || "",
+        salesExecutiveId: editData.salesExecutiveId || "",
+      });
+      setPlaceQuery(editData.Customer?.city || "");
+      setUserEditedBudget(editData.budget ? true : false);
+    } else if (!editData && open) {
+      // Reset for new enquiry
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "" });
+      setPlaceQuery("");
+      setUserEditedBudget(false);
+    }
+  }, [editData, open]);
+
+  const [userEditedBudget, setUserEditedBudget] = useState(false);
+
+  // Calculation logic
+  const getCalculatedPrice = () => {
+    const h = settingsHalls.find(x => x.name === form.hallPreference);
+    if (!h) return 0;
+
+    if (h.pricingType === "slab" && h.slabs && h.slabs.length > 0) {
+      const g = Number(form.guestCount) || 0;
+      const sortedSlabs = [...h.slabs].sort((a, b) => a.guests - b.guests);
+      const matchedSlab = sortedSlabs.find(s => g <= s.guests);
+      if (matchedSlab) {
+        return matchedSlab.totalAmount;
+      } else {
+        return sortedSlabs[sortedSlabs.length - 1].totalAmount;
+      }
+    } else if (h.pricingType === "per_pax") {
+      const g = Number(form.guestCount) || 0;
+      return (h.pricePerPax || 0) * g;
+    } else {
+      return h.price || 0;
+    }
+  };
+
+  useEffect(() => {
+    const price = getCalculatedPrice();
+    if (price > 0 && !userEditedBudget) {
+      setForm(prev => ({ ...prev, budget: price }));
+    }
+  }, [form.hallPreference, form.guestCount, form.session, settingsHalls, userEditedBudget]);
+
+  // Load places and users
   useEffect(() => {
     if (!open) return;
+    
+    // Fetch settings
     settingsAPI.get()
       .then(res => {
-        if (res.data.places && res.data.places.length > 0) {
-          setPlaces(res.data.places);
+        const data = res.data.data; // Fixed to parse the nested data wrapper
+        if (data && data.places && data.places.length > 0) setPlaces(data.places);
+        if (data && data.halls && data.halls.length > 0) {
+          setSettingsHalls(data.halls);
+        }
+        if (data && data.eventTypes && data.eventTypes.length > 0) {
+          setSettingsEventTypes(data.eventTypes);
+        }
+        if (data && data.sessions && data.sessions.length > 0) {
+          setSettingsSessions(data.sessions);
         }
       })
-      .catch(() => {}); // silently fail — default places are already set
+      .catch(() => {});
+
+    // Fetch users for salesman dropdown
+    if (settingsAPI.getUsers) {
+      settingsAPI.getUsers()
+        .then(res => {
+          if (res.data.data && res.data.data.length > 0) {
+            setUsers(res.data.data.filter(u => u.active !== false));
+          }
+        })
+        .catch(() => {});
+    }
   }, [open]);
+
+  // Auto-correct session if not allowed by event type or hall
+  useEffect(() => {
+    let allowedSessionNames = [];
+    
+    if (settingsEventTypes.length > 0) {
+      const currentEv = settingsEventTypes.find(t => (typeof t === "string" ? t : t.name) === form.eventType);
+      if (currentEv) {
+        allowedSessionNames = currentEv.sessions ? currentEv.sessions.map(s => s.name) : (currentEv.allowedSessions || []);
+      }
+    }
+    
+    const selectedHall = settingsHalls.find(h => h.name === form.hallPreference);
+    if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
+       if (allowedSessionNames.length > 0) {
+          allowedSessionNames = allowedSessionNames.filter(s => selectedHall.allowedSessions.includes(s));
+          if (allowedSessionNames.length === 0) allowedSessionNames = [...selectedHall.allowedSessions];
+       } else {
+          allowedSessionNames = [...selectedHall.allowedSessions];
+       }
+    }
+
+    if (form.session && allowedSessionNames.length > 0 && !allowedSessionNames.includes(form.session)) {
+      setForm(prev => ({ ...prev, session: "" }));
+    }
+  }, [form.eventType, form.hallPreference, settingsEventTypes, settingsHalls]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -77,6 +196,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "budget") setUserEditedBudget(true); // Stop auto-calc if user manually edits
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
@@ -98,38 +218,79 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
       setError("Please enter a valid 10-digit phone number.");
       return;
     }
+    if (!form.hallPreference) {
+      setError("Please select a Hall.");
+      return;
+    }
+    if (!form.session) {
+      setError("Please select a Session.");
+      return;
+    }
 
     setLoading(true);
     try {
-      // Step 1: Find or create the customer
-      const custRes = await customersAPI.findOrCreate({
-        name: form.name.trim(),
-        phone: form.phone.replace(/\D/g, "").slice(-10),
-        gender: form.gender,
-        address: form.address.trim(),
-        place: form.place.trim(),
-      });
-      const customerId = custRes.data.data.id;
+      if (editData) {
+        // ── EDIT MODE ── Update customer info + enquiry fields
+        await customersAPI.findOrCreate({
+          name: form.name.trim(),
+          phone: form.phone.replace(/\D/g, "").slice(-10),
+          gender: form.gender,
+          address: form.address.trim(),
+          place: form.place.trim(),
+        });
+        await enquiriesAPI.update(editData.id, {
+          eventType: form.eventType,
+          tentativeDate: form.tentativeDate || undefined,
+          session: form.session,
+          hallPreference: form.hallPreference,
+          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
+          budget: form.budget ? parseInt(form.budget) : 0,
+          leadScore: form.leadScore || undefined,
+          remarks: form.remarks || undefined,
+          source: form.source || undefined,
+          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+        });
+        addToast("Enquiry updated successfully! ✏️", "success");
+      } else {
+        // ── CREATE MODE ── Find or create customer then create enquiry
+        const custRes = await customersAPI.findOrCreate({
+          name: form.name.trim(),
+          phone: form.phone.replace(/\D/g, "").slice(-10),
+          gender: form.gender,
+          address: form.address.trim(),
+          place: form.place.trim(),
+        });
+        const customerId = custRes.data.data.id;
+        await enquiriesAPI.create({
+          customerId,
+          eventType: form.eventType,
+          tentativeDate: form.tentativeDate || undefined,
+          session: form.session,
+          hallPreference: form.hallPreference,
+          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
+          budget: form.budget ? parseInt(form.budget) : 0,
+          leadScore: form.leadScore || undefined,
+          remarks: form.remarks || undefined,
+          source: form.source || undefined,
+          status: "New Enquiry",
+          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+        });
+      }
 
-      // Step 2: Create the enquiry
-      await enquiriesAPI.create({
-        customerId,
-        eventType: form.eventType,
-        tentativeDate: form.tentativeDate || undefined,
-        session: form.session,
-        hallPreference: form.hallPreference,
-        guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
-        budget: form.budget ? parseInt(form.budget) : 0,
-        leadScore: form.leadScore,
-        remarks: form.remarks,
-        source: form.source,
-        status: "New Enquiry",
-      });
-
-      // Reset form
-      setForm({ name: "", phone: "", gender: "Male", address: "", place: "", eventType: "Wedding", tentativeDate: "", session: "Full Day", hallPreference: "Emerald Hall", guestCount: "", budget: "", leadScore: "Warm", remarks: "", source: "Walk-in" });
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "" });
       setPlaceQuery("");
       onSuccess?.();
+      
+      // WhatsApp Redirect
+      const message = editData 
+        ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
+        : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
+      
+      const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
+      const text = encodeURIComponent(message);
+      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+      window.open(waUrl, "_blank");
+
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || "Failed to save enquiry. Please try again.";
       setError(msg);
@@ -140,14 +301,19 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
-      <div style={{ background: "#fff", width: "100%", maxWidth: 620, borderRadius: 20, boxShadow: "0 25px 80px rgba(0,0,0,0.2)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "92vh" }}>
+    <>
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+        <div style={{ background: "#fff", width: "100%", maxWidth: 620, borderRadius: 20, boxShadow: "0 25px 80px rgba(0,0,0,0.2)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "92vh" }}>
         
         {/* Header */}
         <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif" }}>New Enquiry</h2>
-            <p style={{ margin: "3px 0 0", fontSize: 12, color: "rgba(212,160,23,0.9)" }}>Capture lead details — booking can be done later</p>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif" }}>
+              {editData ? "✏️ Edit Enquiry" : "New Enquiry"}
+            </h2>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: "rgba(212,160,23,0.9)" }}>
+              {editData ? `Editing ${editData.enquiryNumber || "enquiry"} — ${editData.Customer?.name || ""}` : "Capture lead details — booking can be done later"}
+            </p>
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={16} />
@@ -169,13 +335,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
             {/* ── Customer Info ── */}
             <div>
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <User size={12} /> Customer Information
+                <User size={12} /> Enquirer Information
               </p>
 
               {/* Row 1: Name + Phone */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div>
-                  <label style={labelSt}>Customer Name *</label>
+                  <label style={labelSt}>Enquired By *</label>
                   <input name="name" value={form.name} onChange={handleChange}
                     placeholder="e.g. Muhammed Rafi" style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
@@ -193,11 +359,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
               {/* Row 2: Gender + Place */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div>
-                  <label style={labelSt}>Gender</label>
-                  <select name="gender" value={form.gender} onChange={handleChange}
+                  <label style={labelSt}>Gender *</label>
+                  <select required name="gender" value={form.gender} onChange={handleChange}
                     style={{ ...iStyle, cursor: "pointer" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                    <option value="" disabled>-- Select --</option>
                     {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
@@ -205,9 +372,10 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
                 {/* Place with autocomplete dropdown */}
                 <div ref={placeRef} style={{ position: "relative" }}>
                   <label style={labelSt}>
-                    <MapPin size={10} style={{ display: "inline", marginRight: 3 }} /> Place / Area
+                    <MapPin size={10} style={{ display: "inline", marginRight: 3 }} /> Place / Area *
                   </label>
                   <input
+                    required
                     type="text"
                     name="place"
                     value={placeQuery || form.place}
@@ -221,33 +389,53 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
                     style={iStyle}
                     autoComplete="off"
                   />
-                  {showPlaceDropdown && filteredPlaces.length > 0 && (
+                  {showPlaceDropdown && (
                     <div style={{
                       position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
                       background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
                       border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
                     }}>
-                      {filteredPlaces.map(p => (
-                        <div
-                          key={p}
-                          onMouseDown={e => e.preventDefault()}
-                          onClick={() => {
-                            setForm(prev => ({ ...prev, place: p }));
-                            setPlaceQuery(p);
-                            setShowPlaceDropdown(false);
-                          }}
-                          style={{
-                            padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
-                            display: "flex", alignItems: "center", gap: 8,
-                            borderBottom: "1px solid #f3f4f6"
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
-                          onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                        >
-                          <MapPin size={13} color="#1B4332" />
-                          {p}
-                        </div>
-                      ))}
+                      {filteredPlaces.length > 0 ? (
+                        filteredPlaces.map(p => (
+                          <div
+                            key={p}
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setForm(prev => ({ ...prev, place: p }));
+                              setPlaceQuery(p);
+                              setShowPlaceDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8,
+                              borderBottom: "1px solid #f3f4f6"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            <MapPin size={13} color="#1B4332" />
+                            {p}
+                          </div>
+                        ))
+                      ) : (
+                        placeQuery.trim() !== "" && (
+                          <div
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setPlaceToConfirm(placeQuery.trim());
+                              setShowPlaceDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#0284c7", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8, fontWeight: 600
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#e0f2fe"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            <Plus size={14} /> Add "{placeQuery}" as new place
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -255,8 +443,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
 
               {/* Row 3: Address */}
               <div>
-                <label style={labelSt}>Address</label>
+                <label style={labelSt}>Address *</label>
                 <textarea
+                  required
                   name="address"
                   value={form.address}
                   onChange={handleChange}
@@ -272,39 +461,129 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
             {/* ── Event Info ── */}
             <div>
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <Calendar size={12} /> Event Information
+                <Calendar size={12} /> Event Details
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Event Type *</label>
-                  <select name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                  <select required name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
-                    {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    <option value="" disabled>-- Select --</option>
+                    {settingsEventTypes.length > 0
+                      ? settingsEventTypes.map(t => {
+                          const name = typeof t === "string" ? t : t.name;
+                          return <option key={name} value={name}>{name}</option>;
+                        })
+                      : EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={labelSt}>Tentative Date</label>
-                  <input type="date" name="tentativeDate" value={form.tentativeDate} onChange={handleChange}
+                  <label style={labelSt}>Event Date *</label>
+                  <input required type="date" name="tentativeDate" value={form.tentativeDate} onChange={handleChange}
                     style={{ ...iStyle, cursor: "pointer" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
-                <div>
-                  <label style={labelSt}>Session</label>
-                  <select name="session" value={form.session} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
-                    {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelSt}>Hall Preference</label>
-                  <select name="hallPreference" value={form.hallPreference} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
-                    {HALLS.map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
+              </div>
+            </div>
+
+            {/* ── Hall & Session ── */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <Building2 size={12} /> Hall & Session *
+              </p>
+              
+              {/* Hall Cards */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {(settingsHalls.length > 0 ? settingsHalls : HALLS.map(h => ({ name: h }))).map((h, index) => {
+                  const themes = [
+                    { icon: "🏛️", bg: "#fafafa" }, 
+                    { icon: "🏠", bg: "#fffaf0" }, 
+                    { icon: "✨", bg: "#f8fafc" },
+                    { icon: "🎪", bg: "#fdf4ff" },
+                    { icon: "🏰", bg: "#eff6ff" }
+                  ];
+                  const t = themes[index % themes.length];
+                  const isSelected = form.hallPreference === h.name;
+                  
+                  return (
+                  <div
+                    key={h.name}
+                    onClick={() => {
+                      setForm(prev => ({ ...prev, hallPreference: h.name }));
+                      setUserEditedBudget(false);
+                    }}
+                    style={{
+                      position: "relative",
+                      flex: 1, minWidth: 140, padding: "18px 12px", borderRadius: 12, 
+                      border: `1.5px solid ${isSelected ? "#1B4332" : "#e5e7eb"}`,
+                      background: isSelected ? "#f0faf4" : t.bg, 
+                      cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.2s"
+                    }}
+                  >
+                    <div style={{ fontSize: 24, marginBottom: 4 }}>{t.icon}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#111", textAlign: "center" }}>{h.name}</div>
+                    
+                    {(Number(h.price) > 0 || Number(h.pricePerPax) > 0 || h.pricingType === "slab") ? (
+                      <div style={{ fontSize: 10, color: "#6b7280", textAlign: "center" }}>
+                        {h.pricingType === "per_pax" ? `₹${h.pricePerPax} / pax` : h.pricingType === "slab" ? "Slab-Based Pricing" : `₹${h.price} / session`}
+                      </div>
+                    ) : null}
+                    {h.capacity > 0 && <div style={{ fontSize: 10, color: "#9ca3af", textAlign: "center" }}>Up to {h.capacity} guests</div>}
+                    
+                    {isSelected && (
+                      <div style={{ position: "absolute", bottom: 10, left: 10 }}>
+                        <CheckCircle2 size={16} color="#1B4332" />
+                      </div>
+                    )}
+                  </div>
+                )})}
+              </div>
+
+              {/* Session Pills */}
+              <div style={{ marginTop: 20 }}>
+                <label style={labelSt}>SESSION *</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                  {(() => {
+                    let allowed = [];
+                    if (settingsEventTypes.length > 0) {
+                      const currentEv = settingsEventTypes.find(t => (typeof t === "string" ? t : t.name) === form.eventType);
+                      if (currentEv && currentEv.sessions) {
+                        allowed = currentEv.sessions;
+                      } else if (currentEv && currentEv.allowedSessions) {
+                        allowed = currentEv.allowedSessions.map(s => ({ name: s }));
+                      } else {
+                        allowed = settingsSessions.length > 0 ? settingsSessions : SESSIONS.map(s => ({ name: s }));
+                      }
+                    } else {
+                      allowed = settingsSessions.length > 0 ? settingsSessions : SESSIONS.map(s => ({ name: s }));
+                    }
+
+                    const selectedHall = settingsHalls.find(h => h.name === form.hallPreference);
+                    if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
+                       allowed = allowed.filter(s => selectedHall.allowedSessions.includes(s.name));
+                       if (allowed.length === 0) {
+                         allowed = selectedHall.allowedSessions.map(s => ({ name: s }));
+                       }
+                    }
+                    return allowed.map(s => (
+                      <div
+                        key={s.name}
+                        onClick={() => setForm(prev => ({ ...prev, session: s.name }))}
+                        style={{
+                          flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, 
+                          border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`,
+                          background: form.session === s.name ? "#1B4332" : "#fff",
+                          color: form.session === s.name ? "#fff" : "#374151",
+                          cursor: "pointer", textAlign: "center", transition: "all 0.2s"
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
+                        {s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>}
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -316,38 +595,72 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <div>
-                  <label style={labelSt}>Est. Guests</label>
-                  <input type="number" name="guestCount" value={form.guestCount} onChange={handleChange}
+                  <label style={labelSt}>Est. Guests *</label>
+                  <input required type="number" name="guestCount" value={form.guestCount} onChange={handleChange}
                     placeholder="e.g. 400" style={iStyle} min="0"
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
                 <div>
-                  <label style={labelSt}>Budget (₹)</label>
-                  <input type="number" name="budget" value={form.budget} onChange={handleChange}
+                  <label style={labelSt}>Budget (₹) *</label>
+                  <input required type="number" name="budget" value={form.budget} onChange={(e) => { handleChange(e); setUserEditedBudget(true); }}
                     placeholder="e.g. 150000" style={iStyle} min="0"
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
                 <div>
-                  <label style={labelSt}>Lead Score</label>
-                  <select name="leadScore" value={form.leadScore} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                  <label style={labelSt}>Lead Score *</label>
+                  <select required name="leadScore" value={form.leadScore} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                    <option value="" disabled>-- Select --</option>
                     {LEAD_SCORES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
+              {getCalculatedPrice() > 0 && (
+                <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8, background: "#f0faf4", border: "1px solid #d1fae5", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, color: "#166534", fontWeight: 600 }}>
+                    💡 {form.hallPreference} — {form.session}: ₹{getCalculatedPrice().toLocaleString()} (auto-calculated)
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Remarks */}
+            {/* ── Additional Details ── */}
             <div>
-              <label style={labelSt}><FileText size={11} style={{ display: "inline", marginRight: 4 }} />Remarks</label>
-              <textarea name="remarks" value={form.remarks} onChange={handleChange}
-                rows={3} placeholder="Any notes from the initial call or visit..."
-                style={{ ...iStyle, resize: "none", lineHeight: 1.6 }}
-                onFocus={e => e.target.style.borderColor = "#1B4332"}
-                onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <Building2 size={12} /> Assignment & Remarks
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelSt}>Salesman (Assigned To) *</label>
+                  <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                    <option value="" disabled>-- Select Salesman --</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelSt}>Lead Source *</label>
+                  <select required name="source" value={form.source} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                    <option value="" disabled>-- Select --</option>
+                    {["Walk-in", "Phone Call", "Website", "Social Media", "Referral", "Other"].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={labelSt}><FileText size={11} style={{ display: "inline", marginRight: 4 }} />Remarks</label>
+                <textarea name="remarks" value={form.remarks} onChange={handleChange}
+                  rows={2} placeholder="Any notes from the initial call or visit..."
+                  style={{ ...iStyle, resize: "none", lineHeight: 1.6 }}
+                  onFocus={e => e.target.style.borderColor = "#1B4332"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              </div>
             </div>
 
           </form>
@@ -361,10 +674,62 @@ export default function NewEnquiryModal({ open, onClose, onSuccess }) {
           </button>
           <button type="submit" form="new-enquiry-form" disabled={loading}
             style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
-            {loading ? "Saving..." : "✅ Save Enquiry"}
+            {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
           </button>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* ── Custom Place Confirmation Modal ── */}
+      {placeToConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", backdropFilter: "blur(4px)",
+          zIndex: 99999, display: "flex", justifyContent: "center", alignItems: "center"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 400,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MapPin size={24} color="#15803d" />
+              </div>
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
+              Add New Place?
+            </h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Are you sure you want to permanently add <strong>"{placeToConfirm}"</strong> to your system's Place dropdown list?
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setPlaceToConfirm(null)}
+                style={{ flex: 1, padding: "12px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const newPlace = placeToConfirm;
+                  const newPlaces = [...places, newPlace];
+                  setPlaces(newPlaces);
+                  setForm(prev => ({ ...prev, place: newPlace }));
+                  setPlaceQuery(newPlace);
+                  setPlaceToConfirm(null);
+                  try {
+                    await settingsAPI.update({ places: newPlaces });
+                    addToast(`"${newPlace}" added to places!`, "success");
+                  } catch(e) {}
+                }}
+                style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Yes, Add It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

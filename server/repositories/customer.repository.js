@@ -1,6 +1,7 @@
 const BaseRepository = require("./base.repository");
 const Customer = require("../models/Customer");
 const { Op } = require("sequelize");
+const sequelize = require("../db");
 
 class CustomerRepository extends BaseRepository {
   constructor() {
@@ -19,13 +20,42 @@ class CustomerRepository extends BaseRepository {
       ];
     }
 
-    return this.findAll({
-      tenantId,
-      environmentId,
-      where,
+    const { page, limit, offset } = require("../helpers/pagination").parsePagination(query);
+
+    const { count, rows } = await this.model.findAndCountAll({
+      where: { tenantId, environmentId, ...where },
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COALESCE(SUM("totalAmount"), 0)
+              FROM "Bookings" AS "Booking"
+              WHERE "Booking"."customerId" = "Customer"."id"
+              AND "Booking"."tenantId" = ${tenantId}
+              AND "Booking"."environmentId" = ${environmentId}
+              AND "Booking"."deletedAt" IS NULL
+            )`),
+            "lifetimeValue"
+          ],
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM "Bookings" AS "Booking"
+              WHERE "Booking"."customerId" = "Customer"."id"
+              AND "Booking"."tenantId" = ${tenantId}
+              AND "Booking"."environmentId" = ${environmentId}
+              AND "Booking"."deletedAt" IS NULL
+            )`),
+            "bookingCount"
+          ]
+        ]
+      },
       order: [["createdAt", "DESC"]],
-      query,
+      limit,
+      offset
     });
+
+    return { rows, total: count, page, limit };
   }
 
   async findByPhone(phone, { tenantId, environmentId }) {

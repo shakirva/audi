@@ -41,15 +41,15 @@ export default function Sidebar() {
       type: "group", label: "Finance", icon: CreditCard, id: "finance",
       children: [
         { path: "/payments", label: "Payments & Receipts" },
-        { path: "/accounts", label: "Accounts Lite" }
+        { path: "/accounts", label: "Accounts Lite" },
+        { path: "/vendors", label: "Vendors" },
+        { path: "/purchases", label: "Purchases" }
       ]
     },
     { 
-      type: "group", label: "External & HR", icon: UsersRound, id: "external",
+      type: "group", label: "Staff & HR", icon: UsersRound, id: "external",
       children: [
-        { path: "/vendors", label: "Vendors" },
-        { path: "/purchases", label: "Purchases" },
-        { path: "/staff", label: "Staff & HR" }
+        { path: "/staff", label: "Staff Management" }
       ]
     },
     { 

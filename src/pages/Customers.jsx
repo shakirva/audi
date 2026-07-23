@@ -134,7 +134,7 @@ export default function Customers() {
                   <div>
                     <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>Lifetime Value</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: "#f97316" }}>
-                      {totalSpent > 0 ? `₹${(totalSpent / 100000).toFixed(1)}L` : "—"}
+                      {totalSpent > 0 ? (totalSpent >= 100000 ? `₹${(totalSpent / 100000).toFixed(1)}L` : `₹${Number(totalSpent).toLocaleString()}`) : "—"}
                     </div>
                   </div>
                 </div>

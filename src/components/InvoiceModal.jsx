@@ -107,7 +107,9 @@ export default function InvoiceModal({ booking, onClose }) {
     const msg = encodeURIComponent(
       `Dear ${booking.customerName},\n\nPlease find your invoice details below:\n\n🧾 Invoice: ${invoiceNo}\n📅 Date: ${formattedDate}\n🏛️ Hall: ${booking.hall} (${booking.session})\n💰 Total: ₹${booking.totalAmount.toLocaleString()}\n✅ Advance: ₹${advance.toLocaleString()}\n⚠️ Balance: ₹${balance.toLocaleString()}\n\nThank you! 🙏 — ${venueInfo.name}`
     );
-    window.open(`https://wa.me/91${booking.phone}?text=${msg}`, "_blank");
+    const phoneNum = `91${booking.phone}`;
+    const waUrl = `https://wa.me/${phoneNum}?text=${msg}`;
+    window.open(waUrl, "_blank");
     addToast("Invoice shared on WhatsApp! 📱", "success");
     onClose();
   };

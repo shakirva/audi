@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw, Plus } from "lucide-react";
 import { motion } from "framer-motion";
-import { agreementsAPI } from "../services/api";
+import { bookingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import PageHeader from "../components/ui/PageHeader";
 
@@ -23,17 +23,31 @@ const STATUS_STYLE = {
 };
 
 function printAgreement(agr) {
-  const customerName = agr.Booking?.Customer?.name || agr.customerName || "";
-  const phone = agr.Booking?.Customer?.phone || "";
-  const address = agr.Booking?.Customer?.address || "";
-  const eventType = agr.Booking?.eventType || "";
-  const dateStr = agr.Booking?.date ? new Date(agr.Booking.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
-  const session = agr.Booking?.session || "";
-  const total = agr.totalAmount || agr.Booking?.totalAmount || 0;
-  const advance = agr.advanceAmount || agr.Booking?.advance || 0;
-  const balance = agr.balanceAmount || (total - advance) || 0;
-  const guests = agr.Booking?.guestCount || "";
-  const agNum = agr.agreementNumber || `AGR-${String(agr.id).padStart(3,"0")}`;
+  const customerName = agr.customerName || "";
+  const phone = agr.phone || "";
+  const address = agr.address || "";
+  const eventType = agr.eventType || "";
+  const dateStr = agr.date ? new Date(agr.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
+  const session = agr.session || "";
+  const hall = agr.hall ? ` - ${agr.hall}` : "";
+  const total = Number(agr.totalAmount) || 0;
+  const discount = Number(agr.discount) || 0;
+  const quoted = total + discount;
+  const advance = Number(agr.advance) || 0;
+  const deposit = Number(agr.depositAmount) || 0;
+  const balance = total - advance - deposit;
+  const guests = agr.guests || "";
+  const agNum = agr.bookingId || `AGR-${String(agr._id || agr.id).padStart(3,"0")}`;
+
+  const hostFull = `${customerName}${agr.bookedBy && agr.bookedBy !== customerName ? ` (Booked by: ${agr.bookedBy})` : ""}${agr.bookingParty ? ` [${agr.bookingParty}]` : ""}`;
+  const phoneFull = `${phone}${agr.whatsapp ? ` / WA: ${agr.whatsapp}` : ""}`;
+  
+  const brideParents = (agr.brideFatherName || agr.brideMotherName) ? ` (D/o ${[agr.brideFatherName, agr.brideMotherName].filter(Boolean).join(" & ")})` : "";
+  const brideFull = agr.brideName ? `${agr.brideName}${brideParents}${agr.bridePhone ? ` — Ph: ${agr.bridePhone}` : ""}${agr.brideAddress ? `, ${agr.brideAddress}` : ""}` : "";
+  
+  const groomParents = (agr.groomFatherName || agr.groomMotherName) ? ` (S/o ${[agr.groomFatherName, agr.groomMotherName].filter(Boolean).join(" & ")})` : "";
+  const groomFull = agr.groomName ? `${agr.groomName}${groomParents}${agr.groomPhone ? ` — Ph: ${agr.groomPhone}` : ""}${agr.groomAddress ? `, ${agr.groomAddress}` : ""}` : "";
+
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
 
   const w = window.open("", "_blank");
@@ -68,23 +82,25 @@ function printAgreement(agr) {
     </div>
     
     <div class="form-grid">
-      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${customerName}</div>
+      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${hostFull}</div>
       <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
       <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
-      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phone}</div>
+      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phoneFull}</div>
       <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
-      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}</div>
+      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}${hall}</div>
       
       <div style="grid-column: 1 / -1; height: 15px;"></div>
       
-      <div class="label">Bride Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Groom Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Total Amount (Estimated)</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
+      <div class="label">Bride Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${brideFull}</div>
+      <div class="label">Groom Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${groomFull}</div>
+      <div class="label">Quoted Amount</div><div class="value">:&nbsp;&nbsp; ₹${quoted.toLocaleString()}</div>
+      <div class="label">Discount</div><div class="value">:&nbsp;&nbsp; ₹${discount.toLocaleString()}</div>
+      <div class="label">Final Total Amount</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
       <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
-      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; ₹${deposit.toLocaleString()}</div>
       <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
-      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; </div>
+      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; ${agr.extraArrangements || ""}</div>
+      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; ${agr.notes || agr.specialInstructions || ""}</div>
     </div>
 
     <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
@@ -110,10 +126,13 @@ export default function Agreements() {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
+      const params = { limit: 1000 };
       if (search) params.search = search;
-      const res = await agreementsAPI.getAll(params);
-      setAgreements(res.data.data || []);
+      const res = await bookingsAPI.getAll(params);
+      
+      // Filter out enquiries if we only want confirmed/actual bookings
+      const fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
+      setAgreements(fetched);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load agreements";
       setError(msg);
@@ -142,9 +161,9 @@ export default function Agreements() {
 
   const getEventInfo = (agr) => {
     const parts = [];
-    if (agr.Booking?.eventType) parts.push(agr.Booking.eventType);
-    if (agr.Booking?.date) {
-      const d = new Date(agr.Booking.date);
+    if (agr.eventType) parts.push(agr.eventType);
+    if (agr.date) {
+      const d = new Date(agr.date);
       parts.push(d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }));
     }
     return parts.join(" • ") || "—";
@@ -196,10 +215,10 @@ export default function Agreements() {
         ) : (
           agreements.map((a, i) => {
             const st = STATUS_STYLE[a.status] || STATUS_STYLE.Draft;
-            const agNum = a.agreementNumber || `AGR-${String(a.id).padStart(3,"0")}`;
-            const customerName = getCustomerName(a);
+            const agNum = a.bookingId || `AGR-${String(a._id || a.id).padStart(3,"0")}`;
+            const customerName = a.customerName || "Unknown";
             const eventInfo = getEventInfo(a);
-            const contractValue = formatValue(a.contractValue || a.Booking?.totalAmount);
+            const contractValue = formatValue(a.totalAmount);
 
             return (
               <motion.div
@@ -230,7 +249,7 @@ export default function Agreements() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
-                    onClick={() => addToast("Preview feature coming soon", "info")}
+                    onClick={() => printAgreement(a)}
                     style={{ flex: 1, padding: "10px", background: "#0f172a", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", border: "none", fontWeight: 700, fontSize: 14, gap: 8, cursor: "pointer" }}
                   >
                     Preview

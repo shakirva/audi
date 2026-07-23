@@ -7,7 +7,7 @@ const createEnquirySchema = z.object({
     customerId: z.number().int().positive("Customer ID must be a positive integer"),
     eventType: z.string().min(1, "Event type is required"),
     tentativeDate: z.string().optional(),
-    session: z.enum(["Morning", "Afternoon", "Evening", "Full Day"]).optional(),
+    session: z.string().optional(),
     hallPreference: z.string().optional(),
     guestCount: z.number().int().min(0).optional(),
     budget: z.number().int().min(0).optional(),
@@ -24,7 +24,7 @@ const updateEnquirySchema = z.object({
   body: z.object({
     eventType: z.string().min(1).optional(),
     tentativeDate: z.string().optional(),
-    session: z.enum(["Morning", "Afternoon", "Evening", "Full Day"]).optional(),
+    session: z.string().optional(),
     hallPreference: z.string().optional(),
     guestCount: z.number().int().min(0).optional(),
     budget: z.number().int().min(0).optional(),

@@ -51,13 +51,13 @@ class CustomerController {
   // Find existing customer by phone, or create a new one
   async findOrCreate(req, res, next) {
     try {
-      const { name, phone, email, city } = req.body;
+      const { name, phone, email, address, place, gender } = req.body;
       if (!name || !phone) {
         return res.status(400).json({ success: false, message: "Name and phone are required" });
       }
 
       const result = await customerService.findOrCreateCustomer(
-        { name, phone, email, city },
+        { name, phone, email, address, place, gender },
         {
           tenantId: req.tenantId,
           environmentId: req.environmentId,

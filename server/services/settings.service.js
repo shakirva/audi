@@ -37,7 +37,7 @@ class SettingsService {
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
-      "gallery", "eventTypes", "sessions", "expenseCategories"
+      "gallery", "eventTypes", "sessions", "expenseCategories", "places"
     ];
     
     const updateData = {};
@@ -122,6 +122,31 @@ class SettingsService {
     }
 
     return { email, password };
+  }
+
+  async getUsers(tenantId) {
+    return User.findAll({
+      where: { tenantId },
+      attributes: ['id', 'name', 'email', 'role', 'phone', 'active', 'createdAt'],
+      order: [['name', 'ASC']]
+    });
+  }
+
+  async toggleUserActive(userId, tenantId) {
+    const user = await User.findOne({ where: { id: userId, tenantId } });
+    if (!user) throw new NotFoundError("User");
+    if (user.role === ROLES.OWNER) throw new BadRequestError("Cannot deactivate the Owner account");
+    user.active = !user.active;
+    await user.save();
+    return { id: user.id, name: user.name, active: user.active };
+  }
+
+  async deleteUser(userId, tenantId) {
+    const user = await User.findOne({ where: { id: userId, tenantId } });
+    if (!user) throw new NotFoundError("User");
+    if (user.role === ROLES.OWNER) throw new BadRequestError("Cannot delete the Owner account");
+    await user.destroy();
+    return { success: true };
   }
 }
 

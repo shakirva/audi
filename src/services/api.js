@@ -77,6 +77,7 @@ export const settingsAPI = {
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
   update: (data) => api.put("/v1/settings", data),
   getCustomers: () => api.get("/v1/settings/customers"),
+  getUsers: () => api.get("/v1/settings/users"),
   resetSandbox: () => api.post("/v1/settings/sandbox/reset"),
   generateTester: (data) => api.post("/v1/settings/tester", data),
 };
@@ -158,12 +159,19 @@ export const followupsAPI = {
 };
 
 // ═══════════════════════════════════
-// ACCOUNTS (Cash Book / Bank Book)
+// ACCOUNTS (Full Accounting Module)
 // ═══════════════════════════════════
 export const accountsAPI = {
-  getCashBook: (params) => api.get("/v1/accounts/cash", { params }),
-  getBankBook: (params) => api.get("/v1/accounts/bank", { params }),
+  getCashBook: (params) => api.get("/v1/accounts/cash-book", { params }),
+  getBankBook: (params) => api.get("/v1/accounts/bank-book", { params }),
   getStatement: (customerId) => api.get(`/v1/accounts/statement/${customerId}`),
+  getDashboard: () => api.get("/v1/accounts/dashboard"),
+  getLedger: (params) => api.get("/v1/accounts/ledger", { params }),
+  getVouchers: (params) => api.get("/v1/accounts/vouchers", { params }),
+  getChartOfAccounts: () => api.get("/v1/accounts/chart-of-accounts"),
+  getCustomerLedger: (customerId) => api.get(`/v1/accounts/customer-ledger/${customerId}`),
+  getProfitLoss: (params) => api.get("/v1/accounts/profit-loss", { params }),
+  getOutstanding: () => api.get("/v1/accounts/outstanding"),
 };
 
 // ═══════════════════════════════════
@@ -178,3 +186,13 @@ export const adminAPI = {
 };
 
 export default api;
+
+// ═══════════════════════════════════
+// USERS (Staff Management)
+// ═══════════════════════════════════
+export const usersAPI = {
+  getAll: () => api.get("/v1/settings/users"),
+  create: (data) => api.post("/auth/register", data),
+  toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
+  remove: (id) => api.delete(`/v1/settings/users/${id}`),
+};

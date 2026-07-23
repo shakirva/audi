@@ -3,6 +3,7 @@ const bookingRepository = require("../repositories/booking.repository");
 const accountStatementRepo = require("../repositories/accountStatement.repository");
 const cashBookRepo = require("../repositories/cashBook.repository");
 const bankBookRepo = require("../repositories/bankBook.repository");
+const accountingEngine = require("./accountingEngine.service");
 const { Receipt, JobTimeline, sequelize } = require("../models");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
@@ -120,6 +121,13 @@ class PaymentService {
       }
 
       // 8. Audit log is handled by middleware
+
+      // 9. Create double-entry journal + voucher via accounting engine
+      try {
+        await accountingEngine.onPaymentReceived(payment, { tenantId, environmentId, createdBy, transaction: t });
+      } catch (e) {
+        console.error("[PaymentService] Accounting engine error:", e);
+      }
       
       return { payment, receipt };
     });
