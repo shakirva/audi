@@ -116,14 +116,33 @@ class BookingController {
    */
   async updateStatus(req, res, next) {
     try {
-      const result = await bookingService.updateBookingStatus(req.params.id, req.body.status, {
+      const booking = await bookingService.updateBookingStatus(req.params.id, req.body.status, {
         tenantId: req.tenantId,
         environmentId: req.environmentId,
       });
 
       return sendSuccess(res, {
-        data: result,
+        data: booking,
         message: "Booking status updated successfully",
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /api/v1/bookings/:id/invoice
+   */
+  async generateInvoice(req, res, next) {
+    try {
+      const booking = await bookingService.generateInvoice(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+      });
+
+      return sendSuccess(res, {
+        data: booking,
+        message: "Final Tax Invoice generated successfully",
       });
     } catch (err) {
       next(err);

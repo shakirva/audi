@@ -49,7 +49,7 @@ const Voucher = sequelize.define("Voucher", {
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
 }, {
   hooks: {
-    beforeValidate: async (voucher) => {
+    beforeValidate: async (voucher, options) => {
       if (!voucher.voucherNumber) {
         const prefix = voucher.voucherType;
         const count = await Voucher.count({
@@ -58,6 +58,7 @@ const Voucher = sequelize.define("Voucher", {
             environmentId: voucher.environmentId,
             voucherType: voucher.voucherType,
           },
+          transaction: options.transaction
         });
         voucher.voucherNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
       }

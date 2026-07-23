@@ -4,7 +4,8 @@ const accountStatementRepo = require("../repositories/accountStatement.repositor
 const cashBookRepo = require("../repositories/cashBook.repository");
 const bankBookRepo = require("../repositories/bankBook.repository");
 const accountingEngine = require("./accountingEngine.service");
-const { Receipt, JobTimeline, sequelize } = require("../models");
+const { Receipt, JobTimeline } = require("../models");
+const sequelize = require("../db");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class PaymentService {
@@ -29,6 +30,24 @@ class PaymentService {
       booking = await bookingRepository.findById(data.bookingId, { tenantId, environmentId });
       if (!booking) throw new NotFoundError("Booking");
       if (!customerId) customerId = booking.customerId;
+    }
+
+    if (!customerId && booking) {
+      // Auto-heal missing customer ID
+      try {
+        const customerService = require("./customer.service");
+        const { customer } = await customerService.findOrCreateCustomer({
+          name: booking.customerName || "Unknown",
+          phone: booking.phone || ""
+        }, { tenantId, environmentId, createdBy });
+        customerId = customer.id;
+        
+        // Optionally update booking as well
+        booking.customerId = cust.id;
+        await booking.save({ hooks: false });
+      } catch (err) {
+        console.error("Failed to auto-heal customerId for payment:", err);
+      }
     }
 
     if (!customerId) {

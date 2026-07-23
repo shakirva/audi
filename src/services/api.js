@@ -54,6 +54,7 @@ export const bookingsAPI = {
   createEnquiry: (data) => api.post("/v1/bookings/enquiry", data),
   update: (id, data) => api.put(`/v1/bookings/${id}`, data),
   updateStatus: (id, status) => api.patch(`/v1/bookings/${id}/status`, { status }),
+  generateInvoice: (id) => api.post(`/v1/bookings/${id}/invoice`),
   remove: (id) => api.delete(`/v1/bookings/${id}`),
   getStats: () => api.get("/v1/bookings/stats/dashboard"),
   getComparisonStats: () => api.get("/v1/bookings/stats/comparison"),
@@ -170,6 +171,7 @@ export const accountsAPI = {
   getVouchers: (params) => api.get("/v1/accounts/vouchers", { params }),
   getChartOfAccounts: () => api.get("/v1/accounts/chart-of-accounts"),
   getCustomerLedger: (customerId) => api.get(`/v1/accounts/customer-ledger/${customerId}`),
+  getBookingLedger: (bookingId) => api.get(`/v1/accounts/booking-ledger/${bookingId}`),
   getProfitLoss: (params) => api.get("/v1/accounts/profit-loss", { params }),
   getOutstanding: () => api.get("/v1/accounts/outstanding"),
 };

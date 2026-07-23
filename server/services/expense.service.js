@@ -38,6 +38,7 @@ class ExpenseService {
       amount: Number(data.amount),
       date: data.date,
       recurring: !!data.recurring,
+      bookingId: data.bookingId || null,
     });
 
     // Hook into accounting engine

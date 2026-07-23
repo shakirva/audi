@@ -40,10 +40,12 @@ export default function Sidebar() {
     { 
       type: "group", label: "Finance", icon: CreditCard, id: "finance",
       children: [
-        { path: "/payments", label: "Payments & Receipts" },
-        { path: "/accounts", label: "Accounts Lite" },
-        { path: "/vendors", label: "Vendors" },
-        { path: "/purchases", label: "Purchases" }
+        { path: "/finance/payments", label: "Payments & Receipts" },
+        { path: "/finance/booking-accounts", label: "Booking Accounts" },
+        { path: "/finance/collections", label: "Collections" },
+        { path: "/finance/expenses", label: "Purchases & Expenses" },
+        { path: "/finance/reports", label: "Reports" },
+        { path: "/finance/advanced", label: "Advanced Accounting" }
       ]
     },
     { 

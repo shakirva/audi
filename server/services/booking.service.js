@@ -72,14 +72,14 @@ class BookingService {
 
     let customerId = null;
     try {
-      const cust = await customerService.findOrCreate({
+      const { customer } = await customerService.findOrCreateCustomer({
         name: data.customerName,
         phone: data.phone,
         gender: data.gender,
         place: data.place,
         address: data.address,
-      }, { tenantId, environmentId });
-      customerId = cust.id;
+      }, { tenantId, environmentId, createdBy: data.createdBy || null });
+      customerId = customer.id;
     } catch (e) {
       console.error("Failed to create customer for booking:", e);
     }
@@ -214,6 +214,33 @@ class BookingService {
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
     return { message: "Booking deleted", id: bookingId };
+  }
+
+  /**
+   * Generate Final Tax Invoice
+   */
+  async generateInvoice(id, { tenantId, environmentId }) {
+    const booking = await bookingRepository.findOneOrFail({
+      tenantId, environmentId,
+      where: { id },
+      resourceName: "Booking",
+    });
+
+    const { Payment } = require("../models");
+    const payments = await Payment.findAll({ where: { bookingId: id, tenantId, environmentId } });
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+    const outstanding = booking.totalAmount - totalPaid;
+
+    if (outstanding > 0) {
+      throw new Error("Cannot generate final invoice while outstanding balance exists.");
+    }
+
+    const updated = await bookingRepository.update(booking, {
+      invoiceStatus: "Generated",
+      status: "Closed", // Mark Financially Closed
+    });
+
+    return updated;
   }
 }
 

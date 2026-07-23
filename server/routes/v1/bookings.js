@@ -55,6 +55,13 @@ router.patch("/:id/status",
   bookingController.updateStatus
 );
 
+// POST /api/v1/bookings/:id/invoice — generate final tax invoice
+router.post("/:id/invoice",
+  auth, tenantScope, subscriptionGuard,
+  auditLog("Generate Invoice"),
+  bookingController.generateInvoice
+);
+
 // DELETE /api/v1/bookings/:id — delete booking
 router.delete("/:id",
   auth, requireRole("Owner", "Manager", "Tester"),

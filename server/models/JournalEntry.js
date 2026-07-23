@@ -57,10 +57,11 @@ const JournalEntry = sequelize.define("JournalEntry", {
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
 }, {
   hooks: {
-    beforeValidate: async (entry) => {
+    beforeValidate: async (entry, options) => {
       if (!entry.journalNumber) {
         const count = await JournalEntry.count({
           where: { tenantId: entry.tenantId, environmentId: entry.environmentId },
+          transaction: options.transaction
         });
         entry.journalNumber = `JRN${String(count + 1).padStart(5, "0")}`;
       }

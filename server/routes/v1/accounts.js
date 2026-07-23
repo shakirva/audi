@@ -11,7 +11,7 @@ const { ROLES } = require("../../helpers/roles");
 const router = express.Router();
 
 router.use(auth, tenantScope, subscriptionGuard);
-router.use(requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER));
+router.use(requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER));
 
 // ── Existing routes ──
 router.get("/statements", accountStatementController.getStatements);
@@ -24,6 +24,7 @@ router.get("/ledger", accountsDashboardController.getLedger);
 router.get("/vouchers", accountsDashboardController.getVouchers);
 router.get("/chart-of-accounts", accountsDashboardController.getChartOfAccounts);
 router.get("/customer-ledger/:customerId", accountsDashboardController.getCustomerLedger);
+router.get("/booking-ledger/:bookingId", accountsDashboardController.getBookingLedger);
 router.get("/profit-loss", accountsDashboardController.getProfitLoss);
 router.get("/outstanding", accountsDashboardController.getOutstanding);
 

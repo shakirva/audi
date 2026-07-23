@@ -179,6 +179,7 @@ class AccountingEngine {
       voucherType: "EV", // Expense Voucher
       sourceModule: "Expense",
       sourceId: expense.id,
+      bookingId: expense.bookingId,
       paymentMode: paymentMode || "Cash",
       createdBy,
       transaction,
@@ -445,6 +446,57 @@ class AccountingEngine {
       outstanding: totalBooked - totalPaid,
       bookings,
       payments,
+      journals,
+    };
+  }
+
+  // ═══════════════════════════════════
+  // BOOKING LEDGER (FINANCIAL CENTER)
+  // ═══════════════════════════════════
+  async getBookingLedger(bookingId, { tenantId, environmentId }) {
+    const booking = await Booking.findOne({ 
+      where: { id: bookingId, tenantId, environmentId },
+      include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }]
+    });
+    if (!booking) return null;
+
+    // Get all payments for this booking
+    const payments = await Payment.findAll({
+      where: { bookingId, tenantId, environmentId },
+      include: [{ model: Receipt, attributes: ["receiptNumber"] }],
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get all expenses for this booking
+    const expenses = await Expense.findAll({
+      where: { bookingId, tenantId, environmentId },
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get journal entries for this booking
+    const journals = await JournalEntry.findAll({
+      where: { bookingId, tenantId, environmentId },
+      include: [
+        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
+        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
+        { model: Voucher, attributes: ["voucherNumber", "voucherType"] }
+      ],
+      order: [["date", "DESC"], ["createdAt", "DESC"]],
+    });
+
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+    const outstanding = (booking.totalAmount || 0) - totalPaid;
+    const netProfit = (booking.totalAmount || 0) - totalExpenses;
+
+    return {
+      booking: booking.toJSON(),
+      totalPaid,
+      totalExpenses,
+      outstanding: outstanding > 0 ? outstanding : 0,
+      netProfit,
+      payments,
+      expenses,
       journals,
     };
   }

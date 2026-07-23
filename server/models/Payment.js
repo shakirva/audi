@@ -43,10 +43,11 @@ const Payment = sequelize.define("Payment", {
 }, {
   paranoid: true,
   hooks: {
-    beforeCreate: async (payment) => {
+    beforeValidate: async (payment, options) => {
       if (!payment.paymentNumber) {
         const count = await Payment.count({
           where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+          transaction: options.transaction
         });
         payment.paymentNumber = `PAY${String(count + 1).padStart(5, "0")}`;
       }

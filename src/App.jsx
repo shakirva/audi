@@ -8,15 +8,18 @@ import Dashboard from "./pages/Dashboard";
 import Bookings from "./pages/Bookings";
 import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
-import Payments from "./pages/Payments";
-import Reports from "./pages/Reports";
+import PaymentsAndReceipts from "./pages/Finance/PaymentsAndReceipts";
+import BookingAccounts from "./pages/Finance/BookingAccounts";
+import BookingFinancialDashboard from "./pages/Finance/BookingFinancialDashboard";
+import Collections from "./pages/Finance/Collections";
+import PurchasesAndExpenses from "./pages/Finance/PurchasesAndExpenses";
+import FinanceReports from "./pages/Finance/FinanceReports";
+import AdvancedAccounting from "./pages/Finance/AdvancedAccounting";
 import HallReports from "./pages/HallReports";
 import SalesReports from "./pages/SalesReports";
 import BookingReports from "./pages/BookingReports";
-import AccountsReports from "./pages/AccountsReports";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
-import Expenses from "./pages/Expenses";
 import PublicBooking from "./pages/PublicBooking";
 import Login from "./pages/Login";
 import SuperAdminTenants from "./pages/SuperAdminTenants";
@@ -25,10 +28,7 @@ import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
 import Masters from "./pages/Masters";
 import Roadmap from "./pages/Roadmap";
-import Vendors from "./pages/Vendors";
-import Purchases from "./pages/Purchases";
 import Staff from "./pages/Staff";
-import AccountsLite from "./pages/AccountsLite";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -41,20 +41,12 @@ const pageTitles = {
   "/bookings": "Bookings",
   "/calendar": "Calendar",
   "/customers": "Customers",
-  "/payments": "Payments",
-  "/reports": "Reports",
-  "/expenses": "Expenses",
-  "/settings": "Settings",
-  "/notifications": "Notifications",
-  "/crm": "CRM (Pipeline)",
-  "/agreements": "Agreements",
-  "/jobs": "Job Management",
-  "/masters": "Master Settings",
-  "/roadmap": "ERP Roadmap",
-  "/vendors": "Vendor Management",
-  "/purchases": "Purchase Orders",
-  "/staff": "Staff & HR",
-  "/accounts": "Accounts Lite",
+  "/finance/payments": "Payments & Receipts",
+  "/finance/booking-accounts": "Booking Accounts",
+  "/finance/collections": "Collections",
+  "/finance/expenses": "Purchases & Expenses",
+  "/finance/reports": "Finance Reports",
+  "/finance/advanced": "Advanced Accounting",
 };
 
 // Guard: redirects to dashboard if current role lacks permission
@@ -80,13 +72,18 @@ function AdminLayout() {
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/customers" element={<Customers />} />
-            <Route path="/payments"  element={<ProtectedRoute permission="canViewPayments"><Payments /></ProtectedRoute>} />
-            <Route path="/reports"   element={<ProtectedRoute permission="canViewReports"><Reports /></ProtectedRoute>} />
+            <Route path="/finance/payments"  element={<ProtectedRoute permission="canViewPayments"><PaymentsAndReceipts /></ProtectedRoute>} />
+            <Route path="/finance/booking-accounts" element={<ProtectedRoute permission="canViewPayments"><BookingAccounts /></ProtectedRoute>} />
+            <Route path="/finance/booking-accounts/:id" element={<ProtectedRoute permission="canViewPayments"><BookingFinancialDashboard /></ProtectedRoute>} />
+            <Route path="/finance/collections" element={<ProtectedRoute permission="canViewPayments"><Collections /></ProtectedRoute>} />
+            <Route path="/finance/expenses" element={<ProtectedRoute permission="canViewPayments"><PurchasesAndExpenses /></ProtectedRoute>} />
+            <Route path="/finance/reports" element={<ProtectedRoute permission="canViewReports"><FinanceReports /></ProtectedRoute>} />
+            <Route path="/finance/advanced" element={<ProtectedRoute permission="canViewReports"><AdvancedAccounting /></ProtectedRoute>} />
+            
+            {/* Keeping non-finance routes below */}
             <Route path="/reports/sales"   element={<ProtectedRoute permission="canViewReports"><SalesReports /></ProtectedRoute>} />
             <Route path="/reports/booking"   element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
-            <Route path="/reports/accounts"   element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
             <Route path="/reports/hall"   element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
-            <Route path="/expenses"  element={<ProtectedRoute permission="canViewReports"><Expenses /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/superadmin/tenants" element={<ProtectedRoute permission="canManageTenants"><SuperAdminTenants /></ProtectedRoute>} />
@@ -95,10 +92,7 @@ function AdminLayout() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
             <Route path="/roadmap" element={<Roadmap />} />
-            <Route path="/vendors" element={<Vendors />} />
-            <Route path="/purchases" element={<Purchases />} />
             <Route path="/staff" element={<Staff />} />
-            <Route path="/accounts" element={<AccountsLite />} />
           </Routes>
         </main>
       </div>
