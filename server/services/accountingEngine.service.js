@@ -4,7 +4,7 @@
  * proper double-entry journal entries, vouchers, and update ledgers.
  */
 
-const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, sequelize } = require("../models");
+const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt, sequelize } = require("../models");
 const { Op } = require("sequelize");
 
 // ── Default Chart of Accounts (seeded per tenant) ──
