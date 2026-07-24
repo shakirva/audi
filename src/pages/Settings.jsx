@@ -56,6 +56,7 @@ export default function Settings() {
   const [showCreateHallModal, setShowCreateHallModal] = useState(false);
   const [editHallIndex, setEditHallIndex] = useState(null);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [dbUsers, setDbUsers] = useState([]);
 
   // ── Hall Pricing ──
@@ -405,7 +406,7 @@ export default function Settings() {
 
   const StaffAdder = () => (
     <button
-      onClick={() => setShowAddStaffModal(true)}
+      onClick={() => { setEditingStaff(null); setShowAddStaffModal(true); }}
       style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "10px 18px", borderRadius: 10, border: "none",
@@ -1035,9 +1036,9 @@ export default function Settings() {
         <StaffAdder />
 
         <div style={{ border: "1.5px solid #f3f4f6", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 40px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 80px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
             {["Name", "Password", "Role", "Access", "Status", ""].map(h => (
-              <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
+              <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: h === "" ? "right" : "left" }}>{h}</span>
             ))}
           </div>
           {dbUsers.length === 0 ? (
@@ -1046,10 +1047,10 @@ export default function Settings() {
             const roleColors = { Owner: { bg: "#f0faf4", color: "#1B4332" }, Manager: { bg: "#fffbeb", color: "#D4A017" }, Staff: { bg: "#eff6ff", color: "#2563eb" } };
             const rc = roleColors[s.role] || roleColors.Staff;
             return (
-              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
+              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 80px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{s.name}</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af" }}>{s.email}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px" }}>{s.name}</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>{s.email}</p>
                 </div>
                 <div style={{ fontSize: 12, fontFamily: "monospace", color: "#4b5563", background: "#f3f4f6", padding: "4px 8px", borderRadius: 6, display: "inline-block", wordBreak: "break-all" }}>
                   {s.plainPassword || "********"}
@@ -1067,27 +1068,32 @@ export default function Settings() {
                 }} style={{ cursor: "pointer", border: "none", background: "none", fontSize: 11, fontWeight: 600, color: s.active ? "#15803d" : "#ef4444", background: s.active ? "#dcfce7" : "#fee2e2", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>
                   {s.active ? "Active" : "Inactive"}
                 </button>
-                <button onClick={async () => {
-                  if (!isOwner) {
-                    addToast("Only Owners can delete users", "error");
-                    return;
-                  }
-                  if (s.role === "Owner") {
-                    addToast("Cannot delete Owner account", "error");
-                    return;
-                  }
-                  if (window.confirm("Are you sure you want to delete this user?")) {
-                    try {
-                      await usersAPI.remove(s.id);
-                      loadUsers();
-                      addToast("User deleted successfully", "success");
-                    } catch(e) {
-                      addToast("Failed to delete user", "error");
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center" }}>
+                  <button onClick={() => { setEditingStaff(s); setShowAddStaffModal(true); }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "#6366f1", display: "flex", justifyContent: "center" }}>
+                    <Edit size={14} />
+                  </button>
+                  <button onClick={async () => {
+                    if (!isOwner) {
+                      addToast("Only Owners can delete users", "error");
+                      return;
                     }
-                  }
-                }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: (!isOwner || s.role === "Owner") ? "#cbd5e1" : "#ef4444", display: "flex", justifyContent: "center" }} disabled={!isOwner || s.role === "Owner"}>
-                  <Trash2 size={14} />
-                </button>
+                    if (s.role === "Owner") {
+                      addToast("Cannot delete Owner account", "error");
+                      return;
+                    }
+                    if (window.confirm("Are you sure you want to delete this user?")) {
+                      try {
+                        await usersAPI.remove(s.id);
+                        loadUsers();
+                        addToast("User deleted successfully", "success");
+                      } catch(e) {
+                        addToast("Failed to delete user", "error");
+                      }
+                    }
+                  }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: (!isOwner || s.role === "Owner") ? "#cbd5e1" : "#ef4444", display: "flex", justifyContent: "center" }} disabled={!isOwner || s.role === "Owner"}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -1379,12 +1385,19 @@ export default function Settings() {
       />
       <AddStaffModal 
         open={showAddStaffModal}
-        onClose={() => setShowAddStaffModal(false)}
-        onSave={async (staffData) => {
-          await usersAPI.create(staffData);
-          addToast("Staff created successfully!", "success");
+        onClose={() => { setShowAddStaffModal(false); setEditingStaff(null); }}
+        editingUser={editingStaff}
+        onSave={async (staffData, id) => {
+          if (id) {
+            await usersAPI.update(id, staffData);
+            addToast("Staff updated successfully!", "success");
+          } else {
+            await usersAPI.create(staffData);
+            addToast("Staff created successfully!", "success");
+          }
           loadUsers();
           setShowAddStaffModal(false);
+          setEditingStaff(null);
         }}
       />
     </div>

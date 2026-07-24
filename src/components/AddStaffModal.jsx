@@ -23,11 +23,25 @@ const labelSt = {
   display: "block", marginBottom: 6,
 };
 
-export default function AddStaffModal({ open, onClose, onSave }) {
+export default function AddStaffModal({ open, onClose, onSave, editingUser }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "Staff" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  React.useEffect(() => {
+    if (editingUser) {
+      setForm({
+        name: editingUser.name || "",
+        email: editingUser.email || "",
+        phone: editingUser.phone || "",
+        password: editingUser.plainPassword || "",
+        role: editingUser.role || "Staff"
+      });
+    } else {
+      setForm({ name: "", email: "", phone: "", password: "", role: "Staff" });
+    }
+  }, [editingUser, open]);
 
   if (!open) return null;
 
@@ -49,11 +63,11 @@ export default function AddStaffModal({ open, onClose, onSave }) {
     }
     setLoading(true);
     try {
-      await onSave(form);
+      await onSave(form, editingUser?.id);
       setForm({ name: "", email: "", phone: "", password: "", role: "Staff" });
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create user. Email may already exist.");
+      setError(err?.response?.data?.message || `Failed to ${editingUser ? "update" : "create"} user.`);
     } finally {
       setLoading(false);
     }
@@ -68,8 +82,8 @@ export default function AddStaffModal({ open, onClose, onSave }) {
         <div style={{ background: "linear-gradient(135deg, #4c1d95, #7c3aed)", padding: "22px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff", margin: 0 }}>Add New Staff</h3>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>Create a user account with role-based access</p>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff", margin: 0 }}>{editingUser ? "Edit Staff" : "Add New Staff"}</h3>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>{editingUser ? "Update user details and permissions" : "Create a user account with role-based access"}</p>
             </div>
             <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
               <X size={16} />
@@ -151,7 +165,7 @@ export default function AddStaffModal({ open, onClose, onSave }) {
           <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", background: "#f9fafb", display: "flex", gap: 12, justifyContent: "flex-end" }}>
             <button type="button" onClick={onClose} style={{ padding: "12px 24px", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", cursor: "pointer" }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: "12px 28px", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #4c1d95, #7c3aed)", border: "none", fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", boxShadow: "0 4px 12px rgba(124,58,237,0.25)" }}>
-              {loading ? "Creating..." : "Create Staff Account"}
+              {loading ? (editingUser ? "Updating..." : "Creating...") : (editingUser ? "Update Staff Account" : "Create Staff Account")}
             </button>
           </div>
         </form>

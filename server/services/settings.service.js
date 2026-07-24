@@ -132,6 +132,22 @@ class SettingsService {
     });
   }
 
+  async updateUser(userId, data, tenantId) {
+    const user = await User.findOne({ where: { id: userId, tenantId } });
+    if (!user) throw new NotFoundError("User");
+    
+    // Only update allowed fields
+    if (data.name) user.name = data.name;
+    if (data.email) user.email = data.email.toLowerCase();
+    if (data.phone) user.phone = data.phone;
+    if (data.role && user.role !== ROLES.OWNER) user.role = data.role;
+    if (data.password) {
+      user.password = data.password;
+    }
+    await user.save();
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
+  }
+
   async toggleUserActive(userId, tenantId) {
     const user = await User.findOne({ where: { id: userId, tenantId } });
     if (!user) throw new NotFoundError("User");

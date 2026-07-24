@@ -195,6 +195,7 @@ export default api;
 export const usersAPI = {
   getAll: () => api.get("/v1/settings/users"),
   create: (data) => api.post("/v1/auth/register", data),
+  update: (id, data) => api.put(`/v1/settings/users/${id}`, data),
   toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
   remove: (id) => api.delete(`/v1/settings/users/${id}`),
 };
