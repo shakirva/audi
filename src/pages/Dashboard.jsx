@@ -6,6 +6,7 @@ import {
   FunnelChart, Funnel, LabelList
 } from "recharts";
 import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ const GradientCard = ({ title, value, gradient, delay }) => (
 // 1. MANAGER / OWNER MODE (Executive Cockpit)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI } from "../services/api";
 
 function ExecutiveCockpit() {
   const [stats, setStats] = React.useState({
@@ -187,6 +188,39 @@ function ExecutiveCockpit() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ReceptionCockpit() {
+  const navigate = useNavigate();
+  const [events, setEvents] = React.useState([]);
+  const [enquiries, setEnquiries] = React.useState([]);
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [bookingsRes, enquiriesRes] = await Promise.all([
+        bookingsAPI.getAll(),
+        enquiriesAPI.getAll()
+      ]);
+      const allBookings = bookingsRes.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      const todaysEvents = allBookings.filter(b => b.date && b.date.startsWith(today));
+      setEvents(todaysEvents);
+      
+      setEnquiries(enquiriesRes.data?.data || []);
+    } catch(err) {
+      console.error("Failed to load reception data", err);
+    }
+  };
+
+  const getStatusColumn = (columnType) => {
+    if (columnType === "Open") return enquiries.filter(e => ["New Enquiry", "Contacted"].includes(e.status));
+    if (columnType === "Follow Up") return enquiries.filter(e => ["Follow-up", "Customer Visit", "Quotation Sent", "Interested"].includes(e.status));
+    if (columnType === "Closed") return enquiries.filter(e => ["Booking Confirmed", "Cancelled", "Lost"].includes(e.status));
+    return [];
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -194,10 +228,10 @@ function ReceptionCockpit() {
           <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px" }}>Reception Desk 👋</h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Fast creation and calendar view.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <button style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => navigate("/crm")} style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Plus size={20} /> New Enquiry
             </button>
-            <button style={{ padding: "16px", background: "#fff", color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => navigate("/calendar")} style={{ padding: "16px", background: "#fff", color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Calendar size={20} /> Check Availability
             </button>
           </div>
@@ -206,16 +240,15 @@ function ReceptionCockpit() {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Today's Live Events</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {[
-              { title: "Wedding - Emerald Hall", time: "09:00 AM - 04:00 PM", host: "Amina & Shanid", status: "Ongoing" },
-              { title: "Corporate - Royal Hall", time: "11:00 AM - 02:00 PM", host: "ABC Builders", status: "Ongoing" }
-            ].map((evt, i) => (
-              <div key={i} style={{ background: "#f8fafc", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {events.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 14 }}>No events scheduled for today.</div>
+            ) : events.map((evt) => (
+              <div key={evt.id} style={{ background: "#f8fafc", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.title}</div>
-                  <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.host} • {evt.time}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.eventType} - {evt.hall}</div>
+                  <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.customerName} • {evt.session}</div>
                 </div>
-                <div style={{ background: evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
+                <div style={{ background: evt.status === "Confirmed" ? "#dcfce7" : "#fef3c7", color: evt.status === "Confirmed" ? "#166534" : "#b45309", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
                   {evt.status}
                 </div>
               </div>
@@ -226,15 +259,27 @@ function ReceptionCockpit() {
 
       <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Follow-up Queue (CRM)</h3>
-        {/* Mock Kanban style for reception */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
-          {["Call Back", "Visit Scheduled", "Quotation Sent"].map((status, i) => (
+          {[
+            { label: "New / Open", status: "Open" }, 
+            { label: "Follow Up", status: "Follow Up" }, 
+            { label: "Converted / Closed", status: "Closed" }
+          ].map((col, i) => (
             <div key={i} style={{ background: "#f1f5f9", borderRadius: 24, padding: 24, minHeight: 300 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "#64748b", marginBottom: 16, letterSpacing: 1 }}>{status}</div>
-              <div style={{ background: "#fff", padding: 16, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", marginBottom: 12 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Enquiry ENQ-10{i}</div>
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Needs callback regarding catering.</div>
-              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "#64748b", marginBottom: 16, letterSpacing: 1 }}>{col.label}</div>
+              {getStatusColumn(col.status).length === 0 ? (
+                <div style={{ padding: "16px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>No enquiries</div>
+              ) : getStatusColumn(col.status).map(enq => (
+                <div key={enq.id} style={{ background: "#fff", padding: 16, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{enq.Customer?.name || enq.enquiryNumber}</div>
+                    <span style={{ fontSize: 10, background: "#e2e8f0", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{enq.eventType}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Date: {enq.tentativeDate || "TBD"}</div>
+                  <div style={{ fontSize: 12, color: "#475569", marginTop: 4, fontWeight: 600, color: "#d4a017" }}>{enq.status}</div>
+                  {enq.remarks && <div style={{ fontSize: 12, color: "#475569", marginTop: 8, fontStyle: "italic", borderTop: "1px solid #f1f5f9", paddingTop: 8 }}>"{enq.remarks}"</div>}
+                </div>
+              ))}
             </div>
           ))}
         </div>
