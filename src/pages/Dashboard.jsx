@@ -51,15 +51,92 @@ function ExecutiveCockpit() {
     enquiryCount: 0,
   });
 
+  const [revData, setRevData] = React.useState([]);
+  const [distData, setDistData] = React.useState([]);
+  const [todaysEvents, setTodaysEvents] = React.useState([]);
+  const [urgent, setUrgent] = React.useState([
+    { id: "0 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
+    { id: "0 Quotations", details: "Pending Signature", status: "Waiting" },
+    { id: "0 Advances", details: "Payment Pending", status: "Action Needed" }
+  ]);
+
   React.useEffect(() => {
-    bookingsAPI.getStats()
-      .then(res => {
-        if (res.data?.data) {
-          setStats(res.data.data);
-        }
-      })
-      .catch(err => console.error("Failed to load dashboard stats", err));
+    loadDashboard();
   }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const [statsRes, bookingsRes, enqRes] = await Promise.all([
+        bookingsAPI.getStats(),
+        bookingsAPI.getAll(),
+        enquiriesAPI.getAll()
+      ]);
+
+      if (statsRes.data?.data) {
+        setStats(statsRes.data.data);
+      }
+
+      const allBookings = bookingsRes.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Compute Today's Events
+      const todayEvts = allBookings.filter(b => b.date && b.date.startsWith(today));
+      setTodaysEvents(todayEvts);
+
+      // Compute Event Distribution
+      const distMap = {};
+      allBookings.forEach(b => {
+        if (!b.eventType) return;
+        distMap[b.eventType] = (distMap[b.eventType] || 0) + 1;
+      });
+      const colors = [BRAND.primary, BRAND.primaryLight, BRAND.accent, BRAND.info, BRAND.warning, BRAND.success];
+      const distArr = Object.keys(distMap).map((k, i) => ({
+        name: k,
+        value: distMap[k],
+        color: colors[i % colors.length]
+      }));
+      if (distArr.length === 0) {
+        distArr.push({ name: "No Events", value: 1, color: "#e2e8f0" });
+      }
+      setDistData(distArr);
+
+      // Compute Revenue Trend (Last 6 months)
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const revMap = {};
+      allBookings.forEach(b => {
+        if (b.status === "Confirmed" || b.status === "Completed") {
+          if (b.date) {
+            const m = new Date(b.date).getMonth();
+            revMap[m] = (revMap[m] || 0) + (Number(b.totalAmount) || 0);
+          }
+        }
+      });
+      // Just take 6 recent months for demo, or all 12
+      const currentMonth = new Date().getMonth();
+      const revArr = [];
+      for (let i = 5; i >= 0; i--) {
+        let m = currentMonth - i;
+        if (m < 0) m += 12;
+        revArr.push({ name: monthNames[m], uv: revMap[m] || 0 });
+      }
+      setRevData(revArr);
+
+      // Compute Urgent Enquiries
+      const allEnquiries = enqRes.data?.data || [];
+      const followUpCount = allEnquiries.filter(e => ["Contacted", "Follow-up", "Customer Visit"].includes(e.status)).length;
+      const quoteCount = allEnquiries.filter(e => e.status === "Quotation Sent").length;
+      const pendingCount = allBookings.filter(b => b.status === "Pending Payment").length;
+
+      setUrgent([
+        { id: `${followUpCount} Enquiries`, details: "Need Follow-up Call", status: "Urgent" },
+        { id: `${quoteCount} Quotations`, details: "Pending Signature", status: "Waiting" },
+        { id: `${pendingCount} Advances`, details: "Payment Pending", status: "Action Needed" }
+      ]);
+
+    } catch(err) {
+      console.error("Failed to load dashboard data", err);
+    }
+  };
 
   const formatLakhs = (val) => `₹${(val / 100000).toFixed(1)}L`;
 
@@ -100,7 +177,7 @@ function ExecutiveCockpit() {
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Revenue Trend</h3>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
+              <AreaChart data={revData.length ? revData : revenueData}>
                 <defs>
                   <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.3}/>
@@ -108,8 +185,8 @@ function ExecutiveCockpit() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `₹${val/1000}k`} />
-                <Tooltip />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value) => [`₹${value}`, "Revenue"]} />
                 <Area type="monotone" dataKey="uv" stroke={BRAND.primary} strokeWidth={4} fill="url(#colorUv)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -119,19 +196,16 @@ function ExecutiveCockpit() {
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.accent} /> Today's Events</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { title: "Wedding - Emerald Hall", time: "09:00 AM - 04:00 PM", host: "Amina & Shanid", status: "Ongoing" },
-              { title: "Corporate - Royal Hall", time: "11:00 AM - 02:00 PM", host: "ABC Builders", status: "Ongoing" },
-              { title: "Birthday - Orchid Hall", time: "02:00 PM - 06:00 PM", host: "Ayaan", status: "Upcoming" },
-              { title: "Reception - Emerald Hall", time: "05:00 PM - 10:00 PM", host: "Rashid & Sameeha", status: "Upcoming" }
-            ].map((evt, i) => (
-              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {todaysEvents.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 14 }}>No events scheduled for today.</div>
+            ) : todaysEvents.map((evt) => (
+              <div key={evt.id} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{evt.title}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 2 }}>{evt.host}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{evt.time}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{evt.eventType} - {evt.hall}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 2 }}>{evt.customerName}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{evt.session}</div>
                 </div>
-                <div style={{ background: evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
+                <div style={{ background: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
                   {evt.status}
                 </div>
               </div>
@@ -148,8 +222,8 @@ function ExecutiveCockpit() {
           <div style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={eventDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
-                  {eventDistData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                <Pie data={distData.length ? distData : eventDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                  {(distData.length ? distData : eventDistData).map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -160,11 +234,7 @@ function ExecutiveCockpit() {
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><MessageCircle size={18} color={BRAND.primary} /> Urgent Enquiries</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            {[
-              { id: "5 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
-              { id: "3 Quotations", details: "Pending Signature", status: "Waiting" },
-              { id: "2 Advances", details: "Payment Pending", status: "Action Needed" }
-            ].map((enq, i) => (
+            {urgent.map((enq, i) => (
               <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{enq.id}</div>
