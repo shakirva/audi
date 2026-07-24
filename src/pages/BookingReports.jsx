@@ -1,31 +1,68 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line } from "recharts";
 import { Download, CalendarCheck, Ban, CalendarDays, CheckCircle2, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
+import { bookingsAPI } from "../services/api";
+import dayjs from "dayjs";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
-const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
-
-const MOCK_MONTHS = [
-  { month: "Jan", bookings: 12 },
-  { month: "Feb", bookings: 18 },
-  { month: "Mar", bookings: 25 },
-  { month: "Apr", bookings: 15 },
-  { month: "May", bookings: 30 },
-  { month: "Jun", bookings: 28 },
-];
-
-const MOCK_EVENTS = [
-  { name: "Wedding", value: 45 },
-  { name: "Reception", value: 30 },
-  { name: "Corporate", value: 15 },
-  { name: "Birthday", value: 10 },
-];
+const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
 
 const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed"];
 
 export default function BookingReports() {
   const { addToast } = useToast();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const res = await bookingsAPI.getAll();
+      setBookings(res.data?.data || []);
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to load booking data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalBookings = bookings.length;
+  const completed = bookings.filter(b => b.status === "Completed").length;
+  const upcoming = bookings.filter(b => b.status === "Confirmed").length;
+  const cancelled = bookings.filter(b => b.status === "Cancelled").length;
+  const cancelRate = totalBookings > 0 ? ((cancelled / totalBookings) * 100).toFixed(1) : 0;
+
+  // Monthly Volume (last 6 months)
+  const trendData = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = dayjs().subtract(i, 'month');
+    const monthStr = d.format('MMM');
+    const yearMonth = d.format('YYYY-MM');
+    trendData.push({ month: monthStr, key: yearMonth, bookings: 0 });
+  }
+
+  const eventCounts = {};
+  
+  bookings.forEach(b => {
+    // Trend
+    const d = dayjs(b.date);
+    const key = d.format('YYYY-MM');
+    const trendItem = trendData.find(t => t.key === key);
+    if (trendItem) trendItem.bookings += 1;
+    
+    // Events
+    const type = b.eventType || "Other";
+    eventCounts[type] = (eventCounts[type] || 0) + 1;
+  });
+
+  const eventData = Object.keys(eventCounts).map(k => ({ name: k, value: eventCounts[k] })).sort((a,b) => b.value - a.value);
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -36,9 +73,6 @@ export default function BookingReports() {
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Analyze booking volumes, event types, and cancellations</p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#D4A017", background: "rgba(212,160,23,0.1)", padding: "6px 12px", borderRadius: 8, border: "1px dashed #D4A017" }}>
-            STATIC PROTOTYPE
-          </span>
           <button 
             onClick={() => {
               window.print();
@@ -77,10 +111,10 @@ export default function BookingReports() {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
         {[
-          { label: "Total Bookings", value: "128", sub: "This Year", icon: CalendarDays, color: "#1B4332", bg: "#f0faf4" },
-          { label: "Completed", value: "85", sub: "Successfully Executed", icon: CheckCircle2, color: "#059669", bg: "#dcfce7" },
-          { label: "Upcoming", value: "38", sub: "Scheduled Events", icon: CalendarCheck, color: "#2563eb", bg: "#eff6ff" },
-          { label: "Cancelled", value: "5", sub: "3.9% Cancel Rate", icon: Ban, color: "#dc2626", bg: "#fef2f2" },
+          { label: "Total Bookings", value: totalBookings, sub: "All time", icon: CalendarDays, color: "#1B4332", bg: "#f0faf4" },
+          { label: "Completed", value: completed, sub: "Successfully Executed", icon: CheckCircle2, color: "#059669", bg: "#dcfce7" },
+          { label: "Upcoming", value: upcoming, sub: "Scheduled Events", icon: CalendarCheck, color: "#2563eb", bg: "#eff6ff" },
+          { label: "Cancelled", value: cancelled, sub: `${cancelRate}% Cancel Rate`, icon: Ban, color: "#dc2626", bg: "#fef2f2" },
         ].map(k => (
           <div key={k.label} style={{ ...cardSt, display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: k.bg, color: k.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -102,7 +136,7 @@ export default function BookingReports() {
         <div style={cardSt}>
           <p style={sTitle}>Monthly Booking Volume</p>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={MOCK_MONTHS}>
+            <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
@@ -116,17 +150,21 @@ export default function BookingReports() {
         <div style={cardSt}>
           <p style={sTitle}>Events Breakdown</p>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={MOCK_EVENTS}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip cursor={{ fill: "#f9fafb" }} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={35}>
-                {MOCK_EVENTS.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
+            {eventData.length > 0 ? (
+              <BarChart data={eventData.slice(0, 5)}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip cursor={{ fill: "#f9fafb" }} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={35}>
+                  {eventData.slice(0, 5).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
+            )}
           </ResponsiveContainer>
         </div>
       </div>

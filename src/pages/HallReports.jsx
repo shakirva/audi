@@ -1,21 +1,54 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, TrendingUp, AlertCircle, Building2, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
+import { bookingsAPI } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
-const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
+const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
 
-const MOCK_HALL_DATA = [
-  { name: "Emerald Hall", revenue: 850000, bookings: 42, occupancy: 85 },
-  { name: "Royal Hall", revenue: 620000, bookings: 38, occupancy: 70 },
-  { name: "Orchid Hall", revenue: 210000, bookings: 25, occupancy: 45 },
-];
-
-const COLORS = ["#1B4332", "#D4A017", "#2563eb"];
+const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed", "#059669"];
 
 export default function HallReports() {
   const { addToast } = useToast();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const res = await bookingsAPI.getAll();
+      setBookings(res.data?.data || []);
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to load hall data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const hallMap = {};
+  let totalBookings = 0;
+  
+  bookings.forEach(b => {
+    if (b.status !== "Cancelled") {
+      const h = b.hall || "Main Hall";
+      if (!hallMap[h]) hallMap[h] = { name: h, revenue: 0, bookings: 0 };
+      hallMap[h].bookings += 1;
+      hallMap[h].revenue += (b.totalAmount || 0);
+      totalBookings += 1;
+    }
+  });
+
+  const hallData = Object.values(hallMap).sort((a,b) => b.revenue - a.revenue);
+  const topHall = hallData.length > 0 ? hallData[0] : null;
+  const topHallName = topHall ? topHall.name : "N/A";
+  const topHallRev = topHall ? (topHall.revenue >= 100000 ? `₹${(topHall.revenue / 100000).toFixed(1)}L` : `₹${topHall.revenue.toLocaleString()}`) : "₹0";
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -26,9 +59,6 @@ export default function HallReports() {
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Compare revenue, occupancy, and utilization across venues</p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#D4A017", background: "rgba(212,160,23,0.1)", padding: "6px 12px", borderRadius: 8, border: "1px dashed #D4A017" }}>
-            STATIC PROTOTYPE
-          </span>
           <button 
             onClick={() => {
               window.print();
@@ -67,9 +97,8 @@ export default function HallReports() {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
         {[
-          { label: "Top Performing Hall", value: "Emerald Hall", sub: "₹8.5L Revenue", icon: Building2, color: "#1B4332", bg: "#f0faf4" },
-          { label: "Overall Occupancy", value: "68%", sub: "+12% from last month", icon: TrendingUp, color: "#D4A017", bg: "#fffbeb" },
-          { label: "Total Hall Bookings", value: "105", sub: "Across all halls", icon: Calendar, color: "#2563eb", bg: "#eff6ff" },
+          { label: "Top Performing Hall", value: topHallName, sub: `${topHallRev} Revenue`, icon: Building2, color: "#1B4332", bg: "#f0faf4" },
+          { label: "Total Hall Bookings", value: totalBookings, sub: "Across all halls", icon: Calendar, color: "#2563eb", bg: "#eff6ff" },
         ].map(k => (
           <div key={k.label} style={{ ...cardSt, display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: k.bg, color: k.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -91,17 +120,21 @@ export default function HallReports() {
         <div style={cardSt}>
           <p style={sTitle}>Revenue Comparison</p>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={MOCK_HALL_DATA} barSize={40}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v/100000}L`} />
-              <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [`₹${(v/100000).toFixed(1)}L`, "Revenue"]} />
-              <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
-                {MOCK_HALL_DATA.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
+            {hallData.length > 0 ? (
+              <BarChart data={hallData} barSize={40}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 100000 ? `₹${v/100000}L` : `₹${v}`} />
+                <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : `₹${v.toLocaleString()}`, "Revenue"]} />
+                <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                  {hallData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
+            )}
           </ResponsiveContainer>
         </div>
 
@@ -109,20 +142,24 @@ export default function HallReports() {
         <div style={cardSt}>
           <p style={sTitle}>Booking Distribution</p>
           <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={MOCK_HALL_DATA} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="bookings">
-                {MOCK_HALL_DATA.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
+            {hallData.length > 0 ? (
+              <PieChart>
+                <Pie data={hallData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="bookings">
+                  {hallData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
+            )}
           </ResponsiveContainer>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-            {MOCK_HALL_DATA.map((h, i) => (
+            {hallData.map((h, i) => (
               <div key={h.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#374151", fontWeight: 500 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i] }} /> {h.name}
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length] }} /> {h.name}
                 </span>
                 <span style={{ fontWeight: 700, color: "#111827" }}>{h.bookings}</span>
               </div>

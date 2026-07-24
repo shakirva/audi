@@ -1,22 +1,81 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import { Download, Wallet, CreditCard, Banknote, PiggyBank, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
+import api, { bookingsAPI } from "../services/api";
+import dayjs from "dayjs";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
-const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
-
-const MOCK_FINANCE = [
-  { month: "Jan", revenue: 850, expense: 220, profit: 630 },
-  { month: "Feb", revenue: 920, expense: 280, profit: 640 },
-  { month: "Mar", revenue: 1100, expense: 310, profit: 790 },
-  { month: "Apr", revenue: 890, expense: 250, profit: 640 },
-  { month: "May", revenue: 1250, expense: 420, profit: 830 },
-  { month: "Jun", revenue: 1400, expense: 380, profit: 1020 },
-];
+const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
 
 export default function AccountsReports() {
   const { addToast } = useToast();
+  const [data, setData] = useState({ revenue: 0, expenses: 0, cashInHand: 0, trend: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [bookingsRes, expensesRes] = await Promise.all([
+        bookingsAPI.getAll(),
+        api.get("/v1/expenses").catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const bookings = bookingsRes.data?.data || [];
+      const expenses = expensesRes.data?.data || [];
+
+      let totalRev = 0;
+      let totalExp = 0;
+
+      // Trend data (last 6 months)
+      const trendData = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = dayjs().subtract(i, 'month');
+        trendData.push({ month: d.format('MMM'), key: d.format('YYYY-MM'), revenue: 0, expense: 0, profit: 0 });
+      }
+
+      bookings.forEach(b => {
+        if (b.status !== "Cancelled") {
+          totalRev += (b.totalAmount || 0);
+          const key = dayjs(b.date).format('YYYY-MM');
+          const t = trendData.find(x => x.key === key);
+          if (t) t.revenue += (b.totalAmount || 0);
+        }
+      });
+
+      expenses.forEach(e => {
+        totalExp += (e.amount || 0);
+        const key = dayjs(e.date).format('YYYY-MM');
+        const t = trendData.find(x => x.key === key);
+        if (t) t.expense += (e.amount || 0);
+      });
+
+      trendData.forEach(t => t.profit = t.revenue - t.expense);
+
+      setData({
+        revenue: totalRev,
+        expenses: totalExp,
+        cashInHand: totalRev * 0.1, // mock cash in hand based on revenue
+        trend: trendData
+      });
+
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to load accounts data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const netProfit = data.revenue - data.expenses;
+  const margin = data.revenue > 0 ? Math.round((netProfit / data.revenue) * 100) : 0;
+
+  const formatLakhs = (val) => val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` : `₹${val.toLocaleString()}`;
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -27,9 +86,6 @@ export default function AccountsReports() {
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Comprehensive financial overview, cash flow, and profitability</p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#D4A017", background: "rgba(212,160,23,0.1)", padding: "6px 12px", borderRadius: 8, border: "1px dashed #D4A017" }}>
-            STATIC PROTOTYPE
-          </span>
           <button 
             onClick={() => {
               window.print();
@@ -68,10 +124,10 @@ export default function AccountsReports() {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
         {[
-          { label: "Net Revenue", value: "₹64.1L", sub: "Year to Date", icon: Wallet, color: "#1B4332", bg: "#f0faf4" },
-          { label: "Total Expenses", value: "₹18.6L", sub: "Operational costs", icon: CreditCard, color: "#dc2626", bg: "#fef2f2" },
-          { label: "Net Profit", value: "₹45.5L", sub: "71% Margin", icon: PiggyBank, color: "#059669", bg: "#dcfce7" },
-          { label: "Cash in Hand", value: "₹4.2L", sub: "Petty Cash", icon: Banknote, color: "#D4A017", bg: "#fffbeb" },
+          { label: "Net Revenue", value: formatLakhs(data.revenue), sub: "All time", icon: Wallet, color: "#1B4332", bg: "#f0faf4" },
+          { label: "Total Expenses", value: formatLakhs(data.expenses), sub: "Operational costs", icon: CreditCard, color: "#dc2626", bg: "#fef2f2" },
+          { label: "Net Profit", value: formatLakhs(netProfit), sub: `${margin}% Margin`, icon: PiggyBank, color: "#059669", bg: "#dcfce7" },
+          { label: "Est. Cash in Hand", value: formatLakhs(data.cashInHand), sub: "Petty Cash", icon: Banknote, color: "#D4A017", bg: "#fffbeb" },
         ].map(k => (
           <div key={k.label} style={{ ...cardSt, display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: k.bg, color: k.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -93,7 +149,7 @@ export default function AccountsReports() {
         <div style={cardSt}>
           <p style={sTitle}>Cash Flow & Profitability</p>
           <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={MOCK_FINANCE}>
+            <AreaChart data={data.trend}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#1B4332" stopOpacity={0.2}/>
@@ -106,8 +162,8 @@ export default function AccountsReports() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v}k`} />
-              <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [`₹${v}k`, ""]} />
+              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : `₹${v}`} />
+              <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : `₹${v.toLocaleString()}`, ""]} />
               <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#1B4332" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
               <Area type="monotone" dataKey="expense" name="Expense" stroke="#dc2626" fillOpacity={1} fill="url(#colorExp)" strokeWidth={2} />
               <Line type="monotone" dataKey="profit" name="Profit" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} />
