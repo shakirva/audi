@@ -1,25 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter } from "lucide-react";
-
-const DEMO_STAFF = [
-  { id: "STF-001", name: "Suresh Kumar", role: "Manager", status: "Present", shift: "Morning (09:00 - 17:00)", phone: "+91 9447056789" },
-  { id: "STF-002", name: "Anitha Nair", role: "Sales", status: "Present", shift: "Morning (09:00 - 17:00)", phone: "+91 9447098765" },
-  { id: "STF-003", name: "Siddique", role: "Accountant", status: "Present", shift: "Morning (09:00 - 17:00)", phone: "+91 9447011111" },
-  { id: "STF-004", name: "Rahul M", role: "Reception", status: "Present", shift: "Morning (09:00 - 17:00)", phone: "+91 9447022222" },
-  { id: "STF-005", name: "Biju P", role: "Coordinator", status: "Absent", shift: "Morning (09:00 - 17:00)", phone: "+91 9447033333" },
-  { id: "STF-006", name: "Ramesh", role: "Security", status: "Present", shift: "Night (17:00 - 02:00)", phone: "+91 9447044444" },
-  { id: "STF-007", name: "Sajith", role: "Technician", status: "Present", shift: "Evening (14:00 - 22:00)", phone: "+91 9447055555" },
-  { id: "STF-008", name: "Latha", role: "Cleaner", status: "On Leave", shift: "Morning (08:00 - 16:00)", phone: "+91 9447066666" },
-  { id: "STF-009", name: "Mini", role: "Cleaner", status: "Present", shift: "Morning (08:00 - 16:00)", phone: "+91 9447077777" }
-];
+import { usersAPI } from "../services/api";
 
 export default function Staff() {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
+  const [staffList, setStaffList] = useState([]);
 
-  const roles = ["All", "Manager", "Sales", "Reception", "Coordinator", "Accountant", "Security", "Technician", "Cleaner"];
+  useEffect(() => {
+    loadStaff();
+  }, []);
 
-  const filteredStaff = DEMO_STAFF.filter(s => {
+  const loadStaff = async () => {
+    try {
+      const res = await usersAPI.getAll();
+      setStaffList(res.data.data || []);
+    } catch (e) {
+      console.error("Failed to load staff", e);
+    }
+  };
+
+  const roles = ["All", "Owner", "Manager", "Sales", "Reception", "Coordinator", "Accountant", "Security", "Technician", "Cleaner"];
+
+  const filteredStaff = staffList.filter(s => {
     if (filterRole !== "All" && s.role !== filterRole) return false;
     if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -50,7 +53,7 @@ export default function Staff() {
           </div>
           <div>
             <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Total Staff</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{DEMO_STAFF.length}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.length}</div>
           </div>
         </div>
         
@@ -60,7 +63,7 @@ export default function Staff() {
           </div>
           <div>
             <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Present Today</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>7</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => s.active).length}</div>
           </div>
         </div>
 
@@ -69,8 +72,8 @@ export default function Staff() {
             <UserX size={24} />
           </div>
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Absent / Leave</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>2</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Absent / Inactive</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => !s.active).length}</div>
           </div>
         </div>
 
@@ -123,7 +126,7 @@ export default function Staff() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#1B4332" }}>
-                  {staff.name.charAt(0)}
+                  {staff.name?.charAt(0) || "U"}
                 </div>
                 <div>
                   <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{staff.name}</h3>
@@ -131,22 +134,22 @@ export default function Staff() {
                 </div>
               </div>
               <div style={{
-                background: staff.status === "Present" ? "#dcfce7" : staff.status === "Absent" ? "#fee2e2" : "#fef3c7",
-                color: staff.status === "Present" ? "#16a34a" : staff.status === "Absent" ? "#dc2626" : "#d97706",
+                background: staff.active ? "#dcfce7" : "#fee2e2",
+                color: staff.active ? "#16a34a" : "#dc2626",
                 padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, textTransform: "uppercase"
               }}>
-                {staff.status}
+                {staff.active ? "Active" : "Inactive"}
               </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569", background: "#f8fafc", padding: "8px 12px", borderRadius: 8 }}>
                 <Clock size={16} color="#94a3b8" />
-                <span>{staff.shift}</span>
+                <span>{staff.email}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569", background: "#f8fafc", padding: "8px 12px", borderRadius: 8 }}>
                 <Users size={16} color="#94a3b8" />
-                <span>{staff.phone}</span>
+                <span>{staff.phone || "No phone added"}</span>
               </div>
             </div>
 

@@ -194,7 +194,7 @@ export default api;
 // ═══════════════════════════════════
 export const usersAPI = {
   getAll: () => api.get("/v1/settings/users"),
-  create: (data) => api.post("/auth/register", data),
+  create: (data) => api.post("/v1/auth/register", data),
   toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
   remove: (id) => api.delete(`/v1/settings/users/${id}`),
 };

@@ -83,7 +83,17 @@ export default function Settings() {
 
   useEffect(() => {
     loadSettings();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const res = await usersAPI.getAll();
+      setDbUsers(res.data.data || []);
+    } catch (e) {
+      console.error("Failed to load users:", e);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -1030,25 +1040,49 @@ export default function Settings() {
               <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
             ))}
           </div>
-          {staff.length === 0 ? (
+          {dbUsers.length === 0 ? (
             <p style={{ textAlign: "center", padding: "16px", fontSize: 12, color: "#9ca3af", margin: 0 }}>No staff members added.</p>
-          ) : staff.map((s, i) => {
+          ) : dbUsers.map((s, i) => {
             const roleColors = { Owner: { bg: "#f0faf4", color: "#1B4332" }, Manager: { bg: "#fffbeb", color: "#D4A017" }, Staff: { bg: "#eff6ff", color: "#2563eb" } };
             const rc = roleColors[s.role] || roleColors.Staff;
             return (
-              <div key={s.email + i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
+              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{s.name}</p>
                   <p style={{ fontSize: 11, color: "#9ca3af" }}>{s.email}</p>
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: rc.color, background: rc.bg, padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>{s.role}</span>
-                <span style={{ fontSize: 12, color: "#6b7280" }}>{s.access}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d", background: "#dcfce7", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>Active</span>
-                <button onClick={() => {
-                  const updated = staff.filter((_, idx) => idx !== i);
-                  setStaff(updated);
-                  handleSaveStaff(updated);
-                }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "#ef4444", display: "flex", justifyContent: "center" }}>
+                <span style={{ fontSize: 12, color: "#6b7280" }}>{s.role === "Owner" || s.role === "Manager" ? "Full Access" : s.role === "Sales" ? "CRM Only" : "Basic"}</span>
+                <button onClick={async () => {
+                  try {
+                    await usersAPI.toggle(s.id);
+                    loadUsers();
+                    addToast(`User ${s.active ? 'deactivated' : 'activated'}`, "success");
+                  } catch(e) {
+                    addToast("Failed to toggle user status", "error");
+                  }
+                }} style={{ cursor: "pointer", border: "none", background: "none", fontSize: 11, fontWeight: 600, color: s.active ? "#15803d" : "#ef4444", background: s.active ? "#dcfce7" : "#fee2e2", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>
+                  {s.active ? "Active" : "Inactive"}
+                </button>
+                <button onClick={async () => {
+                  if (!isOwner) {
+                    addToast("Only Owners can delete users", "error");
+                    return;
+                  }
+                  if (s.role === "Owner") {
+                    addToast("Cannot delete Owner account", "error");
+                    return;
+                  }
+                  if (window.confirm("Are you sure you want to delete this user?")) {
+                    try {
+                      await usersAPI.remove(s.id);
+                      loadUsers();
+                      addToast("User deleted successfully", "success");
+                    } catch(e) {
+                      addToast("Failed to delete user", "error");
+                    }
+                  }
+                }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: (!isOwner || s.role === "Owner") ? "#cbd5e1" : "#ef4444", display: "flex", justifyContent: "center" }} disabled={!isOwner || s.role === "Owner"}>
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -1338,6 +1372,16 @@ export default function Settings() {
           } catch(e) {
             console.error("Failed to auto-save halls to db", e);
           }
+        }}
+      />
+      <AddStaffModal 
+        open={showAddStaffModal}
+        onClose={() => setShowAddStaffModal(false)}
+        onSave={async (staffData) => {
+          await usersAPI.create(staffData);
+          addToast("Staff created successfully!", "success");
+          loadUsers();
+          setShowAddStaffModal(false);
         }}
       />
     </div>

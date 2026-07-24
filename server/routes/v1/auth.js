@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/login", validate(loginSchema), authController.login);
 router.get("/me", auth, authController.me);
-router.post("/register", auth, requireRole(ROLES.OWNER), validate(registerSchema), authController.register);
+router.post("/register", auth, requireRole(ROLES.OWNER, ROLES.MANAGER), validate(registerSchema), authController.register);
 router.post("/bootstrap", authController.bootstrap);
 
 module.exports = router;
