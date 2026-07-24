@@ -453,29 +453,36 @@ class AccountingEngine {
   // ═══════════════════════════════════
   // BOOKING LEDGER (FINANCIAL CENTER)
   // ═══════════════════════════════════
-  async getBookingLedger(bookingId, { tenantId, environmentId }) {
+  async getBookingLedger(bookingIdParam, { tenantId, environmentId }) {
+    const { Op } = require("sequelize");
+    const whereCondition = isNaN(bookingIdParam) 
+      ? { bookingId: bookingIdParam, tenantId, environmentId }
+      : { id: bookingIdParam, tenantId, environmentId };
+
     const booking = await Booking.findOne({ 
-      where: { id: bookingId, tenantId, environmentId },
+      where: whereCondition,
       include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }]
     });
     if (!booking) return null;
 
+    const realBookingId = booking.id;
+
     // Get all payments for this booking
     const payments = await Payment.findAll({
-      where: { bookingId, tenantId, environmentId },
+      where: { bookingId: realBookingId, tenantId, environmentId },
       include: [{ model: Receipt, attributes: ["receiptNumber"] }],
       order: [["createdAt", "DESC"]],
     });
 
     // Get all expenses for this booking
     const expenses = await Expense.findAll({
-      where: { bookingId, tenantId, environmentId },
+      where: { bookingId: realBookingId, tenantId, environmentId },
       order: [["createdAt", "DESC"]],
     });
 
     // Get journal entries for this booking
     const journals = await JournalEntry.findAll({
-      where: { bookingId, tenantId, environmentId },
+      where: { bookingId: realBookingId, tenantId, environmentId },
       include: [
         { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
         { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
