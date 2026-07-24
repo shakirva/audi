@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil } from "lucide-react";
+import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 
-export default function BookingDetailModal({ booking, onClose, onEdit }) {
+export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
 
   if (!booking) return null;
@@ -144,6 +144,11 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
               <motion.button onClick={generateReceipt} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "10px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#0f172a", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", whiteSpace: "nowrap" }}>
                 <FileText size={16} /> Download Receipt
               </motion.button>
+              {onDelete && (
+                <motion.button onClick={() => { if (window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) onDelete(booking.id); }} whileHover={{ scale: 1.1, background: "#fee2e2" }} whileTap={{ scale: 0.9 }} style={{ background: "#fff", border: "1px solid #fecaca", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#ef4444" }}>
+                  <Trash2 size={20} />
+                </motion.button>
+              )}
               <motion.button whileHover={{ scale: 1.1, background: "#e2e8f0" }} whileTap={{ scale: 0.9 }} onClick={onClose} style={{ background: "#f1f5f9", border: "none", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
               </motion.button>

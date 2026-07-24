@@ -1,15 +1,32 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent } from "lucide-react";
 import { useRole } from "../context/RoleContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { settingsAPI } from "../services/api";
 import Logo from "./Logo";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
+
+  // Load venue info from settings API on mount (if not already cached)
+  useEffect(() => {
+    if (!venueInfo) {
+      settingsAPI.get().then(res => {
+        const d = res.data.data;
+        if (d) {
+          setVenueInfo({
+            name: d.venueName || "",
+            subtitle: d.venueSubtitle || "Auditorium",
+            owner: d.ownerName || "",
+          });
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
@@ -110,8 +127,8 @@ export default function Sidebar({ open, onClose }) {
         <AnimatePresence>
           {!collapsed && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ whiteSpace: "nowrap" }}>
-              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>Laural Garden</div>
-              <div style={{ fontSize: 11, color: ACCENT_COLOR, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Auditorium</div>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>{venueInfo?.name || "Venueza"}</div>
+              <div style={{ fontSize: 11, color: ACCENT_COLOR, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>{venueInfo?.subtitle || "Auditorium"}</div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -210,10 +210,10 @@ class BookingService {
   /**
    * Delete a booking.
    */
-  async deleteBooking(bookingId, { tenantId, environmentId }) {
-    const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
+  async deleteBooking(id, { tenantId, environmentId }) {
+    const deleted = await bookingRepository.delete(id, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
-    return { message: "Booking deleted", id: bookingId };
+    return { message: "Booking deleted", id };
   }
 
   /**

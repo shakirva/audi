@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -70,6 +70,17 @@ export default function CRM() {
       addToast(`Moved to ${newStatus}`, "success");
     } catch (err) {
       addToast("Failed to update status", "error");
+    }
+  };
+  
+  const handleDeleteEnquiry = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this enquiry? This action cannot be undone.")) return;
+    try {
+      await enquiriesAPI.remove(id);
+      addToast("Enquiry deleted successfully", "success");
+      fetchEnquiries();
+    } catch (err) {
+      addToast(err.response?.data?.message || "Failed to delete enquiry", "error");
     }
   };
 
@@ -259,6 +270,12 @@ export default function CRM() {
                                 >
                                   <CheckCircle2 size={11}/> Convert
                                 </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                                  style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <Trash2 size={11}/> Delete
+                                </button>
                               </div>
                             ) : (
                               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8f9fa", padding: "2px 8px 2px 2px", borderRadius: 12, border: "1px solid #eaeaea" }}>
@@ -339,12 +356,20 @@ export default function CRM() {
                       {enq.SalesExecutive?.name || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                        style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                      >
-                        <CheckCircle2 size={12}/> Convert
-                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                          style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <CheckCircle2 size={12}/> Convert
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                          style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Trash2 size={12}/> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

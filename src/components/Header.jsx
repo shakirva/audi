@@ -159,7 +159,7 @@ export default function Header({ title, onMenuClick }) {
           color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 700, fontSize: 14,
           boxShadow: "0 2px 8px rgba(27,67,50,0.35)"
-        }}>R</div>
+        }}>{user?.name?.charAt(0)?.toUpperCase() || "U"}</div>
         <span className="hm-avatar-name" style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{user?.role === "Tester" && user?.name === "Sandbox Auditor" ? "Manager" : user?.name || "User"}</span>
         <ChevronDown size={13} style={{ color: "#9ca3af" }} />
       </div>

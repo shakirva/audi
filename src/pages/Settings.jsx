@@ -37,7 +37,7 @@ const sectionTitle = {
 
 export default function Settings() {
   const { addToast } = useToast();
-  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment } = useRole();
+  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo } = useRole();
   const { bookings, deleteBooking } = useBookings();
   const isOwner = role === "Owner";
   const isAdminRole = role === "Owner" || role === "Manager"; // both see full settings
@@ -148,6 +148,8 @@ export default function Settings() {
   const handleSaveVenue = async () => {
     try {
       await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin });
+      // Update shared venueInfo so Sidebar/Header reflect changes immediately
+      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
       addToast("Venue settings saved! 🏛️", "success");
     } catch (e) { addToast("Failed to save", "error"); }
   };

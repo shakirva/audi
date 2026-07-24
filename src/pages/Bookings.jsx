@@ -4,6 +4,7 @@ import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
+import api from "../services/api";
 
 export default function Bookings() {
   const [search, setSearch] = useState("");
@@ -300,7 +301,22 @@ export default function Bookings() {
         </div>
       )}
 
-      {detail && <BookingDetailModal booking={detail} onClose={() => setDetail(null)} onEdit={(b) => { setDetail(null); setEditBooking(b); }} />}
+      {detail && (
+        <BookingDetailModal 
+          booking={detail} 
+          onClose={() => setDetail(null)} 
+          onEdit={(b) => { setDetail(null); setEditBooking(b); }} 
+          onDelete={async (id) => {
+            try {
+              await api.bookings.remove(id);
+              setDetail(null);
+              refetch?.();
+            } catch (err) {
+              alert(err.response?.data?.message || "Failed to delete booking");
+            }
+          }}
+        />
+      )}
       <EditBookingModal
         open={!!editBooking}
         booking={editBooking}

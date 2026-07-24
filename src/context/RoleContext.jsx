@@ -17,6 +17,12 @@ export function RoleProvider({ children }) {
       return stored ? JSON.parse(stored) : null;
     } catch { return null; }
   });
+  const [venueInfo, setVenueInfoState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("hm_venue");
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
   const [activeEnvironment, setActiveEnvironmentState] = useState(() => {
     return sessionStorage.getItem("hm_environment") || "production";
   });
@@ -69,32 +75,35 @@ export function RoleProvider({ children }) {
     }
   };
 
-  const logout = async () => {
+  const setVenueInfo = (info) => {
+    setVenueInfoState(info);
+    localStorage.setItem("hm_venue", JSON.stringify(info));
+  };
+
+  const logout = () => {
+    // Immediately clear all auth data
     localStorage.removeItem("hm_token");
     localStorage.removeItem("hm_user");
     localStorage.removeItem("hm_tenant");
+    localStorage.removeItem("hm_venue");
     sessionStorage.removeItem("hm_environment");
     localStorage.removeItem("hm_logged_in");
     localStorage.removeItem("hm_role");
     
-    // Clear PWA Caches for security
-    try {
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        if (reg.active) reg.active.postMessage("CLEAR_CACHES");
-      }
-      if ("caches" in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map((name) => caches.delete(name)));
-      }
-    } catch (e) {
-      console.error("Failed to clear PWA cache:", e);
-    }
-    
     setUser(null);
     setTenant(null);
+    setVenueInfoState(null);
     setActiveEnvironmentState("production");
     setIsLoggedIn(false);
+    
+    // Try to clear PWA caches in the background (non-blocking)
+    try {
+      if ("caches" in window) {
+        caches.keys().then(names => names.forEach(name => caches.delete(name))).catch(() => {});
+      }
+    } catch (e) {
+      // Ignore — logout already happened
+    }
   };
 
   const switchEnvironment = (env) => {
@@ -123,6 +132,8 @@ export function RoleProvider({ children }) {
       role,
       user,
       tenant,
+      venueInfo,
+      setVenueInfo,
       isLoggedIn,
       activeEnvironment,
       switchEnvironment,
