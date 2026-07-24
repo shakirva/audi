@@ -28,7 +28,7 @@ export default function BookingAccounts() {
 
   const filtered = bookings.filter(b => 
     b.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    b.bookingId?.toLowerCase().includes(searchTerm.toLowerCase())
+    (b.bookingId || b.id)?.toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -77,8 +77,8 @@ export default function BookingAccounts() {
                 </tr>
               ) : (
                 filtered.map((b) => (
-                  <tr key={b.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "16px 24px", fontWeight: 600, color: "#334155" }}>{b.bookingId}</td>
+                  <tr key={b._id || b.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "16px 24px", fontWeight: 600, color: "#334155" }}>{b.bookingId || b.id}</td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <div style={{ fontWeight: 600, color: "#1e293b" }}>{b.customerName}</div>
                       <div style={{ fontSize: 12, color: "#94a3b8" }}>{b.phone}</div>
