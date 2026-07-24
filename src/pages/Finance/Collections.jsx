@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Wallet, Search, ArrowRight, Printer } from "lucide-react";
 import { paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { generateReceipt } from "../../utils/documentGenerator";
 
 export default function Collections() {
   const { addToast } = useToast();
@@ -96,7 +97,7 @@ export default function Collections() {
                     <td style={{ padding: "16px 24px", color: "#16a34a", fontWeight: 700 }}>₹{Number(p.amount).toLocaleString()}</td>
                     <td style={{ padding: "16px 24px" }}>
                       <button 
-                        onClick={() => window.open(`/api/v1/payments/${p.id}/receipt`, '_blank')}
+                        onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
                         style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#334155" }}
                       >
                         <Printer size={14} /> Receipt

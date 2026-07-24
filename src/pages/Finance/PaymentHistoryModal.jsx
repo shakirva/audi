@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Receipt, Printer, FileText, ArrowDownToLine, RefreshCw } from "lucide-react";
 import { paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { generateReceipt, generateInvoice } from "../../utils/documentGenerator";
 
 export default function PaymentHistoryModal({ open, booking, onClose }) {
   const { addToast } = useToast();
@@ -68,16 +69,20 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
     }
   };
 
-  const printReceipt = (paymentId) => {
-    window.open(`/api/v1/payments/${paymentId}/receipt`, '_blank');
+  const printReceipt = (p) => {
+    generateReceipt(p, booking);
   };
 
   const printFinalInvoice = () => {
-    // For now, trigger a print of the current window or open a dedicated print route
     addToast("Generating Final Invoice...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 1000);
+    const sumPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const outstanding = Number(booking.totalAmount || 0) - sumPayments;
+    generateInvoice({
+      booking,
+      payments,
+      totalPaid: sumPayments,
+      outstanding
+    });
   };
 
   if (!open || !booking) return null;
@@ -123,7 +128,7 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
                     </div>
                     {p.id !== "synthetic-advance" ? (
                       <button 
-                        onClick={() => printReceipt(p.id)}
+                        onClick={() => printReceipt(p)}
                         style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#334155", fontWeight: 600, fontSize: 12, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}
                       >
                         <Printer size={14} /> Receipt
