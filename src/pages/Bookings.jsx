@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye } from "lucide-react";
+import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2 } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
-import api from "../services/api";
+import { bookingsAPI } from "../services/api";
 
 export default function Bookings() {
   const [search, setSearch] = useState("");
@@ -206,6 +206,20 @@ export default function Bookings() {
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Pencil size={13} /> Edit
                   </button>
+                  <button onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+                      try {
+                        await bookingsAPI.remove(b.bookingId || b.id);
+                        refetch?.();
+                      } catch (err) {
+                        alert(err.response?.data?.message || "Failed to delete booking");
+                      }
+                    }
+                  }}
+                    style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    <Trash2 size={13} /> Delete
+                  </button>
                 </div>
               </motion.div>
             );
@@ -283,6 +297,20 @@ export default function Bookings() {
                           style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Pencil size={11} /> Edit
                         </button>
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+                            try {
+                              await bookingsAPI.remove(b.bookingId || b.id);
+                              refetch?.();
+                            } catch (err) {
+                              alert(err.response?.data?.message || "Failed to delete booking");
+                            }
+                          }
+                        }}
+                          style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Trash2 size={11} /> Delete
+                        </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -307,12 +335,14 @@ export default function Bookings() {
           onClose={() => setDetail(null)} 
           onEdit={(b) => { setDetail(null); setEditBooking(b); }} 
           onDelete={async (id) => {
-            try {
-              await api.bookings.remove(id);
-              setDetail(null);
-              refetch?.();
-            } catch (err) {
-              alert(err.response?.data?.message || "Failed to delete booking");
+            if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+              try {
+                await bookingsAPI.remove(id);
+                setDetail(null);
+                refetch?.();
+              } catch (err) {
+                alert(err.response?.data?.message || "Failed to delete booking");
+              }
             }
           }}
         />

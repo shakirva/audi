@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Area } from "recharts";
 import { Download, Wallet, CreditCard, Banknote, PiggyBank, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
-import api, { bookingsAPI } from "../services/api";
-import dayjs from "dayjs";
+import api, { bookingsAPI, settingsAPI } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -11,6 +10,7 @@ const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeig
 export default function AccountsReports() {
   const { addToast } = useToast();
   const [data, setData] = useState({ revenue: 0, expenses: 0, cashInHand: 0, trend: [] });
+  const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,38 +20,51 @@ export default function AccountsReports() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [bookingsRes, expensesRes] = await Promise.all([
+      const [bookingsRes, expensesRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll(),
-        api.get("/v1/expenses").catch(() => ({ data: { data: [] } }))
+        api.get("/v1/expenses").catch(() => ({ data: { data: [] } })),
+        settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
       ]);
 
       const bookings = bookingsRes.data?.data || [];
       const expenses = expensesRes.data?.data || [];
+      setHalls(settingsRes.data?.data?.halls || []);
 
       let totalRev = 0;
       let totalExp = 0;
 
-      // Trend data (last 6 months)
+      // Trend data (last 6 months) using native Date
       const trendData = [];
+      const now = new Date();
       for (let i = 5; i >= 0; i--) {
-        const d = dayjs().subtract(i, 'month');
-        trendData.push({ month: d.format('MMM'), key: d.format('YYYY-MM'), revenue: 0, expense: 0, profit: 0 });
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStr = d.toLocaleString('en-US', { month: 'short' });
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        trendData.push({ month: monthStr, key, revenue: 0, expense: 0, profit: 0 });
       }
 
       bookings.forEach(b => {
-        if (b.status !== "Cancelled") {
+        if (b.status !== "Cancelled" && b.date) {
           totalRev += (b.totalAmount || 0);
-          const key = dayjs(b.date).format('YYYY-MM');
-          const t = trendData.find(x => x.key === key);
-          if (t) t.revenue += (b.totalAmount || 0);
+          const bd = new Date(b.date);
+          if (!isNaN(bd)) {
+             const key = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}`;
+             const t = trendData.find(x => x.key === key);
+             if (t) t.revenue += (b.totalAmount || 0);
+          }
         }
       });
 
       expenses.forEach(e => {
-        totalExp += (e.amount || 0);
-        const key = dayjs(e.date).format('YYYY-MM');
-        const t = trendData.find(x => x.key === key);
-        if (t) t.expense += (e.amount || 0);
+        if (e.date) {
+          totalExp += (e.amount || 0);
+          const ed = new Date(e.date);
+          if (!isNaN(ed)) {
+             const key = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}`;
+             const t = trendData.find(x => x.key === key);
+             if (t) t.expense += (e.amount || 0);
+          }
+        }
       });
 
       trendData.forEach(t => t.profit = t.revenue - t.expense);
@@ -108,7 +121,10 @@ export default function AccountsReports() {
           <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option><option>Emerald Hall</option><option>Royal Hall</option><option>Orchid Hall</option>
+          <option>Hall: All Halls</option>
+          {halls.map((h, i) => (
+            <option key={i}>{h.name}</option>
+          ))}
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>
@@ -149,7 +165,7 @@ export default function AccountsReports() {
         <div style={cardSt}>
           <p style={sTitle}>Cash Flow & Profitability</p>
           <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={data.trend}>
+            <ComposedChart data={data.trend}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#1B4332" stopOpacity={0.2}/>
@@ -167,7 +183,7 @@ export default function AccountsReports() {
               <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#1B4332" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
               <Area type="monotone" dataKey="expense" name="Expense" stroke="#dc2626" fillOpacity={1} fill="url(#colorExp)" strokeWidth={2} />
               <Line type="monotone" dataKey="profit" name="Profit" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} />
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 

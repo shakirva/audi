@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, TrendingUp, AlertCircle, Building2, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, settingsAPI } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -12,6 +12,7 @@ const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed", "#059669"];
 export default function HallReports() {
   const { addToast } = useToast();
   const [bookings, setBookings] = useState([]);
+  const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,8 +22,12 @@ export default function HallReports() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await bookingsAPI.getAll();
-      setBookings(res.data?.data || []);
+      const [bookRes, settingsRes] = await Promise.all([
+        bookingsAPI.getAll(),
+        settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
+      ]);
+      setBookings(bookRes.data?.data || []);
+      setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
       addToast("Failed to load hall data", "error");
@@ -32,19 +37,36 @@ export default function HallReports() {
   };
 
   const hallMap = {};
+  
+  // Initialize with real halls
+  halls.forEach(h => {
+    hallMap[h.name] = { name: h.name, revenue: 0, bookings: 0 };
+  });
+
   let totalBookings = 0;
   
   bookings.forEach(b => {
     if (b.status !== "Cancelled") {
-      const h = b.hall || "Main Hall";
-      if (!hallMap[h]) hallMap[h] = { name: h, revenue: 0, bookings: 0 };
-      hallMap[h].bookings += 1;
-      hallMap[h].revenue += (b.totalAmount || 0);
-      totalBookings += 1;
+      const h = b.hall;
+      if (h) {
+        if (!hallMap[h]) hallMap[h] = { name: h, revenue: 0, bookings: 0 };
+        hallMap[h].bookings += 1;
+        hallMap[h].revenue += (b.totalAmount || 0);
+        totalBookings += 1;
+      }
     }
   });
 
-  const hallData = Object.values(hallMap).sort((a,b) => b.revenue - a.revenue);
+  // Filter out any mock halls that are not in real halls, or just sort
+  let hallData = Object.values(hallMap).sort((a,b) => b.revenue - a.revenue);
+  // Keep only halls that are valid master halls (to hide old test data with fake names)
+  if (halls.length > 0) {
+    hallData = hallData.filter(h => halls.some(m => m.name === h.name));
+  } else {
+    // If halls haven't loaded yet, just show ones with bookings
+    hallData = hallData.filter(h => h.bookings > 0);
+  }
+  
   const topHall = hallData.length > 0 ? hallData[0] : null;
   const topHallName = topHall ? topHall.name : "N/A";
   const topHallRev = topHall ? (topHall.revenue >= 100000 ? `₹${(topHall.revenue / 100000).toFixed(1)}L` : `₹${topHall.revenue.toLocaleString()}`) : "₹0";
@@ -81,7 +103,10 @@ export default function HallReports() {
           <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option><option>Emerald Hall</option><option>Royal Hall</option><option>Orchid Hall</option>
+          <option>Hall: All Halls</option>
+          {halls.map((h, i) => (
+            <option key={i}>{h.name}</option>
+          ))}
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>

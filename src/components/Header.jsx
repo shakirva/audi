@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Menu, Bell, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Menu, Bell, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 const notifications = [];
@@ -9,7 +9,7 @@ const notifIcons = { warning: "⚠️", info: "ℹ️", reminder: "🔔" };
 export default function Header({ title, onMenuClick }) {
   const [showNotif, setShowNotif] = useState(false);
   const navigate = useNavigate();
-  const { user, tenant, activeEnvironment, switchEnvironment, role } = useRole();
+  const { user, tenant, activeEnvironment, switchEnvironment, role, logout } = useRole();
 
   const isSandbox = activeEnvironment === "sandbox";
   const canSwitch = tenant?.allowEnvironmentSwitch && (role === "Owner" || role === "SuperAdmin");
@@ -17,6 +17,18 @@ export default function Header({ title, onMenuClick }) {
   const [showEnvDropdown, setShowEnvDropdown] = useState(false);
   const [showSandboxConfirm, setShowSandboxConfirm] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleEnterSandbox = () => {
     setShowSandboxConfirm(false);
@@ -152,16 +164,46 @@ export default function Header({ title, onMenuClick }) {
       )}
 
       {/* Avatar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: "50%",
-          background: "linear-gradient(135deg, #1B4332, #2D6A4F)",
-          color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-          fontWeight: 700, fontSize: 14,
-          boxShadow: "0 2px 8px rgba(27,67,50,0.35)"
-        }}>{user?.name?.charAt(0)?.toUpperCase() || "U"}</div>
-        <span className="hm-avatar-name" style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{user?.role === "Tester" && user?.name === "Sandbox Auditor" ? "Manager" : user?.name || "User"}</span>
-        <ChevronDown size={13} style={{ color: "#9ca3af" }} />
+      <div ref={profileMenuRef} style={{ position: "relative" }}>
+        <div onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 8px", borderRadius: 10, background: showProfileMenu ? "#f3f4f6" : "transparent", transition: "all 0.2s" }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            background: "linear-gradient(135deg, #1B4332, #2D6A4F)",
+            color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 700, fontSize: 14,
+            boxShadow: "0 2px 8px rgba(27,67,50,0.35)"
+          }}>{user?.name?.charAt(0)?.toUpperCase() || "U"}</div>
+          <span className="hm-avatar-name" style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{user?.role === "Tester" && user?.name === "Sandbox Auditor" ? "Manager" : user?.name || "User"}</span>
+          <ChevronDown size={13} style={{ color: "#9ca3af" }} />
+        </div>
+
+        {showProfileMenu && (
+          <div style={{ position: "absolute", top: 48, right: 0, width: 220, background: "#fff", borderRadius: 12, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", border: "1px solid #f3f4f6", overflow: "hidden", zIndex: 50 }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0 }}>{user?.name || "User"}</p>
+              <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{user?.email || ""}</p>
+            </div>
+            <div style={{ padding: 6 }}>
+              <button 
+                onClick={() => { setShowProfileMenu(false); navigate("/profile"); }} 
+                style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 10 }} 
+                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"} 
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <UserIcon size={16} /> My Profile
+              </button>
+              <div style={{ height: 1, background: "#f3f4f6", margin: "4px 0" }} />
+              <button 
+                onClick={() => { setShowProfileMenu(false); logout(); }} 
+                style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#ef4444", display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }} 
+                onMouseEnter={e => e.currentTarget.style.background = "#fef2f2"} 
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <LogOut size={16} /> Log out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
 

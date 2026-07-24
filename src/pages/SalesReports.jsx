@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from "recharts";
 import { Download, Users, TrendingUp, Crosshair, Trophy, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
-import { enquiriesAPI } from "../services/api";
-import dayjs from "dayjs";
+import { enquiriesAPI, settingsAPI } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
@@ -12,6 +11,7 @@ const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed", "#059669"];
 
 export default function SalesReports() {
   const [enquiries, setEnquiries] = useState([]);
+  const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,8 +21,12 @@ export default function SalesReports() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await enquiriesAPI.getAll();
+      const [res, settingsRes] = await Promise.all([
+        enquiriesAPI.getAll(),
+        settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
+      ]);
       setEnquiries(res.data?.data || []);
+      setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
       addToast("Failed to load report data", "error");
@@ -49,20 +53,25 @@ export default function SalesReports() {
 
   // Process last 6 months for trend chart
   const trendData = [];
+  const now = new Date();
   for (let i = 5; i >= 0; i--) {
-    const d = dayjs().subtract(i, 'month');
-    const monthStr = d.format('MMM');
-    const yearMonth = d.format('YYYY-MM');
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStr = d.toLocaleString('en-US', { month: 'short' });
+    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     trendData.push({ month: monthStr, key: yearMonth, enquiries: 0, converted: 0 });
   }
 
   enquiries.forEach(e => {
-    const d = dayjs(e.createdAt);
-    const key = d.format('YYYY-MM');
-    const trendItem = trendData.find(t => t.key === key);
-    if (trendItem) {
-      trendItem.enquiries += 1;
-      if (e.status === "Booking Confirmed") trendItem.converted += 1;
+    if (e.createdAt) {
+      const d = new Date(e.createdAt);
+      if (!isNaN(d)) {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const trendItem = trendData.find(t => t.key === key);
+        if (trendItem) {
+          trendItem.enquiries += 1;
+          if (e.status === "Booking Confirmed") trendItem.converted += 1;
+        }
+      }
     }
   });
 
@@ -98,7 +107,10 @@ export default function SalesReports() {
           <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option><option>Emerald Hall</option><option>Royal Hall</option><option>Orchid Hall</option>
+          <option>Hall: All Halls</option>
+          {halls.map((h, i) => (
+            <option key={i}>{h.name}</option>
+          ))}
         </select>
         <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>

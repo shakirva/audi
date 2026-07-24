@@ -210,10 +210,23 @@ class BookingService {
   /**
    * Delete a booking.
    */
-  async deleteBooking(id, { tenantId, environmentId }) {
-    const deleted = await bookingRepository.delete(id, { tenantId, environmentId });
+  async deleteBooking(bookingId, { tenantId, environmentId }) {
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+
+    // Manually delete related accounting records (Expenses, Journals, Vouchers)
+    // because they are not configured with ON DELETE CASCADE in the associations.
+    // (Payments, Receipts, Agreements, Jobs DO have CASCADE and will be deleted automatically)
+    const { Expense, JournalEntry, Voucher } = require("../models");
+    
+    await Expense.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+
+    // Now delete the booking itself using the correct repository method
+    const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
-    return { message: "Booking deleted", id };
+    return { message: "Booking deleted successfully", id: bookingId };
   }
 
   /**

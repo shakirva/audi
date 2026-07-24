@@ -15,7 +15,9 @@ import Collections from "./pages/Finance/Collections";
 import PurchasesAndExpenses from "./pages/Finance/PurchasesAndExpenses";
 import FinanceReports from "./pages/Finance/FinanceReports";
 import AdvancedAccounting from "./pages/Finance/AdvancedAccounting";
+import Reports from "./pages/Reports";
 import HallReports from "./pages/HallReports";
+import AccountsReports from "./pages/AccountsReports";
 import SalesReports from "./pages/SalesReports";
 import BookingReports from "./pages/BookingReports";
 import Settings from "./pages/Settings";
@@ -29,6 +31,7 @@ import Jobs from "./pages/Jobs";
 import Masters from "./pages/Masters";
 import Roadmap from "./pages/Roadmap";
 import Staff from "./pages/Staff";
+import Profile from "./pages/Profile";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -81,9 +84,11 @@ function AdminLayout() {
             <Route path="/finance/advanced" element={<ProtectedRoute permission="canViewReports"><AdvancedAccounting /></ProtectedRoute>} />
             
             {/* Keeping non-finance routes below */}
+            <Route path="/reports"         element={<ProtectedRoute permission="canViewReports"><Reports /></ProtectedRoute>} />
             <Route path="/reports/sales"   element={<ProtectedRoute permission="canViewReports"><SalesReports /></ProtectedRoute>} />
-            <Route path="/reports/booking"   element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
-            <Route path="/reports/hall"   element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
+            <Route path="/reports/booking" element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
+            <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
+            <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/superadmin/tenants" element={<ProtectedRoute permission="canManageTenants"><SuperAdminTenants /></ProtectedRoute>} />
@@ -93,6 +98,7 @@ function AdminLayout() {
             <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
             <Route path="/roadmap" element={<Roadmap />} />
             <Route path="/staff" element={<Staff />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </main>
       </div>
