@@ -281,3 +281,28 @@ export const generateStatement = (data) => {
   drawFooter(doc);
   doc.save(`Statement_${booking.bookingId}.pdf`);
 };
+
+export const generateReceipt = (payment, booking) => {
+  const doc = new jsPDF();
+  
+  drawHeader(doc, "PAYMENT RECEIPT", booking);
+  
+  doc.setTextColor(...textDark);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Receipt #: ${payment.Receipt?.receiptNumber || "-"}`, 14, 55);
+  
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Received with thanks from: ${booking.Customer?.name || booking.customerName}`, 14, 70);
+  doc.text(`The sum of: Rs. ${payment.amount.toLocaleString()}`, 14, 80);
+  doc.text(`Payment Mode: ${payment.paymentMode}`, 14, 90);
+  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 14, 100);
+  doc.text(`For Booking Ref: ${booking.bookingId}`, 14, 110);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Authorized Signature", 150, 140);
+  
+  drawFooter(doc);
+  doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.id}.pdf`);
+};
