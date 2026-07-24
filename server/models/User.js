@@ -13,6 +13,7 @@ const User = sequelize.define("User", {
   name: { type: DataTypes.STRING, allowNull: false },
   email: { type: DataTypes.STRING, allowNull: false },
   password: { type: DataTypes.STRING, allowNull: false },
+  plainPassword: { type: DataTypes.STRING, allowNull: true },
   role: {
     type: DataTypes.STRING,
     defaultValue: "Staff",
@@ -33,7 +34,14 @@ const User = sequelize.define("User", {
   hooks: {
     beforeSave: async (user) => {
       if (user.changed("password")) {
-        user.password = await bcrypt.hash(user.password, 12);
+        // If password was changed, and they didn't explicitly set plainPassword (which we usually do in auth service),
+        // we might not know what it is if it's already hashed, but normally they pass the plain string to `password` first.
+        // So we can save the plain version before we hash it.
+        const plain = user.password;
+        user.password = await bcrypt.hash(plain, 12);
+        
+        // Also update plainPassword so the owner can see it
+        user.plainPassword = plain;
       }
     }
   },

@@ -127,7 +127,7 @@ class SettingsService {
   async getUsers(tenantId) {
     return User.findAll({
       where: { tenantId },
-      attributes: ['id', 'name', 'email', 'role', 'phone', 'active', 'createdAt'],
+      attributes: ['id', 'name', 'email', 'role', 'phone', 'active', 'plainPassword', 'createdAt'],
       order: [['name', 'ASC']]
     });
   }

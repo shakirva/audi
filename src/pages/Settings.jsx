@@ -1035,8 +1035,8 @@ export default function Settings() {
         <StaffAdder />
 
         <div style={{ border: "1.5px solid #f3f4f6", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
-            {["Name", "Role", "Access", "Status", ""].map(h => (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 40px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
+            {["Name", "Password", "Role", "Access", "Status", ""].map(h => (
               <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
             ))}
           </div>
@@ -1046,10 +1046,13 @@ export default function Settings() {
             const roleColors = { Owner: { bg: "#f0faf4", color: "#1B4332" }, Manager: { bg: "#fffbeb", color: "#D4A017" }, Staff: { bg: "#eff6ff", color: "#2563eb" } };
             const rc = roleColors[s.role] || roleColors.Staff;
             return (
-              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
+              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{s.name}</p>
                   <p style={{ fontSize: 11, color: "#9ca3af" }}>{s.email}</p>
+                </div>
+                <div style={{ fontSize: 12, fontFamily: "monospace", color: "#4b5563", background: "#f3f4f6", padding: "4px 8px", borderRadius: 6, display: "inline-block", wordBreak: "break-all" }}>
+                  {s.plainPassword || "********"}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: rc.color, background: rc.bg, padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>{s.role}</span>
                 <span style={{ fontSize: 12, color: "#6b7280" }}>{s.role === "Owner" || s.role === "Manager" ? "Full Access" : s.role === "Sales" ? "CRM Only" : "Basic"}</span>
