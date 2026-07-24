@@ -8,6 +8,7 @@ import { accountsAPI, bookingsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import AddExpenseModal from "./AddExpenseModal";
+import { generateQuotation, generateAgreement, generateInvoice, generateReceiptSummary, generateReceipt, generateStatement } from "../../utils/documentGenerator";
 
 export default function BookingFinancialDashboard() {
   const { id } = useParams();
@@ -278,7 +279,7 @@ export default function BookingFinancialDashboard() {
                       <td style={{ padding: "16px", color: "#475569" }}>{p.paymentMode}</td>
                       <td style={{ padding: "16px", fontWeight: 700, color: "#16a34a" }}>{formatMoney(p.amount)}</td>
                       <td style={{ padding: "16px", display: "flex", gap: 8 }}>
-                        <button style={{ padding: "4px 8px", fontSize: 12, borderRadius: 4, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>Print Receipt</button>
+                        <button onClick={() => generateReceipt(p, data.booking)} style={{ padding: "4px 8px", fontSize: 12, borderRadius: 4, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>Print Receipt</button>
                       </td>
                     </tr>
                   ))}
@@ -332,7 +333,7 @@ export default function BookingFinancialDashboard() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#0f172a" }}>Customer Ledger (For this Booking)</h2>
-              <button style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13, color: "#334155" }}>Print Statement</button>
+              <button onClick={() => generateStatement(data)} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13, color: "#334155" }}>Print Statement</button>
             </div>
             
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
@@ -411,13 +412,24 @@ export default function BookingFinancialDashboard() {
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 24px", color: "#0f172a" }}>Documents & Attachments</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {["Quotation", "Booking Agreement", "Receipts", "Final Invoice", "Attachments"].map(doc => (
-                <div key={doc} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                  <FileText size={24} color="#94a3b8" />
-                  <div style={{ fontWeight: 600, color: "#334155" }}>{doc}</div>
-                </div>
-              ))}
+              <div onClick={() => generateQuotation(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                <FileText size={24} color="#0f172a" />
+                <div style={{ fontWeight: 600, color: "#334155" }}>Download Quotation</div>
+              </div>
+              <div onClick={() => generateAgreement(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                <FileText size={24} color="#0f172a" />
+                <div style={{ fontWeight: 600, color: "#334155" }}>Download Booking Agreement</div>
+              </div>
+              <div onClick={() => generateReceiptSummary(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                <ReceiptIcon size={24} color="#0f172a" />
+                <div style={{ fontWeight: 600, color: "#334155" }}>Download Receipts Summary</div>
+              </div>
+              <div onClick={() => data.booking.invoiceStatus === "Generated" ? generateInvoice(data) : addToast("Final invoice not generated yet.", "warning")} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: data.booking.invoiceStatus === "Generated" ? "pointer" : "not-allowed", background: data.booking.invoiceStatus === "Generated" ? "#fff" : "#f8fafc", opacity: data.booking.invoiceStatus === "Generated" ? 1 : 0.7, transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => data.booking.invoiceStatus === "Generated" && (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)")} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                <FileText size={24} color={data.booking.invoiceStatus === "Generated" ? "#0f172a" : "#94a3b8"} />
+                <div style={{ fontWeight: 600, color: data.booking.invoiceStatus === "Generated" ? "#334155" : "#94a3b8" }}>Download Final Invoice</div>
+              </div>
             </div>
+            <p style={{ fontSize: 13, color: "#64748b" }}>* Attachments upload functionality is coming soon.</p>
           </div>
         )}
 
