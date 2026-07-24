@@ -83,7 +83,8 @@ export const generateQuotation = (data) => {
   });
 
   drawFooter(doc);
-  doc.save(`Quotation_${booking.bookingId}.pdf`);
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
 
 export const generateAgreement = (data) => {
@@ -125,7 +126,8 @@ Signed: _______________________                   Date: ______________
   doc.text(text, 14, 65, { maxWidth: 180, lineHeightFactor: 1.6 });
   
   drawFooter(doc);
-  doc.save(`Agreement_${booking.bookingId}.pdf`);
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
 
 export const generateInvoice = (data) => {
@@ -186,7 +188,8 @@ export const generateInvoice = (data) => {
   }
 
   drawFooter(doc);
-  doc.save(`Invoice_${booking.bookingId}.pdf`);
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
 
 export const generateReceiptSummary = (data) => {
@@ -225,7 +228,8 @@ export const generateReceiptSummary = (data) => {
   }
   
   drawFooter(doc);
-  doc.save(`Receipts_${booking.bookingId}.pdf`);
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
 
 export const generateStatement = (data) => {
@@ -279,30 +283,120 @@ export const generateStatement = (data) => {
   });
   
   drawFooter(doc);
-  doc.save(`Statement_${booking.bookingId}.pdf`);
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
 
 export const generateReceipt = (payment, booking) => {
   const doc = new jsPDF();
   
-  drawHeader(doc, "PAYMENT RECEIPT", booking);
+  // Header
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 45, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(26);
+  doc.setFont("helvetica", "bold");
+  doc.text("VENUEZA", 14, 25);
   
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Premium Venue & Event Management", 14, 32);
+  doc.text("123 Business Avenue, Tech Park, City - 673638", 14, 38);
+
+  doc.setFontSize(22);
+  doc.text("OFFICIAL RECEIPT", 196, 25, { align: "right" });
+  doc.setFontSize(11);
+  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 32, { align: "right" });
+  doc.text(`Receipt No: ${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}`, 196, 38, { align: "right" });
+
+  // Receipt Body Border
+  doc.setDrawColor(200, 200, 200);
+  doc.setFillColor(252, 253, 255);
+  doc.roundedRect(14, 55, 182, 110, 3, 3, "FD");
+
+  // Content
   doc.setTextColor(...textDark);
+  
+  // Received From
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Received with thanks from:", 20, 68);
+  
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(`Receipt #: ${payment.Receipt?.receiptNumber || "-"}`, 14, 55);
+  doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 75, 68);
+  doc.line(75, 70, 185, 70); // underline
+
+  // The sum of
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("The sum of Rupees:", 20, 82);
   
   doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Received with thanks from: ${booking.Customer?.name || booking.customerName}`, 14, 70);
-  doc.text(`The sum of: Rs. ${payment.amount.toLocaleString()}`, 14, 80);
-  doc.text(`Payment Mode: ${payment.paymentMode}`, 14, 90);
-  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 14, 100);
-  doc.text(`For Booking Ref: ${booking.bookingId}`, 14, 110);
-  
   doc.setFont("helvetica", "bold");
-  doc.text("Authorized Signature", 150, 140);
   
+  // Number to words helper
+  const numToWords = (num) => {
+    const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+    if ((num = num.toString()).length > 9) return 'overflow';
+    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+    str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+    str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+    str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+    str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    return str.trim() + ' Only';
+  };
+  
+  doc.text(numToWords(payment.amount), 65, 82);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 84, 185, 84);
+
+  // Towards
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Towards Booking Ref:", 20, 96);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${booking.bookingId || booking.id} (${booking.eventType || "Event"})`, 65, 96);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 98, 185, 98);
+
+  // By Mode
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("By Payment Mode:", 20, 110);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${payment.paymentMode || "Cash"} ${payment.referenceNumber ? `(Ref: ${payment.referenceNumber})` : ""}`, 65, 110);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 112, 185, 112);
+
+  // Amount Box
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(20, 135, 60, 20, 2, 2, "F");
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...textDark);
+  doc.text(`₹ ${payment.amount.toLocaleString()}/-`, 50, 148, { align: "center" });
+
+  // Signatures
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setDrawColor(100, 116, 139);
+  doc.line(130, 148, 185, 148);
+  doc.text("Authorized Signatory", 157.5, 154, { align: "center" });
+  
+  // Thank you note
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(100, 116, 139);
+  doc.text("Subject to realization of cheque/draft.", 20, 175);
+
   drawFooter(doc);
-  doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.id}.pdf`);
+  
+  // Open in new tab instead of silent download
+  window.open(doc.output('bloburl'), '_blank');
 };
