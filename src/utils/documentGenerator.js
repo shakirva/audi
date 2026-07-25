@@ -90,39 +90,52 @@ export const generateAgreement = (data) => {
   const doc = new jsPDF();
   const { booking } = data;
   
-  drawHeader(doc, "BOOKING AGREEMENT", booking);
+  drawHeader(doc, "CONTRACT AGREEMENT", booking);
   
   doc.setTextColor(...textDark);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.text("Terms & Conditions of Booking", 14, 55);
   
+  // Custom Table for Contract fields matching the physical format
+  const tableData = [
+    ["Name of the Host", booking.customerName || "N/A"],
+    ["Date & Time of function", `${booking.date ? new Date(booking.date).toLocaleDateString("en-IN") : "TBD"} | ${booking.session || "Full Day"}`],
+    ["Address", booking.address || "N/A"],
+    ["Email & Mobile No", `${booking.email || ""} | ${booking.phone || ""}`],
+    ["No. of Guests Expected", `${booking.guests || 0} pax`],
+    ["Nature of Function", booking.eventType || "N/A"],
+    ["Bride Name & Address", `${booking.brideName || ""} ${booking.brideAddress ? "- " + booking.brideAddress : ""}`.trim() || "N/A"],
+    ["Groom Name & Address", `${booking.groomName || ""} ${booking.groomAddress ? "- " + booking.groomAddress : ""}`.trim() || "N/A"],
+    ["Total Amount (Estimated)", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
+    ["Advance Paid", `Rs. ${Number(booking.advance || 0).toLocaleString()}`],
+    ["Balance Amount Payable", `Rs. ${Number(data.outstanding || 0).toLocaleString()}`],
+    ["Extra arrangements if any", booking.additionalServices || booking.specialInstructions || "N/A"],
+    ["Any Remarks", booking.notes || "N/A"]
+  ];
+
+  autoTable(doc, {
+    startY: 65,
+    theme: "grid",
+    body: tableData,
+    styles: { fontSize: 11, cellPadding: 6 },
+    columnStyles: {
+      0: { fontStyle: "bold", textColor: primaryColor, fillColor: [248, 250, 252], cellWidth: 70 },
+      1: { textColor: textDark }
+    },
+    alternateRowStyles: { fillColor: [255, 255, 255] }
+  });
+
+  const finalY = doc.lastAutoTable.finalY || 160;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Both Parties Agree Terms & Conditions", 14, finalY + 15);
+  
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  const text = `This agreement is made between Venueza and ${booking.Customer?.name || booking.customerName}. 
-  
-Event Date: ${new Date(booking.date).toLocaleDateString()}
-Event Type: ${booking.eventType}
-Hall: ${booking.hall}
-
-1. The total agreed amount for the booking is Rs. ${booking.totalAmount?.toLocaleString() || 0}.
-2. An advance payment of Rs. ${booking.advance?.toLocaleString() || 0} has been noted.
-3. The remaining balance of Rs. ${data.outstanding?.toLocaleString() || 0} must be cleared before the event.
-4. Standard cancellation policies apply as per venue rules. Advance payments may be non-refundable.
-5. Any damages to the property during the event will be charged additionally.
-6. The venue is provided for the specified session (${booking.session || "Full Day"}).
-
-By proceeding with the booking, both parties agree to these terms.
-
-
-Signed: _______________________                   Date: ______________
-(Customer)
-
-Signed: _______________________                   Date: ______________
-(Venueza Authorized Signatory)
-`;
-
-  doc.text(text, 14, 65, { maxWidth: 180, lineHeightFactor: 1.6 });
+  doc.text("Name & Signature of Host with Date", 14, finalY + 35);
+  doc.text("Name & Signature of Venue Representative with Date", 100, finalY + 35);
   
   drawFooter(doc);
   doc.save(`Agreement_${booking.bookingNumber || booking.id}.pdf`);
