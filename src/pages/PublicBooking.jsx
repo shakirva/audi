@@ -124,7 +124,7 @@ function GallerySection({ galleryItems, phone, venueName }) {
           A Glimpse of <span style={{ color: "#D4A017" }}>Our Venue</span>
         </h2>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginTop: 6, margin: 0 }}>
-          Real events at {venueName || "Sreelakshmi Centre"}
+          Real events at {venueName || "Venueza Auditorium"}
         </p>
       </div>
 

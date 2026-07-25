@@ -158,7 +158,7 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 20 }}>
-          © 2026 Venueza SaaS · Sreelakshmi Convention Centre
+          © 2026 Venueza SaaS
         </p>
       </div>
 

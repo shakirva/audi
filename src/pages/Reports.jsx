@@ -16,7 +16,7 @@ const PEAK_DAYS = ["Sat", "Sun", "Fri"];
 
 // ── PDF generators ──
 function printHTML(title, bodyHTML) {
-  const name = "Sreelakshmi Convention Centre";
+  const name = "Venueza Auditorium";
   const location = "Kerala, India";
   const w = window.open("", "_blank");
   if (!w) return;
