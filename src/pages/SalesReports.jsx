@@ -3,6 +3,8 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Download, Users, TrendingUp, Crosshair, Trophy, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { enquiriesAPI, settingsAPI } from "../services/api";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
@@ -13,6 +15,11 @@ export default function SalesReports() {
   const [enquiries, setEnquiries] = useState([]);
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterHall, setFilterHall] = useState("All Halls");
+  const [filterExecutive, setFilterExecutive] = useState("All Staff");
+  const [filterPlace, setFilterPlace] = useState("All Locations");
 
   useEffect(() => {
     loadData();
@@ -35,15 +42,43 @@ export default function SalesReports() {
     }
   };
 
-  const totalEnquiries = enquiries.length;
-  const converted = enquiries.filter(e => e.status === "Booking Confirmed").length;
+  // Filter calculations
+  const uniqueExecutives = Array.from(new Set(enquiries.map(e => e.SalesExecutive?.name || e.salesExecutiveName).filter(Boolean)));
+  const uniquePlaces = Array.from(new Set(enquiries.map(e => e.Customer?.city || e.place).filter(Boolean)));
+
+  const filteredEnquiries = enquiries.filter(e => {
+    if (filterHall !== "All Halls" && e.hallPreference !== filterHall && e.hall !== filterHall) return false;
+    
+    const execName = e.SalesExecutive?.name || e.salesExecutiveName;
+    if (filterExecutive !== "All Staff" && execName !== filterExecutive) return false;
+    
+    const placeName = e.Customer?.city || e.place;
+    if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    
+    if (filterDate !== "All Time") {
+      const eDate = new Date(e.createdAt);
+      const now = new Date();
+      if (filterDate === "This Month") {
+        if (eDate.getMonth() !== now.getMonth() || eDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Last Month") {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        if (eDate.getMonth() !== lastMonth.getMonth() || eDate.getFullYear() !== lastMonth.getFullYear()) return false;
+      } else if (filterDate === "This Year") {
+        if (eDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
+  const totalEnquiries = filteredEnquiries.length;
+  const converted = filteredEnquiries.filter(e => e.status === "Booking Confirmed").length;
   const conversionRate = totalEnquiries > 0 ? Math.round((converted / totalEnquiries) * 100) : 0;
   
-  const avgDealSize = converted > 0 ? Math.round(enquiries.filter(e => e.status === "Booking Confirmed").reduce((sum, e) => sum + (e.budget || 0), 0) / converted) : 0;
+  const avgDealSize = converted > 0 ? Math.round(filteredEnquiries.filter(e => e.status === "Booking Confirmed").reduce((sum, e) => sum + (e.budget || 0), 0) / converted) : 0;
   const formattedAvgDeal = avgDealSize >= 100000 ? `₹${(avgDealSize / 100000).toFixed(1)}L` : `₹${avgDealSize.toLocaleString()}`;
 
   const sourceCount = {};
-  enquiries.forEach(e => {
+  filteredEnquiries.forEach(e => {
     const src = e.source || "Other";
     sourceCount[src] = (sourceCount[src] || 0) + 1;
   });
@@ -61,7 +96,7 @@ export default function SalesReports() {
     trendData.push({ month: monthStr, key: yearMonth, enquiries: 0, converted: 0 });
   }
 
-  enquiries.forEach(e => {
+  filteredEnquiries.forEach(e => {
     if (e.createdAt) {
       const d = new Date(e.createdAt);
       if (!isNaN(d)) {
@@ -75,6 +110,27 @@ export default function SalesReports() {
     }
   });
 
+  const handleExportPDF = async () => {
+    const el = document.getElementById("sales-report-content");
+    if (!el) return;
+    
+    addToast("Generating PDF report...", "success");
+    try {
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Sales_Report_${filterDate.replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to generate PDF", "error");
+    }
+  };
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -86,10 +142,7 @@ export default function SalesReports() {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button 
-            onClick={() => {
-              window.print();
-              addToast("Report exported successfully!", "success");
-            }}
+            onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
             <Download size={14} /> Export Report
@@ -97,37 +150,46 @@ export default function SalesReports() {
         </div>
       </div>
 
-      {/* Advanced Filter Bar (Mock) */}
+      {/* Advanced Filter Bar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
           <Filter size={16} /> Filters
         </div>
         
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Time">Date: All Time</option>
+          <option value="This Month">Date: This Month</option>
+          <option value="Last Month">Date: Last Month</option>
+          <option value="This Year">Date: This Year</option>
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option>
+        
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
-            <option key={i}>{h.name}</option>
+            <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>
+        
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Staff">Executive: All Staff</option>
+          {uniqueExecutives.map((exec, i) => (
+            <option key={i} value={exec}>{exec}</option>
+          ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Place: All Locations</option><option>Kannur</option><option>Thalassery</option><option>Kuthuparamba</option>
-        </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Gender: All</option><option>Male</option><option>Female</option>
+        
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Locations">Place: All Locations</option>
+          {uniquePlaces.map((place, i) => (
+            <option key={i} value={place}>{place}</option>
+          ))}
         </select>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
-        {[
-          { label: "Total Enquiries", value: totalEnquiries, sub: "All time", icon: Users, color: "#1B4332", bg: "#f0faf4" },
-          { label: "Conversion Rate", value: `${conversionRate}%`, sub: "Confirmed / Total", icon: Crosshair, color: "#D4A017", bg: "#fffbeb" },
+      <div id="sales-report-content" style={{ padding: "10px 0" }}>
+        {/* KPIs */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
+          {[
+            { label: "Total Enquiries", value: totalEnquiries, sub: filterDate, icon: Users, color: "#1B4332", bg: "#f0faf4" },
           { label: "Avg. Budgets", value: formattedAvgDeal, sub: "For confirmed leads", icon: TrendingUp, color: "#2563eb", bg: "#eff6ff" },
           { label: "Top Source", value: topSource, sub: `${topSourcePercent}% of leads`, icon: Trophy, color: "#7c3aed", bg: "#f5f3ff" },
         ].map(k => (
@@ -193,6 +255,7 @@ export default function SalesReports() {
             )}
           </ResponsiveContainer>
         </div>
+      </div>
       </div>
     </div>
   );
