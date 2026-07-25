@@ -37,7 +37,8 @@ class SettingsService {
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
-      "gallery", "eventTypes", "sessions", "expenseCategories", "places"
+      "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+      "bookingPrefix"
     ];
     
     const updateData = {};

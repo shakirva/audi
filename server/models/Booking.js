@@ -78,11 +78,21 @@ const Booking = sequelize.define("Booking", {
   hooks: {
     beforeValidate: async (booking) => {
       if (!booking.bookingId) {
+        // Fetch Settings for prefix
+        const Settings = sequelize.models.Settings;
+        let prefix = "BK";
+        if (Settings) {
+          const settings = await Settings.findOne({ where: { tenantId: booking.tenantId, environmentId: booking.environmentId } });
+          if (settings && settings.bookingPrefix) {
+            prefix = settings.bookingPrefix;
+          }
+        }
+        
         // Scope booking ID generation to tenant + environment
         const count = await Booking.count({
           where: { tenantId: booking.tenantId, environmentId: booking.environmentId },
         });
-        booking.bookingId = `BK${String(count + 1).padStart(3, "0")}`;
+        booking.bookingId = `${prefix}${String(count + 1).padStart(3, "0")}`;
       }
     }
   },

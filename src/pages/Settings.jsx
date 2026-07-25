@@ -52,6 +52,7 @@ export default function Settings() {
     phone:    "",
     email:    "",
     gstin:    "",
+    bookingPrefix: "",
   });
   const [showCreateHallModal, setShowCreateHallModal] = useState(false);
   const [editHallIndex, setEditHallIndex] = useState(null);
@@ -108,6 +109,7 @@ export default function Settings() {
         phone: data.phone || "",
         email: data.email || "",
         gstin: data.gstin || "",
+        bookingPrefix: data.bookingPrefix || "BK",
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -158,7 +160,7 @@ export default function Settings() {
 
   const handleSaveVenue = async () => {
     try {
-      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin });
+      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin, bookingPrefix: venue.bookingPrefix });
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
       setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
       addToast("Venue settings saved! 🏛️", "success");
@@ -671,6 +673,13 @@ export default function Settings() {
             <input name="gstin" value={venue.gstin} onChange={handleVenueChange} style={iStyle}
               onFocus={e => e.target.style.borderColor = "#1B4332"}
               onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🔢 Booking ID Prefix</label>
+            <input name="bookingPrefix" value={venue.bookingPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. BK, LGE, etc."
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
           </div>
         </div>
 

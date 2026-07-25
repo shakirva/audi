@@ -19,6 +19,7 @@ const Settings = sequelize.define("Settings", {
   phone: { type: DataTypes.STRING, defaultValue: "+91 94470 12345" },
   email: { type: DataTypes.STRING, defaultValue: "" },
   gstin: { type: DataTypes.STRING, defaultValue: "" },
+  bookingPrefix: { type: DataTypes.STRING, defaultValue: "BK" },
   
   // JSONB fields for nested data in PostgreSQL
   halls: { type: DataTypes.JSONB, defaultValue: [] },
