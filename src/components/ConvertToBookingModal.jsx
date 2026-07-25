@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
 import { bookingsAPI, enquiriesAPI, availabilityAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import SmartDatePicker from "./SmartDatePicker";
 
 const iStyle = {
   width: "100%", padding: "10px 12px", borderRadius: 8,
@@ -339,9 +340,14 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                      <option value="Full Day" disabled={availability.fullDay === "booked"}>Full Day {availability.fullDay === "booked" ? "(Booked)" : ""}</option>
                   </select>
                 </div>
-                <div>
+                <div style={{ position: "relative", zIndex: 10 }}>
                   <label style={labelSt}>Event Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} style={iStyle} />
+                  <SmartDatePicker 
+                    value={formData.date} 
+                    onChange={e => setFormData({ ...formData, date: e.target.value })} 
+                    hallPreference={formData.hall}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
+                  />
                   {formData.date && formData.hall && (
                     <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
                       {fetchingAvailability ? "Checking availability..." : availability.status}

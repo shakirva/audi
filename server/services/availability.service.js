@@ -77,6 +77,57 @@ class AvailabilityService {
       status
     };
   }
+
+  /**
+   * Get availability for an entire month for a specific hall
+   */
+  async getMonthAvailability({ tenantId, environmentId, hall, year, month }) {
+    if (!hall || !year || !month) return {};
+    
+    // Create start and end date for the month
+    // month is 1-indexed (1 = Jan, 12 = Dec)
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+    const whereClause = {
+      tenantId,
+      environmentId,
+      hall,
+      date: { [Op.between]: [startDate, endDate] },
+      status: { [Op.notIn]: ["Cancelled", "Closed"] }
+    };
+
+    const bookings = await Booking.findAll({ where: whereClause, attributes: ["date", "session"] });
+    
+    // Group by date
+    const dateMap = {};
+    for (const b of bookings) {
+      if (!dateMap[b.date]) dateMap[b.date] = [];
+      dateMap[b.date].push(b.session);
+    }
+
+    const result = {};
+    for (let day = 1; day <= lastDay; day++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const sessions = dateMap[dateStr] || [];
+      
+      let status = "Available";
+      if (sessions.includes("Full Day") || (sessions.includes("Morning") && sessions.includes("Evening"))) {
+        status = "Fully Booked";
+      } else if (sessions.length > 0) {
+        status = "Partially Booked";
+      }
+      
+      result[dateStr] = {
+        status,
+        morning: sessions.includes("Full Day") || sessions.includes("Morning") ? "booked" : "available",
+        evening: sessions.includes("Full Day") || sessions.includes("Evening") ? "booked" : "available",
+      };
+    }
+
+    return result;
+  }
 }
 
 module.exports = new AvailabilityService();

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2 } from "lucide-react";
 import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
+import SmartDatePicker from "./SmartDatePicker";
 
 const iStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 10,
@@ -501,12 +502,14 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                       : EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                <div>
+                <div style={{ position: "relative" }}>
                   <label style={labelSt}>Event Date *</label>
-                  <input required type="date" name="tentativeDate" value={form.tentativeDate} onChange={handleChange}
-                    style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                  <SmartDatePicker 
+                    value={form.tentativeDate} 
+                    onChange={handleChange} 
+                    hallPreference={form.hallPreference}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
+                  />
                   {form.tentativeDate && form.hallPreference && (
                     <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
                       {fetchingAvailability ? "Checking availability..." : availability.status}
