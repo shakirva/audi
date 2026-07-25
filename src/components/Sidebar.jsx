@@ -37,14 +37,9 @@ export default function Sidebar({ open, onClose }) {
       type: "group", label: "CRM", icon: Users, id: "crm",
       children: [
         { path: "/crm", label: "Enquiries" },
-        { path: "/customers", label: "Customers" }
-      ]
-    },
-    { 
-      type: "group", label: "Bookings", icon: CalendarDays, id: "bookings",
-      children: [
         { path: "/calendar", label: "Calendar" },
         { path: "/bookings", label: "Bookings" },
+        { path: "/customers", label: "Customers" },
         { path: "/agreements", label: "Agreements" }
       ]
     },
