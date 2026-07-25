@@ -46,6 +46,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
+  const [sendWhatsApp, setSendWhatsApp] = useState(true);
 
   const [form, setForm] = useState({
     name: "",
@@ -306,14 +307,16 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       onSuccess?.();
       
       // WhatsApp Redirect
-      const message = editData 
-        ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
-        : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
-      
-      const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
-      const text = encodeURIComponent(message);
-      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
-      window.open(waUrl, "_blank");
+      if (sendWhatsApp) {
+        const message = editData 
+          ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
+          : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
+        
+        const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
+        const text = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+        window.open(waUrl, "_blank");
+      }
 
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || "Failed to save enquiry. Please try again.";
@@ -707,6 +710,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                   style={{ ...iStyle, resize: "none", lineHeight: 1.6 }}
                   onFocus={e => e.target.style.borderColor = "#1B4332"}
                   onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              </div>
+              <div style={{ marginTop: 8, padding: "12px", background: "#f0faf4", border: "1px solid #d1fae5", borderRadius: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#166534", fontWeight: 700 }}>
+                  <input type="checkbox" checked={sendWhatsApp} onChange={(e) => setSendWhatsApp(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#166534", cursor: "pointer" }} />
+                  Send WhatsApp Confirmation Message to Customer
+                </label>
               </div>
             </div>
 
