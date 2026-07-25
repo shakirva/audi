@@ -83,8 +83,7 @@ export const generateQuotation = (data) => {
   });
 
   drawFooter(doc);
-  // Open in new tab instead of silent download
-  window.open(doc.output('bloburl'), '_blank');
+  doc.save(`Quotation_${booking.bookingNumber || booking.id}.pdf`);
 };
 
 export const generateAgreement = (data) => {
@@ -126,8 +125,7 @@ Signed: _______________________                   Date: ______________
   doc.text(text, 14, 65, { maxWidth: 180, lineHeightFactor: 1.6 });
   
   drawFooter(doc);
-  // Open in new tab instead of silent download
-  window.open(doc.output('bloburl'), '_blank');
+  doc.save(`Agreement_${booking.bookingNumber || booking.id}.pdf`);
 };
 
 export const generateInvoice = (data) => {
@@ -142,8 +140,8 @@ export const generateInvoice = (data) => {
   doc.setFont("helvetica", "bold");
   doc.text("Bill To:", 14, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`${booking.Customer?.name || booking.customerName}`, 14, 62);
-  doc.text(`Phone: ${booking.Customer?.phone || booking.phone}`, 14, 68);
+  doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 14, 62);
+  doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
   
   doc.setFont("helvetica", "bold");
   doc.text("Invoice Details:", 120, 55);
@@ -157,12 +155,12 @@ export const generateInvoice = (data) => {
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Item Description", "Amount (INR)"]],
     body: [
-      [`Event Booking: ${booking.eventType} at ${booking.hall}`, `Rs. ${booking.totalAmount?.toLocaleString() || 0}`]
+      [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
     ],
     foot: [
-      ["Gross Total", `Rs. ${booking.totalAmount?.toLocaleString() || 0}`],
-      ["Total Paid", `Rs. ${totalPaid?.toLocaleString() || 0}`],
-      ["Balance Due", `Rs. ${outstanding?.toLocaleString() || 0}`]
+      ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
+      ["Total Paid", `Rs. ${Number(totalPaid || 0).toLocaleString()}`],
+      ["Balance Due", `Rs. ${Number(outstanding || 0).toLocaleString()}`]
     ],
     footStyles: { fillColor: [248, 250, 252], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
@@ -172,10 +170,10 @@ export const generateInvoice = (data) => {
   if (payments && payments.length > 0) {
     doc.text("Payment History", 14, doc.lastAutoTable.finalY + 15);
     const payBody = payments.map(p => [
-      new Date(p.createdAt).toLocaleDateString(),
-      p.Receipt?.receiptNumber || "-",
-      p.paymentMode,
-      `Rs. ${p.amount.toLocaleString()}`
+      new Date(p.paymentDate || p.createdAt).toLocaleDateString(),
+      p.Receipt?.receiptNumber || p.referenceNumber || "-",
+      p.paymentMode || "Cash",
+      `Rs. ${Number(p.amount || 0).toLocaleString()}`
     ]);
     
     doc.autoTable({
@@ -188,8 +186,7 @@ export const generateInvoice = (data) => {
   }
 
   drawFooter(doc);
-  // Open in new tab instead of silent download
-  window.open(doc.output('bloburl'), '_blank');
+  doc.save(`Final_Invoice_${booking.bookingNumber || booking.id}.pdf`);
 };
 
 export const generateReceiptSummary = (data) => {
@@ -215,7 +212,7 @@ export const generateReceiptSummary = (data) => {
       new Date(p.createdAt).toLocaleDateString(),
       p.Receipt?.receiptNumber || "-",
       p.paymentMode,
-      `Rs. ${p.amount.toLocaleString()}`
+      `Rs. ${Number(p.amount || 0).toLocaleString()}`
     ]);
     
     doc.autoTable({
@@ -228,8 +225,7 @@ export const generateReceiptSummary = (data) => {
   }
   
   drawFooter(doc);
-  // Open in new tab instead of silent download
-  window.open(doc.output('bloburl'), '_blank');
+  doc.save(`Receipt_Summary_${booking.bookingNumber || booking.id}.pdf`);
 };
 
 export const generateStatement = (data) => {
@@ -268,8 +264,8 @@ export const generateStatement = (data) => {
         new Date(p.createdAt).toLocaleDateString(),
         `Receipt #${p.Receipt?.receiptNumber || "-"} (${p.paymentMode})`,
         "-",
-        `Rs. ${p.amount.toLocaleString()}`,
-        `Rs. ${runningBalance.toLocaleString()}`
+        `Rs. ${Number(p.amount || 0).toLocaleString()}`,
+        `Rs. ${Number(runningBalance || 0).toLocaleString()}`
       ]);
     });
   }
@@ -380,7 +376,7 @@ export const generateReceipt = (payment, booking) => {
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...textDark);
-  doc.text(`₹ ${payment.amount.toLocaleString()}/-`, 50, 148, { align: "center" });
+  doc.text(`₹ ${Number(payment.amount || 0).toLocaleString()}/-`, 50, 148, { align: "center" });
 
   // Signatures
   doc.setFontSize(10);
@@ -396,7 +392,5 @@ export const generateReceipt = (payment, booking) => {
   doc.text("Subject to realization of cheque/draft.", 20, 175);
 
   drawFooter(doc);
-  
-  // Open in new tab instead of silent download
-  window.open(doc.output('bloburl'), '_blank');
+  doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}.pdf`);
 };
