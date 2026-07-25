@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 // Colors
 const primaryColor = [27, 67, 50]; // #1B4332 - Venueza dark green
@@ -66,7 +66,7 @@ export const generateQuotation = (data) => {
   doc.text(`Guests: ${booking.guests || 0}`, 120, 80);
 
   // Pricing Table
-  doc.autoTable({
+    autoTable(doc, {
     startY: 90,
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Description", "Amount (INR)"]],
@@ -151,7 +151,7 @@ export const generateInvoice = (data) => {
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 68);
 
   // Summary Table
-  doc.autoTable({
+    autoTable(doc, {
     startY: 80,
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Item Description", "Amount (INR)"]],
@@ -182,7 +182,7 @@ export const generateInvoice = (data) => {
       ];
     });
     
-    doc.autoTable({
+      autoTable(doc, {
       startY: startY + 5,
       headStyles: { fillColor: [100, 116, 139] },
       head: [["Date", "Receipt No", "Mode", "Amount"]],
@@ -225,7 +225,7 @@ export const generateReceiptSummary = (data) => {
       `Rs. ${Number(p.amount || 0).toLocaleString()}`
     ]);
     
-    doc.autoTable({
+      autoTable(doc, {
       startY: 85,
       headStyles: { fillColor: primaryColor, textColor: 255 },
       head: [["Date", "Receipt No", "Mode", "Amount"]],
@@ -280,7 +280,7 @@ export const generateStatement = (data) => {
     });
   }
   
-  doc.autoTable({
+    autoTable(doc, {
     startY: 85,
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Date", "Particulars", "Debit", "Credit", "Balance"]],
