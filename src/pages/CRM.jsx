@@ -120,13 +120,6 @@ export default function CRM() {
           >
             <RefreshCw size={14} /> Refresh
           </button>
-          <button onClick={() => setShowEnquiryModal(true)} style={{
-            background: "#1B4332", color: "#fff", border: "none", borderRadius: 8,
-            padding: "10px 16px", display: "flex", alignItems: "center", gap: 8,
-            fontWeight: 600, cursor: "pointer", fontSize: 14, boxShadow: "0 4px 12px rgba(27,67,50,0.2)"
-          }}>
-            <Plus size={18} /> New Enquiry
-          </button>
         </div>
       </div>
 
