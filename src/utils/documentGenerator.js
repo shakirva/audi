@@ -129,6 +129,7 @@ Signed: _______________________                   Date: ______________
 };
 
 export const generateInvoice = (data) => {
+  try {
   const doc = new jsPDF();
   const { booking, payments, totalPaid, outstanding } = data;
   
@@ -168,16 +169,21 @@ export const generateInvoice = (data) => {
 
   // Payment History
   if (payments && payments.length > 0) {
-    doc.text("Payment History", 14, doc.lastAutoTable.finalY + 15);
-    const payBody = payments.map(p => [
-      new Date(p.paymentDate || p.createdAt).toLocaleDateString(),
-      p.Receipt?.receiptNumber || p.referenceNumber || "-",
-      p.paymentMode || "Cash",
-      `Rs. ${Number(p.amount || 0).toLocaleString()}`
-    ]);
+    const startY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 100) + 15;
+    doc.text("Payment History", 14, startY);
+    const payBody = payments.map(p => {
+      let dateStr = "";
+      try { dateStr = new Date(p.paymentDate || p.createdAt || Date.now()).toLocaleDateString(); } catch(e) { dateStr = "-"; }
+      return [
+        dateStr,
+        p.Receipt?.receiptNumber || p.referenceNumber || "-",
+        p.paymentMode || "Cash",
+        `Rs. ${Number(p.amount || 0).toLocaleString()}`
+      ];
+    });
     
     doc.autoTable({
-      startY: doc.lastAutoTable.finalY + 20,
+      startY: startY + 5,
       headStyles: { fillColor: [100, 116, 139] },
       head: [["Date", "Receipt No", "Mode", "Amount"]],
       body: payBody,
@@ -186,7 +192,11 @@ export const generateInvoice = (data) => {
   }
 
   drawFooter(doc);
-  doc.save(`Final_Invoice_${booking.bookingNumber || booking.id}.pdf`);
+  doc.save(`Final_Invoice_${booking.bookingNumber || booking.id || "001"}.pdf`);
+  } catch (err) {
+    console.error(err);
+    alert("PDF Error: " + err.message);
+  }
 };
 
 export const generateReceiptSummary = (data) => {
