@@ -264,15 +264,19 @@ class BookingService {
   /**
    * Generate Final Tax Invoice
    */
-  async generateInvoice(id, { tenantId, environmentId }) {
+  async generateInvoice(idParam, { tenantId, environmentId }) {
+    const whereCondition = isNaN(idParam) ? { bookingId: idParam } : { id: idParam };
+    
     const booking = await bookingRepository.findOneOrFail({
       tenantId, environmentId,
-      where: { id },
+      where: whereCondition,
       resourceName: "Booking",
     });
 
+    const realBookingId = booking.id;
+
     const { Payment } = require("../models");
-    const payments = await Payment.findAll({ where: { bookingId: id, tenantId, environmentId } });
+    const payments = await Payment.findAll({ where: { bookingId: realBookingId, tenantId, environmentId } });
     const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
     const outstanding = booking.totalAmount - totalPaid;
 
