@@ -73,6 +73,14 @@ export const expensesAPI = {
 // ═══════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════
+export const availabilityAPI = {
+  check: (hall, date, ignoreBookingId = null) => {
+    let url = `/v1/availability?hall=${encodeURIComponent(hall)}&date=${encodeURIComponent(date)}`;
+    if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
+    return api.get(url);
+  },
+};
+
 export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),

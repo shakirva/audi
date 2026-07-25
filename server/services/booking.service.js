@@ -6,7 +6,8 @@
 
 const bookingRepository = require("../repositories/booking.repository");
 const customerService = require("./customer.service");
-const { NotFoundError, BadRequestError } = require("../helpers/errors");
+const availabilityService = require("./availability.service");
+const { BadRequestError, NotFoundError, ConflictError } = require("../helpers/errors");
 const paymentService = require("./payment.service");
 const accountingEngine = require("./accountingEngine.service");
 
@@ -68,6 +69,20 @@ class BookingService {
   async createBooking(data, { tenantId, environmentId }) {
     if (!data.customerName || !data.phone || !data.date) {
       throw new BadRequestError("Customer name, phone, and date are required");
+    }
+
+    // --- Availability Check ---
+    if (data.hall && data.session) {
+      const avail = await availabilityService.checkAvailability({
+        tenantId,
+        environmentId,
+        hall: data.hall,
+        date: data.date,
+        session: data.session
+      });
+      if (!avail.available) {
+        throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
+      }
     }
 
     let customerId = null;
@@ -163,7 +178,24 @@ class BookingService {
    */
   async updateBooking(bookingId, data, { tenantId, environmentId }) {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
-    if (!booking) throw new NotFoundError("Booking");
+    if (!booking) {
+      throw new NotFoundError("Booking");
+    }
+
+    // --- Availability Check ---
+    if (data.hall && data.date && data.session) {
+      const avail = await availabilityService.checkAvailability({
+        tenantId,
+        environmentId,
+        hall: data.hall,
+        date: data.date,
+        session: data.session,
+        ignoreBookingId: booking.id
+      });
+      if (!avail.available) {
+        throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
+      }
+    }
 
     const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes"];
     const updateData = {};

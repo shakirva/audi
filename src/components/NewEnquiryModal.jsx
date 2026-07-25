@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2 } from "lucide-react";
-import { enquiriesAPI, customersAPI, settingsAPI } from "../services/api";
+import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
 
 const iStyle = {
@@ -42,6 +42,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [settingsHalls, setSettingsHalls] = useState([]);
   const [settingsEventTypes, setSettingsEventTypes] = useState([]);
   const [settingsSessions, setSettingsSessions] = useState([]);
+  
+  const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+  const [fetchingAvailability, setFetchingAvailability] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -180,6 +183,26 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       setForm(prev => ({ ...prev, session: "" }));
     }
   }, [form.eventType, form.hallPreference, settingsEventTypes, settingsHalls]);
+
+  // Fetch real-time availability
+  useEffect(() => {
+    if (form.tentativeDate && form.hallPreference) {
+      setFetchingAvailability(true);
+      availabilityAPI.check(form.hallPreference, form.tentativeDate, editData ? editData.id : null)
+        .then(res => {
+          const avail = res.data.data;
+          setAvailability(avail);
+          // Auto clear selected session if it's no longer available
+          if (form.session === "Morning" && avail.morning === "booked") setForm(prev => ({ ...prev, session: "" }));
+          if (form.session === "Evening" && avail.evening === "booked") setForm(prev => ({ ...prev, session: "" }));
+          if (form.session === "Full Day" && avail.fullDay === "booked") setForm(prev => ({ ...prev, session: "" }));
+        })
+        .catch(console.error)
+        .finally(() => setFetchingAvailability(false));
+    } else {
+      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+    }
+  }, [form.tentativeDate, form.hallPreference, editData]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -484,6 +507,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     style={{ ...iStyle, cursor: "pointer" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                  {form.tentativeDate && form.hallPreference && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -567,24 +595,40 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                          allowed = selectedHall.allowedSessions.map(s => ({ name: s }));
                        }
                     }
-                    return allowed.map(s => (
+                    return allowed.map(s => {
+                      let isBooked = false;
+                      if (s.name === "Morning" && availability.morning === "booked") isBooked = true;
+                      if (s.name === "Evening" && availability.evening === "booked") isBooked = true;
+                      if (s.name === "Full Day" && availability.fullDay === "booked") isBooked = true;
+                      if (s.name === "Afternoon" && availability.morning === "booked") isBooked = true; // simplifying logic
+                      
+                      return (
                       <div
                         key={s.name}
-                        onClick={() => setForm(prev => ({ ...prev, session: s.name }))}
+                        onClick={() => !isBooked && setForm(prev => ({ ...prev, session: s.name }))}
                         style={{
                           flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, 
                           border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`,
-                          background: form.session === s.name ? "#1B4332" : "#fff",
-                          color: form.session === s.name ? "#fff" : "#374151",
-                          cursor: "pointer", textAlign: "center", transition: "all 0.2s"
+                          background: form.session === s.name ? "#1B4332" : isBooked ? "#f1f5f9" : "#fff",
+                          color: form.session === s.name ? "#fff" : isBooked ? "#94a3b8" : "#374151",
+                          cursor: isBooked ? "not-allowed" : "pointer", textAlign: "center", transition: "all 0.2s"
                         }}
                       >
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
-                        {s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>}
+                        {isBooked ? (
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444" }}>Booked</div>
+                        ) : (
+                          s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>
+                        )}
                       </div>
-                    ));
+                    )});
                   })()}
                 </div>
+                {availability.status === "Fully Booked" && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
+                    No sessions available on this date for the selected hall.
+                  </div>
+                )}
               </div>
             </div>
 

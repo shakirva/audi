@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
-import { bookingsAPI, enquiriesAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, availabilityAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 
 const iStyle = {
@@ -64,6 +64,9 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     paymentRemarks: "",
   });
 
+  const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+  const [fetchingAvailability, setFetchingAvailability] = useState(false);
+
   useEffect(() => {
     if (open && enquiry) {
       const budget = enquiry.budget || 0;
@@ -104,6 +107,23 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [open, enquiry]);
 
+  // Fetch real-time availability
+  useEffect(() => {
+    if (formData.date && formData.hall) {
+      setFetchingAvailability(true);
+      availabilityAPI.check(formData.hall, formData.date, null)
+        .then(res => {
+          const avail = res.data.data;
+          setAvailability(avail);
+          // Don't auto clear for convert modal to let user see it's booked, but we can clear if we want
+        })
+        .catch(console.error)
+        .finally(() => setFetchingAvailability(false));
+    } else {
+      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+    }
+  }, [formData.date, formData.hall]);
+
   // Auto-calculate balance
   const handleMoneyChange = (field, value) => {
     const updated = { ...formData, [field]: value };
@@ -132,6 +152,17 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
     if (!formData.paymentMethod) {
       addToast("Please select a Payment Method", "error");
+      return;
+    }
+    
+    // Check local state availability before sending
+    let isBooked = false;
+    if (formData.session === "Morning" && availability.morning === "booked") isBooked = true;
+    if (formData.session === "Evening" && availability.evening === "booked") isBooked = true;
+    if (formData.session === "Full Day" && availability.fullDay === "booked") isBooked = true;
+    
+    if (isBooked) {
+      addToast(`This session is already booked on ${formData.date}. Please choose another session.`, "error");
       return;
     }
 
@@ -300,11 +331,22 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
                 <div>
                   <label style={labelSt}>Session</label>
-                  {inp("session", { placeholder: "Morning / Evening / Full Day" })}
+                  <select value={formData.session} onChange={e => setFormData({ ...formData, session: e.target.value })} style={iStyle}>
+                     <option value="">-- Select --</option>
+                     <option value="Morning" disabled={availability.morning === "booked"}>Morning {availability.morning === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Afternoon" disabled={availability.morning === "booked"}>Afternoon {availability.morning === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Evening" disabled={availability.evening === "booked"}>Evening {availability.evening === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Full Day" disabled={availability.fullDay === "booked"}>Full Day {availability.fullDay === "booked" ? "(Booked)" : ""}</option>
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Event Date</label>
-                  {inp("date", { type: "date" })}
+                  <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} style={iStyle} />
+                  {formData.date && formData.hall && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={labelSt}>Event Type</label>
