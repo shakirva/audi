@@ -36,10 +36,10 @@ export default function Sidebar({ open, onClose }) {
     { 
       type: "group", label: "CRM", icon: Users, id: "crm",
       children: [
-        { path: "/crm", label: "Enquiries" },
         { path: "/calendar", label: "Calendar" },
-        { path: "/bookings", label: "Bookings" },
+        { path: "/crm", label: "Enquiries" },
         { path: "/customers", label: "Customers" },
+        { path: "/bookings", label: "Bookings" },
         { path: "/agreements", label: "Agreements" }
       ]
     },
@@ -56,7 +56,7 @@ export default function Sidebar({ open, onClose }) {
         { path: "/finance/booking-accounts", label: "Booking Accounts" },
         { path: "/finance/collections", label: "Collections" },
         { path: "/finance/expenses", label: "Purchases & Expenses" },
-        { path: "/finance/reports", label: "Reports" },
+        { path: "/finance/reports", label: "Financial Statements" },
         { path: "/finance/advanced", label: "Advanced Accounting" }
       ]
     },
