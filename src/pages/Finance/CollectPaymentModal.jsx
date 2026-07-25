@@ -13,6 +13,9 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
   const [method, setMethod] = useState("Cash");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+  const [collectedBy, setCollectedBy] = useState("");
+  const [upiName, setUpiName] = useState("");
+  const [bankName, setBankName] = useState("");
 
   if (!open || !booking) return null;
 
@@ -29,12 +32,24 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
 
     setLoading(true);
     try {
+      let finalRef = reference;
+      if (method === "UPI") {
+        finalRef = upiName ? `${upiName} - ${reference}` : reference;
+      } else if (method === "Bank Transfer") {
+        finalRef = bankName ? `${bankName} - ${reference}` : reference;
+      }
+      
+      let finalNotes = notes;
+      if (collectedBy) {
+        finalNotes = `Collected By: ${collectedBy}\n${notes}`;
+      }
+
       await paymentsAPI.create({
         bookingId: booking._id || booking.id, // Use integer ID
         amount: Number(amount),
         paymentMode: method,
-        referenceNumber: reference,
-        notes,
+        referenceNumber: finalRef,
+        notes: finalNotes,
         paymentDate: new Date().toISOString()
       });
       addToast("Payment collected successfully!", "success");
@@ -104,16 +119,87 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
                 </select>
               </div>
               <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Collected By <span style={{ color: "#ef4444" }}>*</span></label>
+                <input 
+                  type="text" 
+                  value={collectedBy}
+                  onChange={e => setCollectedBy(e.target.value)}
+                  placeholder="Staff Name..."
+                  required
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
+
+            {method === "UPI" && (
+              <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>UPI App / Name</label>
+                  <input 
+                    type="text" 
+                    value={upiName}
+                    onChange={e => setUpiName(e.target.value)}
+                    placeholder="e.g. GPay, PhonePe"
+                    list="upi-apps"
+                    style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  />
+                  <datalist id="upi-apps">
+                    <option value="GPay" />
+                    <option value="PhonePe" />
+                    <option value="Paytm" />
+                    <option value="BHIM" />
+                  </datalist>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Transaction Ref No.</label>
+                  <input 
+                    type="text" 
+                    value={reference}
+                    onChange={e => setReference(e.target.value)}
+                    placeholder="UPI Txn ID..."
+                    style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {method === "Bank Transfer" && (
+              <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Bank Name</label>
+                  <input 
+                    type="text" 
+                    value={bankName}
+                    onChange={e => setBankName(e.target.value)}
+                    placeholder="e.g. SBI, HDFC"
+                    style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Transaction Ref No.</label>
+                  <input 
+                    type="text" 
+                    value={reference}
+                    onChange={e => setReference(e.target.value)}
+                    placeholder="NEFT/RTGS Ref..."
+                    style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {["Cheque", "Card"].includes(method) && (
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Reference No.</label>
                 <input 
                   type="text" 
                   value={reference}
                   onChange={e => setReference(e.target.value)}
-                  placeholder="Txn ID, Cheque No..."
+                  placeholder="Cheque No. / Card Last 4 digits..."
                   style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
                 />
               </div>
-            </div>
+            )}
 
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Notes (Optional)</label>

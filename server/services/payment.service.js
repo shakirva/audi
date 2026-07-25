@@ -91,7 +91,10 @@ class PaymentService {
       }, { transaction: t });
 
       // 4. Update Outstanding Balance on Booking (if applicable)
-      // (This would normally update Booking.balanceAmount or similar field, omitted for brevity but conceptually here)
+      if (booking) {
+        booking.advance = (Number(booking.advance) || 0) + Number(payment.amount);
+        await booking.save({ transaction: t, hooks: false });
+      }
 
       // 5. Create Cash Book or Bank Book entry based on mode
       if (payment.paymentMode === "Cash") {
