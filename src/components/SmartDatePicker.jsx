@@ -22,7 +22,10 @@ export default function SmartDatePicker({
 
   // Fetch month availability whenever month or hall changes
   useEffect(() => {
-    if (!isOpen || !hallPreference) return;
+    if (!isOpen || !hallPreference) {
+      setMonthAvail({}); // Clear availability if no hall is selected
+      return;
+    }
     
     let isMounted = true;
     setLoading(true);
@@ -98,10 +101,6 @@ export default function SmartDatePicker({
       {/* Input Facade */}
       <div 
         onClick={() => {
-          if (!hallPreference) {
-            alert("Please select a Hall first to view its availability calendar.");
-            return;
-          }
           setIsOpen(!isOpen);
           if (onFocus) onFocus();
         }}
@@ -147,11 +146,17 @@ export default function SmartDatePicker({
           </div>
 
           {/* Legend */}
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 16, fontSize: 10, fontWeight: 700, color: "#6b7280" }}>
-             <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#16a34a" }}></span> Available</div>
-             <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#d97706" }}></span> Partial</div>
-             <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#ef4444" }}></span> Booked</div>
-          </div>
+          {hallPreference ? (
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 16, fontSize: 10, fontWeight: 700, color: "#6b7280" }}>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#16a34a" }}></span> Available</div>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#d97706" }}></span> Partial</div>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#ef4444" }}></span> Booked</div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", marginBottom: 16, fontSize: 11, fontWeight: 600, color: "#d97706", background: "#fffbeb", padding: "4px 8px", borderRadius: 6, border: "1px solid #fde68a" }}>
+              Select a hall to see availability
+            </div>
+          )}
 
           {/* Days Header */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
@@ -205,7 +210,7 @@ export default function SmartDatePicker({
                 >
                   <span style={{ marginBottom: 2 }}>{day}</span>
                   {/* Indicator Dot */}
-                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: dotColor, opacity: isSelected ? 1 : 0.8 }} />
+                  {hallPreference && <span style={{ width: 4, height: 4, borderRadius: "50%", background: dotColor, opacity: isSelected ? 1 : 0.8 }} />}
                 </div>
               );
             })}
