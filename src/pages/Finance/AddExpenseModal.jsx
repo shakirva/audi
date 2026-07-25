@@ -112,7 +112,7 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
               >
                 <option value="">-- Select Booking --</option>
                 {bookings.map(b => (
-                  <option key={b.id} value={b.id}>{b.bookingNumber || b.id} - {b.customerName}</option>
+                  <option key={b._id || b.id} value={b._id || b.id}>{b.bookingNumber || b.id} - {b.customerName}</option>
                 ))}
               </select>
             </div>
