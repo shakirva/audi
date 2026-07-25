@@ -148,9 +148,9 @@ export default function SmartDatePicker({
           {/* Legend */}
           {hallPreference ? (
             <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 16, fontSize: 10, fontWeight: 700, color: "#6b7280" }}>
-               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#16a34a" }}></span> Available</div>
-               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#d97706" }}></span> Partial</div>
-               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: "#ef4444" }}></span> Booked</div>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#dcfce7", border: "1px solid #22c55e" }}></span> Available</div>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#fef9c3", border: "1px solid #eab308" }}></span> Partial</div>
+               <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: "#fee2e2", border: "1px solid #ef4444" }}></span> Full</div>
             </div>
           ) : (
             <div style={{ textAlign: "center", marginBottom: 16, fontSize: 11, fontWeight: 600, color: "#d97706", background: "#fffbeb", padding: "4px 8px", borderRadius: 6, border: "1px solid #fde68a" }}>
@@ -174,10 +174,25 @@ export default function SmartDatePicker({
               const isSelected = value === dateStr;
               
               let statusObj = monthAvail[dateStr];
-              let dotColor = "#16a34a"; // available
-              if (statusObj) {
-                if (statusObj.status === "Fully Booked") dotColor = "#ef4444";
-                else if (statusObj.status === "Partially Booked") dotColor = "#d97706";
+              
+              let bgColor = "transparent";
+              let borderColor = "transparent";
+              let textColor = "#111";
+
+              if (hallPreference && statusObj) {
+                if (statusObj.status === "Fully Booked") {
+                  bgColor = "#fee2e2";
+                  borderColor = "#ef4444";
+                  textColor = "#b91c1c";
+                } else if (statusObj.status === "Partially Booked") {
+                  bgColor = "#fef9c3";
+                  borderColor = "#eab308";
+                  textColor = "#a16207";
+                } else {
+                  bgColor = "#dcfce7";
+                  borderColor = "#22c55e";
+                  textColor = "#15803d";
+                }
               }
               
               const isToday = new Date().toISOString().split("T")[0] === dateStr;
@@ -189,28 +204,25 @@ export default function SmartDatePicker({
                   style={{
                     height: 36,
                     display: "flex",
-                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 8,
+                    borderRadius: 6,
                     cursor: "pointer",
-                    background: isSelected ? "#1B4332" : (isToday ? "#f0faf4" : "transparent"),
-                    color: isSelected ? "#fff" : "#111",
-                    fontWeight: isSelected || isToday ? 800 : 500,
+                    background: isSelected ? "#1B4332" : bgColor,
+                    color: isSelected ? "#fff" : textColor,
+                    fontWeight: isSelected || isToday ? 800 : 600,
                     fontSize: 13,
-                    border: isToday && !isSelected ? "1px solid #1B4332" : "1px solid transparent",
-                    transition: "all 0.2s"
+                    border: isSelected ? "1px solid transparent" : isToday ? "1px solid #1B4332" : `1px solid ${borderColor}`,
+                    transition: "all 0.15s"
                   }}
                   onMouseEnter={e => {
-                    if (!isSelected) e.currentTarget.style.background = "#f3f4f6";
+                    if (!isSelected) e.currentTarget.style.opacity = "0.7";
                   }}
                   onMouseLeave={e => {
-                    if (!isSelected) e.currentTarget.style.background = isToday ? "#f0faf4" : "transparent";
+                    if (!isSelected) e.currentTarget.style.opacity = "1";
                   }}
                 >
-                  <span style={{ marginBottom: 2 }}>{day}</span>
-                  {/* Indicator Dot */}
-                  {hallPreference && <span style={{ width: 4, height: 4, borderRadius: "50%", background: dotColor, opacity: isSelected ? 1 : 0.8 }} />}
+                  {day}
                 </div>
               );
             })}
