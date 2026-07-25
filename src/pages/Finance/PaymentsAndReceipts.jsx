@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock } from "lucide-react";
+import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List } from "lucide-react";
 import { bookingsAPI, paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
@@ -10,6 +10,7 @@ export default function PaymentsAndReceipts() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState("card");
   
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
@@ -108,99 +109,169 @@ export default function PaymentsAndReceipts() {
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-        <div style={{ position: "relative", flex: 1, maxWidth: 400 }}>
-          <Search size={18} style={{ position: "absolute", left: 16, top: 13, color: "#94a3b8" }} />
-          <input 
-            type="text" 
-            placeholder="Search booking, customer..." 
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "12px 16px 12px 42px", borderRadius: 12, border: "1px solid #e2e8f0", outline: "none", fontSize: 14, fontWeight: 500, boxSizing: "border-box" }}
-          />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
+          <button onClick={() => setViewMode("card")} style={{
+            background: viewMode === "card" ? "#fff" : "transparent", border: "none", borderRadius: 6,
+            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+            fontWeight: 600, color: viewMode === "card" ? "#0f172a" : "#64748b", boxShadow: viewMode === "card" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
+          }}>
+            <LayoutGrid size={16} /> Cards
+          </button>
+          <button onClick={() => setViewMode("table")} style={{
+            background: viewMode === "table" ? "#fff" : "transparent", border: "none", borderRadius: 6,
+            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+            fontWeight: 600, color: viewMode === "table" ? "#0f172a" : "#64748b", boxShadow: viewMode === "table" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
+          }}>
+            <List size={16} /> Table
+          </button>
         </div>
-        <button style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "0 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-          <Filter size={16} /> Filter
-        </button>
+
+        <div style={{ display: "flex", gap: 12, flex: 1, justifyContent: "flex-end" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: 350 }}>
+            <Search size={18} style={{ position: "absolute", left: 16, top: 12, color: "#94a3b8" }} />
+            <input 
+              type="text" 
+              placeholder="Search booking, customer..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: "100%", padding: "10px 16px 10px 42px", borderRadius: 10, border: "1px solid #e2e8f0", outline: "none", fontSize: 14, fontWeight: 500, boxSizing: "border-box" }}
+            />
+          </div>
+          <button style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "0 16px", borderRadius: 10, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+            <Filter size={16} /> Filter
+          </button>
+        </div>
       </div>
 
       {/* Bookings List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
         {loading ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Loading bookings...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No bookings found.</div>
+        ) : viewMode === "table" ? (
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Booking</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Event Date</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Total Amount</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Collected</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#dc2626", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Outstanding</th>
+                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Progress</th>
+                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(b => {
+                  const total = Number(b.totalAmount) || 0;
+                  const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+                  const outstanding = Math.max(0, total - collected);
+                  const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
+                  return (
+                    <tr key={b.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{b.customerName || "Unknown"}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{b.bookingNumber || b.id}</div>
+                      </td>
+                      <td style={{ padding: "16px 20px", color: "#64748b", fontWeight: 500 }}>
+                        {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "TBD"}
+                      </td>
+                      <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 700, color: "#334155" }}>{formatMoney(total)}</td>
+                      <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</td>
+                      <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 700, color: "#dc2626" }}>{formatMoney(outstanding)}</td>
+                      <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                        <span style={{ background: progress === 100 ? "#dcfce7" : "#eff6ff", color: progress === 100 ? "#166534" : "#1d4ed8", padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 700 }}>
+                          {progress}%
+                        </span>
+                      </td>
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                          <button onClick={() => setHistoryBooking(b)} style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "6px 12px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>History</button>
+                          <button onClick={() => setCollectPaymentBooking(b)} style={{ background: "#0f172a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Collect</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          filtered.map(b => {
-            const total = Number(b.totalAmount) || 0;
-            const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
-            const outstanding = Math.max(0, total - collected);
-            const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
-            
-            return (
-              <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-                  <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>
-                      <Calendar size={20} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {filtered.map(b => {
+              const total = Number(b.totalAmount) || 0;
+              const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+              const outstanding = Math.max(0, total - collected);
+              const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
+              
+              return (
+                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{b.customerName || "Unknown Customer"}</span>
+                          <span style={{ background: "#f1f5f9", color: "#475569", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 600 }}>{b.bookingNumber || b.id}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+                          <Clock size={13} />
+                          {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD"}
+                          <span>•</span>
+                          {b.eventType || "Event"}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button 
+                        onClick={() => setHistoryBooking(b)}
+                        style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                      >
+                        View History
+                      </button>
+                      <button 
+                        onClick={() => setCollectPaymentBooking(b)}
+                        style={{ background: "#0f172a", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
+                      >
+                        Collect Payment
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 40, marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Booking Amount</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#334155" }}>{formatMoney(total)}</div>
                     </div>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{b.customerName || "Unknown Customer"}</span>
-                        <span style={{ background: "#f1f5f9", color: "#475569", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 600 }}>{b.bookingNumber || b.id}</span>
-                      </div>
-                      <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
-                        <Clock size={13} />
-                        {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD"}
-                        <span>•</span>
-                        {b.eventType || "Event"}
-                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Collected</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Outstanding</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#dc2626" }}>{formatMoney(outstanding)}</div>
                     </div>
                   </div>
-                  
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button 
-                      onClick={() => setHistoryBooking(b)}
-                      style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-                    >
-                      View History
-                    </button>
-                    <button 
-                      onClick={() => setCollectPaymentBooking(b)}
-                      style={{ background: "#0f172a", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
-                    >
-                      Collect Payment
-                    </button>
-                  </div>
-                </div>
 
-                <div style={{ display: "flex", gap: 40, marginBottom: 20 }}>
                   <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Booking Amount</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: "#334155" }}>{formatMoney(total)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Collected</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Outstanding</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: "#dc2626" }}>{formatMoney(outstanding)}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>Payment Progress</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#334155" }}>{progress}%</span>
+                    </div>
+                    <div style={{ height: 6, background: "#f1f5f9", borderRadius: 6, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${progress}%`, background: progress === 100 ? "#16a34a" : "#3b82f6", borderRadius: 6 }} />
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>Payment Progress</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#334155" }}>{progress}%</span>
-                  </div>
-                  <div style={{ height: 6, background: "#f1f5f9", borderRadius: 6, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${progress}%`, background: progress === 100 ? "#16a34a" : "#3b82f6", borderRadius: 6 }} />
-                  </div>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
 
