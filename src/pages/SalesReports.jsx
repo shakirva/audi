@@ -3,8 +3,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Download, Users, TrendingUp, Crosshair, Trophy, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { enquiriesAPI, settingsAPI } from "../services/api";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
@@ -110,30 +108,32 @@ export default function SalesReports() {
     }
   });
 
-  const handleExportPDF = async () => {
-    const el = document.getElementById("sales-report-content");
-    if (!el) return;
-    
-    addToast("Generating PDF report...", "success");
-    try {
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Sales_Report_${filterDate.replace(/\s+/g, '_')}.pdf`);
-    } catch (err) {
-      console.error(err);
-      addToast("Failed to generate PDF", "error");
-    }
+  const handleExportPDF = () => {
+    addToast("Preparing report for export...", "success");
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <style>
+        {`
+          @media print {
+            body * { visibility: hidden; }
+            #sales-report-content, #sales-report-content * { visibility: visible; }
+            #sales-report-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 0 !important;
+            }
+            .print-hide { display: none !important; }
+          }
+        `}
+      </style>
+      <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Sales & CRM Reports
@@ -151,7 +151,7 @@ export default function SalesReports() {
       </div>
 
       {/* Advanced Filter Bar */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
           <Filter size={16} /> Filters
         </div>
@@ -186,6 +186,13 @@ export default function SalesReports() {
       </div>
 
       <div id="sales-report-content" style={{ padding: "10px 0" }}>
+        {/* Title for Print Only */}
+        <div style={{ display: "none" }} className="print-show">
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>Sales & CRM Reports</h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterDate}</p>
+        </div>
+        <style>{`@media print { .print-show { display: block !important; } }`}</style>
+        
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
           {[
