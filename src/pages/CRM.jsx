@@ -255,7 +255,7 @@ export default function CRM() {
                                     fontSize: 10, padding: "4px", borderRadius: 4, border: "1px solid #ddd", background: "#f8f9fa", cursor: "pointer", maxWidth: 90
                                   }}
                                 >
-                                  {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
+                                  {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
@@ -339,7 +339,7 @@ export default function CRM() {
                           fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid #bae6fd", background: "#e0f2fe", color: "#0284c7", fontWeight: 700, outline: "none", cursor: "pointer"
                         }}
                       >
-                        {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
+                        {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td style={{ padding: "12px 16px" }}>
