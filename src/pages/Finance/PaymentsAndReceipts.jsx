@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List } from "lucide-react";
+import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
 import { bookingsAPI, paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
@@ -26,6 +26,29 @@ export default function PaymentsAndReceipts() {
       addToast("Failed to load bookings", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendPaymentReminder = (b) => {
+    const total = Number(b.totalAmount) || 0;
+    const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+    const balance = Math.max(0, total - collected);
+    
+    if (balance <= 0) {
+      alert("No pending balance for this booking.");
+      return;
+    }
+    
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    
+    const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
+    if (num) {
+      const phoneNum = num.length === 10 ? `91${num}` : num;
+      const text = encodeURIComponent(msg);
+      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+      window.open(waUrl, "_blank");
+    } else {
+      alert("No phone number available for this customer.");
     }
   };
 
@@ -189,6 +212,9 @@ export default function PaymentsAndReceipts() {
                       </td>
                       <td style={{ padding: "16px 20px" }}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                          {outstanding > 0 && (
+                            <button onClick={() => sendPaymentReminder(b)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 12px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }} title="Send Balance Alert"><MessageCircle size={14} /></button>
+                          )}
                           <button onClick={() => setHistoryBooking(b)} style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "6px 12px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>History</button>
                           <button onClick={() => setCollectPaymentBooking(b)} style={{ background: "#0f172a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Collect</button>
                         </div>
@@ -229,6 +255,14 @@ export default function PaymentsAndReceipts() {
                     </div>
                     
                     <div style={{ display: "flex", gap: 8 }}>
+                      {outstanding > 0 && (
+                        <button 
+                          onClick={() => sendPaymentReminder(b)}
+                          style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                        >
+                          <MessageCircle size={16} /> Alert
+                        </button>
+                      )}
                       <button 
                         onClick={() => setHistoryBooking(b)}
                         style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
@@ -23,6 +23,29 @@ export default function Bookings() {
       case "Completed":        return { bg: "#f3e8ff", text: "#6d28d9", dot: "#7c3aed" };
       case "Cancelled":        return { bg: "#fee2e2", text: "#b91c1c", dot: "#ef4444" };
       default:                 return { bg: "#f8f9fa", text: "#666",    dot: "#ccc" };
+    }
+  };
+
+  const sendPaymentReminder = (b) => {
+    const total = Number(b.totalAmount) || 0;
+    const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+    const balance = Math.max(0, total - collected);
+    
+    if (balance <= 0) {
+      alert("No pending balance for this booking.");
+      return;
+    }
+    
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    
+    const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
+    if (num) {
+      const phoneNum = num.length === 10 ? `91${num}` : num;
+      const text = encodeURIComponent(msg);
+      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+      window.open(waUrl, "_blank");
+    } else {
+      alert("No phone number available for this customer.");
     }
   };
 
@@ -202,6 +225,12 @@ export default function Bookings() {
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8fafc", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Eye size={13} /> View
                   </button>
+                  {balance > 0 && (
+                    <button onClick={(e) => { e.stopPropagation(); sendPaymentReminder(b); }}
+                      style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#166534", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                      <MessageCircle size={13} /> Alert
+                    </button>
+                  )}
                   <button onClick={() => setEditBooking(b)}
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Pencil size={13} /> Edit
@@ -289,6 +318,12 @@ export default function Bookings() {
                     </td>
                     <td style={{ padding: "12px 14px" }}>
                       <div style={{ display: "flex", gap: 6 }}>
+                        {balance > 0 && (
+                          <button onClick={e => { e.stopPropagation(); sendPaymentReminder(b); }}
+                            style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                            <MessageCircle size={11} /> Alert
+                          </button>
+                        )}
                         <button onClick={e => { e.stopPropagation(); setDetail(b); }}
                           style={{ background: "#f8fafc", color: "#374151", border: "1px solid #e5e7eb", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Eye size={11} /> View
