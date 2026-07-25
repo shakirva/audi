@@ -135,43 +135,14 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
               <p style={{ margin: "6px 0 0", fontSize: 15, color: "#64748b", fontWeight: 600, wordBreak: "break-word" }}>{booking.customerName} • {new Date(booking.date).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}</p>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "50%" }}>
-              {onEdit && (
-                <motion.button onClick={() => onEdit(booking)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "10px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#1d4ed8", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", whiteSpace: "nowrap" }}>
-                  <Pencil size={16} /> Edit Booking
-                </motion.button>
-              )}
-              <motion.button onClick={generateReceipt} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "10px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#0f172a", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", whiteSpace: "nowrap" }}>
-                <FileText size={16} /> Download Receipt
-              </motion.button>
-              {onDelete && (
-                <motion.button onClick={() => { if (window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) onDelete(booking.id); }} whileHover={{ scale: 1.1, background: "#fee2e2" }} whileTap={{ scale: 0.9 }} style={{ background: "#fff", border: "1px solid #fecaca", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#ef4444" }}>
-                  <Trash2 size={20} />
-                </motion.button>
-              )}
+
               <motion.button whileHover={{ scale: 1.1, background: "#e2e8f0" }} whileTap={{ scale: 0.9 }} onClick={onClose} style={{ background: "#f1f5f9", border: "none", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
               </motion.button>
             </div>
           </div>
 
-          {/* AI Recommended Next Action (Framer Motion Animated) */}
-          {activeView === "overview" && (
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-              style={{ background: "linear-gradient(135deg, #0f172a, #334155)", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", boxShadow: "0 10px 30px rgba(15,23,42,0.15)" }}>
-              <div>
-                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: "rgba(255,255,255,0.7)", marginBottom: 8, fontWeight: 800 }}>Next Recommended Action</div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "Receive Pending Payment" : "All clear. Enjoy the event!"}
-                </div>
-              </div>
-              {((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 && (
-                <motion.button onClick={sendPaymentReminder} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ background: "#25D366", color: "#fff", border: "none", padding: "12px 20px", borderRadius: 12, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)" }}>
-                  Send Reminder <ArrowRight size={16} />
-                </motion.button>
-              )}
-            </motion.div>
-          )}
+
         </div>
 
         {/* ── IOS SETTINGS MENU & VIEWS ── */}
