@@ -214,13 +214,7 @@ export default function Sidebar({ open, onClose }) {
 
       <div style={{ margin: "16px 24px 0", height: 1, background: "rgba(255,255,255,0.1)" }} />
 
-      {/* Development Preview Badge */}
-      {!collapsed && (
-        <div style={{ margin: "16px 24px 0", padding: "8px 12px", background: "rgba(212,160,23,0.1)", borderRadius: 8, border: "1px dashed rgba(212,160,23,0.3)" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ACCENT_COLOR, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Demo Version</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Version 2.0 Development Preview</div>
-        </div>
-      )}
+
 
       {/* User Profile Footer */}
       <div style={{ padding: "16px 24px" }}>
