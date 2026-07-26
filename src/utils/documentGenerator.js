@@ -144,9 +144,9 @@ export const generateAgreement = (data) => {
 export const generateInvoice = (data) => {
   try {
   const doc = new jsPDF();
-  const { booking, payments, totalPaid, outstanding } = data;
+  const { booking, payments, totalPaid, outstanding, isRevised } = data;
   
-  drawHeader(doc, "FINAL TAX INVOICE", booking);
+  drawHeader(doc, isRevised ? "REVISED TAX INVOICE" : "FINAL TAX INVOICE", booking);
   
   // Invoice Info
   doc.setTextColor(...textDark);

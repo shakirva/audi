@@ -424,10 +424,17 @@ export default function BookingFinancialDashboard() {
                 <ReceiptIcon size={24} color="#0f172a" />
                 <div style={{ fontWeight: 600, color: "#334155" }}>Download Receipts Summary</div>
               </div>
-              <div onClick={() => data.booking.invoiceStatus === "Generated" ? generateInvoice(data) : addToast("Final invoice not generated yet.", "warning")} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: data.booking.invoiceStatus === "Generated" ? "pointer" : "not-allowed", background: data.booking.invoiceStatus === "Generated" ? "#fff" : "#f8fafc", opacity: data.booking.invoiceStatus === "Generated" ? 1 : 0.7, transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => data.booking.invoiceStatus === "Generated" && (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)")} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                <FileText size={24} color={data.booking.invoiceStatus === "Generated" ? "#0f172a" : "#94a3b8"} />
-                <div style={{ fontWeight: 600, color: data.booking.invoiceStatus === "Generated" ? "#334155" : "#94a3b8" }}>Download Final Invoice</div>
+              <div onClick={() => data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? generateInvoice(data) : addToast("Final invoice not generated yet.", "warning")} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "pointer" : "not-allowed", background: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#fff" : "#f8fafc", opacity: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? 1 : 0.7, transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => (data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised") && (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)")} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                <FileText size={24} color={data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#0f172a" : "#94a3b8"} />
+                <div style={{ fontWeight: 600, color: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#334155" : "#94a3b8" }}>Download Final Invoice</div>
               </div>
+              
+              {(data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised") && (
+                <div onClick={() => generateInvoice({ ...data, isRevised: true })} style={{ padding: 20, border: "1px solid #fef3c7", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
+                  <FileText size={24} color="#b45309" />
+                  <div style={{ fontWeight: 600, color: "#b45309" }}>Download Revised Invoice</div>
+                </div>
+              )}
             </div>
             <p style={{ fontSize: 13, color: "#64748b" }}>* Attachments upload functionality is coming soon.</p>
           </div>
@@ -495,10 +502,27 @@ export default function BookingFinancialDashboard() {
                 </span>
               </div>
 
-              {data.booking.invoiceStatus === "Generated" ? (
-                <div style={{ background: "#f0fdf4", color: "#166534", padding: 16, borderRadius: 8, fontSize: 14, fontWeight: 600 }}>
-                  Final Tax Invoice has been generated. The booking is financially closed.
-                </div>
+              {data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? (
+                data.outstanding > 0 ? (
+                  <div style={{ background: "#fef3c7", color: "#b45309", padding: 16, borderRadius: 8, fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>
+                    Additional charges have been applied after generating the invoice. <br/>
+                    Please clear the outstanding balance of {formatMoney(data.outstanding)} to generate a Revised Invoice.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ background: "#f0fdf4", color: "#166534", padding: 16, borderRadius: 8, fontSize: 14, fontWeight: 600 }}>
+                      The booking is fully settled. You can download the current invoice or generate a new Revised Invoice to reflect recent changes.
+                    </div>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <button 
+                        onClick={() => generateInvoice({ ...data, isRevised: true })}
+                        style={{ flex: 1, background: "#1B4332", color: "#fff", border: "none", padding: "12px", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
+                      >
+                        Download Revised Invoice
+                      </button>
+                    </div>
+                  </div>
+                )
               ) : data.outstanding > 0 ? (
                 <div style={{ background: "#fef2f2", color: "#991b1b", padding: 16, borderRadius: 8, fontSize: 14, fontWeight: 600 }}>
                   Cannot generate Final Tax Invoice until outstanding balance is fully paid.
