@@ -35,6 +35,7 @@ import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
+import Subscriptions from "./pages/Subscriptions";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -94,7 +95,8 @@ function AdminLayout() {
             <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
-            <Route path="/superadmin/tenants" element={<ProtectedRoute permission="canManageTenants"><SuperAdminTenants /></ProtectedRoute>} />
+            <Route path="/tenants" element={<SuperAdminTenants />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/agreements" element={<Agreements />} />
             <Route path="/jobs" element={<Jobs />} />
