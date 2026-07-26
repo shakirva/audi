@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileText, CheckSquare, Plus, ArrowLeft, RefreshCw, AlertCircle, Printer } from "lucide-react";
 import { jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../context/RoleContext";
 
 function JobSkeleton() {
   return (
@@ -102,11 +103,23 @@ function printAgreement(agr) {
 
 export default function Jobs() {
   const { addToast } = useToast();
+  const { user, role } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Local state for toggled checklists (mocking backend functionality)
+  const [localChecklists, setLocalChecklists] = useState(JSON.parse(localStorage.getItem("hm_local_checklists") || "{}"));
+
+  const toggleChecklistLocal = (jobId, checklistId) => {
+    const key = `${jobId}_${checklistId}`;
+    const newState = !localChecklists[key];
+    const updated = { ...localChecklists, [key]: newState };
+    setLocalChecklists(updated);
+    localStorage.setItem("hm_local_checklists", JSON.stringify(updated));
+  };
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -115,7 +128,17 @@ export default function Jobs() {
       const params = {};
       if (search) params.search = search;
       const res = await jobsAPI.getAll(params);
-      setJobs(res.data.data || []);
+      let data = res.data.data || [];
+      
+      // Filter for Staff Portal (Sales / Operations only see assigned jobs)
+      if (role === "Sales" || role === "Operations") {
+        data = data.filter(job => {
+          const staff = job.JobStaffs || job.Staff || [];
+          return staff.some(s => s.userId === user?.id || s.User?.id === user?.id || s.User?.name === user?.name) ||
+                 job.salesExecutiveId === user?.id; // If they created the booking
+        });
+      }
+      setJobs(data);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load jobs";
       setError(msg);
@@ -150,7 +173,11 @@ export default function Jobs() {
     const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
     
     // Fallback data if arrays are missing
-    const checklists = selectedJob.JobChecklists || selectedJob.Checklists || [];
+    const rawChecklists = selectedJob.JobChecklists || selectedJob.Checklists || [];
+    const checklists = rawChecklists.map(c => ({
+      ...c,
+      isCompleted: localChecklists[`${selectedJob.id}_${c.id}`] !== undefined ? localChecklists[`${selectedJob.id}_${c.id}`] : c.isCompleted
+    }));
     const completedTasks = checklists.filter(c => c.isCompleted).length;
     const totalTasks = checklists.length;
     const staff = selectedJob.JobStaffs || selectedJob.Staff || [];
@@ -203,9 +230,9 @@ export default function Jobs() {
                 {totalTasks === 0 ? (
                   <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
                 ) : checklists.map((task, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8 }}>
+                  <div key={i} onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
                     <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
-                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
+                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none", flex: 1 }}>{task.taskName}</span>
                   </div>
                 ))}
               </div>
@@ -215,7 +242,9 @@ export default function Jobs() {
             <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><UserCircle size={18} /> Staff Assignments</h3>
-                <button style={{ background: "none", border: "none", color: "#D4A017", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ Assign</button>
+                {role !== "Sales" && role !== "Operations" && (
+                  <button style={{ background: "none", border: "none", color: "#D4A017", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ Assign</button>
+                )}
               </div>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 {staff.length === 0 ? (
@@ -315,7 +344,11 @@ export default function Jobs() {
             const hall = job.hall || job.Booking?.hall || "Main Hall";
             const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
             const staffCount = job.JobStaffs?.length || job.Staff?.length || 0;
-            const checklists = job.JobChecklists || job.Checklists || [];
+            const rawChecklists = job.JobChecklists || job.Checklists || [];
+            const checklists = rawChecklists.map(c => ({
+              ...c,
+              isCompleted: localChecklists[`${job.id}_${c.id}`] !== undefined ? localChecklists[`${job.id}_${c.id}`] : c.isCompleted
+            }));
             const completedTasks = checklists.filter(c => c.isCompleted).length;
             const totalTasks = checklists.length;
 

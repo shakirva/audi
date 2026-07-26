@@ -32,6 +32,8 @@ import Masters from "./pages/Masters";
 import Roadmap from "./pages/Roadmap";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
+import Attendance from "./pages/Attendance";
+import LeaveRequests from "./pages/LeaveRequests";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -99,6 +101,8 @@ function AdminLayout() {
             <Route path="/roadmap" element={<Roadmap />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/leaves" element={<LeaveRequests />} />
           </Routes>
         </main>
       </div>
