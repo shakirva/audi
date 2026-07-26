@@ -106,10 +106,13 @@ export default function Jobs() {
   const { user, role } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
-  const [localChecklists, setLocalChecklists] = useState(JSON.parse(localStorage.getItem("hm_local_checklists") || "{}"));
-  const [localTasks, setLocalTasks] = useState(JSON.parse(localStorage.getItem("hm_local_tasks") || "{}"));
-  const [localStaff, setLocalStaff] = useState(JSON.parse(localStorage.getItem("hm_local_staff") || "{}"));
-  const [localJobs, setLocalJobs] = useState(JSON.parse(localStorage.getItem("hm_local_jobs") || "[]"));
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem("hm_local_checklists") || "{}") || {});
+  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem("hm_local_tasks") || "{}") || {});
+  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem("hm_local_staff") || "{}") || {});
+  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem("hm_local_jobs") || "[]") || []);
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
   const [staffModal, setStaffModal] = useState({ open: false, staffName: "", role: "Sales" });
@@ -135,7 +138,7 @@ export default function Jobs() {
       // Filter for Staff Portal (Sales / Operations only see assigned jobs)
       if (role === "Sales" || role === "Operations") {
         data = data.filter(job => {
-          const staff = [...(job.JobStaffs || []), ...(job.Staff || []), ...(localStaff[job.id] || [])];
+          const staff = [...(job.JobStaffs || []), ...(job.Staff || []), ...(localStaff?.[job.id] || [])];
           return staff.some(s => s.userId === user?.id || s.User?.id === user?.id || s.User?.name === user?.name || s.name === user?.name) ||
                  job.salesExecutiveId === user?.id; // If they created the booking
         });
@@ -208,7 +211,7 @@ export default function Jobs() {
     e.preventDefault();
     const jId = selectedJob.id;
     const newTask = { id: Date.now(), taskName: taskModal.taskName, isCompleted: false };
-    const updated = { ...localTasks, [jId]: [...(localTasks[jId] || []), newTask] };
+    const updated = { ...localTasks, [jId]: [...(localTasks?.[jId] || []), newTask] };
     setLocalTasks(updated);
     localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
     setTaskModal({ open: false, taskName: "" });
@@ -218,7 +221,7 @@ export default function Jobs() {
     e.preventDefault();
     const jId = selectedJob.id;
     const newStaff = { User: { name: staffModal.staffName }, role: staffModal.role, name: staffModal.staffName };
-    const updated = { ...localStaff, [jId]: [...(localStaff[jId] || []), newStaff] };
+    const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
     setLocalStaff(updated);
     localStorage.setItem("hm_local_staff", JSON.stringify(updated));
     setStaffModal({ open: false, staffName: "", role: "Sales" });
@@ -244,14 +247,14 @@ export default function Jobs() {
     const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
     
     // Fallback data if arrays are missing
-    const rawChecklists = [...(selectedJob.JobChecklists || selectedJob.Checklists || []), ...(localTasks[selectedJob.id] || [])];
+    const rawChecklists = [...(selectedJob.JobChecklists || selectedJob.Checklists || []), ...(localTasks?.[selectedJob.id] || [])];
     const checklists = rawChecklists.map(c => ({
       ...c,
-      isCompleted: localChecklists[`${selectedJob.id}_${c.id}`] !== undefined ? localChecklists[`${selectedJob.id}_${c.id}`] : c.isCompleted
+      isCompleted: localChecklists?.[`${selectedJob.id}_${c.id}`] !== undefined ? localChecklists[`${selectedJob.id}_${c.id}`] : c.isCompleted
     }));
     const completedTasks = checklists.filter(c => c.isCompleted).length;
     const totalTasks = checklists.length;
-    const staff = [...(selectedJob.JobStaffs || selectedJob.Staff || []), ...(localStaff[selectedJob.id] || [])];
+    const staff = [...(selectedJob.JobStaffs || selectedJob.Staff || []), ...(localStaff?.[selectedJob.id] || [])];
     const timeline = selectedJob.JobTimelines || selectedJob.Timeline || [];
 
     return (
@@ -471,11 +474,11 @@ export default function Jobs() {
             const eventType = getEventType(job);
             const hall = job.hall || job.Booking?.hall || "Main Hall";
             const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-            const staffCount = (job.JobStaffs?.length || job.Staff?.length || 0) + (localStaff[job.id]?.length || 0);
-            const rawChecklists = [...(job.JobChecklists || job.Checklists || []), ...(localTasks[job.id] || [])];
+            const staffCount = (job.JobStaffs?.length || job.Staff?.length || 0) + (localStaff?.[job.id]?.length || 0);
+            const rawChecklists = [...(job.JobChecklists || job.Checklists || []), ...(localTasks?.[job.id] || [])];
             const checklists = rawChecklists.map(c => ({
               ...c,
-              isCompleted: localChecklists[`${job.id}_${c.id}`] !== undefined ? localChecklists[`${job.id}_${c.id}`] : c.isCompleted
+              isCompleted: localChecklists?.[`${job.id}_${c.id}`] !== undefined ? localChecklists[`${job.id}_${c.id}`] : c.isCompleted
             }));
             const completedTasks = checklists.filter(c => c.isCompleted).length;
             const totalTasks = checklists.length;
