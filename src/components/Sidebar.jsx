@@ -31,10 +31,10 @@ export default function Sidebar({ open, onClose }) {
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
 
-  const NAVIGATION = [
-    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  const BASE_NAVIGATION = [
+    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["Admin", "Owner", "Manager", "Sales", "Operations"] },
     { 
-      type: "group", label: "CRM", icon: Users, id: "crm",
+      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["Admin", "Owner", "Manager", "Sales"],
       children: [
         { path: "/calendar", label: "Calendar" },
         { path: "/crm", label: "Enquiries" },
@@ -44,13 +44,13 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "Operations", icon: Briefcase, id: "ops",
+      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["Admin", "Owner", "Manager", "Sales", "Operations"],
       children: [
         { path: "/jobs", label: "Job Management" }
       ]
     },
     { 
-      type: "group", label: "Finance", icon: CreditCard, id: "finance",
+      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["Admin", "Owner", "Manager"],
       children: [
         { path: "/finance/payments", label: "Payments & Receipts" },
         { path: "/finance/booking-accounts", label: "Booking Accounts" },
@@ -61,13 +61,20 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "Staff & HR", icon: UsersRound, id: "external",
+      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["Admin", "Owner", "Manager"],
       children: [
         { path: "/staff", label: "Staff Management" }
       ]
     },
     { 
-      type: "group", label: "Reports Center", icon: BarChart3, id: "reports",
+      type: "group", label: "Attendance & Leaves", icon: CheckSquare, id: "staff-actions", roles: ["Sales", "Operations"],
+      children: [
+        { path: "/attendance", label: "My Attendance" },
+        { path: "/leaves", label: "Leave Requests" }
+      ]
+    },
+    { 
+      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["Admin", "Owner", "Manager"],
       children: [
         { path: "/reports", label: "Report Dashboard" },
         { path: "/reports/sales", label: "Sales Reports 🔒" },
@@ -77,13 +84,15 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "System", icon: Settings, id: "system",
+      type: "group", label: "System", icon: Settings, id: "system", roles: ["Admin", "Owner", "Manager"],
       children: [
         { path: "/settings", label: "Masters" },
         { path: "/roadmap", label: "ERP Roadmap" }
       ]
     }
   ];
+
+  const NAVIGATION = BASE_NAVIGATION.filter(item => item.roles.includes(role));
 
   return (
     <>

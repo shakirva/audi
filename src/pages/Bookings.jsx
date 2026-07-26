@@ -4,9 +4,11 @@ import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
+import { useRole } from "../context/RoleContext";
 import { bookingsAPI } from "../services/api";
 
 export default function Bookings() {
+  const { user, role } = useRole();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
@@ -50,14 +52,18 @@ export default function Bookings() {
   };
 
   const filtered = useMemo(() => {
-    return bookings.filter(b => {
+    let baseBookings = bookings;
+    if (role === "Sales") {
+      baseBookings = baseBookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name);
+    }
+    return baseBookings.filter(b => {
       const nameMatch = !search || (b.customerName || "").toLowerCase().includes(search.toLowerCase())
         || (b.eventType || "").toLowerCase().includes(search.toLowerCase())
         || (b.hall || "").toLowerCase().includes(search.toLowerCase());
       const statusMatch = !statusFilter || b.status === statusFilter;
       return nameMatch && statusMatch;
     });
-  }, [bookings, search, statusFilter]);
+  }, [bookings, search, statusFilter, role, user]);
 
   const uniqueStatuses = [...new Set(bookings.map(b => b.status).filter(Boolean))];
 

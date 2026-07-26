@@ -4,6 +4,7 @@ import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import ConvertToBookingModal from "../components/ConvertToBookingModal";
+import { useRole } from "../context/RoleContext";
 
 const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Lost"];
 
@@ -23,6 +24,7 @@ function KPISkeleton() {
 }
 
 export default function CRM() {
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [viewMode, setViewMode] = useState("board");
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
@@ -45,7 +47,11 @@ export default function CRM() {
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
       const res = await enquiriesAPI.getAll(params);
-      setEnquiries(res.data.data || []);
+      let data = res.data.data || [];
+      if (role === "Sales") {
+        data = data.filter(e => e.SalesExecutive?.name === user?.name || e.assignedTo === user?.name || e.createdBy === user?.name);
+      }
+      setEnquiries(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load enquiries");
     } finally {
