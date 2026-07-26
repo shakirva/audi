@@ -16,6 +16,7 @@ export default function Vendors() {
   const [filterCat, setFilterCat] = useState("All");
   const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [form, setForm] = useState({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
 
   const allVendors = [...localVendors, ...DEMO_VENDORS];
@@ -56,6 +57,17 @@ export default function Vendors() {
     const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
     setLocalVendors(updated);
     localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    if (selectedVendor && selectedVendor.id === id) {
+      setSelectedVendor({ ...selectedVendor, status: nextStatus });
+    }
+  };
+
+  const handleDeleteVendor = (id) => {
+    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+    const updated = localVendors.filter(v => v.id !== id);
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    setSelectedVendor(null);
   };
 
   return (
@@ -123,7 +135,7 @@ export default function Vendors() {
       {/* VENDOR GRID */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
         {filtered.map(vendor => (
-          <div key={vendor.id} style={{
+          <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 
             boxShadow: "0 4px 15px rgba(0,0,0,0.03)", position: "relative", transition: "transform 0.2s", cursor: "pointer"
           }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={e => e.currentTarget.style.transform = "none"}>
@@ -182,6 +194,65 @@ export default function Vendors() {
           </div>
         ))}
       </div>
+
+      {/* VENDOR PROFILE MODAL */}
+      {selectedVendor && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 600, borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", color: "#fff" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800 }}>
+                  {selectedVendor.name.charAt(0)}
+                </div>
+                <div>
+                  <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{selectedVendor.name}</h2>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, opacity: 0.9 }}>
+                    <span style={{ background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 6 }}>{selectedVendor.category}</span>
+                    <span>⭐ {selectedVendor.rating}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedVendor(null)} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            
+            <div style={{ padding: "24px" }}>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>CONTACT</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}><Phone size={14}/> {selectedVendor.phone}</p>
+                  {selectedVendor.email && <p style={{ margin: 0, fontSize: 13, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}><Mail size={14}/> {selectedVendor.email}</p>}
+                </div>
+                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>LOCATION</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}><MapPin size={14}/> {selectedVendor.location}</p>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ margin: "0 0 8px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>TAGS & SPECIALTIES</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {selectedVendor.tags?.map(t => (
+                    <span key={t} style={{ fontSize: 12, fontWeight: 600, color: "#475569", background: "#f1f5f9", padding: "4px 12px", borderRadius: 20 }}>{t}</span>
+                  ))}
+                  {!selectedVendor.tags?.length && <span style={{ fontSize: 13, color: "#94a3b8" }}>No tags specified</span>}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 20 }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => handleToggleStatus(selectedVendor.id, selectedVendor.status)} style={{ padding: "10px 16px", background: selectedVendor.status === "Active" ? "#fef3c7" : "#dcfce7", color: selectedVendor.status === "Active" ? "#d97706" : "#16a34a", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+                    Mark as {selectedVendor.status === "Active" ? "Inactive" : "Active"}
+                  </button>
+                  {String(selectedVendor.id).startsWith("LOCAL_") && (
+                    <button onClick={() => handleDeleteVendor(selectedVendor.id)} style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Delete Vendor</button>
+                  )}
+                </div>
+                <button onClick={() => setSelectedVendor(null)} style={{ padding: "10px 24px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer", fontSize: 13 }}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {modalOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
