@@ -31,6 +31,7 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Bank Transfer", "Cheque"];
 export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [sendWhatsapp, setSendWhatsapp] = useState(true);
 
   const [formData, setFormData] = useState({
     // Contact
@@ -181,12 +182,14 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Successfully converted to Booking! 🎉", "success");
       onClose();
       
-      const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
-      const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
-      const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
-      const text = encodeURIComponent(message);
-      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
-      window.open(waUrl, "_blank");
+      if (sendWhatsapp) {
+        const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
+        const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
+        const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
+        const text = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+        window.open(waUrl, "_blank");
+      }
     } catch (err) {
       addToast(err.response?.data?.message || "Failed to convert", "error");
     } finally {
@@ -557,11 +560,17 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "flex-end", gap: 12, background: "#f8f9fa" }}>
-          <button type="button" onClick={onClose} disabled={loading} style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>Cancel</button>
-          <button type="submit" form="convert-form" disabled={loading} style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
-            {loading ? "Confirming..." : "✅ Confirm Booking"}
-          </button>
+        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#166534", cursor: "pointer" }}>
+            <input type="checkbox" checked={sendWhatsapp} onChange={e => setSendWhatsapp(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#16a34a", cursor: "pointer" }} />
+            Send Booking Details via WhatsApp
+          </label>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button type="button" onClick={onClose} disabled={loading} style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>Cancel</button>
+            <button type="submit" form="convert-form" disabled={loading} style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
+              {loading ? "Confirming..." : "✅ Confirm Booking"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
