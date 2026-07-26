@@ -1,11 +1,94 @@
 import React, { useState, useEffect } from "react";
-import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter } from "lucide-react";
+import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save } from "lucide-react";
 import { usersAPI } from "../services/api";
+import { useToast } from "../components/Toast";
+import { useNavigate } from "react-router-dom";
+
+function StaffModal({ open, onClose, onSuccess, editData }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", role: "Sales", password: "" });
+  const [loading, setLoading] = useState(false);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    if (editData && open) {
+      setForm({ name: editData.name, email: editData.email, phone: editData.phone || "", role: editData.role || "Sales", password: "" });
+    } else if (!editData && open) {
+      setForm({ name: "", email: "", phone: "", role: "Sales", password: "" });
+    }
+  }, [editData, open]);
+
+  if (!open) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (editData) {
+        await usersAPI.update(editData.id, form);
+        addToast("Employee updated successfully", "success");
+      } else {
+        await usersAPI.create(form);
+        addToast("Employee created successfully", "success");
+      }
+      onSuccess();
+    } catch (err) {
+      addToast(err.response?.data?.message || "Failed to save employee", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const roles = ["Owner", "Manager", "Sales", "Reception", "Coordinator", "Accountant", "Security", "Technician", "Cleaner", "Operations"];
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: 500, borderRadius: 20, overflow: "hidden" }}>
+        <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>{editData ? "Edit Employee" : "Add Employee"}</h2>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Full Name *</label>
+            <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="e.g. John Doe" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Email *</label>
+            <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="e.g. john@example.com" />
+          </div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Phone</label>
+              <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="10-digit number" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Role *</label>
+              <select required value={form.role} onChange={e => setForm({...form, role: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", cursor: "pointer", background: "#fff" }}>
+                {roles.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Password {editData ? "(Leave blank to keep current)" : "*"}</label>
+            <input required={!editData} type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="Enter password" />
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>{loading ? "Saving..." : "Save Employee"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function Staff() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
   const [staffList, setStaffList] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editStaff, setEditStaff] = useState(null);
 
   useEffect(() => {
     loadStaff();
@@ -36,7 +119,7 @@ export default function Staff() {
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Staff & HR</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage employee attendance, roles, and job assignments.</p>
         </div>
-        <button style={{
+        <button onClick={() => { setEditStaff(null); setModalOpen(true); }} style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 14
@@ -154,12 +237,19 @@ export default function Staff() {
             </div>
 
             <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
-              <button style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>View Profile</button>
-              <button style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
+              <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>View Profile</button>
+              <button onClick={() => navigate("/jobs")} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
             </div>
           </div>
         ))}
       </div>
+      
+      <StaffModal 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        onSuccess={() => { setModalOpen(false); loadStaff(); }} 
+        editData={editStaff} 
+      />
     </div>
   );
 }
