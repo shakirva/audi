@@ -63,7 +63,9 @@ export default function Sidebar({ open, onClose }) {
     { 
       type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["Admin", "Owner", "Manager"],
       children: [
-        { path: "/staff", label: "Staff Management" }
+        { path: "/staff", label: "Staff Management" },
+        { path: "/attendance", label: "Attendance" },
+        { path: "/leaves", label: "Leave Requests" }
       ]
     },
     { 
