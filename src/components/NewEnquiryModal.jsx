@@ -3,6 +3,7 @@ import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapP
 import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
 import SmartDatePicker from "./SmartDatePicker";
+import { useRole } from "../context/RoleContext";
 
 const iStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 10,
@@ -24,6 +25,7 @@ const LEAD_SCORES = ["Hot", "Warm", "Cold"];
 const GENDERS = ["Male", "Female", "Other"];
 
 export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate = "", editData = null }) {
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -84,17 +86,17 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         leadScore: editData.leadScore || "",
         remarks: editData.remarks || "",
         source: editData.source || "",
-        salesExecutiveId: editData.salesExecutiveId || "",
+        salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
       setPlaceQuery(editData.Customer?.city || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
-      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "" });
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "" });
       setPlaceQuery("");
       setUserEditedBudget(false);
     }
-  }, [editData, open]);
+  }, [editData, open, role, user]);
 
   const [userEditedBudget, setUserEditedBudget] = useState(false);
 
@@ -685,7 +687,8 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Salesman (Assigned To) *</label>
-                  <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                  <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: role === "Sales" ? "not-allowed" : "pointer", background: role === "Sales" ? "#f1f5f9" : "#fff" }}
+                    disabled={role === "Sales"}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
                     <option value="" disabled>-- Select Salesman --</option>
