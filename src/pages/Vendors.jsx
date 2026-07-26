@@ -3,12 +3,12 @@ import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCirc
 import PageHeader from "../components/ui/PageHeader";
 
 const DEMO_VENDORS = [
-  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"] },
-  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"] },
-  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"] },
-  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"] },
-  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"] },
-  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"] }
+  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"], totalBilled: 450000, totalPaid: 400000 },
+  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"], totalBilled: 1250000, totalPaid: 1250000 },
+  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"], totalBilled: 320000, totalPaid: 250000 },
+  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"], totalBilled: 85000, totalPaid: 50000 },
+  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"], totalBilled: 500000, totalPaid: 500000 },
+  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"], totalBilled: 45000, totalPaid: 0 }
 ];
 
 export default function Vendors() {
@@ -41,7 +41,9 @@ export default function Vendors() {
       tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
       status: "Active",
       rating: 5.0,
-      jobs: 0
+      jobs: 0,
+      totalBilled: 0,
+      totalPaid: 0
     };
     const updated = [newVendor, ...localVendors];
     setLocalVendors(updated);
@@ -68,6 +70,22 @@ export default function Vendors() {
     setLocalVendors(updated);
     localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
     setSelectedVendor(null);
+  };
+
+  const handleFinanceUpdate = (id, field, amount) => {
+    if (!String(id).startsWith("LOCAL_")) return; // Only allow for local
+    const num = Number(amount) || 0;
+    const updated = localVendors.map(v => {
+      if (v.id === id) {
+        const newVal = (v[field] || 0) + num;
+        const updatedV = { ...v, [field]: newVal };
+        if (selectedVendor?.id === id) setSelectedVendor(updatedV);
+        return updatedV;
+      }
+      return v;
+    });
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
   };
 
   return (
@@ -175,6 +193,9 @@ export default function Vendors() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569" }}>
                 <ShieldCheck size={14} color="#94a3b8" /> {vendor.jobs} Jobs Done
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: (vendor.totalBilled - vendor.totalPaid > 0) ? "#ef4444" : "#10b981", fontWeight: 700 }}>
+                ₹{((vendor.totalBilled || 0) - (vendor.totalPaid || 0)).toLocaleString("en-IN")} Due
+              </div>
             </div>
 
             {/* Tags */}
@@ -235,6 +256,39 @@ export default function Vendors() {
                     <span key={t} style={{ fontSize: 12, fontWeight: 600, color: "#475569", background: "#f1f5f9", padding: "4px 12px", borderRadius: 20 }}>{t}</span>
                   ))}
                   {!selectedVendor.tags?.length && <span style={{ fontSize: 13, color: "#94a3b8" }}>No tags specified</span>}
+                </div>
+              </div>
+
+              {/* FINANCES */}
+              <div style={{ marginBottom: 24, borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontWeight: 700 }}>FINANCIAL OVERVIEW</p>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#fee2e2" : "#dcfce7", color: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#ef4444" : "#16a34a" }}>
+                    Balance Due: ₹{((selectedVendor.totalBilled || 0) - (selectedVendor.totalPaid || 0)).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Billed</p>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>₹{(selectedVendor.totalBilled || 0).toLocaleString("en-IN")}</p>
+                    {String(selectedVendor.id).startsWith("LOCAL_") && (
+                      <button onClick={() => {
+                        const amt = window.prompt("Enter new bill amount to add (₹):");
+                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalBilled", amt);
+                      }} style={{ background: "none", border: "none", color: "#0ea5e9", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Add Bill</button>
+                    )}
+                  </div>
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Paid</p>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#16a34a" }}>₹{(selectedVendor.totalPaid || 0).toLocaleString("en-IN")}</p>
+                    {String(selectedVendor.id).startsWith("LOCAL_") && (
+                      <button onClick={() => {
+                        const amt = window.prompt("Enter payment amount to add (₹):");
+                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalPaid", amt);
+                      }} style={{ background: "none", border: "none", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Record Payment</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
