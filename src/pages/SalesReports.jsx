@@ -10,6 +10,7 @@ const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeig
 const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed", "#059669"];
 
 export default function SalesReports() {
+  const { addToast } = useToast();
   const [enquiries, setEnquiries] = useState([]);
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);

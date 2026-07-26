@@ -15,6 +15,11 @@ export default function HallReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterHall, setFilterHall] = useState("All Halls");
+  const [filterExecutive, setFilterExecutive] = useState("All Staff");
+  const [filterPlace, setFilterPlace] = useState("All Locations");
+
   useEffect(() => {
     loadData();
   }, []);
@@ -36,16 +41,40 @@ export default function HallReports() {
     }
   };
 
+  const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
+  const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
+
+  const filteredBookings = bookings.filter(b => {
+    if (filterHall !== "All Halls" && b.hall !== filterHall) return false;
+    const execName = b.SalesExecutive?.name || b.salesExecutiveName;
+    if (filterExecutive !== "All Staff" && execName !== filterExecutive) return false;
+    const placeName = b.Customer?.city || b.place || b.address;
+    if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    
+    if (filterDate !== "All Time") {
+      const bDate = new Date(b.date || b.createdAt);
+      const now = new Date();
+      if (filterDate === "This Month") {
+        if (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Last Month") {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
+      } else if (filterDate === "This Year") {
+        if (bDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
   const hallMap = {};
   
-  // Initialize with real halls
   halls.forEach(h => {
     hallMap[h.name] = { name: h.name, revenue: 0, bookings: 0 };
   });
 
   let totalBookings = 0;
   
-  bookings.forEach(b => {
+  filteredBookings.forEach(b => {
     if (b.status !== "Cancelled") {
       const h = b.hall;
       if (h) {
@@ -57,23 +86,44 @@ export default function HallReports() {
     }
   });
 
-  // Filter out any mock halls that are not in real halls, or just sort
   let hallData = Object.values(hallMap).sort((a,b) => b.revenue - a.revenue);
-  // Keep only halls that are valid master halls (to hide old test data with fake names)
   if (halls.length > 0) {
     hallData = hallData.filter(h => halls.some(m => m.name === h.name));
   } else {
-    // If halls haven't loaded yet, just show ones with bookings
     hallData = hallData.filter(h => h.bookings > 0);
   }
   
-  const topHall = hallData.length > 0 ? hallData[0] : null;
+  const topHall = hallData.length > 0 && hallData[0].revenue > 0 ? hallData[0] : null;
   const topHallName = topHall ? topHall.name : "N/A";
   const topHallRev = topHall ? (topHall.revenue >= 100000 ? `₹${(topHall.revenue / 100000).toFixed(1)}L` : `₹${topHall.revenue.toLocaleString()}`) : "₹0";
 
+  const handleExportPDF = () => {
+    addToast("Preparing report for export...", "success");
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <style>
+        {`
+          @media print {
+            body * { visibility: hidden; }
+            #hall-report-content, #hall-report-content * { visibility: visible; }
+            #hall-report-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 0 !important;
+            }
+            .print-hide { display: none !important; }
+            .print-show { display: block !important; }
+          }
+        `}
+      </style>
+      <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Hall Performance
@@ -82,10 +132,7 @@ export default function HallReports() {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button 
-            onClick={() => {
-              window.print();
-              addToast("Report exported successfully!", "success");
-            }}
+            onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
             <Download size={14} /> Export Report
@@ -93,31 +140,47 @@ export default function HallReports() {
         </div>
       </div>
 
-      {/* Advanced Filter Bar (Mock) */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+      {/* Advanced Filter Bar */}
+      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
           <Filter size={16} /> Filters
         </div>
         
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Time">Date: All Time</option>
+          <option value="This Month">Date: This Month</option>
+          <option value="Last Month">Date: Last Month</option>
+          <option value="This Year">Date: This Year</option>
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option>
+        
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
-            <option key={i}>{h.name}</option>
+            <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>
+        
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Staff">Executive: All Staff</option>
+          {uniqueExecutives.map((exec, i) => (
+            <option key={i} value={exec}>{exec}</option>
+          ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Place: All Locations</option><option>Kannur</option><option>Thalassery</option><option>Kuthuparamba</option>
-        </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Gender: All</option><option>Male</option><option>Female</option>
+        
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Locations">Place: All Locations</option>
+          {uniquePlaces.map((place, i) => (
+            <option key={i} value={place}>{place}</option>
+          ))}
         </select>
       </div>
+
+      <div id="hall-report-content" style={{ padding: "10px 0" }}>
+        {/* Title for Print Only */}
+        <div style={{ display: "none" }} className="print-show">
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>Hall Performance Reports</h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterDate}</p>
+        </div>
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
@@ -193,6 +256,7 @@ export default function HallReports() {
         </div>
       </div>
 
+      </div>
     </div>
   );
 }
