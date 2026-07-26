@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, Bell, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut } from "lucide-react";
+import { Menu, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 const notifications = [];
@@ -74,47 +74,7 @@ export default function Header({ title, onMenuClick }) {
         {title}
       </h2>
 
-      {/* Notification Bell */}
-      <div style={{ position: "relative" }}>
-        <button
-          onClick={() => setShowNotif(!showNotif)}
-          style={{ width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", color: "#6b7280", position: "relative" }}
-        >
-          <Bell size={18} />
-          <span style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, background: "#ef4444", borderRadius: "50%", border: "2px solid #fff" }} />
-        </button>
 
-        {showNotif && (
-          <div style={{
-            position: "absolute", right: 0, top: 46, width: 320,
-            background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.15)",
-            border: "1px solid #f0f0f0", zIndex: 999, overflow: "hidden"
-          }}>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>Notifications</span>
-              <span style={{ fontSize: 10, fontWeight: 700, background: "#fef2f2", color: "#ef4444", padding: "2px 8px", borderRadius: 20 }}>
-                {notifications.length} new
-              </span>
-            </div>
-            {notifications.map((n) => (
-              <div key={n.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f9fafb", cursor: "pointer" }}
-                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-              >
-                <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.5 }}>
-                  {notifIcons[n.type]} {n.message}
-                </p>
-                <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3 }}>{n.time}</p>
-              </div>
-            ))}
-            <div style={{ padding: "10px 16px", textAlign: "center" }}>
-              <button onClick={() => { setShowNotif(false); navigate("/notifications"); }} style={{ fontSize: 12, color: "#1B4332", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>
-                View all notifications →
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Feedback Button */}
       <button
