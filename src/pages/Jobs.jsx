@@ -106,11 +106,6 @@ export default function Jobs() {
   const { user, role } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // Local state for mocking backend functionality
   const [localChecklists, setLocalChecklists] = useState(JSON.parse(localStorage.getItem("hm_local_checklists") || "{}"));
   const [localTasks, setLocalTasks] = useState(JSON.parse(localStorage.getItem("hm_local_tasks") || "{}"));
   const [localStaff, setLocalStaff] = useState(JSON.parse(localStorage.getItem("hm_local_staff") || "{}"));
@@ -118,7 +113,7 @@ export default function Jobs() {
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
   const [staffModal, setStaffModal] = useState({ open: false, staffName: "", role: "Sales" });
-  const [jobModal, setJobModal] = useState({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "" });
+  const [jobModal, setJobModal] = useState({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
 
   const toggleChecklistLocal = (jobId, checklistId) => {
     const key = `${jobId}_${checklistId}`;
@@ -170,14 +165,43 @@ export default function Jobs() {
       createdAt: new Date().toISOString(),
       eventDate: jobModal.date,
       hall: jobModal.hall,
-      Booking: { customerName: jobModal.customerName, eventType: jobModal.eventType, hall: jobModal.hall, date: jobModal.date }
+      Booking: { 
+        customerName: jobModal.customerName, 
+        eventType: jobModal.eventType, 
+        hall: jobModal.hall, 
+        date: jobModal.date,
+        session: jobModal.session,
+        totalAmount: jobModal.amount ? Number(jobModal.amount) : 0
+      }
     };
     const updated = [newJob, ...localJobs];
     setLocalJobs(updated);
     localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
     setJobs(prev => [newJob, ...prev]);
-    setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "" });
+    setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
     addToast("Job created successfully", "success");
+  };
+
+  const handleDeleteJob = (id) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    const updated = localJobs.filter(j => j.id !== id);
+    setLocalJobs(updated);
+    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    setJobs(prev => prev.filter(j => j.id !== id));
+    setSelectedJob(null);
+    addToast("Job deleted successfully", "success");
+  };
+
+  const handleUpdateStatus = (id, newStatus) => {
+    const isLocal = String(id).startsWith("LOCAL_");
+    if (isLocal) {
+      const updated = localJobs.map(j => j.id === id ? { ...j, status: newStatus } : j);
+      setLocalJobs(updated);
+      localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    }
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
+    if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
+    addToast("Job status updated", "success");
   };
 
   const handleAddTask = (e) => {
@@ -244,7 +268,20 @@ export default function Jobs() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <h1 style={{ margin: 0, fontSize: 24, color: "#111" }}>{customer} - {eventType}</h1>
-              <span style={{ background: "#e0f2fe", color: "#0284c7", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{selectedJob.status}</span>
+              <select 
+                value={selectedJob.status} 
+                onChange={(e) => handleUpdateStatus(selectedJob.id, e.target.value)}
+                style={{ background: "#e0f2fe", color: "#0284c7", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", outline: "none" }}
+              >
+                <option value="Planning">Planning</option>
+                <option value="Setup">Setup</option>
+                <option value="Event Running">Event Running</option>
+                <option value="Cleanup">Cleanup</option>
+                <option value="Completed">Completed</option>
+              </select>
+              {String(selectedJob.id).startsWith("LOCAL_") && (
+                <button onClick={() => handleDeleteJob(selectedJob.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 20, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Delete</button>
+              )}
             </div>
             <div style={{ display: "flex", gap: 24, color: "#666", fontSize: 14 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Clock size={16} /> {date}</span>
@@ -513,6 +550,15 @@ export default function Jobs() {
                 <option value="Mini Hall">Mini Hall</option>
                 <option value="Dining Hall">Dining Hall</option>
               </select>
+              <div style={{ display: "flex", gap: 12 }}>
+                <select required value={jobModal.session} onChange={e => setJobModal({ ...jobModal, session: e.target.value })} style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }}>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                  <option value="Full Day">Full Day</option>
+                </select>
+                <input type="number" value={jobModal.amount} onChange={e => setJobModal({ ...jobModal, amount: e.target.value })} style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }} placeholder="Amount (₹)" />
+              </div>
             </div>
             <button type="submit" style={{ width: "100%", padding: 12, background: "#1B4332", color: "#fff", borderRadius: 8, fontWeight: 700, border: "none", cursor: "pointer", marginTop: 20 }}>Create Job</button>
           </form>
