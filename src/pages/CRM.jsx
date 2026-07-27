@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2 } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -30,6 +30,7 @@ export default function CRM() {
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [convertEnquiry, setConvertEnquiry] = useState(null);
+  const [editEnquiry, setEditEnquiry] = useState(null);
   const [hoveredEnq, setHoveredEnq] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -92,8 +93,9 @@ export default function CRM() {
 
   const handleEnquiryCreated = () => {
     setShowEnquiryModal(false);
+    setEditEnquiry(null);
     fetchEnquiries();
-    addToast("Enquiry saved successfully! 🎉", "success");
+    addToast(editEnquiry ? "Enquiry updated successfully! 🎉" : "Enquiry saved successfully! 🎉", "success");
   };
 
   const handleConvertClick = (enq) => {
@@ -264,6 +266,12 @@ export default function CRM() {
                                   {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                                 <button
+                                  onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                  style={{ background: "#e0f2fe", color: "#0284c7", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <Edit2 size={11}/> Edit
+                                </button>
+                                <button
                                   onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
                                   style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                                 >
@@ -357,6 +365,12 @@ export default function CRM() {
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button
+                          onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                          style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Edit2 size={12}/> Edit
+                        </button>
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
                           style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                         >
@@ -384,7 +398,7 @@ export default function CRM() {
         </div>
       )}
 
-      <NewEnquiryModal open={showEnquiryModal} onClose={() => setShowEnquiryModal(false)} onSuccess={handleEnquiryCreated} />
+      <NewEnquiryModal open={showEnquiryModal} onClose={() => { setShowEnquiryModal(false); setEditEnquiry(null); }} onSuccess={handleEnquiryCreated} editData={editEnquiry} />
       <ConvertToBookingModal open={showConvertModal} enquiry={convertEnquiry} onClose={() => { setShowConvertModal(false); fetchEnquiries(); }} />
     </div>
   );
