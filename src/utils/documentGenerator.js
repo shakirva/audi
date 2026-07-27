@@ -71,12 +71,12 @@ export const generateQuotation = (data) => {
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Description", "Amount (INR)"]],
     body: [
-      ["Base Hall Rental", `Rs. ${booking.totalAmount?.toLocaleString() || 0}`],
-      ["Discount", `Rs. ${booking.discount?.toLocaleString() || 0}`],
-      ["Taxes", `Rs. ${booking.taxes?.toLocaleString() || 0}`],
+      ["Base Hall Rental", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0) + Number(booking.discount || 0)).toLocaleString()}`],
+      ...(Number(booking.discount || 0) > 0 ? [["Discount", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
+      ...(Number(booking.taxes || 0) > 0 ? [["Taxes (GST)", `Rs. ${Number(booking.taxes).toLocaleString()}`]] : []),
     ],
     foot: [
-      ["Total Estimate", `Rs. ${booking.totalAmount?.toLocaleString() || 0}`]
+      ["Total Estimate", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
     ],
     footStyles: { fillColor: [241, 245, 249], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
@@ -169,7 +169,9 @@ export const generateInvoice = (data) => {
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Item Description", "Amount (INR)"]],
     body: [
-      [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
+      [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0) + Number(booking.discount || 0)).toLocaleString()}`],
+      ...(Number(booking.discount || 0) > 0 ? [["Discount", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
+      ...(Number(booking.taxes || 0) > 0 ? [["Taxes (GST)", `Rs. ${Number(booking.taxes).toLocaleString()}`]] : []),
     ],
     foot: [
       ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],

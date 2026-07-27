@@ -56,8 +56,10 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         guests: booking.guests || "",
         extraArrangements: booking.extraArrangements || "",
         // Financial
-        quotedAmount: (Number(booking.totalAmount || 0) + Number(booking.discount || 0)) || "",
+        quotedAmount: (Number(booking.totalAmount || 0) + Number(booking.discount || 0) - Number(booking.taxes || 0)) || "",
         discount: booking.discount || "",
+        taxes: booking.taxes || "",
+        taxPercentage: booking.taxes && (Number(booking.totalAmount || 0) + Number(booking.discount || 0) - Number(booking.taxes || 0)) ? Math.round((Number(booking.taxes) / (Number(booking.totalAmount || 0) + Number(booking.discount || 0) - Number(booking.taxes || 0))) * 100) : "",
         totalAmount: booking.totalAmount || "",
         advance: booking.advance || "",
         depositAmount: booking.depositAmount || "",
@@ -77,13 +79,22 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   if (!open || !booking) return null;
 
   const handleMoneyChange = (field, value) => {
-    const updated = { ...form, [field]: value };
+    let updated = { ...form, [field]: value };
+    
+    // Auto-calculate taxes if quotedAmount or taxPercentage changes
+    if (field === "quotedAmount" || field === "taxPercentage") {
+      const quoted = Number(updated.quotedAmount) || 0;
+      const pct = Number(updated.taxPercentage) || 0;
+      updated.taxes = Math.round(quoted * (pct / 100));
+    }
+
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
+    const tax = Number(updated.taxes) || 0;
     
-    // Auto calculate Total Amount if quoted or discount changes
-    if (field === "quotedAmount" || field === "discount") {
-      updated.totalAmount = Math.max(0, quoted - disc);
+    // Auto calculate Total Amount if quoted, discount, or taxes changes
+    if (field === "quotedAmount" || field === "discount" || field === "taxes" || field === "taxPercentage") {
+      updated.totalAmount = Math.max(0, quoted + tax - disc);
     }
     
     const total = Number(updated.totalAmount) || 0;
@@ -283,6 +294,25 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                   <input type="number" min={0} value={form.totalAmount || ""}
                     onChange={e => handleMoneyChange("totalAmount", e.target.value)}
                     style={{ ...iStyle, fontWeight: 800, fontSize: 15, background: "#f8fafc" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelSt}>Tax / GST Rate (%)</label>
+                  <input type="number" min={0} value={form.taxPercentage || ""}
+                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700 }}
+                    placeholder="e.g. 18"
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+                <div>
+                  <label style={labelSt}>Tax Amount (₹)</label>
+                  <input type="number" min={0} value={form.taxes || ""}
+                    onChange={e => handleMoneyChange("taxes", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700, color: "#991b1b" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>

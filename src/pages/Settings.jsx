@@ -10,9 +10,9 @@ import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
 
 const INIT_HALLS = [
-  { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup" },
-  { name: "Mini Hall",  icon: "🏠", price: 6000,  capacity: 150, description: "Intimate setting for smaller events" },
-  { name: "Open Stage", icon: "🌿", price: 8000,  capacity: 300, description: "Outdoor stage with natural surroundings" },
+  { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup", gstRate: 18 },
+  { name: "Mini Hall",  icon: "🏠", price: 6000,  capacity: 150, description: "Intimate setting for smaller events", gstRate: 18 },
+  { name: "Open Stage", icon: "🌿", price: 8000,  capacity: 300, description: "Outdoor stage with natural surroundings", gstRate: 18 },
 ];
 
 const iStyle = {
@@ -754,6 +754,13 @@ export default function Settings() {
                     <option value="per_pax">Per Pax Rate</option>
                     <option value="slab">Slab / Package Wise</option>
                   </select>
+                </div>
+                <div style={{ flex: "1 1 80px" }}>
+                  <label style={labelSt}>GST %</label>
+                  <input type="number" value={hall.gstRate ?? 18} onChange={e => handleHallChange(idx, "gstRate", Number(e.target.value))}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
               </div>
               <div style={{ paddingRight: 32 }}>

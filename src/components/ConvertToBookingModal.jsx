@@ -54,6 +54,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     // Payment
     quotedAmount: "",
     discount: "",
+    taxes: "",
+    taxPercentage: "",
     totalAmount: "",
     advance: "",
     paymentMethod: "",
@@ -91,6 +93,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         // Financials
         quotedAmount: budget,
         discount: "",
+        taxes: "",
+        taxPercentage: "",
         totalAmount: budget,
         advance: "",
         depositAmount: "",
@@ -108,6 +112,23 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       }));
     }
   }, [open, enquiry]);
+
+  // Fetch settings to auto-fill GST rate
+  useEffect(() => {
+    if (open && formData.hall) {
+      const fetchSettings = async () => {
+        try {
+          const res = await settingsAPI.get();
+          const halls = res.data.data.halls || [];
+          const selectedHall = halls.find(h => h.name === formData.hall);
+          if (selectedHall && selectedHall.gstRate !== undefined) {
+             handleMoneyChange("taxPercentage", selectedHall.gstRate);
+          }
+        } catch (e) { console.warn("Could not fetch hall GST settings"); }
+      };
+      fetchSettings();
+    }
+  }, [formData.hall, open]);
 
   // Fetch real-time availability
   useEffect(() => {
@@ -128,13 +149,22 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
 
   // Auto-calculate balance
   const handleMoneyChange = (field, value) => {
-    const updated = { ...formData, [field]: value };
+    let updated = { ...formData, [field]: value };
+    
+    // Auto-calculate taxes if quotedAmount or taxPercentage changes
+    if (field === "quotedAmount" || field === "taxPercentage") {
+      const quoted = Number(updated.quotedAmount) || 0;
+      const pct = Number(updated.taxPercentage) || 0;
+      updated.taxes = Math.round(quoted * (pct / 100));
+    }
+
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
+    const tax = Number(updated.taxes) || 0;
     
-    // Auto calculate Total Amount if quoted or discount changes
-    if (field === "quotedAmount" || field === "discount") {
-      updated.totalAmount = Math.max(0, quoted - disc);
+    // Auto calculate Total Amount
+    if (field === "quotedAmount" || field === "discount" || field === "taxes" || field === "taxPercentage") {
+      updated.totalAmount = Math.max(0, quoted + tax - disc);
     }
     
     const total = Number(updated.totalAmount) || 0;
@@ -331,7 +361,16 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Hall</label>
-                  {inp("hall", { placeholder: "Hall name" })}
+                  <select value={formData.hall} onChange={e => setFormData({ ...formData, hall: e.target.value })} style={iStyle}>
+                    <option value="">-- Select Hall --</option>
+                    <option value="Main Hall">Main Hall</option>
+                    <option value="Mini Hall">Mini Hall</option>
+                    <option value="Open Stage">Open Stage</option>
+                    <option value="Pool Area">Pool Area</option>
+                    {formData.hall && !["Main Hall", "Mini Hall", "Open Stage", "Pool Area"].includes(formData.hall) && (
+                       <option value={formData.hall}>{formData.hall}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Session</label>
@@ -397,6 +436,25 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <input type="number" min={0} value={formData.totalAmount}
                     onChange={e => handleMoneyChange("totalAmount", e.target.value)}
                     style={{ ...iStyle, fontWeight: 800, fontSize: 15, background: "#f8fafc" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelSt}>Tax / GST Rate (%)</label>
+                  <input type="number" min={0} value={formData.taxPercentage}
+                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700 }}
+                    placeholder="e.g. 18"
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+                <div>
+                  <label style={labelSt}>Tax Amount (₹)</label>
+                  <input type="number" min={0} value={formData.taxes}
+                    onChange={e => handleMoneyChange("taxes", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700, color: "#991b1b" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
