@@ -71,12 +71,19 @@ export const generateQuotation = (data) => {
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Description", "Amount (INR)"]],
     body: [
-      ["Base Hall Rental", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0) + Number(booking.discount || 0)).toLocaleString()}`],
-      ...(Number(booking.discount || 0) > 0 ? [["Discount", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
-      ...(Number(booking.taxes || 0) > 0 ? [["Taxes (GST)", `Rs. ${Number(booking.taxes).toLocaleString()}`]] : []),
+      ...(Number(booking.taxes || 0) > 0 
+        ? [
+            ["Net Amount (excl. GST)", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
+            ["GST (Inclusive)", `Rs. ${Number(booking.taxes).toLocaleString()}`],
+          ]
+        : [
+            ["Hall Rental", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
+          ]
+      ),
+      ...(Number(booking.discount || 0) > 0 ? [["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
     ],
     foot: [
-      ["Total Estimate", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
+      ["Total (What Client Pays)", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
     ],
     footStyles: { fillColor: [241, 245, 249], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
@@ -169,9 +176,16 @@ export const generateInvoice = (data) => {
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Item Description", "Amount (INR)"]],
     body: [
-      [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0) + Number(booking.discount || 0)).toLocaleString()}`],
-      ...(Number(booking.discount || 0) > 0 ? [["Discount", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
-      ...(Number(booking.taxes || 0) > 0 ? [["Taxes (GST)", `Rs. ${Number(booking.taxes).toLocaleString()}`]] : []),
+      ...(Number(booking.taxes || 0) > 0
+        ? [
+            [`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (excl. GST)`, `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
+            ["GST (Inclusive)", `Rs. ${Number(booking.taxes).toLocaleString()}`],
+          ]
+        : [
+            [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
+          ]
+      ),
+      ...(Number(booking.discount || 0) > 0 ? [["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
     ],
     foot: [
       ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],

@@ -195,7 +195,8 @@ export default function BookingFinancialDashboard() {
               </div>
               <div style={{ padding: 20, background: "#f0f9ff", borderRadius: 12, border: "1px solid #e0f2fe" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#075985", textTransform: "uppercase", marginBottom: 8 }}>Net Profit</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#0ea5e9" }}>{formatMoney(data.netProfit)}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: data.netProfit >= 0 ? "#0ea5e9" : "#dc2626" }}>{formatMoney(data.netProfit)}</div>
+                {data.gstAmount > 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>After GST & Expenses</div>}
               </div>
             </div>
 
@@ -203,16 +204,20 @@ export default function BookingFinancialDashboard() {
               <div style={{ padding: 24, border: "1px solid #e2e8f0", borderRadius: 12 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#334155" }}>Booking Details</h3>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14 }}>
-                  <span style={{ color: "#64748b" }}>Gross Amount</span>
+                  <span style={{ color: "#64748b" }}>Total Amount (Client Pays)</span>
                   <span style={{ fontWeight: 600, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14 }}>
                   <span style={{ color: "#64748b" }}>Discount</span>
-                  <span style={{ fontWeight: 600, color: "#0f172a" }}>{formatMoney(0)}</span>
+                  <span style={{ fontWeight: 600, color: "#d97706" }}>{formatMoney(data.booking.discount || 0)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14 }}>
-                  <span style={{ color: "#64748b" }}>Tax / GST</span>
-                  <span style={{ fontWeight: 600, color: "#0f172a" }}>{formatMoney(0)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14, background: "#fef2f2", margin: "0 -12px 12px", padding: "8px 12px", borderRadius: 6 }}>
+                  <span style={{ color: "#991b1b", fontWeight: 600 }}>GST Included (Govt Liability)</span>
+                  <span style={{ fontWeight: 700, color: "#dc2626" }}>- {formatMoney(data.gstAmount || data.booking.taxes || 0)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 14, background: "#f0fdf4", margin: "0 -12px 12px", padding: "8px 12px", borderRadius: 6 }}>
+                  <span style={{ color: "#166534", fontWeight: 600 }}>Your Net Revenue</span>
+                  <span style={{ fontWeight: 700, color: "#16a34a" }}>{formatMoney(data.netRevenue || ((data.booking.totalAmount || 0) - (data.gstAmount || data.booking.taxes || 0)))}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, borderTop: "1px dashed #e2e8f0", fontSize: 14 }}>
                   <span style={{ color: "#64748b", fontWeight: 700 }}>Total Booking Expenses</span>
@@ -468,8 +473,18 @@ export default function BookingFinancialDashboard() {
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 24px", color: "#0f172a" }}>Profit Analysis</h2>
             <div style={{ padding: 32, background: "#f0f9ff", borderRadius: 16, border: "1px solid #bae6fd", maxWidth: 500 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16 }}>
-                <span style={{ color: "#0369a1", fontWeight: 600 }}>Booking Revenue</span>
+                <span style={{ color: "#0369a1", fontWeight: 600 }}>Booking Amount (Client Pays)</span>
                 <span style={{ fontWeight: 800, color: "#0369a1" }}>{formatMoney(data.booking.totalAmount)}</span>
+              </div>
+              {(data.gstAmount || data.booking.taxes || 0) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16 }}>
+                  <span style={{ color: "#991b1b", fontWeight: 600 }}>GST to Government</span>
+                  <span style={{ fontWeight: 800, color: "#991b1b" }}>- {formatMoney(data.gstAmount || data.booking.taxes || 0)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16, background: "#f0fdf4", margin: "0 -16px 16px", padding: "12px 16px", borderRadius: 8 }}>
+                <span style={{ color: "#166534", fontWeight: 600 }}>Your Net Revenue</span>
+                <span style={{ fontWeight: 800, color: "#166534" }}>{formatMoney(data.netRevenue || ((data.booking.totalAmount || 0) - (data.gstAmount || data.booking.taxes || 0)))}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16 }}>
                 <span style={{ color: "#be123c", fontWeight: 600 }}>Direct Expenses</span>
@@ -477,12 +492,14 @@ export default function BookingFinancialDashboard() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, borderTop: "2px dashed #bae6fd", fontSize: 20 }}>
                 <span style={{ color: "#0f172a", fontWeight: 800 }}>Net Profit</span>
-                <span style={{ fontWeight: 800, color: "#0ea5e9" }}>{formatMoney(data.netProfit)}</span>
+                <span style={{ fontWeight: 800, color: data.netProfit >= 0 ? "#0ea5e9" : "#dc2626" }}>{formatMoney(data.netProfit)}</span>
               </div>
               <div style={{ marginTop: 24, background: "#fff", padding: "12px 16px", borderRadius: 8, display: "flex", justifyContent: "space-between", border: "1px solid #bae6fd" }}>
                 <span style={{ color: "#64748b", fontWeight: 600 }}>Profit Margin</span>
-                <span style={{ fontWeight: 800, color: "#16a34a" }}>
-                  {data.booking.totalAmount > 0 ? ((data.netProfit / data.booking.totalAmount) * 100).toFixed(1) : 0}%
+                <span style={{ fontWeight: 800, color: data.netProfit >= 0 ? "#16a34a" : "#dc2626" }}>
+                  {(data.netRevenue || ((data.booking.totalAmount || 0) - (data.gstAmount || data.booking.taxes || 0))) > 0 
+                    ? ((data.netProfit / (data.netRevenue || ((data.booking.totalAmount || 0) - (data.gstAmount || data.booking.taxes || 0)))) * 100).toFixed(1) 
+                    : 0}%
                 </span>
               </div>
             </div>

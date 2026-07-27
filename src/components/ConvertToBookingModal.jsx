@@ -147,27 +147,25 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [formData.date, formData.hall]);
 
-  // Auto-calculate balance
+  // Auto-calculate balance (GST is INCLUSIVE — extracted from total, not added on top)
   const handleMoneyChange = (field, value) => {
     let updated = { ...formData, [field]: value };
     
-    // Auto-calculate taxes if quotedAmount or taxPercentage changes
-    if (field === "quotedAmount" || field === "taxPercentage") {
-      const quoted = Number(updated.quotedAmount) || 0;
-      const pct = Number(updated.taxPercentage) || 0;
-      updated.taxes = Math.round(quoted * (pct / 100));
-    }
-
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
-    const tax = Number(updated.taxes) || 0;
     
-    // Auto calculate Total Amount
-    if (field === "quotedAmount" || field === "discount" || field === "taxes" || field === "taxPercentage") {
-      updated.totalAmount = Math.max(0, quoted + tax - disc);
+    // Total Amount = Quoted - Discount (this is what client pays, GST included)
+    if (field === "quotedAmount" || field === "discount") {
+      updated.totalAmount = Math.max(0, quoted - disc);
+    }
+
+    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
+    const total = Number(updated.totalAmount) || 0;
+    const pct = Number(updated.taxPercentage) || 0;
+    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
+      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
     }
     
-    const total = Number(updated.totalAmount) || 0;
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
     updated.balanceAmount = Math.max(0, total - adv - dep);

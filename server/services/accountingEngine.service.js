@@ -192,14 +192,18 @@ class AccountingEngine {
   async onBookingCreated(booking, { tenantId, environmentId, createdBy, transaction }) {
     if (!booking.totalAmount || booking.totalAmount <= 0) return;
 
+    const gstAmount = Number(booking.taxes) || 0;
+    const netRevenue = (booking.totalAmount || 0) - gstAmount;
+
+    // 1. Customer owes us the full amount → recognize as revenue (net of GST)
     await this.createEntry({
       tenantId, environmentId,
       date: new Date(),
       description: `Booking #${booking.bookingId} - ${booking.customerName}`,
       debitCode: "1005",  // Customer Outstanding (Asset - they owe us)
-      creditCode: "3001", // Hall Booking Income
-      amount: booking.totalAmount,
-      voucherType: "JV", // Journal Voucher
+      creditCode: "3001", // Hall Booking Income (net revenue only)
+      amount: netRevenue,
+      voucherType: "JV",
       sourceModule: "Booking",
       sourceId: booking.id,
       customerId: booking.customerId,
@@ -207,6 +211,25 @@ class AccountingEngine {
       createdBy,
       transaction,
     });
+
+    // 2. If GST exists, record GST portion as a liability (owed to government)
+    if (gstAmount > 0) {
+      await this.createEntry({
+        tenantId, environmentId,
+        date: new Date(),
+        description: `GST on Booking #${booking.bookingId} - ${booking.customerName}`,
+        debitCode: "1005",  // Customer Outstanding (they pay GST too)
+        creditCode: "2004", // Taxes Payable (GST liability to government)
+        amount: gstAmount,
+        voucherType: "JV",
+        sourceModule: "Booking",
+        sourceId: booking.id,
+        customerId: booking.customerId,
+        bookingId: booking.id,
+        createdBy,
+        transaction,
+      });
+    }
   }
 
   // ═══════════════════════════════════
@@ -494,13 +517,17 @@ class AccountingEngine {
     const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
     const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     const outstanding = (booking.totalAmount || 0) - totalPaid;
-    const netProfit = (booking.totalAmount || 0) - totalExpenses;
+    const gstAmount = Number(booking.taxes) || 0;
+    const netRevenue = (booking.totalAmount || 0) - gstAmount; // What owner actually earns
+    const netProfit = netRevenue - totalExpenses;
 
     return {
       booking: booking.toJSON(),
       totalPaid,
       totalExpenses,
       outstanding: outstanding > 0 ? outstanding : 0,
+      gstAmount,
+      netRevenue,
       netProfit,
       payments,
       expenses,
