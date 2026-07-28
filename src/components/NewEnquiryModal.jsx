@@ -270,12 +270,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
           hallPreference: form.hallPreference,
-          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
-          budget: form.budget ? parseInt(form.budget) : 0,
+          guestCount: parseInt(form.guestCount) || 0,
+          budget: parseInt(form.budget) || 0,
           leadScore: form.leadScore || undefined,
           remarks: form.remarks || undefined,
           source: form.source || undefined,
-          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+          salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
         });
         addToast("Enquiry updated successfully! ✏️", "success");
       } else {
@@ -294,13 +294,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
           hallPreference: form.hallPreference,
-          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
-          budget: form.budget ? parseInt(form.budget) : 0,
+          guestCount: parseInt(form.guestCount) || 0,
+          budget: parseInt(form.budget) || 0,
           leadScore: form.leadScore || undefined,
           remarks: form.remarks || undefined,
           source: form.source || undefined,
           status: "New Enquiry",
-          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+          salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
         });
       }
 
