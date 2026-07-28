@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
-import { bookingsAPI, enquiriesAPI, availabilityAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import SmartDatePicker from "./SmartDatePicker";
 
@@ -122,7 +122,13 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
           const halls = res.data.data.halls || [];
           const selectedHall = halls.find(h => h.name === formData.hall);
           if (selectedHall && selectedHall.gstRate !== undefined) {
-             handleMoneyChange("taxPercentage", selectedHall.gstRate);
+            // Use functional updater to get latest formData (avoids stale closure)
+            setFormData(prev => {
+              const pct = Number(selectedHall.gstRate) || 0;
+              const total = Number(prev.totalAmount) || 0;
+              const taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+              return { ...prev, taxPercentage: pct, taxes };
+            });
           }
         } catch (e) { console.warn("Could not fetch hall GST settings"); }
       };
