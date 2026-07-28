@@ -88,11 +88,21 @@ const Booking = sequelize.define("Booking", {
           }
         }
         
-        // Scope booking ID generation to tenant + environment
-        const count = await Booking.count({
+        // Find highest existing bookingId (including soft-deleted) to guarantee uniqueness
+        const lastBooking = await Booking.findOne({
           where: { tenantId: booking.tenantId, environmentId: booking.environmentId },
+          order: [["id", "DESC"]],
+          attributes: ["bookingId"],
+          paranoid: false, // include soft-deleted records
         });
-        booking.bookingId = `${prefix}${String(count + 1).padStart(3, "0")}`;
+
+        let nextNum = 1;
+        if (lastBooking && lastBooking.bookingId) {
+          const match = lastBooking.bookingId.match(/\d+$/);
+          if (match) nextNum = parseInt(match[0], 10) + 1;
+        }
+
+        booking.bookingId = `${prefix}${String(nextNum).padStart(3, "0")}`;
       }
     }
   },
