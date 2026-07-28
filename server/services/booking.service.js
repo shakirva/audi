@@ -111,7 +111,7 @@ class BookingService {
       date: data.date,
       session: data.session || "Full Day",
       guests: Number(data.guests) || 0,
-      advance: Number(data.advance) || 0,
+      advance: 0, // Will be updated by paymentService
       totalAmount: Number(data.totalAmount) || 0,
       status: data.status || "Enquiry",
       notes: data.notes || "",
