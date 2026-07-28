@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
 import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useBookings } from "../context/BookingsContext";
 import SmartDatePicker from "./SmartDatePicker";
 
 const iStyle = {
@@ -30,6 +31,7 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Bank Transfer", "Cheque"];
 
 export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addToast } = useToast();
+  const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
   const [sendWhatsapp, setSendWhatsapp] = useState(true);
 
@@ -204,7 +206,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
 
     setLoading(true);
     try {
-      await bookingsAPI.create({
+      await addBooking({
         ...formData,
         status: "Confirmed",
       });
