@@ -128,6 +128,8 @@ class BookingService {
       specialInstructions: data.specialInstructions || "",
       package: data.package || "",
       discount: Number(data.discount) || 0,
+      taxes: Number(data.taxes) || 0,
+      taxPercentage: Number(data.taxPercentage) || 0,
     });
 
     // Create accounting journal entry (Customer Outstanding ↔ Hall Booking Income)
@@ -197,11 +199,11 @@ class BookingService {
       }
     }
 
-    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes"];
+    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes", "taxes", "taxPercentage"];
     const updateData = {};
     fields.forEach((f) => {
       if (data[f] !== undefined) {
-        updateData[f] = ["guests", "advance", "totalAmount"].includes(f)
+        updateData[f] = ["guests", "advance", "totalAmount", "taxes", "taxPercentage"].includes(f)
           ? Number(data[f])
           : data[f];
       }
