@@ -321,7 +321,18 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       }
 
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || "Failed to save enquiry. Please try again.";
+      console.error("Enquiry submission error:", err.response?.data);
+      
+      let msg = "Failed to save enquiry. Please try again.";
+      
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // If it's a Zod validation error array, show the first specific field error
+        const firstErr = err.response.data.errors[0];
+        msg = firstErr.message ? `${firstErr.path?.join('.')} : ${firstErr.message}` : "Validation failed check all fields";
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      }
+      
       setError(msg);
       addToast(msg, "error");
     } finally {

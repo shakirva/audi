@@ -50,9 +50,10 @@ const Enquiry = sequelize.define("Enquiry", {
   hooks: {
     beforeValidate: async (enquiry) => {
       if (!enquiry.enquiryNumber) {
-        // Scope enquiry number generation to tenant + environment
+        // Use paranoid:false to count ALL records (including soft-deleted) to avoid duplicate numbers
         const count = await Enquiry.count({
           where: { tenantId: enquiry.tenantId, environmentId: enquiry.environmentId },
+          paranoid: false,
         });
         enquiry.enquiryNumber = `ENQ${String(count + 1).padStart(3, "0")}`;
       }
