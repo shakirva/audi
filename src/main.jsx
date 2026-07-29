@@ -5,9 +5,17 @@ import { ToastProvider } from "./components/Toast";
 import "./index.css";
 import App from "./App";
 
+// Calculate dynamic basename for tenant routing
+let basename = "/";
+const pathParts = window.location.pathname.split("/").filter(Boolean);
+const reservedWords = ["book"]; // Global routes that don't need tenant slug
+if (pathParts.length > 0 && !reservedWords.includes(pathParts[0])) {
+  basename = `/${pathParts[0]}`;
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <ToastProvider>
         <App />
       </ToastProvider>
