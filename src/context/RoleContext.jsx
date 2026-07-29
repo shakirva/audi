@@ -86,9 +86,12 @@ export function RoleProvider({ children }) {
 
     if (!user) {
       authAPI.getMe()
-        .then(({ data }) => {
+        .then((response) => {
+          // V1 API wraps response in .data
+          const payload = response.data?.success ? response.data.data : response.data;
+          
           // SECOND CHECK: verify server-returned tenant matches URL
-          if (urlSlug && data.tenant?.slug && data.tenant.slug !== urlSlug) {
+          if (urlSlug && payload.tenant?.slug && payload.tenant.slug !== urlSlug) {
             clearAuthStorage();
             setUser(null);
             setTenant(null);
@@ -96,14 +99,14 @@ export function RoleProvider({ children }) {
             return;
           }
 
-          setUser(data.user);
-          setTenant(data.tenant);
-          localStorage.setItem("hm_user", JSON.stringify(data.user));
-          if (data.tenant) {
-            localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
+          setUser(payload.user);
+          setTenant(payload.tenant);
+          localStorage.setItem("hm_user", JSON.stringify(payload.user));
+          if (payload.tenant) {
+            localStorage.setItem("hm_tenant", JSON.stringify(payload.tenant));
             // Redirect non-SuperAdmin users to their slug URL if needed
-            if (data.user.role !== "SuperAdmin" && data.tenant.slug) {
-              const expectedPrefix = `/${data.tenant.slug}`;
+            if (payload.user.role !== "SuperAdmin" && payload.tenant.slug) {
+              const expectedPrefix = `/${payload.tenant.slug}`;
               if (!window.location.pathname.startsWith(expectedPrefix)) {
                 window.location.href = `${expectedPrefix}/dashboard`;
               }
@@ -120,28 +123,32 @@ export function RoleProvider({ children }) {
   // ─── Login ────────────────────────────────────────────────
   const login = async (email, password, tenantSlug) => {
     try {
-      const { data } = await authAPI.login(email, password, tenantSlug);
-      localStorage.setItem("hm_token", data.token);
-      localStorage.setItem("hm_user", JSON.stringify(data.user));
-      if (data.tenant) localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
-      const defaultEnv = data.user.role === "Tester" ? "sandbox" : "production";
+      const response = await authAPI.login(email, password, tenantSlug);
+      // V1 API wraps response in .data
+      const payload = response.data?.success ? response.data.data : response.data;
+
+      localStorage.setItem("hm_token", payload.token);
+      localStorage.setItem("hm_user", JSON.stringify(payload.user));
+      if (payload.tenant) localStorage.setItem("hm_tenant", JSON.stringify(payload.tenant));
+      const defaultEnv = payload.user.role === "Tester" ? "sandbox" : "production";
       sessionStorage.setItem("hm_environment", defaultEnv);
 
       // Redirect non-SuperAdmin to their tenant slug URL
-      if (data.tenant && data.user.role !== "SuperAdmin" && data.tenant.slug) {
-        const expectedPrefix = `/${data.tenant.slug}`;
+      if (payload.tenant && payload.user.role !== "SuperAdmin" && payload.tenant.slug) {
+        const expectedPrefix = `/${payload.tenant.slug}`;
         if (!window.location.pathname.startsWith(expectedPrefix)) {
           window.location.href = `${expectedPrefix}/dashboard`;
           return { ok: true };
         }
       }
 
-      setUser(data.user);
-      setTenant(data.tenant);
+      setUser(payload.user);
+      setTenant(payload.tenant);
       setActiveEnvironmentState(defaultEnv);
       setIsLoggedIn(true);
-      return { ok: true, user: data.user };
+      return { ok: true, user: payload.user };
     } catch (err) {
+      console.error("Login Error:", err);
       const msg = err.response?.data?.message || err.response?.data?.error || "Login failed";
       return { ok: false, error: msg };
     }
