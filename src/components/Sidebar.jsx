@@ -46,7 +46,7 @@ export default function Sidebar({ open, onClose }) {
     { 
       type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
       children: [
-        { path: "/jobs", label: "Job Management" },
+        // { path: "/jobs", label: "Job Management" },
         { path: "/vendors", label: "Vendor Management" }
       ]
     },
