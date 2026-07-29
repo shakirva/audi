@@ -146,8 +146,9 @@ export const jobsAPI = {
   getById: (id) => api.get(`/v1/jobs/${id}`),
   create: (data) => api.post("/v1/jobs", data),
   update: (id, data) => api.put(`/v1/jobs/${id}`, data),
-  updateStatus: (id, status) => api.patch(`/v1/jobs/${id}`, { status }),
+  updateStatus: (id, status) => api.patch(`/v1/jobs/${id}/status`, { status }),
   updateChecklist: (id, data) => api.put(`/v1/jobs/${id}/checklist`, data),
+  assignStaff: (id, data) => api.post(`/v1/jobs/${id}/staff`, data),
 };
 
 // ═══════════════════════════════════

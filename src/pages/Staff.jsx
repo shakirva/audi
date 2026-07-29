@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save } from "lucide-react";
-import { usersAPI } from "../services/api";
+import { usersAPI, jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
 
@@ -82,6 +82,84 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
   );
 }
 
+function AssignJobModal({ open, onClose, staffMember }) {
+  const [jobs, setJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    if (open && staffMember) {
+      loadJobs();
+      setSelectedJob("");
+    }
+  }, [open, staffMember]);
+
+  const loadJobs = async () => {
+    setFetching(true);
+    try {
+      const res = await jobsAPI.getAll({ status: "Planning" }); // Fetch active/planning jobs
+      setJobs(res.data.data || []);
+    } catch (e) {
+      addToast("Failed to load jobs", "error");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    if (!selectedJob) return addToast("Please select a job", "error");
+    setLoading(true);
+    try {
+      await jobsAPI.assignStaff(selectedJob, { userId: staffMember.id, role: staffMember.role });
+      addToast(`Assigned ${staffMember.name} successfully!`, "success");
+      onClose();
+    } catch (err) {
+      addToast(err.response?.data?.message || "Failed to assign job", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 20, overflow: "hidden" }}>
+        <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#fff" }}>Assign Job to {staffMember?.name}</h2>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+        </div>
+        <form onSubmit={handleAssign} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Select Upcoming Event/Job *</label>
+            {fetching ? (
+              <p style={{ fontSize: 13, color: "#666" }}>Loading jobs...</p>
+            ) : jobs.length > 0 ? (
+              <select required value={selectedJob} onChange={e => setSelectedJob(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", cursor: "pointer", background: "#fff" }}>
+                <option value="" disabled>-- Select a Job --</option>
+                {jobs.map(j => (
+                  <option key={j.id} value={j.id}>Event on {new Date(j.createdAt).toLocaleDateString()} (ID: {j.id})</option>
+                ))}
+              </select>
+            ) : (
+              <div style={{ padding: "12px", background: "#fef2f2", color: "#991b1b", borderRadius: 8, fontSize: 13 }}>
+                No active jobs available to assign. (Jobs are created automatically when bookings are confirmed).
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+            <button type="submit" disabled={loading || jobs.length === 0} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: (loading || jobs.length === 0) ? "not-allowed" : "pointer", opacity: (loading || jobs.length === 0) ? 0.7 : 1 }}>{loading ? "Assigning..." : "Assign Staff"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Staff() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -89,6 +167,9 @@ export default function Staff() {
   const [staffList, setStaffList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editStaff, setEditStaff] = useState(null);
+
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignStaffData, setAssignStaffData] = useState(null);
 
   useEffect(() => {
     loadStaff();
@@ -238,7 +319,7 @@ export default function Staff() {
 
             <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
               <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>View Profile</button>
-              <button onClick={() => navigate("/jobs")} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
+              <button onClick={() => { setAssignStaffData(staff); setAssignModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
             </div>
           </div>
         ))}
@@ -249,6 +330,11 @@ export default function Staff() {
         onClose={() => setModalOpen(false)} 
         onSuccess={() => { setModalOpen(false); loadStaff(); }} 
         editData={editStaff} 
+      />
+      <AssignJobModal
+        open={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        staffMember={assignStaffData}
       />
     </div>
   );
