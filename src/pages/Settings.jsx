@@ -83,7 +83,7 @@ export default function Settings() {
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
   const [facilities, setFacilities] = useState([]);
-  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
+  const [newFacility, setNewFacility] = useState({ name: "", price: "", gst: "" });
 
   useEffect(() => {
     loadSettings();
@@ -246,8 +246,6 @@ export default function Settings() {
     } catch (e) { addToast("Failed to save staff", "error"); }
   };
 
-  // ── Facilities & Add-ons ──
-  const [newFacility, setNewFacility] = useState({ name: "", price: "", gst: "" });
   const [editFacilityId, setEditFacilityId] = useState(null);
   const [editFacilityData, setEditFacilityData] = useState({ name: "", price: "", gst: "" });
 
