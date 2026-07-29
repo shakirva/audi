@@ -21,6 +21,14 @@ const Settings = sequelize.define("Settings", {
   gstin: { type: DataTypes.STRING, defaultValue: "" },
   bookingPrefix: { type: DataTypes.STRING, defaultValue: "BK" },
   
+  // Branding and Bank Details
+  logoUrl: { type: DataTypes.STRING, defaultValue: "" },
+  legalName: { type: DataTypes.STRING, defaultValue: "" },
+  bankName: { type: DataTypes.STRING, defaultValue: "" },
+  accountName: { type: DataTypes.STRING, defaultValue: "" },
+  accountNumber: { type: DataTypes.STRING, defaultValue: "" },
+  ifscCode: { type: DataTypes.STRING, defaultValue: "" },
+
   // JSONB fields for nested data in PostgreSQL
   halls: { type: DataTypes.JSONB, defaultValue: [] },
   blackoutDates: { type: DataTypes.JSONB, defaultValue: [] },

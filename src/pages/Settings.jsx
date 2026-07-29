@@ -52,6 +52,12 @@ export default function Settings() {
     email:    "",
     gstin:    "",
     bookingPrefix: "",
+    logoUrl: "",
+    legalName: "",
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+    ifscCode: "",
   });
   const [showCreateHallModal, setShowCreateHallModal] = useState(false);
   const [editHallIndex, setEditHallIndex] = useState(null);
@@ -122,6 +128,12 @@ export default function Settings() {
         email: data.email || "",
         gstin: data.gstin || "",
         bookingPrefix: data.bookingPrefix || "BK",
+        logoUrl: data.logoUrl || "",
+        legalName: data.legalName || "",
+        bankName: data.bankName || "",
+        accountName: data.accountName || "",
+        accountNumber: data.accountNumber || "",
+        ifscCode: data.ifscCode || "",
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -172,7 +184,11 @@ export default function Settings() {
 
   const handleSaveVenue = async () => {
     try {
-      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin, bookingPrefix: venue.bookingPrefix });
+      await settingsAPI.update({ 
+        venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, 
+        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix,
+        logoUrl: venue.logoUrl, legalName: venue.legalName, bankName: venue.bankName, accountName: venue.accountName, accountNumber: venue.accountNumber, ifscCode: venue.ifscCode 
+      });
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
       setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
       addToast("Venue settings saved! 🏛️", "success");
@@ -735,6 +751,48 @@ export default function Settings() {
               onFocus={e => e.target.style.borderColor = "#1B4332"}
               onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
             <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
+          </div>
+          <div>
+            <label style={labelSt}><ImagePlus size={11} /> Logo URL</label>
+            <input name="logoUrl" value={venue.logoUrl} onChange={handleVenueChange} style={iStyle} placeholder="https://..."
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used in PDF Receipts and Invoices</p>
+          </div>
+
+          <div style={{ gridColumn: "1 / -1", marginTop: 12, marginBottom: 4 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>Billing & Bank Details</p>
+          </div>
+
+          <div>
+            <label style={labelSt}>🏛️ Legal Entity Name</label>
+            <input name="legalName" value={venue.legalName} onChange={handleVenueChange} style={iStyle} placeholder="Legal name if different"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🏦 Bank Name</label>
+            <input name="bankName" value={venue.bankName} onChange={handleVenueChange} style={iStyle} placeholder="e.g. HDFC Bank"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>👤 Account Name</label>
+            <input name="accountName" value={venue.accountName} onChange={handleVenueChange} style={iStyle} placeholder="e.g. Venueza Event Management"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>💳 Account Number</label>
+            <input name="accountNumber" value={venue.accountNumber} onChange={handleVenueChange} style={iStyle} placeholder="0000 0000 0000"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🔢 IFSC Code</label>
+            <input name="ifscCode" value={venue.ifscCode} onChange={handleVenueChange} style={iStyle} placeholder="e.g. HDFC0001234"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
           </div>
         </div>
 
