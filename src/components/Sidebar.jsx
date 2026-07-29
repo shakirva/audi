@@ -89,7 +89,7 @@ export default function Sidebar({ open, onClose }) {
     { 
       type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
-        { path: "/masters", label: "Masters" },
+        { path: "/settings", label: "Masters Configuration" },
         { path: "/roadmap", label: "ERP Roadmap" }
       ]
     },
