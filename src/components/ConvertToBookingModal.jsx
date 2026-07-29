@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
+import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus, CheckSquare } from "lucide-react";
 import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
@@ -68,10 +68,18 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     balanceAmount: "",
     extraArrangements: "",
     paymentRemarks: "",
+    facilities: [],
   });
 
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
+  const [facilitiesList, setFacilitiesList] = useState([]);
+
+  useEffect(() => {
+    import("../services/api").then(({ mastersAPI }) => {
+      mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+    });
+  }, []);
 
   useEffect(() => {
     if (open && enquiry) {
@@ -107,6 +115,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         accountName: "",
         extraArrangements: "",
         paymentRemarks: "",
+        facilities: [],
         // Reset personal
         bookedBy: "", bookingParty: "", whatsapp: "",
         brideName: "", brideFatherName: "", brideMotherName: "", bridePhone: "", brideAddress: "",
@@ -156,8 +165,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   }, [formData.date, formData.hall]);
 
   // Auto-calculate balance (GST is INCLUSIVE — extracted from total, not added on top)
-  const handleMoneyChange = (field, value) => {
-    let updated = { ...formData, [field]: value };
+  const handleMoneyChange = (field, value, extraState = {}) => {
+    let updated = { ...formData, [field]: value, ...extraState };
     
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
@@ -416,6 +425,38 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
               </div>
             </div>
+
+            {/* ── FACILITIES ── */}
+            {facilitiesList.length > 0 && (
+              <div>
+                <p style={sectionHead}><CheckSquare size={14} /> Facilities & Add-ons</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {facilitiesList.map(f => {
+                    const checked = formData.facilities?.some(x => x.id === f.id);
+                    return (
+                      <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
+                        <input type="checkbox" checked={checked} onChange={(e) => {
+                          let newFac = [...(formData.facilities || [])];
+                          let newQuoted = Number(formData.quotedAmount || 0);
+                          if (e.target.checked) {
+                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newQuoted += Number(f.price || 0);
+                          } else {
+                            newFac = newFac.filter(x => x.id !== f.id);
+                            newQuoted -= Number(f.price || 0);
+                          }
+                          handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                        }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
+                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
+                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── FINANCIAL DETAILS ── */}
             <div>

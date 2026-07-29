@@ -4,8 +4,7 @@ import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
-import { authAPI, settingsAPI } from "../services/api";
-import { usersAPI } from "../services/api";
+import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
 
@@ -83,10 +82,23 @@ export default function Settings() {
   // ── WhatsApp Reminder Days ──
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
+  const [facilities, setFacilities] = useState([]);
+  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
+
   useEffect(() => {
     loadSettings();
     loadUsers();
+    loadFacilities();
   }, []);
+
+  const loadFacilities = async () => {
+    try {
+      const res = await mastersAPI.getByType("services");
+      setFacilities(res.data?.data || []);
+    } catch (e) {
+      console.error("Failed to load facilities:", e);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -232,6 +244,30 @@ export default function Settings() {
       await settingsAPI.update({ staff: newStaffList });
       addToast("Staff updated successfully! ✅", "success");
     } catch (e) { addToast("Failed to save staff", "error"); }
+  };
+
+  // ── Facilities & Add-ons ──
+  const handleAddFacility = async () => {
+    if (!newFacility.name.trim()) return;
+    try {
+      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services" });
+      setNewFacility({ name: "", price: "" });
+      loadFacilities();
+      addToast("Facility added! 🛠️", "success");
+    } catch (e) {
+      addToast("Failed to add facility", "error");
+    }
+  };
+
+  const handleDeleteFacility = async (id) => {
+    if (!window.confirm("Delete this facility?")) return;
+    try {
+      await mastersAPI.remove(id);
+      loadFacilities();
+      addToast("Facility deleted", "info");
+    } catch (e) {
+      addToast("Failed to delete facility", "error");
+    }
   };
 
   // ── Gallery Management ──
@@ -797,6 +833,60 @@ export default function Settings() {
             onMouseLeave={e => e.currentTarget.style.background = "#4b5563"}>
             <Save size={14} /> Save Halls
           </button>
+        </div>
+      </div>
+      )}
+
+      {/* ── FACILITIES & ADD-ONS (Owner & Manager) ── */}
+      {isAdminRole && (
+      <div style={cardSt}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 18 }}>🛠️</span>
+          </div>
+          <div>
+            <p style={sectionTitle}>Facilities & Add-ons</p>
+            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Create extra services that clients can add to their bookings</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+          {facilities.map((fac) => (
+            <div key={fac.id} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
+              background: "#fafafa"
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
+                {fac.price > 0 && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+              </div>
+              <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                <Trash2 size={14} color="#ef4444" />
+              </button>
+            </div>
+          ))}
+          
+          {facilities.length === 0 && (
+            <div style={{ padding: "16px", textAlign: "center", background: "#f9fafb", borderRadius: 10, border: "1px dashed #d1d5db", fontSize: 12, color: "#6b7280" }}>
+              No facilities added yet.
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelSt}>New Facility Name</label>
+            <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+          </div>
+          <div style={{ width: 150 }}>
+            <label style={labelSt}>Price (₹)</label>
+            <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+          </div>
+          <button onClick={handleAddFacility} style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
+            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
+          }}>+ Add</button>
         </div>
       </div>
       )}

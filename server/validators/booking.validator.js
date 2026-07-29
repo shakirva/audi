@@ -36,6 +36,7 @@ const createBookingSchema = z.object({
     decoration: z.string().optional(),
     catering: z.string().optional(),
     sound: z.string().optional(),
+    facilities: z.array(z.any()).optional(),
     specialInstructions: z.string().optional(),
   }),
 });
@@ -67,6 +68,7 @@ const updateBookingSchema = z.object({
     decoration: z.string().optional(),
     catering: z.string().optional(),
     sound: z.string().optional(),
+    facilities: z.array(z.any()).optional(),
     specialInstructions: z.string().optional(),
   }),
   params: z.object({

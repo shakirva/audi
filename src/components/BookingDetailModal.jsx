@@ -319,8 +319,21 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Session</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.session || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Expected Guests</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.guests || "—"}</div></div>
                 </div>
+                {booking.facilities && booking.facilities.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Facilities & Add-ons</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {booking.facilities.map((fac, idx) => (
+                        <div key={idx} style={{ background: "#f0faf4", border: "1px solid #bbf7d0", padding: "12px 16px", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>{fac.name}</span>
+                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{Number(fac.price).toLocaleString()}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {booking.extraArrangements && (
-                  <div style={{ marginTop: 32 }}>
+                  <div style={{ marginTop: 24 }}>
                     <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Extra Arrangements</h4>
                     <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 16, borderRadius: 12, color: "#334155", lineHeight: 1.5 }}>
                       {booking.extraArrangements}

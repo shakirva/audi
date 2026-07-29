@@ -61,6 +61,7 @@ const Booking = sequelize.define("Booking", {
   ledWall: { type: DataTypes.STRING, allowNull: true },
   generator: { type: DataTypes.STRING, allowNull: true },
   cleaning: { type: DataTypes.STRING, allowNull: true },
+  facilities: { type: DataTypes.JSONB, defaultValue: [] },
   additionalServices: { type: DataTypes.TEXT, allowNull: true },
   package: { type: DataTypes.STRING, allowNull: true },
   discount: { type: DataTypes.INTEGER, defaultValue: 0 },
