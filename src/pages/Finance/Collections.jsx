@@ -64,6 +64,7 @@ export default function Collections() {
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Booking</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Mode</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Amount</th>
+                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Collected By</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Print</th>
               </tr>
             </thead>
@@ -95,6 +96,11 @@ export default function Collections() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px", color: "#16a34a", fontWeight: 700 }}>₹{Number(p.amount).toLocaleString()}</td>
+                    <td style={{ padding: "16px 24px", color: "#475569" }}>
+                      <span style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "1px solid #e2e8f0" }}>
+                        {p.creator?.name || "System"}
+                      </span>
+                    </td>
                     <td style={{ padding: "16px 24px" }}>
                       <button 
                         onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
