@@ -40,6 +40,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     customerName: "",
     phone: "",
     address: "",
+    clientGstNumber: "",
     place: "",
     bookedBy: "",
     bookingParty: "",
@@ -89,6 +90,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         customerName: enquiry.Customer?.name || enquiry.customerName || "",
         phone: enquiry.Customer?.phone || enquiry.phone || "",
         address: enquiry.Customer?.address || "",
+        clientGstNumber: enquiry.Customer?.gstNumber || "",
         place: enquiry.Customer?.city || enquiry.place || "",
         // Event info from enquiry
         eventType: enquiry.eventType || "",
@@ -338,6 +340,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div>
                   <label style={labelSt}><MapPin size={10} /> Address</label>
                   {inp("address", { placeholder: "House / Building, Street, Town..." })}
+                </div>
+                <div>
+                  <label style={labelSt}>🔖 Client GST Number (Optional)</label>
+                  {inp("clientGstNumber", { placeholder: "e.g. 32AABCU9603R1ZJ" })}
                 </div>
               </div>
             </div>

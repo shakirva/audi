@@ -98,6 +98,9 @@ export const generateQuotation = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`Name: ${booking.Customer?.name || booking.customerName || "N/A"}`, 14, 62);
   doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
+  if (booking.clientGstNumber || booking.Customer?.gstNumber) {
+    doc.text(`GSTIN: ${booking.clientGstNumber || booking.Customer?.gstNumber}`, 14, 74);
+  }
   
   // Event Info
   doc.setFont("helvetica", "bold");
@@ -151,6 +154,7 @@ export const generateAgreement = async (data) => {
   // Custom Table for Contract fields matching the physical format
   const tableData = [
     ["Name of the Host", booking.customerName || "N/A"],
+    ...(booking.clientGstNumber || booking.Customer?.gstNumber ? [["Client GSTIN", booking.clientGstNumber || booking.Customer?.gstNumber]] : []),
     ["Date & Time of function", `${booking.date ? new Date(booking.date).toLocaleDateString("en-IN") : "TBD"} | ${booking.session || "Full Day"}`],
     ["Address", booking.address || "N/A"],
     ["Email & Mobile No", `${booking.email || ""} | ${booking.phone || ""}`],
@@ -208,6 +212,9 @@ export const generateInvoice = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 14, 62);
   doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
+  if (booking.clientGstNumber || booking.Customer?.gstNumber) {
+    doc.text(`GSTIN: ${booking.clientGstNumber || booking.Customer?.gstNumber}`, 14, 74);
+  }
   
   doc.setFont("helvetica", "bold");
   doc.text("Invoice Details:", 120, 55);

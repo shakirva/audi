@@ -45,6 +45,7 @@ const Booking = sequelize.define("Booking", {
   whatsapp: { type: DataTypes.STRING, allowNull: true },
   address: { type: DataTypes.TEXT, allowNull: true },
   pincode: { type: DataTypes.STRING, allowNull: true },
+  clientGstNumber: { type: DataTypes.STRING, allowNull: true },
   phone: { type: DataTypes.STRING, allowNull: false },
   eventType: { type: DataTypes.STRING, allowNull: true },
   hall: { type: DataTypes.STRING, allowNull: true },

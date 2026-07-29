@@ -42,6 +42,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         phone: booking.phone || "",
         whatsapp: booking.whatsapp || "",
         address: booking.address || "",
+        clientGstNumber: booking.clientGstNumber || "",
+        pincode: booking.pincode || "",
         bookedBy: booking.bookedBy || "",
         bookingParty: booking.bookingParty || "",
         // Bride
@@ -126,7 +128,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
 
       const message = `Hello ${form.customerName},\n\nYour booking details at Laural Garden Auditorium have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
       const waPhone = form.whatsapp ? form.whatsapp : form.phone;
-      const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
+      const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
       const text = encodeURIComponent(message);
       const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
       window.open(waUrl, "_blank");
@@ -201,7 +203,11 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><MapPin size={10} /> Address</label>
-                  {inp("address")}
+                  {inp("address", { placeholder: "House / Building, Street, Town..." })}
+                </div>
+                <div>
+                  <label style={labelSt}>🔖 Client GST Number</label>
+                  {inp("clientGstNumber", { placeholder: "e.g. 32AABCU9603R1ZJ" })}
                 </div>
               </div>
             </div>
