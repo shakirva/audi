@@ -25,6 +25,9 @@ const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
+// ── Trust Nginx Proxy ──
+app.set('trust proxy', 1);
+
 // ── Security ──
 app.use(helmet());
 app.use(cors({
