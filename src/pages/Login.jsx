@@ -18,8 +18,11 @@ export default function Login() {
     if (!email.trim()) { setError("Please enter your email."); return; }
     if (!password.trim()) { setError("Please enter your password."); return; }
     setLoading(true);
+    
+    let tenantSlug = window.location.pathname.replace(/^\/([^/]+).*/, "$1");
+    if (!tenantSlug || tenantSlug === "login" || tenantSlug === "dashboard") tenantSlug = null;
 
-    const result = await login(email.trim(), password);
+    const result = await login(email.trim(), password, tenantSlug);
     if (!result.ok) {
       setError(result.error);
       setLoading(false);

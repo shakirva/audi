@@ -590,7 +590,7 @@ export default function Settings() {
                   onClick={async () => {
                     try {
                       const { data } = await settingsAPI.generateTester(testerForm);
-                      setTesterCreds(data);
+                      setTesterCreds(data.data);
                       setTesterForm({ name: "", email: "", password: "" });
                       addToast("Tester credentials generated!", "success");
                     } catch(e) {

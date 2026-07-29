@@ -5,8 +5,20 @@ const { UnauthorizedError, NotFoundError, ConflictError, BadRequestError } = req
 const { ROLES } = require("../helpers/roles");
 
 class AuthService {
-  async login({ email, password }) {
-    const user = await userRepository.findByEmail(email);
+  async login({ email, password, tenantSlug }) {
+    let user = null;
+    
+    if (tenantSlug) {
+      const tenant = await Tenant.findOne({ where: { slug: tenantSlug } });
+      if (tenant) {
+        user = await userRepository.findByEmailAndTenant(email, tenant.id);
+      }
+    }
+    
+    if (!user) {
+      user = await userRepository.findByEmail(email);
+    }
+    
     if (!user) throw new UnauthorizedError("Invalid credentials");
     if (!user.active) throw new UnauthorizedError("Account is disabled");
 

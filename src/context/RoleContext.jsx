@@ -56,9 +56,9 @@ export function RoleProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, tenantSlug) => {
     try {
-      const { data } = await authAPI.login(email, password);
+      const { data } = await authAPI.login(email, password, tenantSlug);
       localStorage.setItem("hm_token", data.token);
       localStorage.setItem("hm_user", JSON.stringify(data.user));
       if (data.tenant) localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
