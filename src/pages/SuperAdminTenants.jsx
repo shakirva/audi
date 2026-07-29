@@ -97,7 +97,7 @@ export default function SuperAdminTenants() {
                   </div>
                   <div>
                     <p style={{ fontWeight: 600, fontSize: 14, color: "#111827", margin: 0 }}>{t.name}</p>
-                    <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{window.location.origin}/book/{t.slug}</p>
+                    <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{window.location.origin}/{t.slug}</p>
                   </div>
                 </td>
                 <td style={{ padding: "16px" }}>

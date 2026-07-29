@@ -9,20 +9,27 @@ class AuthService {
     let user = null;
     
     if (tenantSlug) {
+      // Tenant-specific login: look up user within that tenant only
       const tenant = await Tenant.findOne({ where: { slug: tenantSlug } });
-      if (tenant) {
-        user = await userRepository.findByEmailAndTenant(email, tenant.id);
-      }
-    }
-    
-    if (!user) {
+      if (!tenant) throw new UnauthorizedError("Auditorium not found. Please check your URL.");
+      if (tenant.status !== "active") throw new UnauthorizedError("This auditorium account is currently suspended.");
+      
+      user = await userRepository.findByEmailAndTenant(email, tenant.id);
+      if (!user) throw new UnauthorizedError("Invalid credentials for this auditorium.");
+    } else {
+      // No slug provided — only SuperAdmin can log in from the root URL
       const { User } = require("../models");
       const users = await User.findAll({ where: { email: email.toLowerCase() } });
       
-      if (users.length > 1) {
-        throw new UnauthorizedError("Multiple accounts found for this email. Please log in using your auditorium's specific link (e.g. venueza.cloud/your-auditorium).");
-      } else if (users.length === 1) {
-        user = users[0];
+      if (users.length === 0) throw new UnauthorizedError("Invalid credentials");
+      
+      // Find a SuperAdmin among matches
+      const superAdmin = users.find(u => u.role === "SuperAdmin");
+      if (superAdmin) {
+        user = superAdmin;
+      } else {
+        // Not a SuperAdmin — they must use their slug URL
+        throw new UnauthorizedError("Please log in using your auditorium's link (e.g. venueza.cloud/your-auditorium).");
       }
     }
     

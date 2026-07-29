@@ -8,7 +8,12 @@ import App from "./App";
 // Calculate dynamic basename for tenant routing
 let basename = "/";
 const pathParts = window.location.pathname.split("/").filter(Boolean);
-const reservedWords = ["book"]; // Global routes that don't need tenant slug
+const reservedWords = [
+  "book", "dashboard", "bookings", "calendar", "customers", "finance", 
+  "reports", "settings", "notifications", "tenants", "subscriptions",
+  "crm", "agreements", "jobs", "vendors", "masters", "roadmap", "staff",
+  "profile", "attendance", "leaves", "login"
+];
 if (pathParts.length > 0 && !reservedWords.includes(pathParts[0])) {
   basename = `/${pathParts[0]}`;
 }

@@ -46,9 +46,12 @@ export function RoleProvider({ children }) {
           localStorage.setItem("hm_user", JSON.stringify(data.user));
           if (data.tenant) {
             localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
-            const expectedPrefix = `/${data.tenant.slug}`;
-            if (!window.location.pathname.startsWith(expectedPrefix)) {
-              window.location.href = `${expectedPrefix}/dashboard`;
+            // Only redirect non-SuperAdmin users to their slug URL
+            if (data.user.role !== "SuperAdmin" && data.tenant.slug) {
+              const expectedPrefix = `/${data.tenant.slug}`;
+              if (!window.location.pathname.startsWith(expectedPrefix)) {
+                window.location.href = `${expectedPrefix}/dashboard`;
+              }
             }
           }
         })
@@ -71,7 +74,7 @@ export function RoleProvider({ children }) {
       const defaultEnv = data.user.role === "Tester" ? "sandbox" : "production";
       sessionStorage.setItem("hm_environment", defaultEnv);
       
-      if (data.tenant) {
+      if (data.tenant && data.user.role !== "SuperAdmin" && data.tenant.slug) {
         const expectedPrefix = `/${data.tenant.slug}`;
         if (!window.location.pathname.startsWith(expectedPrefix)) {
           window.location.href = `${expectedPrefix}/dashboard`;
