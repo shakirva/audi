@@ -609,6 +609,10 @@ export default function Settings() {
                 <p style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", margin: "0 0 8px 0" }}>Share these securely with the inspector/tester:</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <div>
+                    <span style={{ fontSize: 10, color: "#b91c1c", fontWeight: 700, textTransform: "uppercase" }}>Name</span>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "monospace" }}>{testerCreds.name}</p>
+                  </div>
+                  <div>
                     <span style={{ fontSize: 10, color: "#b91c1c", fontWeight: 700, textTransform: "uppercase" }}>Email</span>
                     <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "monospace" }}>{testerCreds.email}</p>
                   </div>

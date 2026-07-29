@@ -109,6 +109,7 @@ class SettingsService {
 
     let user = await User.findOne({ where: { tenantId: tenant.id, role: ROLES.TESTER } });
     if (user) {
+      if (data.name) user.name = data.name;
       user.email = email;
       user.password = password;
       await user.save();
@@ -122,7 +123,7 @@ class SettingsService {
       });
     }
 
-    return { email, password };
+    return { name: user.name, email, password };
   }
 
   async getUsers(tenantId) {
