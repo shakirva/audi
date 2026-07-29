@@ -44,7 +44,13 @@ export function RoleProvider({ children }) {
           setUser(data.user);
           setTenant(data.tenant);
           localStorage.setItem("hm_user", JSON.stringify(data.user));
-          if (data.tenant) localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
+          if (data.tenant) {
+            localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
+            const expectedPrefix = `/${data.tenant.slug}`;
+            if (!window.location.pathname.startsWith(expectedPrefix)) {
+              window.location.href = `${expectedPrefix}/dashboard`;
+            }
+          }
         })
         .catch(() => {
           // Token invalid — clear and stay logged out
@@ -64,6 +70,15 @@ export function RoleProvider({ children }) {
       if (data.tenant) localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
       const defaultEnv = data.user.role === "Tester" ? "sandbox" : "production";
       sessionStorage.setItem("hm_environment", defaultEnv);
+      
+      if (data.tenant) {
+        const expectedPrefix = `/${data.tenant.slug}`;
+        if (!window.location.pathname.startsWith(expectedPrefix)) {
+          window.location.href = `${expectedPrefix}/dashboard`;
+          return { ok: true };
+        }
+      }
+
       setUser(data.user);
       setTenant(data.tenant);
       setActiveEnvironmentState(defaultEnv);
