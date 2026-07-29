@@ -8,7 +8,7 @@ import Logo from "./Logo";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout, venueInfo, setVenueInfo } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
 
@@ -102,7 +102,11 @@ export default function Sidebar({ open, onClose }) {
     }
   ];
 
-  const NAVIGATION = BASE_NAVIGATION.filter(item => item.roles.includes(role));
+  const NAVIGATION = BASE_NAVIGATION.filter(item => {
+    if (!item.roles.includes(role)) return false;
+    if (activeEnvironment === "sandbox" && (item.label === "Staff & HR" || item.label === "Attendance & Leaves")) return false;
+    return true;
+  });
 
   return (
     <>
