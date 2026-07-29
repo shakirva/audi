@@ -16,7 +16,14 @@ class AuthService {
     }
     
     if (!user) {
-      user = await userRepository.findByEmail(email);
+      const { User } = require("../models");
+      const users = await User.findAll({ where: { email: email.toLowerCase() } });
+      
+      if (users.length > 1) {
+        throw new UnauthorizedError("Multiple accounts found for this email. Please log in using your auditorium's specific link (e.g. venueza.cloud/your-auditorium).");
+      } else if (users.length === 1) {
+        user = users[0];
+      }
     }
     
     if (!user) throw new UnauthorizedError("Invalid credentials");
