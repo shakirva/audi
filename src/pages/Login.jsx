@@ -19,8 +19,9 @@ export default function Login() {
     if (!password.trim()) { setError("Please enter your password."); return; }
     setLoading(true);
     
-    let tenantSlug = window.location.pathname.replace(/^\/([^/]+).*/, "$1");
-    if (!tenantSlug || tenantSlug === "login" || tenantSlug === "dashboard") tenantSlug = null;
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    let tenantSlug = parts.length > 0 ? parts[0] : null;
+    if (["login", "dashboard"].includes(tenantSlug)) tenantSlug = null;
 
     const result = await login(email.trim(), password, tenantSlug);
     if (!result.ok) {
