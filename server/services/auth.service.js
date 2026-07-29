@@ -6,6 +6,7 @@ const { ROLES } = require("../helpers/roles");
 
 class AuthService {
   async login({ email, password, tenantSlug }) {
+    console.log("[AUTH LOGIN]", { email, tenantSlug: tenantSlug || "(none)" });
     let user = null;
     
     if (tenantSlug) {
