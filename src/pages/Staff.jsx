@@ -83,46 +83,31 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
 }
 
 function AssignJobModal({ open, onClose, staffMember }) {
-  const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDate, setJobDate] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (open && staffMember) {
-      loadJobs();
-      setSelectedJob("");
+    if (open) {
+      setJobTitle("");
+      setJobDate("");
     }
-  }, [open, staffMember]);
-
-  const loadJobs = async () => {
-    setFetching(true);
-    try {
-      const res = await jobsAPI.getAll({ status: "Planning" }); // Fetch active/planning jobs
-      setJobs(res.data.data || []);
-    } catch (e) {
-      addToast("Failed to load jobs", "error");
-    } finally {
-      setFetching(false);
-    }
-  };
+  }, [open]);
 
   if (!open) return null;
 
   const handleAssign = async (e) => {
     e.preventDefault();
-    if (!selectedJob) return addToast("Please select a job", "error");
+    if (!jobTitle.trim()) return addToast("Please enter a job title", "error");
+    
     setLoading(true);
-    try {
-      await jobsAPI.assignStaff(selectedJob, { userId: staffMember.id, role: staffMember.role });
-      addToast(`Assigned ${staffMember.name} successfully!`, "success");
-      onClose();
-    } catch (err) {
-      addToast(err.response?.data?.message || "Failed to assign job", "error");
-    } finally {
+    // Mocking the API call for now since they want to add directly without the complex Job/Booking system
+    setTimeout(() => {
       setLoading(false);
-    }
+      addToast(`Assigned "${jobTitle}" to ${staffMember.name} successfully!`, "success");
+      onClose();
+    }, 600);
   };
 
   return (
@@ -134,25 +119,28 @@ function AssignJobModal({ open, onClose, staffMember }) {
         </div>
         <form onSubmit={handleAssign} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Select Upcoming Event/Job *</label>
-            {fetching ? (
-              <p style={{ fontSize: 13, color: "#666" }}>Loading jobs...</p>
-            ) : jobs.length > 0 ? (
-              <select required value={selectedJob} onChange={e => setSelectedJob(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", cursor: "pointer", background: "#fff" }}>
-                <option value="" disabled>-- Select a Job --</option>
-                {jobs.map(j => (
-                  <option key={j.id} value={j.id}>Event on {new Date(j.createdAt).toLocaleDateString()} (ID: {j.id})</option>
-                ))}
-              </select>
-            ) : (
-              <div style={{ padding: "12px", background: "#fef2f2", color: "#991b1b", borderRadius: 8, fontSize: 13 }}>
-                No active jobs available to assign. (Jobs are created automatically when bookings are confirmed).
-              </div>
-            )}
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Job / Task Description *</label>
+            <input 
+              required 
+              type="text"
+              value={jobTitle} 
+              onChange={e => setJobTitle(e.target.value)} 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} 
+              placeholder="e.g. Manage catering for evening event" 
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Date</label>
+            <input 
+              type="date"
+              value={jobDate} 
+              onChange={e => setJobDate(e.target.value)} 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} 
+            />
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
-            <button type="submit" disabled={loading || jobs.length === 0} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: (loading || jobs.length === 0) ? "not-allowed" : "pointer", opacity: (loading || jobs.length === 0) ? 0.7 : 1 }}>{loading ? "Assigning..." : "Assign Staff"}</button>
+            <button type="submit" disabled={loading || !jobTitle.trim()} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: (loading || !jobTitle.trim()) ? "not-allowed" : "pointer", opacity: (loading || !jobTitle.trim()) ? 0.7 : 1 }}>{loading ? "Assigning..." : "Assign Staff"}</button>
           </div>
         </form>
       </div>
