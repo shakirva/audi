@@ -83,7 +83,7 @@ export default function Settings() {
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
   const [facilities, setFacilities] = useState([]);
-  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
+  const [newFacility, setNewFacility] = useState({ name: "", price: "", gstRate: "" });
 
   useEffect(() => {
     loadSettings();
@@ -250,8 +250,8 @@ export default function Settings() {
   const handleAddFacility = async () => {
     if (!newFacility.name.trim()) return;
     try {
-      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services" });
-      setNewFacility({ name: "", price: "" });
+      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, gstRate: Number(newFacility.gstRate) || 0, type: "services" });
+      setNewFacility({ name: "", price: "", gstRate: "" });
       loadFacilities();
       addToast("Facility added! 🛠️", "success");
     } catch (e) {
@@ -859,7 +859,10 @@ export default function Settings() {
             }}>
               <div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
-                {fac.price > 0 && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  {fac.price > 0 && <p style={{ margin: 0, fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+                  {fac.gstRate > 0 && <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>GST {fac.gstRate}%</p>}
+                </div>
               </div>
               <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
                 <Trash2 size={14} color="#ef4444" />
@@ -879,9 +882,13 @@ export default function Settings() {
             <label style={labelSt}>New Facility Name</label>
             <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
           </div>
-          <div style={{ width: 150 }}>
+          <div style={{ width: 120 }}>
             <label style={labelSt}>Price (₹)</label>
             <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+          </div>
+          <div style={{ width: 100 }}>
+            <label style={labelSt}>GST (%)</label>
+            <input type="number" value={newFacility.gstRate || ""} onChange={e => setNewFacility({ ...newFacility, gstRate: e.target.value })} style={iStyle} placeholder="e.g. 18" />
           </div>
           <button onClick={handleAddFacility} style={{
             padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",

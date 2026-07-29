@@ -289,7 +289,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                           let newFac = [...(form.facilities || [])];
                           let newQuoted = Number(form.quotedAmount || 0);
                           if (e.target.checked) {
-                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newFac.push({ id: f.id, name: f.name, price: f.price, gstRate: f.gstRate });
                             newQuoted += Number(f.price || 0);
                           } else {
                             newFac = newFac.filter(x => x.id !== f.id);
@@ -299,7 +299,10 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                         }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
                         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
-                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                            {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>₹{Number(f.price).toLocaleString()}</div>}
+                            {f.gstRate > 0 && <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 500 }}>(Inc. {f.gstRate}% GST)</div>}
+                          </div>
                         </div>
                       </label>
                     );

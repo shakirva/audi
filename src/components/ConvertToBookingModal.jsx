@@ -176,11 +176,29 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       updated.totalAmount = Math.max(0, quoted - disc);
     }
 
-    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
     const total = Number(updated.totalAmount) || 0;
     const pct = Number(updated.taxPercentage) || 0;
+    
     if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
-      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+      // Calculate Facility Tax (Inclusive)
+      let facilityTax = 0;
+      let facilityTotal = 0;
+      if (updated.facilities && updated.facilities.length > 0) {
+        updated.facilities.forEach(f => {
+          const fPrice = Number(f.price) || 0;
+          const fGst = Number(f.gstRate) || 0;
+          facilityTotal += fPrice;
+          if (fGst > 0) {
+            facilityTax += Math.round(fPrice * fGst / (100 + fGst));
+          }
+        });
+      }
+
+      // Calculate Hall Tax (Inclusive) on the remaining amount
+      const hallTotal = Math.max(0, total - facilityTotal);
+      const hallTax = pct > 0 ? Math.round(hallTotal * pct / (100 + pct)) : 0;
+      
+      updated.taxes = hallTax + facilityTax;
     }
     
     const adv = Number(updated.advance) || 0;
@@ -439,7 +457,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                           let newFac = [...(formData.facilities || [])];
                           let newQuoted = Number(formData.quotedAmount || 0);
                           if (e.target.checked) {
-                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newFac.push({ id: f.id, name: f.name, price: f.price, gstRate: f.gstRate });
                             newQuoted += Number(f.price || 0);
                           } else {
                             newFac = newFac.filter(x => x.id !== f.id);
@@ -449,7 +467,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                         }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
                         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
-                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                            {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>₹{Number(f.price).toLocaleString()}</div>}
+                            {f.gstRate > 0 && <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 500 }}>(Inc. {f.gstRate}% GST)</div>}
+                          </div>
                         </div>
                       </label>
                     );
