@@ -83,7 +83,7 @@ export default function Settings() {
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
   const [facilities, setFacilities] = useState([]);
-  const [newFacility, setNewFacility] = useState({ name: "", price: "", gstRate: "" });
+  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
 
   useEffect(() => {
     loadSettings();
@@ -247,15 +247,32 @@ export default function Settings() {
   };
 
   // ── Facilities & Add-ons ──
+  const [newFacility, setNewFacility] = useState({ name: "", price: "", gst: "" });
+  const [editFacilityId, setEditFacilityId] = useState(null);
+  const [editFacilityData, setEditFacilityData] = useState({ name: "", price: "", gst: "" });
+
   const handleAddFacility = async () => {
     if (!newFacility.name.trim()) return;
     try {
-      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, gstRate: Number(newFacility.gstRate) || 0, type: "services" });
-      setNewFacility({ name: "", price: "", gstRate: "" });
+      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services", gst: Number(newFacility.gst) || 0 });
+      setNewFacility({ name: "", price: "", gst: "" });
       loadFacilities();
       addToast("Facility added! 🛠️", "success");
     } catch (e) {
       addToast("Failed to add facility", "error");
+    }
+  };
+
+  const handleUpdateFacility = async () => {
+    if (!editFacilityData.name.trim()) return;
+    try {
+      await mastersAPI.update("services", editFacilityId, { name: editFacilityData.name, price: Number(editFacilityData.price) || 0, gst: Number(editFacilityData.gst) || 0 });
+      setEditFacilityId(null);
+      setEditFacilityData({ name: "", price: "", gst: "" });
+      loadFacilities();
+      addToast("Facility updated!", "success");
+    } catch (e) {
+      addToast("Failed to update facility", "error");
     }
   };
 
@@ -857,16 +874,42 @@ export default function Settings() {
               border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
               background: "#fafafa"
             }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
-                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                  {fac.price > 0 && <p style={{ margin: 0, fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
-                  {fac.gstRate > 0 && <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>GST {fac.gstRate}%</p>}
+              {editFacilityId === fac.id ? (
+                <div style={{ display: "flex", gap: 12, flex: 1, alignItems: "flex-end", marginRight: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Name</label>
+                    <input value={editFacilityData.name} onChange={e => setEditFacilityData({ ...editFacilityData, name: e.target.value })} style={iStyle} />
+                  </div>
+                  <div style={{ width: 100 }}>
+                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Price (₹)</label>
+                    <input type="number" value={editFacilityData.price} onChange={e => setEditFacilityData({ ...editFacilityData, price: e.target.value })} style={iStyle} />
+                  </div>
+                  <div style={{ width: 80 }}>
+                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>GST (%)</label>
+                    <input type="number" value={editFacilityData.gst} onChange={e => setEditFacilityData({ ...editFacilityData, gst: e.target.value })} style={iStyle} />
+                  </div>
+                  <button onClick={handleUpdateFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Save</button>
+                  <button onClick={() => setEditFacilityId(null)} style={{ background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Cancel</button>
                 </div>
-              </div>
-              <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
-                <Trash2 size={14} color="#ef4444" />
-              </button>
+              ) : (
+                <>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "4px 0 0" }}>
+                      {fac.price > 0 && <p style={{ margin: 0, fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+                      {fac.gst > 0 && <span style={{ fontSize: 11, background: "#e0e7ff", color: "#3730a3", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{fac.gst}% GST</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setEditFacilityId(fac.id); setEditFacilityData({ name: fac.name, price: fac.price, gst: fac.gst || "" }); }} style={{ background: "#e0f2fe", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                      <Edit3 size={14} color="#0284c7" />
+                    </button>
+                    <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                      <Trash2 size={14} color="#ef4444" />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
           
@@ -877,24 +920,26 @@ export default function Settings() {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-          <div style={{ flex: 1 }}>
-            <label style={labelSt}>New Facility Name</label>
-            <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+        {editFacilityId === null && (
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelSt}>New Facility Name</label>
+              <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+            </div>
+            <div style={{ width: 150 }}>
+              <label style={labelSt}>Price (₹)</label>
+              <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+            </div>
+            <div style={{ width: 100 }}>
+              <label style={labelSt}>GST (%)</label>
+              <input type="number" value={newFacility.gst} onChange={e => setNewFacility({ ...newFacility, gst: e.target.value })} style={iStyle} placeholder="e.g. 18" />
+            </div>
+            <button onClick={handleAddFacility} style={{
+              padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
+              border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
+            }}>+ Add</button>
           </div>
-          <div style={{ width: 120 }}>
-            <label style={labelSt}>Price (₹)</label>
-            <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
-          </div>
-          <div style={{ width: 100 }}>
-            <label style={labelSt}>GST (%)</label>
-            <input type="number" value={newFacility.gstRate || ""} onChange={e => setNewFacility({ ...newFacility, gstRate: e.target.value })} style={iStyle} placeholder="e.g. 18" />
-          </div>
-          <button onClick={handleAddFacility} style={{
-            padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
-            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
-          }}>+ Add</button>
-        </div>
+        )}
       </div>
       )}
 

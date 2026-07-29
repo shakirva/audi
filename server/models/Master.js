@@ -43,6 +43,7 @@ const MasterPackage = sequelize.define("MasterPackage", {
 const MasterService = sequelize.define("MasterService", {
   ...masterFields,
   price: { type: DataTypes.INTEGER, defaultValue: 0 },
+  gst: { type: DataTypes.INTEGER, defaultValue: 0 },
   category: { type: DataTypes.STRING, allowNull: true }, // Food, Decor, etc.
 }, masterOptions("masters_services"));
 

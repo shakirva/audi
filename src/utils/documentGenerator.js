@@ -170,27 +170,55 @@ export const generateInvoice = (data) => {
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 62);
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 68);
 
+  const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
+  
+  let dynamicBody = [];
+  
+  // Base event/hall
+  let hallTotal = Number(booking.totalAmount || 0);
+  
+  // Deduct facility prices from hallTotal to get the actual hall cost
+  facilities.forEach(f => {
+    hallTotal -= Number(f.price || 0);
+  });
+  
+  // If there's overall tax, assume it applies to the remaining hall amount
+  const overallTax = Number(booking.taxes || 0);
+  if (overallTax > 0) {
+    dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (excl. GST)`, `Rs. ${(hallTotal - overallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    dynamicBody.push(["Hall GST (Inclusive)", `Rs. ${overallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+  } else {
+    dynamicBody.push([`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${hallTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+  }
+
+  // Facilities
+  facilities.forEach(f => {
+    const p = Number(f.price || 0);
+    const gstRate = Number(f.gst || 0);
+    if (gstRate > 0) {
+      const base = p / (1 + gstRate / 100);
+      const gstAmt = p - base;
+      dynamicBody.push([`${f.name} (Base)`, `Rs. ${base.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      dynamicBody.push([`${f.name} GST (${gstRate}%)`, `Rs. ${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    } else {
+      dynamicBody.push([`${f.name}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    }
+  });
+
+  if (Number(booking.discount || 0) > 0) {
+    dynamicBody.push(["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+  }
+
   // Summary Table
     autoTable(doc, {
     startY: 80,
     headStyles: { fillColor: primaryColor, textColor: 255 },
     head: [["Item Description", "Amount (INR)"]],
-    body: [
-      ...(Number(booking.taxes || 0) > 0
-        ? [
-            [`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (excl. GST)`, `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
-            ["GST (Inclusive)", `Rs. ${Number(booking.taxes).toLocaleString()}`],
-          ]
-        : [
-            [`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
-          ]
-      ),
-      ...(Number(booking.discount || 0) > 0 ? [["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
-    ],
+    body: dynamicBody,
     foot: [
-      ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
-      ["Total Paid", `Rs. ${Number(totalPaid || 0).toLocaleString()}`],
-      ["Balance Due", `Rs. ${Number(outstanding || 0).toLocaleString()}`]
+      ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ["Total Paid", `Rs. ${Number(totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ["Balance Due", `Rs. ${Number(outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
     ],
     footStyles: { fillColor: [248, 250, 252], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
