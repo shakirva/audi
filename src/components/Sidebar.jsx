@@ -32,9 +32,9 @@ export default function Sidebar({ open, onClose }) {
   const ACCENT_COLOR = "#D4A017";
 
   const BASE_NAVIGATION = [
-    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Sales", "Operations"] },
+    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"] },
     { 
-      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Sales"],
+      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales"],
       children: [
         { path: "/calendar", label: "Calendar" },
         { path: "/crm", label: "Enquiries" },
@@ -44,14 +44,14 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Sales", "Operations"],
+      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
       children: [
         { path: "/jobs", label: "Job Management" },
         { path: "/vendors", label: "Vendor Management" }
       ]
     },
     { 
-      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager"],
+      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
         { path: "/finance/payments", label: "Payments & Receipts" },
         { path: "/finance/booking-accounts", label: "Booking Accounts" },
@@ -62,7 +62,7 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager"],
+      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
         { path: "/staff", label: "Staff Management" },
         { path: "/attendance", label: "Attendance" },
@@ -77,7 +77,7 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager"],
+      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
         { path: "/reports", label: "Report Dashboard" },
         { path: "/reports/sales", label: "Sales Reports 🔒" },
@@ -87,7 +87,7 @@ export default function Sidebar({ open, onClose }) {
       ]
     },
     { 
-      type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager"],
+      type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
         { path: "/settings", label: "Masters" },
         { path: "/roadmap", label: "ERP Roadmap" }
