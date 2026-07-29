@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Receipt, Search, Plus } from "lucide-react";
+import { Receipt, Search, Plus, Edit, Trash2 } from "lucide-react";
 import { expensesAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import AddExpenseModal from "./AddExpenseModal";
@@ -10,6 +10,7 @@ export default function PurchasesAndExpenses() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editExpense, setEditExpense] = useState(null);
 
   useEffect(() => {
     fetchExpenses();
@@ -24,6 +25,18 @@ export default function PurchasesAndExpenses() {
       addToast("Failed to fetch expenses", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (window.confirm("Are you sure you want to delete this expense?")) {
+      try {
+        await expensesAPI.remove(id);
+        addToast("Expense deleted successfully", "success");
+        fetchExpenses();
+      } catch (err) {
+        addToast("Failed to delete expense", "error");
+      }
     }
   };
 
@@ -51,10 +64,11 @@ export default function PurchasesAndExpenses() {
               style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
             />
           </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            style={{ background: "#0f172a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, cursor: "pointer" }}
-          >
+          <button onClick={() => { setEditExpense(null); setIsModalOpen(true); }} style={{
+          background: "#0D2418", color: "#fff", border: "none", borderRadius: 8,
+          padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 600, cursor: "pointer",
+          fontSize: 14, transition: "background 0.2s"
+        }}>
             <Plus size={16} /> New Expense
           </button>
         </div>
@@ -70,16 +84,17 @@ export default function PurchasesAndExpenses() {
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Vendor / Description</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Mode</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Amount</th>
+                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading expenses...</td>
+                  <td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading expenses...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No expenses found.</td>
+                  <td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No expenses found.</td>
                 </tr>
               ) : (
                 filtered.map((e) => (
@@ -97,6 +112,16 @@ export default function PurchasesAndExpenses() {
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>{e.paymentMode || "Cash"}</td>
                     <td style={{ padding: "16px 24px", color: "#ef4444", fontWeight: 700 }}>₹{Number(e.amount).toLocaleString()}</td>
+                    <td style={{ padding: "16px 24px", textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                        <button onClick={() => { setEditExpense(e); setIsModalOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }} title="Edit">
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -113,6 +138,7 @@ export default function PurchasesAndExpenses() {
             setIsModalOpen(false);
             fetchExpenses();
           }}
+          editData={editExpense}
         />
       )}
     </div>

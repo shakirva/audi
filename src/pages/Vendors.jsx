@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck } from "lucide-react";
+import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 
 const DEMO_VENDORS = [
@@ -15,11 +15,12 @@ export default function Vendors() {
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
   const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
+  const [deletedVendors, setDeletedVendors] = useState(() => JSON.parse(localStorage.getItem("hm_deleted_vendors") || "[]") || []);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [form, setForm] = useState({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
 
-  const allVendors = [...localVendors, ...DEMO_VENDORS];
+  const allVendors = [...localVendors, ...DEMO_VENDORS].filter(v => !deletedVendors.includes(v.id));
 
   const categories = ["All", "Catering", "Decoration", "Sound & Stage", "Photography", "Event Management"];
 
@@ -31,25 +32,71 @@ export default function Vendors() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    const newVendor = { 
-      id: "LOCAL_" + Date.now(), 
-      name: form.name,
-      category: form.category,
-      phone: form.phone,
-      location: form.location,
-      email: form.email,
-      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
-      status: "Active",
-      rating: 5.0,
-      jobs: 0,
-      totalBilled: 0,
-      totalPaid: 0
-    };
-    const updated = [newVendor, ...localVendors];
-    setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    if (form.id) {
+      const updated = localVendors.map(v => v.id === form.id ? { 
+        ...v, 
+        name: form.name, 
+        category: form.category, 
+        phone: form.phone, 
+        location: form.location, 
+        email: form.email, 
+        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [] 
+      } : v);
+      setLocalVendors(updated);
+      localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    } else {
+      const newVendor = { 
+        id: "LOCAL_" + Date.now(), 
+        name: form.name,
+        category: form.category,
+        phone: form.phone,
+        location: form.location,
+        email: form.email,
+        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+        status: "Active",
+        rating: 5.0,
+        jobs: 0,
+        totalBilled: 0,
+        totalPaid: 0
+      };
+      const updated = [newVendor, ...localVendors];
+      setLocalVendors(updated);
+      localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    }
     setModalOpen(false);
-    setForm({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+    setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to delete this vendor?")) {
+      if (id.startsWith("LOCAL_")) {
+        const updated = localVendors.filter(v => v.id !== id);
+        setLocalVendors(updated);
+        localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+      } else {
+        const updated = [...deletedVendors, id];
+        setDeletedVendors(updated);
+        localStorage.setItem("hm_deleted_vendors", JSON.stringify(updated));
+      }
+    }
+  };
+
+  const openEdit = (v, e) => {
+    e.stopPropagation();
+    if (!v.id.startsWith("LOCAL_")) {
+      alert("Demo vendors cannot be edited.");
+      return;
+    }
+    setForm({
+      id: v.id,
+      name: v.name,
+      category: v.category,
+      phone: v.phone || "",
+      location: v.location || "",
+      email: v.email || "",
+      tags: v.tags ? v.tags.join(", ") : ""
+    });
+    setModalOpen(true);
   };
 
   const handleToggleStatus = (id, currentStatus) => {
@@ -102,7 +149,7 @@ export default function Vendors() {
           </div>
           <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>Manage external service providers, track their performance, and assign jobs.</p>
         </div>
-        <button onClick={() => setModalOpen(true)} style={{
+        <button onClick={() => { setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" }); setModalOpen(true); }} style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 13, transition: "transform 0.2s"
@@ -207,9 +254,18 @@ export default function Vendors() {
 
             {/* Footer action */}
             <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#1B4332" }}>View Full Profile</span>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#1B4332" }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>View Profile</span>
                 <ChevronRight size={14} />
+              </div>
+              
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={(e) => openEdit(vendor, e)} style={{ border: "none", background: "none", cursor: "pointer", color: "#475569" }} title="Edit Vendor">
+                  <Edit size={16} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleDelete(vendor.id); }} style={{ border: "none", background: "none", cursor: "pointer", color: "#ef4444" }} title="Delete Vendor">
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           </div>

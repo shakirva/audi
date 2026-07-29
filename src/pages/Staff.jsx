@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save } from "lucide-react";
+import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save, Trash2 } from "lucide-react";
 import { usersAPI, jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
@@ -165,10 +165,25 @@ export default function Staff() {
 
   const loadStaff = async () => {
     try {
+      setLoading(true);
       const res = await usersAPI.getAll();
       setStaffList(res.data.data || []);
     } catch (e) {
-      console.error("Failed to load staff", e);
+      addToast("Failed to load staff", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (window.confirm("Are you sure you want to delete this staff member?")) {
+      try {
+        await usersAPI.remove(id);
+        addToast("Staff member deleted", "success");
+        loadStaff();
+      } catch (err) {
+        addToast("Failed to delete staff", "error");
+      }
     }
   };
 
@@ -306,8 +321,13 @@ export default function Staff() {
             </div>
 
             <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
-              <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>View Profile</button>
+              <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                Edit
+              </button>
               <button onClick={() => { setAssignStaffData(staff); setAssignModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
+              <button onClick={() => handleDeleteStaff(staff.id)} style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 0", background: "#fff", border: "1px solid #fecaca", borderRadius: 8, color: "#ef4444", cursor: "pointer" }}>
+                <Trash2 size={16} />
+              </button>
             </div>
           </div>
         ))}

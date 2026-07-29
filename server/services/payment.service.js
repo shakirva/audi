@@ -161,6 +161,28 @@ class PaymentService {
     return receipt;
   }
 
+  async removePayment(id, { tenantId, environmentId }) {
+    return sequelize.transaction(async (t) => {
+      const payment = await paymentRepository.findByIdWithDetails(id, { tenantId, environmentId }, { transaction: t });
+      if (!payment) throw new NotFoundError("Payment");
+
+      if (payment.bookingId) {
+        const booking = await bookingRepository.findById(payment.bookingId, { tenantId, environmentId }, { transaction: t });
+        if (booking) {
+          booking.totalPaid = Math.max(0, Number(booking.totalPaid || 0) - Number(payment.amount));
+          booking.balanceAmount = Number(booking.totalAmount || 0) - Number(booking.totalPaid);
+          if (booking.balanceAmount > 0 && booking.status === "Completed") {
+            // keep status or let it be
+          }
+          await booking.save({ transaction: t });
+        }
+      }
+
+      await payment.destroy({ transaction: t });
+      return { message: "Payment removed" };
+    });
+  }
+
   async generateReceiptPdf(receiptId, { tenantId, environmentId }) {
     const receipt = await Receipt.findOne({ where: { id: receiptId, tenantId, environmentId } });
     if (!receipt) throw new NotFoundError("Receipt");

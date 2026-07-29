@@ -135,6 +135,8 @@ export const paymentsAPI = {
   getAll: (params) => api.get("/v1/payments", { params }),
   getById: (id) => api.get(`/v1/payments/${id}`),
   create: (data) => api.post("/v1/payments", data),
+  update: (id, data) => api.put(`/v1/payments/${id}`, data),
+  remove: (id) => api.delete(`/v1/payments/${id}`),
   getReceipt: (id) => api.get(`/v1/payments/${id}/receipt`),
 };
 

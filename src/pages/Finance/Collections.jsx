@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Wallet, Search, ArrowRight, Printer } from "lucide-react";
+import { Wallet, Search, ArrowRight, Printer, Trash2 } from "lucide-react";
 import { paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { generateReceipt } from "../../utils/documentGenerator";
@@ -23,6 +23,18 @@ export default function Collections() {
       addToast("Failed to fetch collections", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeletePayment = async (id) => {
+    if (window.confirm("Are you sure you want to delete this payment record? This action cannot be undone and will not automatically revert the booking balance.")) {
+      try {
+        await paymentsAPI.remove(id);
+        addToast("Payment deleted successfully", "success");
+        fetchPayments();
+      } catch (err) {
+        addToast(err.response?.data?.message || "Failed to delete payment", "error");
+      }
     }
   };
 
@@ -66,16 +78,17 @@ export default function Collections() {
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Amount</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Collected By</th>
                 <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Print</th>
+                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading collections...</td>
+                  <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading collections...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No collections found.</td>
+                  <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No collections found.</td>
                 </tr>
               ) : (
                 filtered.map((p) => (
@@ -107,6 +120,11 @@ export default function Collections() {
                         style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#334155" }}
                       >
                         <Printer size={14} /> Receipt
+                      </button>
+                    </td>
+                    <td style={{ padding: "16px 24px", textAlign: "right" }}>
+                      <button onClick={() => handleDeletePayment(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>

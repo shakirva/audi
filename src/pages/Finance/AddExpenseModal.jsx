@@ -3,11 +3,11 @@ import { X, Receipt } from "lucide-react";
 import { expensesAPI, bookingsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 
-export default function AddExpenseModal({ open, onClose, onSuccess, defaultBookingId }) {
+export default function AddExpenseModal({ open, onClose, onSuccess, defaultBookingId, editData }) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState([]);
-  const [expenseType, setExpenseType] = useState(defaultBookingId ? "booking" : "general"); // "general" or "booking"
+  const [expenseType, setExpenseType] = useState(defaultBookingId || (editData && editData.bookingId) ? "booking" : "general"); // "general" or "booking"
   const [formData, setFormData] = useState({
     category: "Office Expense",
     description: "",
@@ -15,6 +15,28 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
     date: new Date().toISOString().split('T')[0],
     bookingId: defaultBookingId || "",
   });
+
+  useEffect(() => {
+    if (editData && open) {
+      setFormData({
+        category: editData.category || "Office Expense",
+        description: editData.description || "",
+        amount: editData.amount || "",
+        date: editData.date ? editData.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        bookingId: editData.bookingId || "",
+      });
+      setExpenseType(editData.bookingId ? "booking" : "general");
+    } else if (!editData && open) {
+      setFormData({
+        category: "Office Expense",
+        description: "",
+        amount: "",
+        date: new Date().toISOString().split('T')[0],
+        bookingId: defaultBookingId || "",
+      });
+      setExpenseType(defaultBookingId ? "booking" : "general");
+    }
+  }, [editData, open, defaultBookingId]);
 
   useEffect(() => {
     if (open) {
@@ -43,15 +65,22 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
 
     try {
       setLoading(true);
-      await expensesAPI.create({
+      const payload = {
         category: formData.category,
         description: formData.description,
         amount: Number(formData.amount),
         date: new Date(formData.date).toISOString(),
         bookingId: expenseType === "booking" ? formData.bookingId : null,
         paymentMode: "Cash" // Default for now
-      });
-      addToast("Expense recorded successfully", "success");
+      };
+
+      if (editData && editData.id) {
+        await expensesAPI.update(editData.id, payload);
+        addToast("Expense updated successfully", "success");
+      } else {
+        await expensesAPI.create(payload);
+        addToast("Expense recorded successfully", "success");
+      }
       onSuccess();
     } catch (error) {
       addToast("Failed to record expense", "error");
@@ -73,17 +102,16 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
               <Receipt size={20} />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Record Expense</h2>
-              <div style={{ fontSize: 13, color: "#64748b" }}>Post a new purchase or bill</div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#1B4332", fontFamily: "'Playfair Display', serif" }}>
+                {editData ? "Edit Expense" : "Record Expense"}
+              </h2>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}>
-            <X size={20} />
-          </button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}><X size={20} /></button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} style={{ padding: 24, overflowY: "auto", display: "flex", flexDirection: "column", gap: 20 }}>
+        <form onSubmit={handleSubmit} style={{ padding: 24, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
           
           {!defaultBookingId && (
             <div>
@@ -148,7 +176,7 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 6 }}>Amount (₹) *</label>
               <input 
@@ -171,7 +199,6 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
               />
             </div>
           </div>
-
         </form>
 
         {/* Footer */}
@@ -185,11 +212,12 @@ export default function AddExpenseModal({ open, onClose, onSuccess, defaultBooki
             Cancel
           </button>
           <button 
+            type="submit" 
             onClick={handleSubmit}
             disabled={loading}
-            style={{ background: "#4f46e5", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, opacity: loading ? 0.7 : 1 }}
+            style={{ padding: "10px 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontSize: 14 }}
           >
-            {loading ? "Saving..." : "Record Expense"}
+            {loading ? "Saving..." : (editData ? "Update Expense" : "Save Expense")}
           </button>
         </div>
       </div>

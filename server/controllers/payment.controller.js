@@ -48,6 +48,18 @@ class PaymentController {
     }
   }
 
+  async remove(req, res, next) {
+    try {
+      const result = await paymentService.removePayment(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+      });
+      return sendSuccess(res, { message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getReceipt(req, res, next) {
     try {
       const result = await paymentService.getReceipt(req.params.paymentId, {

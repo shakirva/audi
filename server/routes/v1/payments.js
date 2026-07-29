@@ -15,6 +15,7 @@ router.use(auth, tenantScope, subscriptionGuard);
 router.get("/", paymentController.list);
 router.get("/:id", paymentController.getOne);
 router.post("/", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), validate(recordPaymentSchema), auditLog("Record Payment"), paymentController.record);
+router.delete("/:id", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), auditLog("Delete Payment"), paymentController.remove);
 
 // Receipt specific routes nested under payments for now
 router.get("/:paymentId/receipt", paymentController.getReceipt);
