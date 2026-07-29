@@ -154,11 +154,11 @@ export const jobsAPI = {
 // MASTERS (Halls, Event Types, etc.)
 // ═══════════════════════════════════
 export const mastersAPI = {
-  getAll: (params) => api.get("/v1/masters", { params }),
-  getByType: (type) => api.get("/v1/masters", { params: { type } }),
-  create: (data) => api.post("/v1/masters", data),
-  update: (id, data) => api.put(`/v1/masters/${id}`, data),
-  remove: (id) => api.delete(`/v1/masters/${id}`),
+  getAll: (params) => api.get("/v1/masters", { params }), // fallback if needed, but not matching backend route
+  getByType: (type) => api.get(`/v1/masters/${type}`),
+  create: (data) => api.post(`/v1/masters/${data.type}`, data),
+  update: (id, data) => api.put(`/v1/masters/${data.type}/${id}`, data),
+  remove: (type, id) => api.delete(`/v1/masters/${type}/${id}`),
 };
 
 // ═══════════════════════════════════

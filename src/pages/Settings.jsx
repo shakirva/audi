@@ -262,7 +262,7 @@ export default function Settings() {
   const handleDeleteFacility = async (id) => {
     if (!window.confirm("Delete this facility?")) return;
     try {
-      await mastersAPI.remove(id);
+      await mastersAPI.remove("services", id);
       loadFacilities();
       addToast("Facility deleted", "info");
     } catch (e) {

@@ -91,7 +91,7 @@ export default function Masters() {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
     try {
       setLoading(true);
-      await mastersAPI.remove(id);
+      await mastersAPI.remove(activeTab, id);
       fetchData();
     } catch (err) {
       setError("Failed to delete item");
