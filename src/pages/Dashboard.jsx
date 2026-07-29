@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from "recharts";
-import { Calendar, Plus, Banknote, Users, AlertCircle, Phone, ArrowRight, TrendingUp, CheckCircle, CreditCard, Landmark, FileText, ClipboardList } from "lucide-react";
+import { 
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, RadialBarChart, RadialBar, Legend,
+  FunnelChart, Funnel, LabelList
+} from "recharts";
+import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 import { bookingsAPI } from "../services/api";
 
@@ -31,6 +36,8 @@ const revenueData = [
 // 1. MANAGER / OWNER MODE (Executive Command Center)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { bookingsAPI, enquiriesAPI } from "../services/api";
+
 function ExecutiveCockpit() {
   const [stats, setStats] = useState({
     todayBookings: 2,
@@ -41,15 +48,115 @@ function ExecutiveCockpit() {
     eventsToday: 2
   });
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+  const [revData, setRevData] = React.useState([]);
+  const [distData, setDistData] = React.useState([]);
+  const [todaysEvents, setTodaysEvents] = React.useState([]);
+  const [urgent, setUrgent] = React.useState([
+    { id: "0 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
+    { id: "0 Quotations", details: "Pending Signature", status: "Waiting" },
+    { id: "0 Advances", details: "Payment Pending", status: "Action Needed" }
+  ]);
+  const [urgentList, setUrgentList] = React.useState([]);
+
+  React.useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const [statsRes, bookingsRes, enqRes] = await Promise.all([
+        bookingsAPI.getStats(),
+        bookingsAPI.getAll(),
+        enquiriesAPI.getAll()
+      ]);
+
+      if (statsRes.data?.data) {
+        setStats(statsRes.data.data);
+      }
+
+      const allBookings = bookingsRes.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
       
-      {/* HEADER & QUICK ACTIONS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 relative overflow-hidden">
-        <div className="absolute -right-20 -top-40 w-96 h-96 bg-green-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold font-serif text-gray-900 tracking-tight">Executive Command Center</h1>
-          <p className="text-gray-500 font-medium mt-1 text-sm">Welcome back. Here is the operational health of Venueza today.</p>
+      // Compute Today's Events
+      const todayEvts = allBookings.filter(b => b.date && b.date.startsWith(today));
+      setTodaysEvents(todayEvts);
+
+      // Compute Event Distribution
+      const distMap = {};
+      allBookings.forEach(b => {
+        if (!b.eventType) return;
+        distMap[b.eventType] = (distMap[b.eventType] || 0) + 1;
+      });
+      const colors = [BRAND.primary, BRAND.primaryLight, BRAND.accent, BRAND.info, BRAND.warning, BRAND.success];
+      const distArr = Object.keys(distMap).map((k, i) => ({
+        name: k,
+        value: distMap[k],
+        color: colors[i % colors.length]
+      }));
+      if (distArr.length === 0) {
+        distArr.push({ name: "No Events", value: 1, color: "#e2e8f0" });
+      }
+      setDistData(distArr);
+
+      // Compute Revenue Trend (Last 6 months)
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const revMap = {};
+      allBookings.forEach(b => {
+        if (b.status === "Confirmed" || b.status === "Completed") {
+          if (b.date) {
+            const m = new Date(b.date).getMonth();
+            revMap[m] = (revMap[m] || 0) + (Number(b.totalAmount) || 0);
+          }
+        }
+      });
+      // Just take 6 recent months for demo, or all 12
+      const currentMonth = new Date().getMonth();
+      const revArr = [];
+      for (let i = 5; i >= 0; i--) {
+        let m = currentMonth - i;
+        if (m < 0) m += 12;
+        revArr.push({ name: monthNames[m], uv: revMap[m] || 0 });
+      }
+      setRevData(revArr);
+
+      // Compute Urgent Enquiries
+      const allEnquiries = enqRes.data?.data || [];
+      const followUpCount = allEnquiries.filter(e => ["Contacted", "Follow-up", "Customer Visit"].includes(e.status)).length;
+      const quoteCount = allEnquiries.filter(e => e.status === "Quotation Sent").length;
+      const pendingCount = allBookings.filter(b => b.status === "Pending Payment").length;
+
+      setUrgent([
+        { id: `${followUpCount} Enquiries`, details: "Need Follow-up Call", status: "Urgent" },
+        { id: `${quoteCount} Quotations`, details: "Pending Signature", status: "Waiting" },
+        { id: `${pendingCount} Advances`, details: "Payment Pending", status: "Action Needed" }
+      ]);
+
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const urgentFollowUps = allEnquiries.filter(e => {
+        const isPending = !["Booking Confirmed", "Lost", "Cancelled"].includes(e.status);
+        const createdDate = new Date(e.createdAt || e.date || Date.now());
+        return isPending && createdDate <= threeDaysAgo;
+      }).sort((a,b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)).slice(0, 5); // top 5
+      
+      setUrgentList(urgentFollowUps);
+
+    } catch(err) {
+      console.error("Failed to load dashboard data", err);
+    }
+  };
+
+  const formatLakhs = (val) => `₹${(val / 100000).toFixed(1)}L`;
+
+  const { user } = useRole();
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px", color: "#0f172a", letterSpacing: "-1px" }}>Good Morning, {user?.name?.split(' ')[0] || "User"} 👋</h1>
+          <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
         </div>
         <div className="relative z-10 flex flex-wrap gap-3 mt-6 md:mt-0">
           <button className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 text-sm font-bold shadow-md transition">
@@ -64,158 +171,74 @@ function ExecutiveCockpit() {
         </div>
       </div>
 
-      {/* 1. TODAY'S SNAPSHOT (Top KPI Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition"><Calendar size={40}/></div>
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Today's Bookings</p>
-          <p className="text-3xl font-black text-gray-900">{stats.todayBookings}</p>
-        </div>
-        <div className="bg-green-50 p-5 rounded-2xl border border-green-100 shadow-sm flex flex-col justify-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-green-700 mb-1">Cash Collected</p>
-          <p className="text-2xl font-black text-green-600 font-mono">{formatCurrency(stats.cashCollected)}</p>
-        </div>
-        <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm flex flex-col justify-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-700 mb-1">Bank Collected</p>
-          <p className="text-2xl font-black text-blue-600 font-mono">{formatCurrency(stats.bankCollected)}</p>
-        </div>
-        <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 shadow-sm flex flex-col justify-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-orange-700 mb-1">Pending Collections</p>
-          <p className="text-2xl font-black text-orange-600 font-mono">{formatCurrency(stats.pendingCollections)}</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Events Today</p>
-          <p className="text-3xl font-black text-gray-900">{stats.eventsToday}</p>
-        </div>
-        <div className="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm flex flex-col justify-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Cancelled</p>
-          <p className="text-3xl font-black text-red-600">{stats.cancelledBookings}</p>
-        </div>
-      </div>
-
-      {/* TWO COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* LEFT COLUMN: Operations & Finance */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* 2. REVENUE OVERVIEW */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold font-serif text-gray-900">Revenue & Cash Flow</h3>
-              <select className="text-sm border-gray-200 rounded-lg text-gray-600 font-medium">
-                <option>This Year</option>
-                <option>Last 6 Months</option>
-              </select>
-            </div>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={BRAND.danger} stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor={BRAND.danger} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} tickFormatter={(val) => `₹${val/100000}L`} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontWeight: 600 }}
-                    formatter={(value) => formatCurrency(value)}
-                  />
-                  <Area type="monotone" dataKey="rev" name="Revenue" stroke={BRAND.primary} strokeWidth={3} fill="url(#colorRev)" />
-                  <Area type="monotone" dataKey="exp" name="Expenses" stroke={BRAND.danger} strokeWidth={3} fill="url(#colorExp)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* 3. BOOKING OPERATIONS */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold font-serif text-gray-900">Recent Booking Operations</h3>
-              <button className="text-sm font-bold text-blue-600 hover:underline">View All</button>
-            </div>
-            <div className="space-y-4">
-              {[
-                { ref: "BKG-1042", name: "Sharma Wedding", status: "Advance Pending", date: "15 Dec 2026", color: "orange" },
-                { ref: "BKG-1043", name: "Tech Corp Seminar", status: "Confirmed", date: "22 Aug 2026", color: "green" },
-                { ref: "BKG-1044", name: "Verma Reception", status: "Draft", date: "05 Nov 2026", color: "gray" },
-              ].map((b, i) => (
-                <div key={i} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 hover:bg-gray-50 transition cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-${b.color}-100 text-${b.color}-600`}>
-                      <ClipboardList size={20} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{b.name}</p>
-                      <p className="text-xs font-semibold text-gray-500">{b.ref} • {b.date}</p>
-                    </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-${b.color}-100 text-${b.color}-700`}>
-                    {b.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Revenue Trend</h3>
+          <div style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revData.length ? revData : revenueData}>
+                <defs>
+                  <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={BRAND.primary} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={BRAND.primary} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value) => [`₹${value}`, "Revenue"]} />
+                <Area type="monotone" dataKey="uv" stroke={BRAND.primary} strokeWidth={4} fill="url(#colorUv)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Alerts, Finance Summary, Widgets */}
-        <div className="space-y-8">
-          
-          {/* 5. BUSINESS ALERTS */}
-          <div className="bg-red-50 p-6 rounded-3xl border border-red-100 shadow-sm relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 text-red-200 opacity-50"><AlertCircle size={100} /></div>
-            <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2 relative z-10"><AlertCircle size={20}/> Action Required</h3>
-            <div className="space-y-3 relative z-10">
-              <div className="bg-white/80 backdrop-blur p-4 rounded-xl shadow-sm border border-red-50">
-                <p className="text-sm font-bold text-gray-900">Overdue Payment</p>
-                <p className="text-xs font-medium text-gray-600 mt-1">BKG-1035 (Verma) is overdue by ₹50,000 for 3 days.</p>
-              </div>
-              <div className="bg-white/80 backdrop-blur p-4 rounded-xl shadow-sm border border-red-50">
-                <p className="text-sm font-bold text-gray-900">Vendor Payment Pending</p>
-                <p className="text-xs font-medium text-gray-600 mt-1">Alpha Catering invoice #INV-99 requires approval.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. FINANCE SUMMARY */}
-          <div className="bg-gray-900 p-8 rounded-3xl shadow-sm text-white relative overflow-hidden">
-            <div className="absolute -right-10 -bottom-10 opacity-10"><Landmark size={150} /></div>
-            <h3 className="text-lg font-bold font-serif mb-6 text-gray-100 relative z-10">Liquidity Summary</h3>
-            <div className="space-y-6 relative z-10">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Total Cash in Hand</p>
-                <p className="text-3xl font-mono font-bold mt-1 text-green-400">{formatCurrency(33000)}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Total Bank Balance</p>
-                <p className="text-3xl font-mono font-bold mt-1 text-white">{formatCurrency(155000)}</p>
-              </div>
-              <div className="pt-4 border-t border-gray-700">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">This Month's Profit Margin</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl font-bold">68%</span>
-                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded font-bold">+4.2%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 8. PERFORMANCE WIDGETS */}
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Performance Highlights</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.accent} /> Today's Events</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {todaysEvents.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 14 }}>No events scheduled for today.</div>
+            ) : todaysEvents.map((evt) => (
+              <div key={evt.id} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500">Most Profitable Booking</p>
-                  <p className="font-bold text-gray-900 text-sm mt-0.5">Sharma Wedding</p>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{evt.eventType} - {evt.hall}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 2 }}>{evt.customerName}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{evt.session}</div>
+                </div>
+                <div style={{ background: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
+                  {evt.status}
+                </div>
+              </div>
+            </div>
+          </div>
+
+      {/* Row 2: Event Distribution (4 cols) + Urgent Enquiries (8 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
+        
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Event Distribution</h3>
+          <div style={{ height: 180 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={distData.length ? distData : eventDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                  {(distData.length ? distData : eventDistData).map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><MessageCircle size={18} color={BRAND.primary} /> Urgent Enquiries</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {urgent.map((enq, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 12, borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{enq.id}</div>
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>{enq.details}</div>
+                <div style={{ background: enq.status === "Urgent" ? "#fee2e2" : "#f1f5f9", color: enq.status === "Urgent" ? "#b91c1c" : "#475569", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800, textTransform: "uppercase", alignSelf: "flex-start", marginTop: 4 }}>
+                  {enq.status}
                 </div>
                 <p className="font-mono font-bold text-green-600">{formatCurrency(205000)}</p>
               </div>
@@ -236,6 +259,34 @@ function ExecutiveCockpit() {
             </div>
           </div>
 
+          <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 800, color: "#475569" }}>Needs WhatsApp Follow-up (3+ Days Old)</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {urgentList.length === 0 ? (
+              <div style={{ padding: 12, textAlign: "center", color: "#94a3b8", fontSize: 12, background: "#f8fafc", borderRadius: 12 }}>No urgent follow-ups found.</div>
+            ) : urgentList.map((enq) => {
+              const name = enq.Customer?.name || enq.enquiryNumber || 'Unknown';
+              const phone = enq.Customer?.phone || enq.phone || '';
+              return (
+                <div key={enq.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, border: "1px solid #e2e8f0", borderRadius: 12, background: "#fff" }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{enq.eventType} • {new Date(enq.createdAt || enq.date).toLocaleDateString()}</div>
+                  </div>
+                  <a 
+                    href={`https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${name}, we are reaching out regarding your enquiry for ${enq.eventType}...`)}`} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", color: "#fff", padding: "6px 12px", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 700 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12.01 2.01C6.49 2.01 2.01 6.49 2.01 12.01C2.01 13.96 2.57 15.82 3.56 17.43L2.01 22.01L6.72 20.48C8.28 21.39 10.09 21.93 12.01 21.93C17.53 21.93 22.01 17.45 22.01 11.93C22.01 6.41 17.53 2.01 12.01 2.01ZM17.13 16.3C16.92 16.89 15.93 17.4 15.34 17.51C14.88 17.61 14.16 17.71 11.83 16.75C8.84 15.53 6.94 12.48 6.79 12.28C6.64 12.08 5.56 10.63 5.56 9.14C5.56 7.64 6.32 6.9 6.64 6.58C6.91 6.31 7.33 6.18 7.74 6.18C7.88 6.18 7.99 6.18 8.1 6.19C8.42 6.2 8.58 6.21 8.79 6.72C9.05 7.37 9.7 8.95 9.78 9.11C9.86 9.27 9.94 9.49 9.83 9.7C9.72 9.91 9.61 10.03 9.45 10.21C9.29 10.39 9.12 10.51 8.97 10.72C8.82 10.93 8.64 11.16 8.84 11.51C9.04 11.85 9.7 12.92 10.66 13.77C11.9 14.86 12.9 15.19 13.27 15.35C13.64 15.51 14.07 15.48 14.33 15.2C14.67 14.83 15.09 14.25 15.52 13.67C15.84 13.24 16.21 13.3 16.58 13.43C16.96 13.57 18.96 14.56 19.34 14.74C19.71 14.93 19.96 15.02 20.05 15.18C20.14 15.34 20.14 16.14 19.82 16.89L17.13 16.3Z" />
+                    </svg>
+                    WhatsApp
+                  </a>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -247,20 +298,162 @@ function ExecutiveCockpit() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ReceptionCockpit() {
+  const navigate = useNavigate();
+  const [events, setEvents] = React.useState([]);
+  const [enquiries, setEnquiries] = React.useState([]);
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [bookingsRes, enquiriesRes] = await Promise.all([
+        bookingsAPI.getAll(),
+        enquiriesAPI.getAll()
+      ]);
+      const allBookings = bookingsRes.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      const todaysEvents = allBookings.filter(b => b.date && b.date.startsWith(today));
+      setEvents(todaysEvents);
+      
+      setEnquiries(enquiriesRes.data?.data || []);
+    } catch(err) {
+      console.error("Failed to load reception data", err);
+    }
+  };
+
+  const getStatusColumn = (columnType) => {
+    if (columnType === "Open") return enquiries.filter(e => ["New Enquiry", "Contacted"].includes(e.status));
+    if (columnType === "Follow Up") return enquiries.filter(e => ["Follow-up", "Customer Visit", "Quotation Sent", "Interested"].includes(e.status));
+    if (columnType === "Closed") return enquiries.filter(e => ["Booking Confirmed", "Cancelled", "Lost"].includes(e.status));
+    return [];
+  };
+
   return (
-    <div className="p-8 text-center bg-white rounded-3xl shadow-sm border border-gray-100 mt-10 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold font-serif text-gray-900">Reception Desk</h1>
-      <p className="text-gray-500 mt-2">Manage enquiries and check availability.</p>
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 20px 40px rgba(13,36,24,0.2)" }}>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px" }}>Reception Desk 👋</h1>
+          <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Fast creation and calendar view.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <button onClick={() => navigate("/calendar")} style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Plus size={20} /> New Enquiry
+            </button>
+            <button onClick={() => navigate("/calendar")} style={{ padding: "16px", background: "#fff", color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Calendar size={20} /> Check Availability
+            </button>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Today's Live Events</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {events.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 14 }}>No events scheduled for today.</div>
+            ) : events.map((evt) => (
+              <div key={evt.id} style={{ background: "#f8fafc", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.eventType} - {evt.hall}</div>
+                  <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.customerName} • {evt.session}</div>
+                </div>
+                <div style={{ background: evt.status === "Confirmed" ? "#dcfce7" : "#fef3c7", color: evt.status === "Confirmed" ? "#166534" : "#b45309", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
+                  {evt.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Follow-up Queue (CRM)</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
+          {[
+            { label: "New / Open", status: "Open" }, 
+            { label: "Follow Up", status: "Follow Up" }, 
+            { label: "Converted / Closed", status: "Closed" }
+          ].map((col, i) => (
+            <div key={i} style={{ background: "#f1f5f9", borderRadius: 24, padding: 24, minHeight: 300 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "#64748b", marginBottom: 16, letterSpacing: 1 }}>{col.label}</div>
+              {getStatusColumn(col.status).length === 0 ? (
+                <div style={{ padding: "16px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>No enquiries</div>
+              ) : getStatusColumn(col.status).map(enq => (
+                <div key={enq.id} style={{ background: "#fff", padding: 16, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{enq.Customer?.name || enq.enquiryNumber}</div>
+                    <span style={{ fontSize: 10, background: "#e2e8f0", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{enq.eventType}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Date: {enq.tentativeDate || "TBD"}</div>
+                  <div style={{ fontSize: 12, color: "#475569", marginTop: 4, fontWeight: 600, color: "#d4a017" }}>{enq.status}</div>
+                  {enq.remarks && <div style={{ fontSize: 12, color: "#475569", marginTop: 8, fontStyle: "italic", borderTop: "1px solid #f1f5f9", paddingTop: 8 }}>"{enq.remarks}"</div>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
 function OperationsCockpit() {
   return (
-    <div className="p-8 text-center bg-white rounded-3xl shadow-sm border border-gray-100 mt-10 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold font-serif text-gray-900">Operations Command</h1>
-      <p className="text-gray-500 mt-2">Track live jobs and vendor logistics.</p>
-    </div>
+    <>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div>
+          <h1 style={{ fontSize: 40, fontWeight: 800, margin: "0 0 16px", color: "#0f172a", letterSpacing: "-1px" }}>Operations Command 🛠️</h1>
+          <p style={{ margin: 0, fontSize: 18, color: "#64748b", fontWeight: 500 }}>Track live jobs, vendors, and hall logistics.</p>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <GradientCard title="Active Jobs" value="8" gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
+        <GradientCard title="Vendor Arrivals" value="12" gradient={["#D4A017", "#f59e0b"]} delay={0.2} />
+        <GradientCard title="Checklists Pending" value="4" gradient={["#52B788", "#74C69D"]} delay={0.3} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
+        <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px", display: "flex", alignItems: "center", gap: 8 }}><Workflow size={20} color="#0ea5e9"/> Job Board</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { id: "JOB-1142", title: "Wedding Logistics", hall: "Emerald Hall", progress: 85 },
+              { id: "JOB-1143", title: "Corporate Setup", hall: "Royal Hall", progress: 60 }
+            ].map(job => (
+              <div key={job.id} style={{ border: "1px solid #e2e8f0", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#0ea5e9", marginBottom: 4 }}>{job.id}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{job.title}</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><MapPin size={16}/> {job.hall}</div>
+                </div>
+                <div style={{ height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${job.progress}%` }} transition={{ duration: 1 }} style={{ height: "100%", background: "#0ea5e9" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px", display: "flex", alignItems: "center", gap: 8 }}><Truck size={20} color="#f59e0b"/> Vendors</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { name: "Alpha Catering", eta: "Arrived", color: "#10b981" },
+              { name: "Lumina Decorators", eta: "ETA 2:00 PM", color: "#f59e0b" }
+            ].map((v, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{v.name}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: v.color }}>{v.eta}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

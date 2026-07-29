@@ -4,7 +4,8 @@ const accountStatementRepo = require("../repositories/accountStatement.repositor
 const cashBookRepo = require("../repositories/cashBook.repository");
 const bankBookRepo = require("../repositories/bankBook.repository");
 const accountingEngine = require("./accountingEngine.service");
-const { Receipt, JobTimeline, sequelize } = require("../models");
+const { Receipt, JobTimeline } = require("../models");
+const sequelize = require("../db");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class PaymentService {
@@ -29,6 +30,24 @@ class PaymentService {
       booking = await bookingRepository.findById(data.bookingId, { tenantId, environmentId });
       if (!booking) throw new NotFoundError("Booking");
       if (!customerId) customerId = booking.customerId;
+    }
+
+    if (!customerId && booking) {
+      // Auto-heal missing customer ID
+      try {
+        const customerService = require("./customer.service");
+        const { customer } = await customerService.findOrCreateCustomer({
+          name: booking.customerName || "Unknown",
+          phone: booking.phone || ""
+        }, { tenantId, environmentId, createdBy });
+        customerId = customer.id;
+        
+        // Optionally update booking as well
+        booking.customerId = cust.id;
+        await booking.save({ hooks: false });
+      } catch (err) {
+        console.error("Failed to auto-heal customerId for payment:", err);
+      }
     }
 
     if (!customerId) {
@@ -72,7 +91,10 @@ class PaymentService {
       }, { transaction: t });
 
       // 4. Update Outstanding Balance on Booking (if applicable)
-      // (This would normally update Booking.balanceAmount or similar field, omitted for brevity but conceptually here)
+      if (booking) {
+        booking.advance = (Number(booking.advance) || 0) + Number(payment.amount);
+        await booking.save({ transaction: t, hooks: false });
+      }
 
       // 5. Create Cash Book or Bank Book entry based on mode
       if (payment.paymentMode === "Cash") {

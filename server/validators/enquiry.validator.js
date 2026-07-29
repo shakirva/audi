@@ -5,13 +5,13 @@ const ENQUIRY_STATUSES = ["New Enquiry", "Contacted", "Follow-up", "Customer Vis
 const createEnquirySchema = z.object({
   body: z.object({
     customerId: z.number().int().positive("Customer ID must be a positive integer"),
-    eventType: z.string().min(1, "Event type is required"),
+    eventType: z.string().optional(),
     tentativeDate: z.string().optional(),
     session: z.string().optional(),
     hallPreference: z.string().optional(),
-    guestCount: z.number().int().min(0).optional(),
-    budget: z.number().int().min(0).optional(),
-    salesExecutiveId: z.number().int().positive().optional(),
+    guestCount: z.number().int().min(0).nullable().optional(),
+    budget: z.number().int().min(0).nullable().optional(),
+    salesExecutiveId: z.number().int().positive().nullable().optional(),
     leadScore: z.enum(["Hot", "Warm", "Cold"]).optional(),
     status: z.enum(ENQUIRY_STATUSES).optional(),
     lostReason: z.string().optional(),
@@ -22,13 +22,13 @@ const createEnquirySchema = z.object({
 
 const updateEnquirySchema = z.object({
   body: z.object({
-    eventType: z.string().min(1).optional(),
+    eventType: z.string().optional(),
     tentativeDate: z.string().optional(),
     session: z.string().optional(),
     hallPreference: z.string().optional(),
-    guestCount: z.number().int().min(0).optional(),
-    budget: z.number().int().min(0).optional(),
-    salesExecutiveId: z.number().int().positive().optional(),
+    guestCount: z.number().int().min(0).nullable().optional(),
+    budget: z.number().int().min(0).nullable().optional(),
+    salesExecutiveId: z.number().int().positive().nullable().optional(),
     leadScore: z.enum(["Hot", "Warm", "Cold"]).optional(),
     status: z.enum(ENQUIRY_STATUSES).optional(),
     lostReason: z.string().optional(),

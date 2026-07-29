@@ -6,7 +6,8 @@
 
 const bookingRepository = require("../repositories/booking.repository");
 const customerService = require("./customer.service");
-const { NotFoundError, BadRequestError } = require("../helpers/errors");
+const availabilityService = require("./availability.service");
+const { BadRequestError, NotFoundError, ConflictError } = require("../helpers/errors");
 const paymentService = require("./payment.service");
 const accountingEngine = require("./accountingEngine.service");
 const { sequelize } = require("../models");
@@ -71,57 +72,65 @@ class BookingService {
       throw new BadRequestError("Customer name, phone, and date are required");
     }
 
+    // --- Availability Check ---
+    if (data.hall && data.session) {
+      const avail = await availabilityService.checkAvailability({
+        tenantId,
+        environmentId,
+        hall: data.hall,
+        date: data.date,
+        session: data.session
+      });
+      if (!avail.available) {
+        throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
+      }
+    }
+
     let customerId = null;
     try {
-      const cust = await customerService.findOrCreate({
+      const { customer } = await customerService.findOrCreateCustomer({
         name: data.customerName,
         phone: data.phone,
         gender: data.gender,
         place: data.place,
         address: data.address,
-      }, { tenantId, environmentId });
-      customerId = cust.id;
+      }, { tenantId, environmentId, createdBy: data.createdBy || null });
+      customerId = customer.id;
     } catch (e) {
       console.error("Failed to create customer for booking:", e);
     }
 
-    const booking = await sequelize.transaction(async (t) => {
-      const b = await bookingRepository.create({
-        tenantId,
-        environmentId,
-        customerId,
-        customerName: data.customerName,
-        phone: data.phone,
-        address: data.address || "",
-        eventType: data.eventType,
-        hall: data.hall,
-        date: data.date,
-        session: data.session || "Full Day",
-        guests: Number(data.guests) || 0,
-        advance: Number(data.advance) || 0,
-        totalAmount: Number(data.totalAmount) || 0,
-        status: data.status || "Enquiry",
-        notes: data.notes || "",
-        brideName: data.brideName || "",
-        groomName: data.groomName || "",
-        fatherName: data.fatherName || "",
-        motherName: data.motherName || "",
-        email: data.email || "",
-        whatsapp: data.whatsapp || "",
-        decoration: data.decoration || "",
-        catering: data.catering || "",
-        sound: data.sound || "",
-        specialInstructions: data.specialInstructions || "",
-        package: data.package || "",
-        discount: Number(data.discount) || 0,
-      }, { transaction: t });
-
-      // Create accounting journal entry strictly inside the transaction
-      if (b.status !== "Enquiry" && b.status !== "Cancelled") {
-        await accountingEngine.recordBooking(b.id, tenantId, environmentId, t);
-      }
-
-      return b;
+    const booking = await bookingRepository.create({
+      tenantId,
+      environmentId,
+      customerId,
+      customerName: data.customerName,
+      phone: data.phone,
+      address: data.address || "",
+      eventType: data.eventType,
+      hall: data.hall,
+      date: data.date,
+      session: data.session || "Full Day",
+      guests: Number(data.guests) || 0,
+      advance: 0, // Will be updated by paymentService
+      totalAmount: Number(data.totalAmount) || 0,
+      status: data.status || "Enquiry",
+      notes: data.notes || "",
+      // Extended Contract Fields
+      brideName: data.brideName || "",
+      groomName: data.groomName || "",
+      fatherName: data.fatherName || "",
+      motherName: data.motherName || "",
+      email: data.email || "",
+      whatsapp: data.whatsapp || "",
+      decoration: data.decoration || "",
+      catering: data.catering || "",
+      sound: data.sound || "",
+      specialInstructions: data.specialInstructions || "",
+      package: data.package || "",
+      discount: Number(data.discount) || 0,
+      taxes: Number(data.taxes) || 0,
+      taxPercentage: Number(data.taxPercentage) || 0,
     });
 
     if (Number(data.advance) > 0 && data.paymentMethod) {
@@ -164,13 +173,30 @@ class BookingService {
    */
   async updateBooking(bookingId, data, { tenantId, environmentId }) {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
-    if (!booking) throw new NotFoundError("Booking");
+    if (!booking) {
+      throw new NotFoundError("Booking");
+    }
 
-    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes"];
+    // --- Availability Check ---
+    if (data.hall && data.date && data.session) {
+      const avail = await availabilityService.checkAvailability({
+        tenantId,
+        environmentId,
+        hall: data.hall,
+        date: data.date,
+        session: data.session,
+        ignoreBookingId: booking.id
+      });
+      if (!avail.available) {
+        throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
+      }
+    }
+
+    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes", "taxes", "taxPercentage"];
     const updateData = {};
     fields.forEach((f) => {
       if (data[f] !== undefined) {
-        updateData[f] = ["guests", "advance", "totalAmount"].includes(f)
+        updateData[f] = ["guests", "advance", "totalAmount", "taxes", "taxPercentage"].includes(f)
           ? Number(data[f])
           : data[f];
       }
@@ -212,9 +238,53 @@ class BookingService {
    * Delete a booking.
    */
   async deleteBooking(bookingId, { tenantId, environmentId }) {
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+
+    // Manually delete related accounting records (Expenses, Journals, Vouchers)
+    // because they are not configured with ON DELETE CASCADE in the associations.
+    // (Payments, Receipts, Agreements, Jobs DO have CASCADE and will be deleted automatically)
+    const { Expense, JournalEntry, Voucher } = require("../models");
+    
+    await Expense.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+
+    // Now delete the booking itself using the correct repository method
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
-    return { message: "Booking deleted", id: bookingId };
+    return { message: "Booking deleted successfully", id: bookingId };
+  }
+
+  /**
+   * Generate Final Tax Invoice
+   */
+  async generateInvoice(idParam, { tenantId, environmentId }) {
+    const whereCondition = isNaN(idParam) ? { bookingId: idParam } : { id: idParam };
+    
+    const booking = await bookingRepository.findOneOrFail({
+      tenantId, environmentId,
+      where: whereCondition,
+      resourceName: "Booking",
+    });
+
+    const realBookingId = booking.id;
+
+    const { Payment } = require("../models");
+    const payments = await Payment.findAll({ where: { bookingId: realBookingId, tenantId, environmentId } });
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+    const outstanding = booking.totalAmount - totalPaid;
+
+    if (outstanding > 0) {
+      throw new Error("Cannot generate final invoice while outstanding balance exists.");
+    }
+
+    const updated = await bookingRepository.update(booking, {
+      invoiceStatus: "Generated",
+      status: "Closed", // Mark Financially Closed
+    });
+
+    return updated;
   }
 }
 

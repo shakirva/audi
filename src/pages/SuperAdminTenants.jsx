@@ -97,7 +97,7 @@ export default function SuperAdminTenants() {
                   </div>
                   <div>
                     <p style={{ fontWeight: 600, fontSize: 14, color: "#111827", margin: 0 }}>{t.name}</p>
-                    <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{window.location.origin}/book/{t.slug}</p>
+                    <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{window.location.origin}/{t.slug}</p>
                   </div>
                 </td>
                 <td style={{ padding: "16px" }}>
@@ -161,7 +161,7 @@ export default function SuperAdminTenants() {
             </div>
             
             <form onSubmit={handleAddTenant}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Venue Name *</label>
                   <input type="text" required placeholder="e.g. Grand Palace" value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />

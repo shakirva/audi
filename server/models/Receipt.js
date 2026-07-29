@@ -43,10 +43,11 @@ const Receipt = sequelize.define("Receipt", {
 }, {
   paranoid: true,
   hooks: {
-    beforeCreate: async (receipt) => {
+    beforeValidate: async (receipt, options) => {
       if (!receipt.receiptNumber) {
         const count = await Receipt.count({
           where: { tenantId: receipt.tenantId, environmentId: receipt.environmentId },
+          transaction: options.transaction
         });
         receipt.receiptNumber = `RCP${String(count + 1).padStart(5, "0")}`;
       }

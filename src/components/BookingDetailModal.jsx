@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil } from "lucide-react";
+import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 
-export default function BookingDetailModal({ booking, onClose, onEdit }) {
+export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
 
   if (!booking) return null;
@@ -135,38 +135,14 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
               <p style={{ margin: "6px 0 0", fontSize: 15, color: "#64748b", fontWeight: 600, wordBreak: "break-word" }}>{booking.customerName} • {new Date(booking.date).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}</p>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "50%" }}>
-              {onEdit && (
-                <motion.button onClick={() => onEdit(booking)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "10px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#1d4ed8", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", whiteSpace: "nowrap" }}>
-                  <Pencil size={16} /> Edit Booking
-                </motion.button>
-              )}
-              <motion.button onClick={generateReceipt} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "10px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#0f172a", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", whiteSpace: "nowrap" }}>
-                <FileText size={16} /> Download Receipt
-              </motion.button>
+
               <motion.button whileHover={{ scale: 1.1, background: "#e2e8f0" }} whileTap={{ scale: 0.9 }} onClick={onClose} style={{ background: "#f1f5f9", border: "none", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748b" }}>
                 <X size={20} />
               </motion.button>
             </div>
           </div>
 
-          {/* AI Recommended Next Action (Framer Motion Animated) */}
-          {activeView === "overview" && (
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-              style={{ background: "linear-gradient(135deg, #0f172a, #334155)", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", boxShadow: "0 10px 30px rgba(15,23,42,0.15)" }}>
-              <div>
-                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: "rgba(255,255,255,0.7)", marginBottom: 8, fontWeight: 800 }}>Next Recommended Action</div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "Receive Pending Payment" : "All clear. Enjoy the event!"}
-                </div>
-              </div>
-              {((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 && (
-                <motion.button onClick={sendPaymentReminder} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ background: "#25D366", color: "#fff", border: "none", padding: "12px 20px", borderRadius: 12, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)" }}>
-                  Send Reminder <ArrowRight size={16} />
-                </motion.button>
-              )}
-            </motion.div>
-          )}
+
         </div>
 
         {/* ── IOS SETTINGS MENU & VIEWS ── */}
@@ -283,7 +259,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
             {activeView === "customer" && (
               <motion.div key="customer" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Customer Profile</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 16px" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Name</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.customerName || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Phone</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.phone || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>WhatsApp</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.whatsapp || "—"}</div></div>
@@ -324,7 +300,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
                 
                 <div style={{ marginTop: 32 }}>
                   <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment Info</h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 16px" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Payment Method</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.paymentMethod || "—"}</div></div>
                     <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Received By</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.receivedBy || "—"}</div></div>
                   </div>
@@ -336,15 +312,28 @@ export default function BookingDetailModal({ booking, onClose, onEdit }) {
             {activeView === "services" && (
               <motion.div key="services" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Services & Logistics</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 16px" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Event Type</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.eventType || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Date</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.date ? new Date(booking.date).toLocaleDateString() : "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Hall</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.hall || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Session</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.session || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Expected Guests</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.guests || "—"}</div></div>
                 </div>
+                {booking.facilities && booking.facilities.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Facilities & Add-ons</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {booking.facilities.map((fac, idx) => (
+                        <div key={idx} style={{ background: "#f0faf4", border: "1px solid #bbf7d0", padding: "12px 16px", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>{fac.name}</span>
+                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{Number(fac.price).toLocaleString()}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {booking.extraArrangements && (
-                  <div style={{ marginTop: 32 }}>
+                  <div style={{ marginTop: 24 }}>
                     <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Extra Arrangements</h4>
                     <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 16, borderRadius: 12, color: "#334155", lineHeight: 1.5 }}>
                       {booking.extraArrangements}

@@ -10,6 +10,7 @@ const { auth, requireRole } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
 const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
 const { auditLog } = require("../../middleware/audit");
+const { ROLES } = require("../../helpers/roles");
 
 const router = express.Router();
 
@@ -21,21 +22,21 @@ router.get("/",
 
 // POST /api/v1/expenses
 router.post("/",
-  auth, requireRole("Owner", "Manager", "Tester"),
+  auth, requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER, ROLES.ACCOUNTS),
   tenantScope, subscriptionGuard,
   expenseController.create
 );
 
 // PUT /api/v1/expenses/:id
 router.put("/:id",
-  auth, requireRole("Owner", "Manager", "Tester"),
+  auth, requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER, ROLES.ACCOUNTS),
   tenantScope, subscriptionGuard,
   expenseController.update
 );
 
 // DELETE /api/v1/expenses/:id
 router.delete("/:id",
-  auth, requireRole("Owner", "Manager", "Tester"),
+  auth, requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER),
   tenantScope, subscriptionGuard,
   auditLog("Delete Expense"),
   expenseController.remove

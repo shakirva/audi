@@ -66,20 +66,20 @@ class BaseRepository {
   /**
    * Create a new record.
    */
-  async create(data) {
-    return this.model.create(data);
+  async create(data, options = {}) {
+    return this.model.create(data, options);
   }
 
   /**
    * Update an existing record.
    */
-  async update(instance, data) {
+  async update(instance, data, options = {}) {
     Object.keys(data).forEach((key) => {
       if (data[key] !== undefined) {
         instance[key] = data[key];
       }
     });
-    await instance.save();
+    await instance.save(options);
     return instance;
   }
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2 } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import ConvertToBookingModal from "../components/ConvertToBookingModal";
+import { useRole } from "../context/RoleContext";
 
 const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Lost"];
 
@@ -23,11 +24,13 @@ function KPISkeleton() {
 }
 
 export default function CRM() {
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [viewMode, setViewMode] = useState("board");
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [convertEnquiry, setConvertEnquiry] = useState(null);
+  const [editEnquiry, setEditEnquiry] = useState(null);
   const [hoveredEnq, setHoveredEnq] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -45,7 +48,11 @@ export default function CRM() {
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
       const res = await enquiriesAPI.getAll(params);
-      setEnquiries(res.data.data || []);
+      let data = res.data.data || [];
+      if (role === "Sales") {
+        data = data.filter(e => e.SalesExecutive?.name === user?.name || e.assignedTo === user?.name || e.createdBy === user?.name);
+      }
+      setEnquiries(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load enquiries");
     } finally {
@@ -72,11 +79,23 @@ export default function CRM() {
       addToast("Failed to update status", "error");
     }
   };
+  
+  const handleDeleteEnquiry = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this enquiry? This action cannot be undone.")) return;
+    try {
+      await enquiriesAPI.remove(id);
+      addToast("Enquiry deleted successfully", "success");
+      fetchEnquiries();
+    } catch (err) {
+      addToast(err.response?.data?.message || "Failed to delete enquiry", "error");
+    }
+  };
 
   const handleEnquiryCreated = () => {
     setShowEnquiryModal(false);
+    setEditEnquiry(null);
     fetchEnquiries();
-    addToast("Enquiry saved successfully! 🎉", "success");
+    addToast(editEnquiry ? "Enquiry updated successfully! 🎉" : "Enquiry saved successfully! 🎉", "success");
   };
 
   const handleConvertClick = (enq) => {
@@ -108,13 +127,6 @@ export default function CRM() {
             style={{ background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}
           >
             <RefreshCw size={14} /> Refresh
-          </button>
-          <button onClick={() => setShowEnquiryModal(true)} style={{
-            background: "#1B4332", color: "#fff", border: "none", borderRadius: 8,
-            padding: "10px 16px", display: "flex", alignItems: "center", gap: 8,
-            fontWeight: 600, cursor: "pointer", fontSize: 14, boxShadow: "0 4px 12px rgba(27,67,50,0.2)"
-          }}>
-            <Plus size={18} /> New Enquiry
           </button>
         </div>
       </div>
@@ -251,13 +263,25 @@ export default function CRM() {
                                     fontSize: 10, padding: "4px", borderRadius: 4, border: "1px solid #ddd", background: "#f8f9fa", cursor: "pointer", maxWidth: 90
                                   }}
                                 >
-                                  {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
+                                  {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                  style={{ background: "#e0f2fe", color: "#0284c7", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <Edit2 size={11}/> Edit
+                                </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
                                   style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                                 >
                                   <CheckCircle2 size={11}/> Convert
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                                  style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <Trash2 size={11}/> Delete
                                 </button>
                               </div>
                             ) : (
@@ -329,7 +353,7 @@ export default function CRM() {
                           fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid #bae6fd", background: "#e0f2fe", color: "#0284c7", fontWeight: 700, outline: "none", cursor: "pointer"
                         }}
                       >
-                        {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
+                        {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td style={{ padding: "12px 16px" }}>
@@ -339,12 +363,26 @@ export default function CRM() {
                       {enq.SalesExecutive?.name || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                        style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                      >
-                        <CheckCircle2 size={12}/> Convert
-                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                          style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Edit2 size={12}/> Edit
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                          style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <CheckCircle2 size={12}/> Convert
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                          style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Trash2 size={12}/> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -360,7 +398,7 @@ export default function CRM() {
         </div>
       )}
 
-      <NewEnquiryModal open={showEnquiryModal} onClose={() => setShowEnquiryModal(false)} onSuccess={handleEnquiryCreated} />
+      <NewEnquiryModal open={showEnquiryModal} onClose={() => { setShowEnquiryModal(false); setEditEnquiry(null); }} onSuccess={handleEnquiryCreated} editData={editEnquiry} />
       <ConvertToBookingModal open={showConvertModal} enquiry={convertEnquiry} onClose={() => { setShowConvertModal(false); fetchEnquiries(); }} />
     </div>
   );

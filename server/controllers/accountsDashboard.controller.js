@@ -65,6 +65,18 @@ class AccountsDashboardController {
     }
   }
 
+  async getBookingLedger(req, res, next) {
+    try {
+      const data = await accountingEngine.getBookingLedger(req.params.bookingId, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+      });
+      return sendSuccess(res, { data, message: "Booking ledger fetched successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getProfitLoss(req, res, next) {
     try {
       const { startDate, endDate } = req.query;

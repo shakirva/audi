@@ -208,12 +208,16 @@ Enquiry.belongsTo(Customer, { foreignKey: "customerId" });
 Enquiry.belongsTo(User, { as: "SalesExecutive", foreignKey: "salesExecutiveId" });
 FollowUp.belongsTo(Enquiry, { foreignKey: "enquiryId" });
 
+Expense.belongsTo(Booking, { foreignKey: "bookingId" });
+Booking.hasMany(Expense, { foreignKey: "bookingId" });
+
 Agreement.belongsTo(Booking, { foreignKey: "bookingId" });
 Agreement.belongsTo(AgreementTemplate, { foreignKey: "templateId" });
 AgreementVersion.belongsTo(Agreement, { foreignKey: "agreementId" });
 
 Payment.belongsTo(Booking, { foreignKey: "bookingId" });
 Payment.belongsTo(Customer, { foreignKey: "customerId" });
+Payment.belongsTo(User, { foreignKey: "createdBy", as: "creator" });
 
 Receipt.belongsTo(Payment, { foreignKey: "paymentId" });
 Receipt.belongsTo(Booking, { foreignKey: "bookingId" });

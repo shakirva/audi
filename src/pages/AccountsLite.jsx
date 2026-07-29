@@ -61,14 +61,14 @@ export default function AccountsLite() {
     const { summary, recentTransactions } = dashboardData;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard title="Net Balance" value={formatMoney(summary.netBalance)} icon={Activity} color="#16a34a" bg="#dcfce7" />
           <MetricCard title="Cash Balance" value={formatMoney(summary.cashBalance)} icon={DollarSign} color="#0ea5e9" bg="#e0f2fe" />
           <MetricCard title="Bank Balance" value={formatMoney(summary.bankBalance)} icon={Wallet} color="#8b5cf6" bg="#ede9fe" />
           <MetricCard title="Outstanding" value={formatMoney(summary.outstanding)} icon={Clock} color="#ef4444" bg="#fee2e2" />
         </div>
         
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
            <MetricCard title="Monthly Revenue" value={formatMoney(summary.monthlyRevenue)} icon={TrendingUp} color="#10b981" bg="#d1fae5" />
            <MetricCard title="Monthly Expenses" value={formatMoney(summary.monthlyExpense)} icon={ArrowDownRight} color="#f59e0b" bg="#fef3c7" />
            <MetricCard title="Net Profit (Month)" value={formatMoney(summary.netProfit)} icon={BarChart2} color="#3b82f6" bg="#dbeafe" />
@@ -174,7 +174,7 @@ export default function AccountsLite() {
   const renderPL = () => {
     if (!plData) return null;
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div style={{ background: "#fff", borderRadius: 20, padding: 24, border: "1px solid #f1f5f9" }}>
           <h3 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 800, color: "#16a34a" }}>Income</h3>
           {plData.income.map(item => (

@@ -157,7 +157,7 @@ export default function InvoiceModal({ booking, onClose }) {
           {/* Event details */}
           <div style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 11 }}>
             <p style={{ fontWeight: 700, color: "#374151", marginBottom: 6 }}>Event Details</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 0", color: "#6b7280" }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <span>Event Type:</span><span style={{ fontWeight: 600, color: "#111" }}>{booking.eventType}</span>
               <span>Hall:</span><span style={{ fontWeight: 600, color: "#111" }}>{booking.hall}</span>
               <span>Date:</span><span style={{ fontWeight: 600, color: "#111" }}>{formattedDate}</span>

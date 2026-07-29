@@ -75,6 +75,15 @@ class SettingsController {
     }
   }
 
+  async updateUser(req, res, next) {
+    try {
+      const result = await settingsService.updateUser(req.params.id, req.body, req.tenantId);
+      return sendSuccess(res, { data: result, message: "User updated successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async toggleUserActive(req, res, next) {
     try {
       const result = await settingsService.toggleUserActive(req.params.id, req.tenantId);

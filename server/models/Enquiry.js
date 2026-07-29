@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, Op } = require("sequelize");
 const sequelize = require("../db");
 
 const Enquiry = sequelize.define("Enquiry", {
@@ -50,11 +50,21 @@ const Enquiry = sequelize.define("Enquiry", {
   hooks: {
     beforeValidate: async (enquiry) => {
       if (!enquiry.enquiryNumber) {
-        // Scope enquiry number generation to tenant + environment
-        const count = await Enquiry.count({
+        // Find the highest existing enquiry number (including soft-deleted) to guarantee uniqueness
+        const lastEnquiry = await Enquiry.findOne({
           where: { tenantId: enquiry.tenantId, environmentId: enquiry.environmentId },
+          order: [["id", "DESC"]],
+          attributes: ["enquiryNumber"],
+          paranoid: false, // include soft-deleted records
         });
-        enquiry.enquiryNumber = `ENQ${String(count + 1).padStart(3, "0")}`;
+
+        let nextNum = 1;
+        if (lastEnquiry && lastEnquiry.enquiryNumber) {
+          const match = lastEnquiry.enquiryNumber.match(/ENQ(\d+)/);
+          if (match) nextNum = parseInt(match[1], 10) + 1;
+        }
+
+        enquiry.enquiryNumber = `ENQ${String(nextNum).padStart(3, "0")}`;
       }
     }
   },

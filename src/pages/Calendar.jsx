@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, Ban } from "lucide-react";
 const hallColors = { "Main Hall": { hex: "#1B4332" }, "Mini Hall": { hex: "#2563eb" }, "Open Stage": { hex: "#D4A017" } };
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import { useBookings } from "../context/BookingsContext";
-import { settingsAPI } from "../services/api";
+import { settingsAPI, enquiriesAPI } from "../services/api";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -31,11 +31,38 @@ export default function Calendar() {
   const [showModal, setShowModal] = useState(false);
   const [blackoutDates, setBlackoutDates] = useState([]);
 
+  const [enquiries, setEnquiries] = useState([]);
+
+  const fetchEnquiries = () => {
+    enquiriesAPI.getAll({ limit: 1000 })
+      .then(res => {
+        const mapped = (res.data.data || [])
+          .filter(e => e.status !== "Booking Confirmed" && e.status !== "Lost" && e.tentativeDate)
+          .map(e => ({
+            id: `enq-${e.id}`,
+            date: e.tentativeDate,
+            customerName: e.Customer?.name || "Unknown",
+            status: "Enquiry",
+            eventType: e.eventType,
+            hall: e.hallPreference,
+            session: e.session,
+            guests: e.guestCount || 0,
+            totalAmount: e.budget || 0
+          }));
+        setEnquiries(mapped);
+      })
+      .catch(console.error);
+  };
+
   useEffect(() => {
     settingsAPI.get()
       .then(res => { if (res.data.blackoutDates) setBlackoutDates(res.data.blackoutDates); })
       .catch(console.error);
+      
+    fetchEnquiries();
   }, []);
+
+  const allCalendarData = [...bookings, ...enquiries];
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay    = getFirstDay(year, month);
@@ -46,7 +73,7 @@ export default function Calendar() {
 
   const bookingsOnDay = (day) => {
     const d = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-    return bookings.filter(b => b.date === d);
+    return allCalendarData.filter(b => b.date === d);
   };
 
   const selectedDateStr = selected
@@ -271,7 +298,7 @@ export default function Calendar() {
           </p>
           {(() => {
             const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
-            const mb = bookings.filter(b => b.date.startsWith(monthStr));
+            const mb = allCalendarData.filter(b => b.date.startsWith(monthStr));
             return [
               { label: "Total bookings", value: mb.length, color: "#1B4332" },
               { label: "Confirmed",      value: mb.filter(b => b.status === "Confirmed").length, color: "#15803d" },
@@ -295,6 +322,7 @@ export default function Calendar() {
           prefillDate={selectedDateStr} 
           onSuccess={() => {
             setShowModal(false);
+            fetchEnquiries();
             if (refetch) refetch();
           }} 
         />

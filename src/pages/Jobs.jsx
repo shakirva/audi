@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileText, CheckSquare, Plus, ArrowLeft, RefreshCw, AlertCircle, Printer } from "lucide-react";
+import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileText, CheckSquare, Plus, ArrowLeft, RefreshCw, AlertCircle, Printer, X } from "lucide-react";
 import { jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../context/RoleContext";
 
 function JobSkeleton() {
   return (
@@ -102,11 +103,28 @@ function printAgreement(agr) {
 
 export default function Jobs() {
   const { addToast } = useToast();
+  const { user, role } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem("hm_local_checklists") || "{}") || {});
+  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem("hm_local_tasks") || "{}") || {});
+  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem("hm_local_staff") || "{}") || {});
+  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem("hm_local_jobs") || "[]") || []);
+  
+  const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
+  const [staffModal, setStaffModal] = useState({ open: false, staffName: "", role: "Sales" });
+  const [jobModal, setJobModal] = useState({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
+
+  const toggleChecklistLocal = (jobId, checklistId) => {
+    const key = `${jobId}_${checklistId}`;
+    const newState = !localChecklists[key];
+    const updated = { ...localChecklists, [key]: newState };
+    setLocalChecklists(updated);
+    localStorage.setItem("hm_local_checklists", JSON.stringify(updated));
+  };
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -115,7 +133,17 @@ export default function Jobs() {
       const params = {};
       if (search) params.search = search;
       const res = await jobsAPI.getAll(params);
-      setJobs(res.data.data || []);
+      let data = res.data.data || [];
+      
+      // Filter for Staff Portal (Sales / Operations only see assigned jobs)
+      if (role === "Sales" || role === "Operations") {
+        data = data.filter(job => {
+          const staff = [...(job.JobStaffs || []), ...(job.Staff || []), ...(localStaff?.[job.id] || [])];
+          return staff.some(s => s.userId === user?.id || s.User?.id === user?.id || s.User?.name === user?.name || s.name === user?.name) ||
+                 job.salesExecutiveId === user?.id; // If they created the booking
+        });
+      }
+      setJobs(data);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load jobs";
       setError(msg);
@@ -129,6 +157,75 @@ export default function Jobs() {
     const timer = setTimeout(() => fetchJobs(), 300);
     return () => clearTimeout(timer);
   }, [fetchJobs]);
+
+  const handleCreateJob = (e) => {
+    e.preventDefault();
+    const newJob = {
+      id: "LOCAL_" + Date.now(),
+      jobNumber: "JOB" + String(Date.now()).slice(-4),
+      customerName: jobModal.customerName,
+      status: "Planning",
+      createdAt: new Date().toISOString(),
+      eventDate: jobModal.date,
+      hall: jobModal.hall,
+      Booking: { 
+        customerName: jobModal.customerName, 
+        eventType: jobModal.eventType, 
+        hall: jobModal.hall, 
+        date: jobModal.date,
+        session: jobModal.session,
+        totalAmount: jobModal.amount ? Number(jobModal.amount) : 0
+      }
+    };
+    const updated = [newJob, ...localJobs];
+    setLocalJobs(updated);
+    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    setJobs(prev => [newJob, ...prev]);
+    setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
+    addToast("Job created successfully", "success");
+  };
+
+  const handleDeleteJob = (id) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    const updated = localJobs.filter(j => j.id !== id);
+    setLocalJobs(updated);
+    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    setJobs(prev => prev.filter(j => j.id !== id));
+    setSelectedJob(null);
+    addToast("Job deleted successfully", "success");
+  };
+
+  const handleUpdateStatus = (id, newStatus) => {
+    const isLocal = String(id).startsWith("LOCAL_");
+    if (isLocal) {
+      const updated = localJobs.map(j => j.id === id ? { ...j, status: newStatus } : j);
+      setLocalJobs(updated);
+      localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    }
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
+    if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
+    addToast("Job status updated", "success");
+  };
+
+  const handleAddTask = (e) => {
+    e.preventDefault();
+    const jId = selectedJob.id;
+    const newTask = { id: Date.now(), taskName: taskModal.taskName, isCompleted: false };
+    const updated = { ...localTasks, [jId]: [...(localTasks?.[jId] || []), newTask] };
+    setLocalTasks(updated);
+    localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
+    setTaskModal({ open: false, taskName: "" });
+  };
+
+  const handleAddStaff = (e) => {
+    e.preventDefault();
+    const jId = selectedJob.id;
+    const newStaff = { User: { name: staffModal.staffName }, role: staffModal.role, name: staffModal.staffName };
+    const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
+    setLocalStaff(updated);
+    localStorage.setItem("hm_local_staff", JSON.stringify(updated));
+    setStaffModal({ open: false, staffName: "", role: "Sales" });
+  };
 
   const getCustomerName = (job) => {
     if (job.Customer?.name) return job.Customer.name;
@@ -150,10 +247,14 @@ export default function Jobs() {
     const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
     
     // Fallback data if arrays are missing
-    const checklists = selectedJob.JobChecklists || selectedJob.Checklists || [];
+    const rawChecklists = [...(selectedJob.JobChecklists || selectedJob.Checklists || []), ...(localTasks?.[selectedJob.id] || [])];
+    const checklists = rawChecklists.map(c => ({
+      ...c,
+      isCompleted: localChecklists?.[`${selectedJob.id}_${c.id}`] !== undefined ? localChecklists[`${selectedJob.id}_${c.id}`] : c.isCompleted
+    }));
     const completedTasks = checklists.filter(c => c.isCompleted).length;
     const totalTasks = checklists.length;
-    const staff = selectedJob.JobStaffs || selectedJob.Staff || [];
+    const staff = [...(selectedJob.JobStaffs || selectedJob.Staff || []), ...(localStaff?.[selectedJob.id] || [])];
     const timeline = selectedJob.JobTimelines || selectedJob.Timeline || [];
 
     return (
@@ -170,7 +271,20 @@ export default function Jobs() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <h1 style={{ margin: 0, fontSize: 24, color: "#111" }}>{customer} - {eventType}</h1>
-              <span style={{ background: "#e0f2fe", color: "#0284c7", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{selectedJob.status}</span>
+              <select 
+                value={selectedJob.status} 
+                onChange={(e) => handleUpdateStatus(selectedJob.id, e.target.value)}
+                style={{ background: "#e0f2fe", color: "#0284c7", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", outline: "none" }}
+              >
+                <option value="Planning">Planning</option>
+                <option value="Setup">Setup</option>
+                <option value="Event Running">Event Running</option>
+                <option value="Cleanup">Cleanup</option>
+                <option value="Completed">Completed</option>
+              </select>
+              {String(selectedJob.id).startsWith("LOCAL_") && (
+                <button onClick={() => handleDeleteJob(selectedJob.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 20, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Delete</button>
+              )}
             </div>
             <div style={{ display: "flex", gap: 24, color: "#666", fontSize: 14 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Clock size={16} /> {date}</span>
@@ -197,15 +311,18 @@ export default function Jobs() {
             <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><CheckSquare size={18} /> Operational Checklist</h3>
-                <span style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>{completedTasks}/{totalTasks} Completed</span>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>{completedTasks}/{totalTasks} Completed</span>
+                  <button onClick={() => setTaskModal({ open: true, taskName: "" })} style={{ background: "none", border: "none", color: "#1B4332", fontWeight: 700, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}><Plus size={14} /> Add</button>
+                </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {totalTasks === 0 ? (
                   <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
                 ) : checklists.map((task, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8 }}>
+                  <div key={i} onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
                     <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
-                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
+                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none", flex: 1 }}>{task.taskName}</span>
                   </div>
                 ))}
               </div>
@@ -215,7 +332,9 @@ export default function Jobs() {
             <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #eaeaea" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 16, color: "#111", display: "flex", alignItems: "center", gap: 8 }}><UserCircle size={18} /> Staff Assignments</h3>
-                <button style={{ background: "none", border: "none", color: "#D4A017", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ Assign</button>
+                {role !== "Sales" && role !== "Operations" && (
+                  <button onClick={() => setStaffModal({ open: true, staffName: "", role: "Sales" })} style={{ background: "none", border: "none", color: "#D4A017", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>+ Assign</button>
+                )}
               </div>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 {staff.length === 0 ? (
@@ -256,6 +375,41 @@ export default function Jobs() {
             </div>
           </div>
         </div>
+
+        {/* Add Task Modal */}
+        {taskModal.open && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+            <form onSubmit={handleAddTask} style={{ background: "#fff", width: 400, borderRadius: 16, padding: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Add Task</h2>
+                <button type="button" onClick={() => setTaskModal({ open: false, taskName: "" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
+              </div>
+              <input autoFocus required type="text" value={taskModal.taskName} onChange={e => setTaskModal({ ...taskModal, taskName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 16 }} placeholder="Task description..." />
+              <button type="submit" style={{ width: "100%", padding: 12, background: "#1B4332", color: "#fff", borderRadius: 8, fontWeight: 700, border: "none", cursor: "pointer" }}>Add Task</button>
+            </form>
+          </div>
+        )}
+
+        {/* Assign Staff Modal */}
+        {staffModal.open && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+            <form onSubmit={handleAddStaff} style={{ background: "#fff", width: 400, borderRadius: 16, padding: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Assign Staff</h2>
+                <button type="button" onClick={() => setStaffModal({ open: false, staffName: "", role: "Sales" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
+              </div>
+              <input required type="text" value={staffModal.staffName} onChange={e => setStaffModal({ ...staffModal, staffName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12 }} placeholder="Staff Name" />
+              <select required value={staffModal.role} onChange={e => setStaffModal({ ...staffModal, role: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 16 }}>
+                <option value="Operations">Operations</option>
+                <option value="Technician">Technician</option>
+                <option value="Security">Security</option>
+                <option value="Cleaner">Cleaner</option>
+                <option value="Sales">Sales</option>
+              </select>
+              <button type="submit" style={{ width: "100%", padding: 12, background: "#D4A017", color: "#fff", borderRadius: 8, fontWeight: 700, border: "none", cursor: "pointer" }}>Assign</button>
+            </form>
+          </div>
+        )}
       </div>
     );
   }
@@ -269,6 +423,12 @@ export default function Jobs() {
           <p style={{ color: "#666", margin: 0, fontSize: 14 }}>Track operational events, staff assignments, and checklists.</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => setJobModal({ open: true, customerName: "", eventType: "", hall: "Main Hall", date: "" })} style={{
+            background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 8,
+            padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
+          }}>
+            <Plus size={16} /> Create Job
+          </button>
           <button onClick={fetchJobs} style={{
             background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8,
             padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
@@ -314,8 +474,12 @@ export default function Jobs() {
             const eventType = getEventType(job);
             const hall = job.hall || job.Booking?.hall || "Main Hall";
             const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-            const staffCount = job.JobStaffs?.length || job.Staff?.length || 0;
-            const checklists = job.JobChecklists || job.Checklists || [];
+            const staffCount = (job.JobStaffs?.length || job.Staff?.length || 0) + (localStaff?.[job.id]?.length || 0);
+            const rawChecklists = [...(job.JobChecklists || job.Checklists || []), ...(localTasks?.[job.id] || [])];
+            const checklists = rawChecklists.map(c => ({
+              ...c,
+              isCompleted: localChecklists?.[`${job.id}_${c.id}`] !== undefined ? localChecklists[`${job.id}_${c.id}`] : c.isCompleted
+            }));
             const completedTasks = checklists.filter(c => c.isCompleted).length;
             const totalTasks = checklists.length;
 
@@ -371,6 +535,38 @@ export default function Jobs() {
           })
         )}
       </div>
+
+      {/* Create Job Modal */}
+      {jobModal.open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+          <form onSubmit={handleCreateJob} style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 16, padding: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Create Custom Job</h2>
+              <button type="button" onClick={() => setJobModal({ ...jobModal, open: false })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input required type="text" value={jobModal.customerName} onChange={e => setJobModal({ ...jobModal, customerName: e.target.value })} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }} placeholder="Customer Name" />
+              <input required type="text" value={jobModal.eventType} onChange={e => setJobModal({ ...jobModal, eventType: e.target.value })} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }} placeholder="Event Type (e.g. Wedding)" />
+              <input required type="date" value={jobModal.date} onChange={e => setJobModal({ ...jobModal, date: e.target.value })} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }} />
+              <select required value={jobModal.hall} onChange={e => setJobModal({ ...jobModal, hall: e.target.value })} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }}>
+                <option value="Main Hall">Main Hall</option>
+                <option value="Mini Hall">Mini Hall</option>
+                <option value="Dining Hall">Dining Hall</option>
+              </select>
+              <div style={{ display: "flex", gap: 12 }}>
+                <select required value={jobModal.session} onChange={e => setJobModal({ ...jobModal, session: e.target.value })} style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }}>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                  <option value="Full Day">Full Day</option>
+                </select>
+                <input type="number" value={jobModal.amount} onChange={e => setJobModal({ ...jobModal, amount: e.target.value })} style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd" }} placeholder="Amount (₹)" />
+              </div>
+            </div>
+            <button type="submit" style={{ width: "100%", padding: 12, background: "#1B4332", color: "#fff", borderRadius: 8, fontWeight: 700, border: "none", cursor: "pointer", marginTop: 20 }}>Create Job</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

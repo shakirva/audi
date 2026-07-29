@@ -128,7 +128,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
             <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
               <User size={13} /> Customer Details
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label style={labelSt}><User size={11} /> Customer Name *</label>
                 <input name="customerName" value={form.customerName} onChange={handleChange}
@@ -145,7 +145,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label style={labelSt}>Gender</label>
                 <select name="gender" value={form.gender} onChange={handleChange}
@@ -229,7 +229,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
             <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
               <CalendarDays size={13} /> Event Details
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label style={labelSt}>Event Type</label>
                 <select name="eventType" value={form.eventType} onChange={handleChange}
@@ -255,7 +255,7 @@ export default function BookingModal({ onClose, prefillDate = "", editData = nul
               <Building2 size={13} /> Hall & Session
             </p>
             {/* Hall cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 14 }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {hallOptions.map(h => (
                 <button type="button" key={h.name} onClick={() => handleChange({ target: { name: "hall", value: h.name } })}
                   style={{

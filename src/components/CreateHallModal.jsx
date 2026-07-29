@@ -27,7 +27,8 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
     price: "",
     pricePerPax: "",
     allowedSessions: ["Morning", "Afternoon", "Evening", "Full Day"],
-    slabs: []
+    slabs: [],
+    gstRate: 18
   });
 
   React.useEffect(() => {
@@ -37,11 +38,12 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
         capacity: editData.capacity || "",
         price: editData.price || "",
         pricePerPax: editData.pricePerPax || "",
+        gstRate: editData.gstRate !== undefined ? editData.gstRate : 18,
         allowedSessions: editData.allowedSessions || ["Morning", "Afternoon", "Evening", "Full Day"],
       });
       setStep(1);
     } else if (open) {
-      setForm({ name: "", icon: "✨", capacity: "", description: "", pricingType: "flat", price: "", pricePerPax: "", allowedSessions: [...ALL_SESSIONS], slabs: [] });
+      setForm({ name: "", icon: "✨", capacity: "", description: "", pricingType: "flat", price: "", pricePerPax: "", gstRate: 18, allowedSessions: [...ALL_SESSIONS], slabs: [] });
       setStep(1);
     }
   }, [open, editData]);
@@ -73,6 +75,7 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
       capacity: Number(form.capacity) || 0,
       price: Number(form.price) || 0,
       pricePerPax: Number(form.pricePerPax) || 0,
+      gstRate: Number(form.gstRate) || 0,
     });
     onClose();
   };
@@ -139,24 +142,42 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
               </div>
 
               {form.pricingType === "flat" && (
-                <div>
-                  <label style={labelSt}><IndianRupee size={11} style={{ display: "inline", marginRight: 4 }}/> Base Flat Price (₹)</label>
-                  <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="e.g. 15000" style={iStyle} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={labelSt}><IndianRupee size={11} style={{ display: "inline", marginRight: 4 }}/> Base Flat Price (₹)</label>
+                    <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="e.g. 15000" style={iStyle} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>GST Tax Rate (%)</label>
+                    <input type="number" name="gstRate" value={form.gstRate} onChange={handleChange} placeholder="e.g. 18" style={iStyle} />
+                  </div>
                 </div>
               )}
 
               {form.pricingType === "per_pax" && (
-                <div>
-                  <label style={labelSt}><IndianRupee size={11} style={{ display: "inline", marginRight: 4 }}/> Price Per Person (₹)</label>
-                  <input type="number" name="pricePerPax" value={form.pricePerPax} onChange={handleChange} placeholder="e.g. 500" style={iStyle} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={labelSt}><IndianRupee size={11} style={{ display: "inline", marginRight: 4 }}/> Price Per Person (₹)</label>
+                    <input type="number" name="pricePerPax" value={form.pricePerPax} onChange={handleChange} placeholder="e.g. 500" style={iStyle} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>GST Tax Rate (%)</label>
+                    <input type="number" name="gstRate" value={form.gstRate} onChange={handleChange} placeholder="e.g. 18" style={iStyle} />
+                  </div>
                 </div>
               )}
 
               {form.pricingType === "slab" && (
-                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>
-                    ℹ️ You can configure the specific pricing slabs for this hall later from the <b>Hall Pricing Configuration</b> section.
-                  </p>
+                <div>
+                  <div style={{ padding: 12, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                    <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>
+                      ℹ️ You can configure the specific pricing slabs for this hall later from the <b>Hall Pricing Configuration</b> section.
+                    </p>
+                  </div>
+                  <div style={{ width: "50%" }}>
+                    <label style={labelSt}>GST Tax Rate (%)</label>
+                    <input type="number" name="gstRate" value={form.gstRate} onChange={handleChange} placeholder="e.g. 18" style={iStyle} />
+                  </div>
                 </div>
               )}
 

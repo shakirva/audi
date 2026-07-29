@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2 } from "lucide-react";
-import { enquiriesAPI, customersAPI, settingsAPI } from "../services/api";
+import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
+import SmartDatePicker from "./SmartDatePicker";
+import { useRole } from "../context/RoleContext";
 
 const iStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 10,
@@ -23,6 +25,7 @@ const LEAD_SCORES = ["Hot", "Warm", "Cold"];
 const GENDERS = ["Male", "Female", "Other"];
 
 export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate = "", editData = null }) {
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -42,6 +45,10 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [settingsHalls, setSettingsHalls] = useState([]);
   const [settingsEventTypes, setSettingsEventTypes] = useState([]);
   const [settingsSessions, setSettingsSessions] = useState([]);
+  
+  const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+  const [fetchingAvailability, setFetchingAvailability] = useState(false);
+  const [sendWhatsApp, setSendWhatsApp] = useState(true);
 
   const [form, setForm] = useState({
     name: "",
@@ -79,17 +86,17 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         leadScore: editData.leadScore || "",
         remarks: editData.remarks || "",
         source: editData.source || "",
-        salesExecutiveId: editData.salesExecutiveId || "",
+        salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
       setPlaceQuery(editData.Customer?.city || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
-      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "" });
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "" });
       setPlaceQuery("");
       setUserEditedBudget(false);
     }
-  }, [editData, open]);
+  }, [editData, open, role, user]);
 
   const [userEditedBudget, setUserEditedBudget] = useState(false);
 
@@ -181,6 +188,26 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     }
   }, [form.eventType, form.hallPreference, settingsEventTypes, settingsHalls]);
 
+  // Fetch real-time availability
+  useEffect(() => {
+    if (form.tentativeDate && form.hallPreference) {
+      setFetchingAvailability(true);
+      availabilityAPI.check(form.hallPreference, form.tentativeDate, editData ? editData.id : null)
+        .then(res => {
+          const avail = res.data.data;
+          setAvailability(avail);
+          // Auto clear selected session if it's no longer available
+          if (form.session === "Morning" && avail.morning === "booked") setForm(prev => ({ ...prev, session: "" }));
+          if (form.session === "Evening" && avail.evening === "booked") setForm(prev => ({ ...prev, session: "" }));
+          if (form.session === "Full Day" && avail.fullDay === "booked") setForm(prev => ({ ...prev, session: "" }));
+        })
+        .catch(console.error)
+        .finally(() => setFetchingAvailability(false));
+    } else {
+      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+    }
+  }, [form.tentativeDate, form.hallPreference, editData]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClick(e) {
@@ -243,12 +270,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
           hallPreference: form.hallPreference,
-          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
-          budget: form.budget ? parseInt(form.budget) : 0,
+          guestCount: parseInt(form.guestCount) || 0,
+          budget: parseInt(form.budget) || 0,
           leadScore: form.leadScore || undefined,
           remarks: form.remarks || undefined,
           source: form.source || undefined,
-          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+          salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
         });
         addToast("Enquiry updated successfully! ✏️", "success");
       } else {
@@ -267,13 +294,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
           hallPreference: form.hallPreference,
-          guestCount: form.guestCount ? parseInt(form.guestCount) : 0,
-          budget: form.budget ? parseInt(form.budget) : 0,
+          guestCount: parseInt(form.guestCount) || 0,
+          budget: parseInt(form.budget) || 0,
           leadScore: form.leadScore || undefined,
           remarks: form.remarks || undefined,
           source: form.source || undefined,
           status: "New Enquiry",
-          salesExecutiveId: form.salesExecutiveId ? parseInt(form.salesExecutiveId) : undefined,
+          salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
         });
       }
 
@@ -282,17 +309,30 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       onSuccess?.();
       
       // WhatsApp Redirect
-      const message = editData 
-        ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
-        : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
-      
-      const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
-      const text = encodeURIComponent(message);
-      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
-      window.open(waUrl, "_blank");
+      if (sendWhatsApp) {
+        const message = editData 
+          ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
+          : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
+        
+        const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
+        const text = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+        window.open(waUrl, "_blank");
+      }
 
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || "Failed to save enquiry. Please try again.";
+      console.error("Enquiry submission error:", err.response?.data);
+      
+      let msg = "Failed to save enquiry. Please try again.";
+      
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // If it's a Zod validation error array, show the first specific field error
+        const firstErr = err.response.data.errors[0];
+        msg = firstErr.message ? `${firstErr.path?.join('.')} : ${firstErr.message}` : "Validation failed check all fields";
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      }
+      
       setError(msg);
       addToast(msg, "error");
     } finally {
@@ -339,7 +379,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </p>
 
               {/* Row 1: Name + Phone */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Enquired By *</label>
                   <input name="name" value={form.name} onChange={handleChange}
@@ -357,7 +397,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </div>
 
               {/* Row 2: Gender + Place */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Gender *</label>
                   <select required name="gender" value={form.gender} onChange={handleChange}
@@ -463,7 +503,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Calendar size={12} /> Event Details
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Event Type *</label>
                   <select required name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
@@ -478,12 +518,19 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                       : EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                <div>
+                <div style={{ position: "relative" }}>
                   <label style={labelSt}>Event Date *</label>
-                  <input required type="date" name="tentativeDate" value={form.tentativeDate} onChange={handleChange}
-                    style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                  <SmartDatePicker 
+                    value={form.tentativeDate} 
+                    onChange={handleChange} 
+                    hallPreference={form.hallPreference}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
+                  />
+                  {form.tentativeDate && form.hallPreference && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -567,24 +614,40 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                          allowed = selectedHall.allowedSessions.map(s => ({ name: s }));
                        }
                     }
-                    return allowed.map(s => (
+                    return allowed.map(s => {
+                      let isBooked = false;
+                      if (s.name === "Morning" && availability.morning === "booked") isBooked = true;
+                      if (s.name === "Evening" && availability.evening === "booked") isBooked = true;
+                      if (s.name === "Full Day" && availability.fullDay === "booked") isBooked = true;
+                      if (s.name === "Afternoon" && availability.morning === "booked") isBooked = true; // simplifying logic
+                      
+                      return (
                       <div
                         key={s.name}
-                        onClick={() => setForm(prev => ({ ...prev, session: s.name }))}
+                        onClick={() => !isBooked && setForm(prev => ({ ...prev, session: s.name }))}
                         style={{
                           flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, 
                           border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`,
-                          background: form.session === s.name ? "#1B4332" : "#fff",
-                          color: form.session === s.name ? "#fff" : "#374151",
-                          cursor: "pointer", textAlign: "center", transition: "all 0.2s"
+                          background: form.session === s.name ? "#1B4332" : isBooked ? "#f1f5f9" : "#fff",
+                          color: form.session === s.name ? "#fff" : isBooked ? "#94a3b8" : "#374151",
+                          cursor: isBooked ? "not-allowed" : "pointer", textAlign: "center", transition: "all 0.2s"
                         }}
                       >
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
-                        {s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>}
+                        {isBooked ? (
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444" }}>Booked</div>
+                        ) : (
+                          s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>
+                        )}
                       </div>
-                    ));
+                    )});
                   })()}
                 </div>
+                {availability.status === "Fully Booked" && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
+                    No sessions available on this date for the selected hall.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -632,10 +695,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Building2 size={12} /> Assignment & Remarks
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Salesman (Assigned To) *</label>
-                  <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
+                  <select required name="salesExecutiveId" value={form.salesExecutiveId} onChange={handleChange} style={{ ...iStyle, cursor: role === "Sales" ? "not-allowed" : "pointer", background: role === "Sales" ? "#f1f5f9" : "#fff" }}
+                    disabled={role === "Sales"}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
                     <option value="" disabled>-- Select Salesman --</option>
@@ -660,6 +724,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                   style={{ ...iStyle, resize: "none", lineHeight: 1.6 }}
                   onFocus={e => e.target.style.borderColor = "#1B4332"}
                   onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              </div>
+              <div style={{ marginTop: 8, padding: "12px", background: "#f0faf4", border: "1px solid #d1fae5", borderRadius: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#166534", fontWeight: 700 }}>
+                  <input type="checkbox" checked={sendWhatsApp} onChange={(e) => setSendWhatsApp(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#166534", cursor: "pointer" }} />
+                  Send WhatsApp Confirmation Message to Customer
+                </label>
               </div>
             </div>
 

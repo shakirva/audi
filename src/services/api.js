@@ -39,9 +39,9 @@ api.interceptors.response.use(
 // AUTH
 // ═══════════════════════════════════
 export const authAPI = {
-  login: (email, password) => api.post("/auth/login", { email, password }),
-  getMe: () => api.get("/auth/me"),
-  register: (data) => api.post("/auth/register", data),
+  login: (email, password, tenantSlug) => api.post("/v1/auth/login", { email, password, tenantSlug }),
+  getMe: () => api.get("/v1/auth/me"),
+  register: (data) => api.post("/v1/auth/register", data),
 };
 
 // ═══════════════════════════════════
@@ -54,6 +54,7 @@ export const bookingsAPI = {
   createEnquiry: (data) => api.post("/v1/bookings/enquiry", data),
   update: (id, data) => api.put(`/v1/bookings/${id}`, data),
   updateStatus: (id, status) => api.patch(`/v1/bookings/${id}/status`, { status }),
+  generateInvoice: (id) => api.post(`/v1/bookings/${id}/invoice`),
   remove: (id) => api.delete(`/v1/bookings/${id}`),
   getStats: () => api.get("/v1/bookings/stats/dashboard"),
   getComparisonStats: () => api.get("/v1/bookings/stats/comparison"),
@@ -72,6 +73,17 @@ export const expensesAPI = {
 // ═══════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════
+export const availabilityAPI = {
+  check: (hall, date, ignoreBookingId = null) => {
+    let url = `/v1/availability?hall=${encodeURIComponent(hall)}&date=${encodeURIComponent(date)}`;
+    if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
+    return api.get(url);
+  },
+  getMonth: (hall, year, month) => {
+    return api.get(`/v1/availability/month?hall=${encodeURIComponent(hall)}&year=${year}&month=${month}`);
+  },
+};
+
 export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
@@ -170,6 +182,7 @@ export const accountsAPI = {
   getVouchers: (params) => api.get("/v1/accounts/vouchers", { params }),
   getChartOfAccounts: () => api.get("/v1/accounts/chart-of-accounts"),
   getCustomerLedger: (customerId) => api.get(`/v1/accounts/customer-ledger/${customerId}`),
+  getBookingLedger: (bookingId) => api.get(`/v1/accounts/booking-ledger/${bookingId}`),
   getProfitLoss: (params) => api.get("/v1/accounts/profit-loss", { params }),
   getOutstanding: () => api.get("/v1/accounts/outstanding"),
 };
@@ -192,7 +205,8 @@ export default api;
 // ═══════════════════════════════════
 export const usersAPI = {
   getAll: () => api.get("/v1/settings/users"),
-  create: (data) => api.post("/auth/register", data),
+  create: (data) => api.post("/v1/auth/register", data),
+  update: (id, data) => api.put(`/v1/settings/users/${id}`, data),
   toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
   remove: (id) => api.delete(`/v1/settings/users/${id}`),
 };

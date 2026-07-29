@@ -37,7 +37,8 @@ class SettingsService {
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
-      "gallery", "eventTypes", "sessions", "expenseCategories", "places"
+      "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+      "bookingPrefix"
     ];
     
     const updateData = {};
@@ -108,6 +109,7 @@ class SettingsService {
 
     let user = await User.findOne({ where: { tenantId: tenant.id, role: ROLES.TESTER } });
     if (user) {
+      if (data.name) user.name = data.name;
       user.email = email;
       user.password = password;
       await user.save();
@@ -121,15 +123,31 @@ class SettingsService {
       });
     }
 
-    return { email, password };
+    return { name: user.name, email, password };
   }
 
   async getUsers(tenantId) {
     return User.findAll({
       where: { tenantId },
-      attributes: ['id', 'name', 'email', 'role', 'phone', 'active', 'createdAt'],
+      attributes: ['id', 'name', 'email', 'role', 'phone', 'active', 'plainPassword', 'createdAt'],
       order: [['name', 'ASC']]
     });
+  }
+
+  async updateUser(userId, data, tenantId) {
+    const user = await User.findOne({ where: { id: userId, tenantId } });
+    if (!user) throw new NotFoundError("User");
+    
+    // Only update allowed fields
+    if (data.name) user.name = data.name;
+    if (data.email) user.email = data.email.toLowerCase();
+    if (data.phone) user.phone = data.phone;
+    if (data.role && user.role !== ROLES.OWNER) user.role = data.role;
+    if (data.password) {
+      user.password = data.password;
+    }
+    await user.save();
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
   async toggleUserActive(userId, tenantId) {

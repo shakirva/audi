@@ -18,16 +18,7 @@ const Expense = sequelize.define("Expense", {
   amount: { type: DataTypes.INTEGER, allowNull: false },
   date: { type: DataTypes.STRING, allowNull: false },
   recurring: { type: DataTypes.BOOLEAN, defaultValue: false },
-  bookingId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: { model: "Bookings", key: "id" }
-  },
-  vendorId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: { model: "Vendors", key: "id" }
-  },
+  bookingId: { type: DataTypes.INTEGER, allowNull: true, references: { model: "Bookings", key: "id" } },
   // ── Audit fields ──
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },

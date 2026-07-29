@@ -3,25 +3,90 @@ import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCirc
 import PageHeader from "../components/ui/PageHeader";
 
 const DEMO_VENDORS = [
-  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"] },
-  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"] },
-  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"] },
-  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"] },
-  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"] },
-  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"] }
+  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"], totalBilled: 450000, totalPaid: 400000 },
+  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"], totalBilled: 1250000, totalPaid: 1250000 },
+  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"], totalBilled: 320000, totalPaid: 250000 },
+  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"], totalBilled: 85000, totalPaid: 50000 },
+  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"], totalBilled: 500000, totalPaid: 500000 },
+  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"], totalBilled: 45000, totalPaid: 0 }
 ];
 
 export default function Vendors() {
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
+  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [form, setForm] = useState({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+
+  const allVendors = [...localVendors, ...DEMO_VENDORS];
 
   const categories = ["All", "Catering", "Decoration", "Sound & Stage", "Photography", "Event Management"];
 
-  const filtered = DEMO_VENDORS.filter(v => {
+  const filtered = allVendors.filter(v => {
     if (filterCat !== "All" && v.category !== filterCat) return false;
     if (search && !v.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    const newVendor = { 
+      id: "LOCAL_" + Date.now(), 
+      name: form.name,
+      category: form.category,
+      phone: form.phone,
+      location: form.location,
+      email: form.email,
+      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+      status: "Active",
+      rating: 5.0,
+      jobs: 0,
+      totalBilled: 0,
+      totalPaid: 0
+    };
+    const updated = [newVendor, ...localVendors];
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    setModalOpen(false);
+    setForm({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  };
+
+  const handleToggleStatus = (id, currentStatus) => {
+    const isLocal = String(id).startsWith("LOCAL_");
+    if (!isLocal) return; // Cannot edit demo vendors for now
+    const nextStatus = currentStatus === "Active" ? "Inactive" : currentStatus === "Inactive" ? "Pending" : "Active";
+    const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    if (selectedVendor && selectedVendor.id === id) {
+      setSelectedVendor({ ...selectedVendor, status: nextStatus });
+    }
+  };
+
+  const handleDeleteVendor = (id) => {
+    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+    const updated = localVendors.filter(v => v.id !== id);
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    setSelectedVendor(null);
+  };
+
+  const handleFinanceUpdate = (id, field, amount) => {
+    if (!String(id).startsWith("LOCAL_")) return; // Only allow for local
+    const num = Number(amount) || 0;
+    const updated = localVendors.map(v => {
+      if (v.id === id) {
+        const newVal = (v[field] || 0) + num;
+        const updatedV = { ...v, [field]: newVal };
+        if (selectedVendor?.id === id) setSelectedVendor(updatedV);
+        return updatedV;
+      }
+      return v;
+    });
+    setLocalVendors(updated);
+    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+  };
 
   return (
     <div style={{ padding: "30px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
@@ -37,7 +102,7 @@ export default function Vendors() {
           </div>
           <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>Manage external service providers, track their performance, and assign jobs.</p>
         </div>
-        <button style={{
+        <button onClick={() => setModalOpen(true)} style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 13, transition: "transform 0.2s"
@@ -47,11 +112,11 @@ export default function Vendors() {
       </div>
 
       {/* KPI ROW */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 30 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
-          { label: "Total Vendors", val: DEMO_VENDORS.length, color: "#1B4332", bg: "#eefcf4" },
-          { label: "Active Partners", val: DEMO_VENDORS.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
-          { label: "Pending Approval", val: DEMO_VENDORS.filter(v=>v.status==="Pending").length, color: "#d97706", bg: "#fffbeb" },
+          { label: "Total Vendors", val: allVendors.length, color: "#1B4332", bg: "#eefcf4" },
+          { label: "Active Partners", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
+          { label: "Pending Approval", val: allVendors.filter(v=>v.status==="Pending").length, color: "#d97706", bg: "#fffbeb" },
           { label: "Avg Rating", val: "4.6", color: "#10b981", bg: "#ecfdf5", suffix: "⭐" },
         ].map((kpi, i) => (
           <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
@@ -88,15 +153,17 @@ export default function Vendors() {
       {/* VENDOR GRID */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
         {filtered.map(vendor => (
-          <div key={vendor.id} style={{
+          <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 
             boxShadow: "0 4px 15px rgba(0,0,0,0.03)", position: "relative", transition: "transform 0.2s", cursor: "pointer"
           }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={e => e.currentTarget.style.transform = "none"}>
             
             {/* Status Badge */}
-            <div style={{ position: "absolute", top: 24, right: 24, display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 800, textTransform: "uppercase", 
+            <div onClick={(e) => { e.stopPropagation(); handleToggleStatus(vendor.id, vendor.status); }} style={{ position: "absolute", top: 24, right: 24, display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 800, textTransform: "uppercase", 
               background: vendor.status === "Active" ? "#dcfce7" : vendor.status === "Pending" ? "#fef3c7" : "#f1f5f9",
-              color: vendor.status === "Active" ? "#16a34a" : vendor.status === "Pending" ? "#d97706" : "#64748b" }}>
+              color: vendor.status === "Active" ? "#16a34a" : vendor.status === "Pending" ? "#d97706" : "#64748b",
+              cursor: String(vendor.id).startsWith("LOCAL_") ? "pointer" : "default"
+            }}>
               {vendor.status === "Active" && <CheckCircle size={10} />}
               {vendor.status}
             </div>
@@ -116,7 +183,7 @@ export default function Vendors() {
             </div>
 
             {/* Info Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569" }}>
                 <Phone size={14} color="#94a3b8" /> {vendor.phone}
               </div>
@@ -125,6 +192,9 @@ export default function Vendors() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569" }}>
                 <ShieldCheck size={14} color="#94a3b8" /> {vendor.jobs} Jobs Done
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: (vendor.totalBilled - vendor.totalPaid > 0) ? "#ef4444" : "#10b981", fontWeight: 700 }}>
+                ₹{((vendor.totalBilled || 0) - (vendor.totalPaid || 0)).toLocaleString("en-IN")} Due
               </div>
             </div>
 
@@ -145,7 +215,145 @@ export default function Vendors() {
           </div>
         ))}
       </div>
+
+      {/* VENDOR PROFILE MODAL */}
+      {selectedVendor && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 600, borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", color: "#fff" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 800 }}>
+                  {selectedVendor.name.charAt(0)}
+                </div>
+                <div>
+                  <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{selectedVendor.name}</h2>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, opacity: 0.9 }}>
+                    <span style={{ background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 6 }}>{selectedVendor.category}</span>
+                    <span>⭐ {selectedVendor.rating}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedVendor(null)} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            
+            <div style={{ padding: "24px" }}>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>CONTACT</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}><Phone size={14}/> {selectedVendor.phone}</p>
+                  {selectedVendor.email && <p style={{ margin: 0, fontSize: 13, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}><Mail size={14}/> {selectedVendor.email}</p>}
+                </div>
+                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>LOCATION</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}><MapPin size={14}/> {selectedVendor.location}</p>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ margin: "0 0 8px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>TAGS & SPECIALTIES</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {selectedVendor.tags?.map(t => (
+                    <span key={t} style={{ fontSize: 12, fontWeight: 600, color: "#475569", background: "#f1f5f9", padding: "4px 12px", borderRadius: 20 }}>{t}</span>
+                  ))}
+                  {!selectedVendor.tags?.length && <span style={{ fontSize: 13, color: "#94a3b8" }}>No tags specified</span>}
+                </div>
+              </div>
+
+              {/* FINANCES */}
+              <div style={{ marginBottom: 24, borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontWeight: 700 }}>FINANCIAL OVERVIEW</p>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#fee2e2" : "#dcfce7", color: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#ef4444" : "#16a34a" }}>
+                    Balance Due: ₹{((selectedVendor.totalBilled || 0) - (selectedVendor.totalPaid || 0)).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Billed</p>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>₹{(selectedVendor.totalBilled || 0).toLocaleString("en-IN")}</p>
+                    {String(selectedVendor.id).startsWith("LOCAL_") && (
+                      <button onClick={() => {
+                        const amt = window.prompt("Enter new bill amount to add (₹):");
+                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalBilled", amt);
+                      }} style={{ background: "none", border: "none", color: "#0ea5e9", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Add Bill</button>
+                    )}
+                  </div>
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Paid</p>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#16a34a" }}>₹{(selectedVendor.totalPaid || 0).toLocaleString("en-IN")}</p>
+                    {String(selectedVendor.id).startsWith("LOCAL_") && (
+                      <button onClick={() => {
+                        const amt = window.prompt("Enter payment amount to add (₹):");
+                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalPaid", amt);
+                      }} style={{ background: "none", border: "none", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Record Payment</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 20 }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => handleToggleStatus(selectedVendor.id, selectedVendor.status)} style={{ padding: "10px 16px", background: selectedVendor.status === "Active" ? "#fef3c7" : "#dcfce7", color: selectedVendor.status === "Active" ? "#d97706" : "#16a34a", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+                    Mark as {selectedVendor.status === "Active" ? "Inactive" : "Active"}
+                  </button>
+                  {String(selectedVendor.id).startsWith("LOCAL_") && (
+                    <button onClick={() => handleDeleteVendor(selectedVendor.id)} style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Delete Vendor</button>
+                  )}
+                </div>
+                <button onClick={() => setSelectedVendor(null)} style={{ padding: "10px 24px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer", fontSize: 13 }}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
+      {modalOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 500, borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>Onboard Vendor</h2>
+              <button onClick={() => setModalOpen(false)} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            <form onSubmit={handleSave} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Vendor Name *</label>
+                <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="e.g. ABC Catering" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Category *</label>
+                <select required value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", cursor: "pointer" }}>
+                  {categories.filter(c => c !== "All").map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Phone Number</label>
+                  <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="+91 XXXX" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Email</label>
+                  <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="Email address" />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Location</label>
+                  <input type="text" value={form.location} onChange={e => setForm({...form, location: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="City" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Tags (comma separated)</label>
+                  <input type="text" value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="Premium, Veg..." />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+                <button type="button" onClick={() => setModalOpen(false)} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Save Vendor</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

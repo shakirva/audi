@@ -388,3 +388,44 @@ button, input, select, textarea {
   .hm-page-title { font-size: 20px; }
 }
 
+/* ========================================================
+   PROJECT-WIDE RESPONSIVE OVERRIDES
+   ======================================================== */
+
+/* Fix all tables to scroll horizontally on small screens instead of overflowing the page */
+@media (max-width: 1023px) {
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Ensure Modals behave nicely on mobile screens */
+.modal-overlay > div {
+  max-height: 95vh !important;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 767px) {
+  .modal-overlay > div {
+    width: 95% !important;
+    margin: auto;
+    border-radius: 12px !important;
+  }
+}
+
+/* Ensure main content doesn't break horizontal scrolling */
+.hm-main-content {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Form inputs span full width on small screens to prevent layout breaks */
+@media (max-width: 767px) {
+  input, select, textarea {
+    width: 100% !important;
+  }
+}

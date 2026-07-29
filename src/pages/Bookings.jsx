@@ -1,11 +1,14 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye } from "lucide-react";
+import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
+import { useRole } from "../context/RoleContext";
+import { bookingsAPI } from "../services/api";
 
 export default function Bookings() {
+  const { user, role } = useRole();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
@@ -25,15 +28,42 @@ export default function Bookings() {
     }
   };
 
+  const sendPaymentReminder = (b) => {
+    const total = Number(b.totalAmount) || 0;
+    const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+    const balance = Math.max(0, total - collected);
+    
+    if (balance <= 0) {
+      alert("No pending balance for this booking.");
+      return;
+    }
+    
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    
+    const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
+    if (num) {
+      const phoneNum = num.length === 10 ? `91${num}` : num;
+      const text = encodeURIComponent(msg);
+      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+      window.open(waUrl, "_blank");
+    } else {
+      alert("No phone number available for this customer.");
+    }
+  };
+
   const filtered = useMemo(() => {
-    return bookings.filter(b => {
+    let baseBookings = bookings;
+    if (role === "Sales") {
+      baseBookings = baseBookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name);
+    }
+    return baseBookings.filter(b => {
       const nameMatch = !search || (b.customerName || "").toLowerCase().includes(search.toLowerCase())
         || (b.eventType || "").toLowerCase().includes(search.toLowerCase())
         || (b.hall || "").toLowerCase().includes(search.toLowerCase());
       const statusMatch = !statusFilter || b.status === statusFilter;
       return nameMatch && statusMatch;
     });
-  }, [bookings, search, statusFilter]);
+  }, [bookings, search, statusFilter, role, user]);
 
   const uniqueStatuses = [...new Set(bookings.map(b => b.status).filter(Boolean))];
 
@@ -144,7 +174,7 @@ export default function Bookings() {
                 </div>
 
                 {/* Meta row */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14, padding: "12px 0", borderTop: "1px solid #f8fafc", borderBottom: "1px solid #f8fafc" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <Calendar size={13} color="#94a3b8" />
                     <div>
@@ -201,9 +231,29 @@ export default function Bookings() {
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8fafc", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Eye size={13} /> View
                   </button>
+                  {balance > 0 && (
+                    <button onClick={(e) => { e.stopPropagation(); sendPaymentReminder(b); }}
+                      style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#166534", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                      <MessageCircle size={13} /> Alert
+                    </button>
+                  )}
                   <button onClick={() => setEditBooking(b)}
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Pencil size={13} /> Edit
+                  </button>
+                  <button onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+                      try {
+                        await bookingsAPI.remove(b.bookingId || b.id);
+                        refetch?.();
+                      } catch (err) {
+                        alert(err.response?.data?.message || "Failed to delete booking");
+                      }
+                    }
+                  }}
+                    style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    <Trash2 size={13} /> Delete
                   </button>
                 </div>
               </motion.div>
@@ -274,6 +324,12 @@ export default function Bookings() {
                     </td>
                     <td style={{ padding: "12px 14px" }}>
                       <div style={{ display: "flex", gap: 6 }}>
+                        {balance > 0 && (
+                          <button onClick={e => { e.stopPropagation(); sendPaymentReminder(b); }}
+                            style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                            <MessageCircle size={11} /> Alert
+                          </button>
+                        )}
                         <button onClick={e => { e.stopPropagation(); setDetail(b); }}
                           style={{ background: "#f8fafc", color: "#374151", border: "1px solid #e5e7eb", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Eye size={11} /> View
@@ -281,6 +337,20 @@ export default function Bookings() {
                         <button onClick={e => { e.stopPropagation(); setEditBooking(b); }}
                           style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Pencil size={11} /> Edit
+                        </button>
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+                            try {
+                              await bookingsAPI.remove(b.bookingId || b.id);
+                              refetch?.();
+                            } catch (err) {
+                              alert(err.response?.data?.message || "Failed to delete booking");
+                            }
+                          }
+                        }}
+                          style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Trash2 size={11} /> Delete
                         </button>
                       </div>
                     </td>
@@ -300,7 +370,24 @@ export default function Bookings() {
         </div>
       )}
 
-      {detail && <BookingDetailModal booking={detail} onClose={() => setDetail(null)} onEdit={(b) => { setDetail(null); setEditBooking(b); }} />}
+      {detail && (
+        <BookingDetailModal 
+          booking={detail} 
+          onClose={() => setDetail(null)} 
+          onEdit={(b) => { setDetail(null); setEditBooking(b); }} 
+          onDelete={async (id) => {
+            if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
+              try {
+                await bookingsAPI.remove(id);
+                setDetail(null);
+                refetch?.();
+              } catch (err) {
+                alert(err.response?.data?.message || "Failed to delete booking");
+              }
+            }
+          }}
+        />
+      )}
       <EditBookingModal
         open={!!editBooking}
         booking={editBooking}

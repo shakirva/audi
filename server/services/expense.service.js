@@ -31,16 +31,22 @@ class ExpenseService {
       throw new BadRequestError("Category, description, amount, and date required");
     }
 
-    const expense = await sequelize.transaction(async (t) => {
-      const exp = await expenseRepository.create({
-        tenantId,
-        environmentId,
-        category: data.category,
-        description: data.description,
-        amount: Number(data.amount),
-        date: data.date,
-        recurring: !!data.recurring,
-        bookingId: data.bookingId || null,
+    const expense = await expenseRepository.create({
+      tenantId,
+      environmentId,
+      category: data.category,
+      description: data.description,
+      amount: Number(data.amount),
+      date: data.date,
+      recurring: !!data.recurring,
+      bookingId: data.bookingId || null,
+    });
+
+    // Hook into accounting engine
+    try {
+      await accountingEngine.onExpenseCreated(expense, {
+        tenantId, environmentId,
+        createdBy: data.createdBy || null,
         paymentMode: data.paymentMode || "Cash",
       }, { transaction: t });
 

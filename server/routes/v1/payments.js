@@ -14,10 +14,10 @@ router.use(auth, tenantScope, subscriptionGuard);
 
 router.get("/", paymentController.list);
 router.get("/:id", paymentController.getOne);
-router.post("/", requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), validate(recordPaymentSchema), auditLog("Record Payment"), paymentController.record);
+router.post("/", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), validate(recordPaymentSchema), auditLog("Record Payment"), paymentController.record);
 
 // Receipt specific routes nested under payments for now
 router.get("/:paymentId/receipt", paymentController.getReceipt);
-router.post("/receipt/:receiptId/generate-pdf", requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), auditLog("Generate Receipt PDF"), paymentController.generateReceiptPdf);
+router.post("/receipt/:receiptId/generate-pdf", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER), auditLog("Generate Receipt PDF"), paymentController.generateReceiptPdf);
 
 module.exports = router;

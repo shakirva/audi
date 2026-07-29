@@ -1,0 +1,15 @@
+--- server/services/accountingEngine.service.js
++++ server/services/accountingEngine.service.js
+@@ -194,7 +194,10 @@
+   // ═══════════════════════════════════
+   async getBookingLedger(bookingId, { tenantId, environmentId }) {
++    const { Op } = require("sequelize");
++    const whereCondition = isNaN(bookingId) 
++      ? { bookingId: bookingId, tenantId, environmentId }
++      : { id: bookingId, tenantId, environmentId };
++
+     const booking = await Booking.findOne({ 
+-      where: { id: bookingId, tenantId, environmentId },
++      where: whereCondition,
+       include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }]
+     });

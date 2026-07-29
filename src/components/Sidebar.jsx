@@ -1,74 +1,83 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent, Database } from "lucide-react";
 import { useRole } from "../context/RoleContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Logo from "./Logo"; // Bring back the new logo component if it exists, or use the brand icon.
+import { settingsAPI } from "../services/api";
+import Logo from "./Logo";
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
+
+  // Load venue info from settings API on mount (if not already cached)
+  useEffect(() => {
+    if (!venueInfo) {
+      settingsAPI.get().then(res => {
+        const d = res.data.data;
+        if (d) {
+          setVenueInfo({
+            name: d.venueName || "",
+            subtitle: d.venueSubtitle || "Auditorium",
+            owner: d.ownerName || "",
+          });
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
 
-  const NAVIGATION = [
-    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  const BASE_NAVIGATION = [
+    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"] },
     { 
-      type: "group", label: "CRM", icon: Users, id: "crm",
-      children: [
-        { path: "/crm", label: "Enquiries" },
-        { path: "/customers", label: "Customers" }
-      ]
-    },
-    { 
-      type: "group", label: "Bookings", icon: CalendarDays, id: "bookings",
+      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales"],
       children: [
         { path: "/calendar", label: "Calendar" },
+        { path: "/crm", label: "Enquiries" },
+        { path: "/customers", label: "Customers" },
         { path: "/bookings", label: "Bookings" },
         { path: "/agreements", label: "Agreements" }
       ]
     },
     { 
-      type: "group", label: "Operations", icon: Briefcase, id: "ops",
+      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
       children: [
-        { path: "/jobs", label: "Job Management" }
+        { path: "/jobs", label: "Job Management" },
+        { path: "/vendors", label: "Vendor Management" }
       ]
     },
     { 
-      type: "group", label: "Finance", icon: CreditCard, id: "finance",
+      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
-        { path: "/payments", label: "Payments & Receipts" },
-        { path: "/finance", label: "Accounts & Finance Overview" },
-        { path: "/finance/daily-collections", label: "Daily Collections" },
-        { path: "/finance/outstanding", label: "Outstanding Receivables" },
-        { path: "/finance/vendor-outstanding", label: "Vendor Outstanding" },
-        { path: "/finance/booking-profit", label: "Booking Profit Report" },
-        { path: "/finance/expense-categories", label: "Expense Categories" },
-        { path: "/finance/payment-history", label: "Payment History" },
-        { path: "/finance/cash-closing", label: "Cash Closing Report" },
-        { path: "/finance/daily-summary", label: "Daily Business Summary" },
-        { path: "/finance/cash-book", label: "Cash Book" },
-        { path: "/finance/bank-book", label: "Bank Book" },
-        { path: "/finance/journals", label: "Journal Entries" },
-        { path: "/finance/general-ledger", label: "General Ledger" },
-        { path: "/finance/trial-balance", label: "Trial Balance" },
-        { path: "/finance/profit-and-loss", label: "Profit & Loss" },
-        { path: "/finance/balance-sheet", label: "Balance Sheet" },
-        { path: "/vendors", label: "Vendors" },
-        { path: "/purchases", label: "Purchases" }
+        { path: "/finance/payments", label: "Payments & Receipts" },
+        { path: "/finance/booking-accounts", label: "Booking Accounts" },
+        { path: "/finance/collections", label: "Collections" },
+        { path: "/finance/expenses", label: "Purchases & Expenses" },
+        { path: "/finance/reports", label: "Financial Statements" },
+        { path: "/finance/advanced", label: "Advanced Accounting" }
       ]
     },
     { 
-      type: "group", label: "Staff & HR", icon: UsersRound, id: "external",
+      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
-        { path: "/staff", label: "Staff Management" }
+        { path: "/staff", label: "Staff Management" },
+        { path: "/attendance", label: "Attendance" },
+        { path: "/leaves", label: "Leave Requests" }
       ]
     },
     { 
-      type: "group", label: "Reports Center", icon: BarChart3, id: "reports",
+      type: "group", label: "Attendance & Leaves", icon: CheckSquare, id: "staff-actions", roles: ["Sales", "Operations"],
+      children: [
+        { path: "/attendance", label: "My Attendance" },
+        { path: "/leaves", label: "Leave Requests" }
+      ]
+    },
+    { 
+      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
         { path: "/reports", label: "Report Dashboard" },
         { path: "/reports/sales", label: "Sales Reports 🔒" },
@@ -78,42 +87,62 @@ export default function Sidebar() {
       ]
     },
     { 
-      type: "group", label: "System", icon: Settings, id: "system",
+      type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
       children: [
-        { path: "/settings", label: "Masters" },
+        { path: "/masters", label: "Masters" },
         { path: "/roadmap", label: "ERP Roadmap" }
+      ]
+    },
+    { 
+      type: "group", label: "SaaS Platform", icon: Database, id: "saas", roles: ["SuperAdmin"],
+      children: [
+        { path: "/tenants", label: "Tenant Manager" },
+        { path: "/subscriptions", label: "Subscriptions" }
       ]
     }
   ];
 
+  const NAVIGATION = BASE_NAVIGATION.filter(item => item.roles.includes(role));
+
   return (
-    <motion.div 
-      initial={false}
-      animate={{ width: collapsed ? 80 : 280 }}
-      style={{ 
-        background: PRIMARY_COLOR, 
-        color: "#fff", 
-        height: "100vh", 
-        display: "flex", 
-        flexDirection: "column", 
-        fontFamily: "'Inter', 'DM Sans', sans-serif",
-        position: "sticky",
-        top: 0,
-        boxShadow: "10px 0 30px rgba(0,0,0,0.1)",
-        overflow: "hidden"
-      }}
-    >
-      
-      {/* Brand */}
-      <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
+    <>
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div 
+        initial={false}
+        animate={{ 
+          width: collapsed ? 80 : 280,
+          x: 0 // handled by CSS transform on mobile
+        }}
+        className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:top-0 h-screen flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        style={{ 
+          background: PRIMARY_COLOR, 
+          color: "#fff", 
+          fontFamily: "'Inter', 'DM Sans', sans-serif",
+        }}
+      >
+        
+        {/* Brand */}
+        <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
         <div style={{ width: 40, height: 40, background: ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR }}>
           <Tent size={24} />
         </div>
         <AnimatePresence>
           {!collapsed && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ whiteSpace: "nowrap" }}>
-              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>Laural Garden</div>
-              <div style={{ fontSize: 11, color: ACCENT_COLOR, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Auditorium</div>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>{venueInfo?.name || "Venueza"}</div>
+              <div style={{ fontSize: 11, color: ACCENT_COLOR, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>{venueInfo?.subtitle || "Auditorium"}</div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -204,13 +233,7 @@ export default function Sidebar() {
 
       <div style={{ margin: "16px 24px 0", height: 1, background: "rgba(255,255,255,0.1)" }} />
 
-      {/* Development Preview Badge */}
-      {!collapsed && (
-        <div style={{ margin: "16px 24px 0", padding: "8px 12px", background: "rgba(212,160,23,0.1)", borderRadius: 8, border: "1px dashed rgba(212,160,23,0.3)" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: ACCENT_COLOR, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Demo Version</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Version 2.0 Development Preview</div>
-        </div>
-      )}
+
 
       {/* User Profile Footer */}
       <div style={{ padding: "16px 24px" }}>
@@ -241,5 +264,6 @@ export default function Sidebar() {
       </div>
 
     </motion.div>
+    </>
   );
 }

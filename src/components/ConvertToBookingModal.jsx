@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus } from "lucide-react";
-import { bookingsAPI, enquiriesAPI } from "../services/api";
+import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus, CheckSquare } from "lucide-react";
+import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useBookings } from "../context/BookingsContext";
+import SmartDatePicker from "./SmartDatePicker";
 
 const iStyle = {
   width: "100%", padding: "10px 12px", borderRadius: 8,
@@ -29,7 +31,9 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Bank Transfer", "Cheque"];
 
 export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addToast } = useToast();
+  const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
+  const [sendWhatsapp, setSendWhatsapp] = useState(true);
 
   const [formData, setFormData] = useState({
     // Contact
@@ -52,6 +56,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     // Payment
     quotedAmount: "",
     discount: "",
+    taxes: "",
+    taxPercentage: "",
     totalAmount: "",
     advance: "",
     paymentMethod: "",
@@ -62,7 +68,18 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     balanceAmount: "",
     extraArrangements: "",
     paymentRemarks: "",
+    facilities: [],
   });
+
+  const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+  const [fetchingAvailability, setFetchingAvailability] = useState(false);
+  const [facilitiesList, setFacilitiesList] = useState([]);
+
+  useEffect(() => {
+    import("../services/api").then(({ mastersAPI }) => {
+      mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+    });
+  }, []);
 
   useEffect(() => {
     if (open && enquiry) {
@@ -86,6 +103,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         // Financials
         quotedAmount: budget,
         discount: "",
+        taxes: "",
+        taxPercentage: "",
         totalAmount: budget,
         advance: "",
         depositAmount: "",
@@ -96,6 +115,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         accountName: "",
         extraArrangements: "",
         paymentRemarks: "",
+        facilities: [],
         // Reset personal
         bookedBy: "", bookingParty: "", whatsapp: "",
         brideName: "", brideFatherName: "", brideMotherName: "", bridePhone: "", brideAddress: "",
@@ -104,18 +124,65 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [open, enquiry]);
 
-  // Auto-calculate balance
-  const handleMoneyChange = (field, value) => {
-    const updated = { ...formData, [field]: value };
+  // Fetch settings to auto-fill GST rate
+  useEffect(() => {
+    if (open && formData.hall) {
+      const fetchSettings = async () => {
+        try {
+          const res = await settingsAPI.get();
+          const halls = res.data.data.halls || [];
+          const selectedHall = halls.find(h => h.name === formData.hall);
+          if (selectedHall && selectedHall.gstRate !== undefined) {
+            // Use functional updater to get latest formData (avoids stale closure)
+            setFormData(prev => {
+              const pct = Number(selectedHall.gstRate) || 0;
+              const total = Number(prev.totalAmount) || 0;
+              const taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+              return { ...prev, taxPercentage: pct, taxes };
+            });
+          }
+        } catch (e) { console.warn("Could not fetch hall GST settings"); }
+      };
+      fetchSettings();
+    }
+  }, [formData.hall, open]);
+
+  // Fetch real-time availability
+  useEffect(() => {
+    if (formData.date && formData.hall) {
+      setFetchingAvailability(true);
+      availabilityAPI.check(formData.hall, formData.date, null)
+        .then(res => {
+          const avail = res.data.data;
+          setAvailability(avail);
+          // Don't auto clear for convert modal to let user see it's booked, but we can clear if we want
+        })
+        .catch(console.error)
+        .finally(() => setFetchingAvailability(false));
+    } else {
+      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+    }
+  }, [formData.date, formData.hall]);
+
+  // Auto-calculate balance (GST is INCLUSIVE — extracted from total, not added on top)
+  const handleMoneyChange = (field, value, extraState = {}) => {
+    let updated = { ...formData, [field]: value, ...extraState };
+    
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
     
-    // Auto calculate Total Amount if quoted or discount changes
+    // Total Amount = Quoted - Discount (this is what client pays, GST included)
     if (field === "quotedAmount" || field === "discount") {
       updated.totalAmount = Math.max(0, quoted - disc);
     }
-    
+
+    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
     const total = Number(updated.totalAmount) || 0;
+    const pct = Number(updated.taxPercentage) || 0;
+    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
+      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+    }
+    
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
     updated.balanceAmount = Math.max(0, total - adv - dep);
@@ -134,10 +201,21 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Please select a Payment Method", "error");
       return;
     }
+    
+    // Check local state availability before sending
+    let isBooked = false;
+    if (formData.session === "Morning" && availability.morning === "booked") isBooked = true;
+    if (formData.session === "Evening" && availability.evening === "booked") isBooked = true;
+    if (formData.session === "Full Day" && availability.fullDay === "booked") isBooked = true;
+    
+    if (isBooked) {
+      addToast(`This session is already booked on ${formData.date}. Please choose another session.`, "error");
+      return;
+    }
 
     setLoading(true);
     try {
-      await bookingsAPI.create({
+      await addBooking({
         ...formData,
         status: "Confirmed",
       });
@@ -149,12 +227,14 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Successfully converted to Booking! 🎉", "success");
       onClose();
       
-      const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
-      const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
-      const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
-      const text = encodeURIComponent(message);
-      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
-      window.open(waUrl, "_blank");
+      if (sendWhatsapp) {
+        const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
+        const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
+        const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
+        const text = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+        window.open(waUrl, "_blank");
+      }
     } catch (err) {
       addToast(err.response?.data?.message || "Failed to convert", "error");
     } finally {
@@ -197,7 +277,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
             {/* ── ENQUIRY SUMMARY (read-only) ── */}
             <div>
               <p style={sectionHead}><Calendar size={14} /> Enquiry Summary</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {[
                   { label: "Hall", value: formData.hall || "—" },
                   { label: "Session", value: formData.session || "—" },
@@ -225,7 +305,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
             {/* ── CONTACT DETAILS ── */}
             <div>
               <p style={sectionHead}><Heart size={14} /> Contact Details</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Enquired By *</label>
                   {inp("customerName", { required: true, placeholder: "Customer name" })}
@@ -270,7 +350,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Father Name</label>{inp("brideFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
@@ -284,7 +364,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Father Name</label>{inp("groomFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
@@ -296,15 +376,40 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Hall</label>
-                  {inp("hall", { placeholder: "Hall name" })}
+                  <select value={formData.hall} onChange={e => setFormData({ ...formData, hall: e.target.value })} style={iStyle}>
+                    <option value="">-- Select Hall --</option>
+                    <option value="Main Hall">Main Hall</option>
+                    <option value="Mini Hall">Mini Hall</option>
+                    <option value="Open Stage">Open Stage</option>
+                    <option value="Pool Area">Pool Area</option>
+                    {formData.hall && !["Main Hall", "Mini Hall", "Open Stage", "Pool Area"].includes(formData.hall) && (
+                       <option value={formData.hall}>{formData.hall}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Session</label>
-                  {inp("session", { placeholder: "Morning / Evening / Full Day" })}
+                  <select value={formData.session} onChange={e => setFormData({ ...formData, session: e.target.value })} style={iStyle}>
+                     <option value="">-- Select --</option>
+                     <option value="Morning" disabled={availability.morning === "booked"}>Morning {availability.morning === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Afternoon" disabled={availability.morning === "booked"}>Afternoon {availability.morning === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Evening" disabled={availability.evening === "booked"}>Evening {availability.evening === "booked" ? "(Booked)" : ""}</option>
+                     <option value="Full Day" disabled={availability.fullDay === "booked"}>Full Day {availability.fullDay === "booked" ? "(Booked)" : ""}</option>
+                  </select>
                 </div>
-                <div>
+                <div style={{ position: "relative", zIndex: 10 }}>
                   <label style={labelSt}>Event Date</label>
-                  {inp("date", { type: "date" })}
+                  <SmartDatePicker 
+                    value={formData.date} 
+                    onChange={e => setFormData({ ...formData, date: e.target.value })} 
+                    hallPreference={formData.hall}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
+                  />
+                  {formData.date && formData.hall && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={labelSt}>Event Type</label>
@@ -320,6 +425,38 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
               </div>
             </div>
+
+            {/* ── FACILITIES ── */}
+            {facilitiesList.length > 0 && (
+              <div>
+                <p style={sectionHead}><CheckSquare size={14} /> Facilities & Add-ons</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {facilitiesList.map(f => {
+                    const checked = formData.facilities?.some(x => x.id === f.id);
+                    return (
+                      <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
+                        <input type="checkbox" checked={checked} onChange={(e) => {
+                          let newFac = [...(formData.facilities || [])];
+                          let newQuoted = Number(formData.quotedAmount || 0);
+                          if (e.target.checked) {
+                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newQuoted += Number(f.price || 0);
+                          } else {
+                            newFac = newFac.filter(x => x.id !== f.id);
+                            newQuoted -= Number(f.price || 0);
+                          }
+                          handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                        }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
+                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
+                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── FINANCIAL DETAILS ── */}
             <div>
@@ -350,7 +487,26 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelSt}>Tax / GST Rate (%)</label>
+                  <input type="number" min={0} value={formData.taxPercentage}
+                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700 }}
+                    placeholder="e.g. 18"
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+                <div>
+                  <label style={labelSt}>Tax Amount (₹)</label>
+                  <input type="number" min={0} value={formData.taxes}
+                    onChange={e => handleMoneyChange("taxes", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700, color: "#991b1b" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Advance Paid (₹)</label>
                   <input type="number" min={0} value={formData.advance}
@@ -409,7 +565,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               </div>
 
               {/* Conditional UPI / Bank fields */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {formData.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>
@@ -509,11 +665,17 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "flex-end", gap: 12, background: "#f8f9fa" }}>
-          <button type="button" onClick={onClose} disabled={loading} style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>Cancel</button>
-          <button type="submit" form="convert-form" disabled={loading} style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
-            {loading ? "Confirming..." : "✅ Confirm Booking"}
-          </button>
+        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#166534", cursor: "pointer" }}>
+            <input type="checkbox" checked={sendWhatsapp} onChange={e => setSendWhatsapp(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#16a34a", cursor: "pointer" }} />
+            Send Booking Details via WhatsApp
+          </label>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button type="button" onClick={onClose} disabled={loading} style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>Cancel</button>
+            <button type="submit" form="convert-form" disabled={loading} style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
+              {loading ? "Confirming..." : "✅ Confirm Booking"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

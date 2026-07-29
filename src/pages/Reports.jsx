@@ -2,10 +2,11 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
+import { settingsAPI } from "../services/api";
 
 const card = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 14 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12, margin: 0 };
@@ -15,7 +16,7 @@ const PEAK_DAYS = ["Sat", "Sun", "Fri"];
 
 // ── PDF generators ──
 function printHTML(title, bodyHTML) {
-  const name = "Sreelakshmi Convention Centre";
+  const name = "Venueza Auditorium";
   const location = "Kerala, India";
   const w = window.open("", "_blank");
   if (!w) return;
@@ -73,8 +74,13 @@ function downloadRevenueReport(bookings) {
   const revenueMap = {};
   bookings.forEach(b => {
     if (b.status === "Confirmed" || b.status === "Completed") {
-      const m = new Date(b.date).toLocaleString('default', { month: 'short', year: '2-digit' });
-      revenueMap[m] = (revenueMap[m] || 0) + b.totalAmount;
+      if (b.date) {
+        const d = new Date(b.date);
+        if (!isNaN(d)) {
+          const m = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+          revenueMap[m] = (revenueMap[m] || 0) + (b.totalAmount || 0);
+        }
+      }
     }
   });
   const monthlyRevenue = Object.keys(revenueMap).map(m => ({ month: m, revenue: revenueMap[m] }));
@@ -154,20 +160,38 @@ export default function Reports() {
   const defaultTo = `${currentYear}-12-31`;
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
+  const [halls, setHalls] = useState([]);
+
+  useEffect(() => {
+    settingsAPI.get().then(res => {
+      setHalls(res.data?.data?.halls || []);
+    }).catch(() => {});
+  }, []);
 
   const bookings = ctxBookings.filter(b => b.date >= fromDate && b.date <= toDate);
 
-  const totalRevenue = bookings.filter(b => b.status === "Confirmed" || b.status === "Completed").reduce((s, b) => s + b.totalAmount, 0);
+  const totalRevenue = bookings.filter(b => b.status === "Confirmed" || b.status === "Completed").reduce((s, b) => s + (b.totalAmount || 0), 0);
   const confirmed    = bookings.filter(b => b.status === "Confirmed").length || 1; // avoid /0
 
   const peakData = WEEKDAYS.map(day => {
-    const bCount = bookings.filter(b => new Date(b.date).toLocaleString('en-US', { weekday: 'short' }) === day).length;
+    const bCount = bookings.filter(b => {
+      if (!b.date) return false;
+      const d = new Date(b.date);
+      if (isNaN(d)) return false;
+      return d.toLocaleString('en-US', { weekday: 'short' }) === day;
+    }).length;
     return { day, bookings: bCount, peak: PEAK_DAYS.includes(day) };
   });
 
   const hallMap = {};
-  bookings.forEach(b => hallMap[b.hall] = (hallMap[b.hall] || 0) + 1);
-  const hallData = Object.keys(hallMap).map(h => ({ hall: h, pct: Math.round((hallMap[h]/bookings.length)*100) }));
+  bookings.forEach(b => {
+    // Only count if it's a real hall (or if real halls haven't loaded yet)
+    if (halls.length === 0 || halls.some(h => h.name === b.hall)) {
+      hallMap[b.hall] = (hallMap[b.hall] || 0) + 1;
+    }
+  });
+  const validBookingCountForHalls = Object.values(hallMap).reduce((a, b) => a + b, 0);
+  const hallData = Object.keys(hallMap).map(h => ({ hall: h, pct: Math.round((hallMap[h]/(validBookingCountForHalls || 1))*100) }));
 
   const eventTypeMap = {};
   bookings.forEach(b => eventTypeMap[b.eventType] = (eventTypeMap[b.eventType] || 0) + 1);
@@ -176,8 +200,13 @@ export default function Reports() {
   const revenueMap = {};
   bookings.forEach(b => {
     if (b.status === "Confirmed" || b.status === "Completed") {
-      const monthStr = new Date(b.date).toLocaleString('default', { month: 'short' });
-      revenueMap[monthStr] = (revenueMap[monthStr] || 0) + b.totalAmount;
+      if (b.date) {
+        const d = new Date(b.date);
+        if (!isNaN(d)) {
+          const monthStr = d.toLocaleString('default', { month: 'short' });
+          revenueMap[monthStr] = (revenueMap[monthStr] || 0) + (b.totalAmount || 0);
+        }
+      }
     }
   });
   const monthlyRevenue = [];

@@ -1,24 +1,129 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, TrendingUp, AlertCircle, Building2, Filter } from "lucide-react";
 import { useToast } from "../components/Toast";
+import { bookingsAPI, settingsAPI } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
-const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
+const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
 
-const MOCK_HALL_DATA = [
-  { name: "Emerald Hall", revenue: 850000, bookings: 42, occupancy: 85 },
-  { name: "Royal Hall", revenue: 620000, bookings: 38, occupancy: 70 },
-  { name: "Orchid Hall", revenue: 210000, bookings: 25, occupancy: 45 },
-];
-
-const COLORS = ["#1B4332", "#D4A017", "#2563eb"];
+const COLORS = ["#1B4332", "#D4A017", "#2563eb", "#7c3aed", "#059669"];
 
 export default function HallReports() {
   const { addToast } = useToast();
+  const [bookings, setBookings] = useState([]);
+  const [halls, setHalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterHall, setFilterHall] = useState("All Halls");
+  const [filterExecutive, setFilterExecutive] = useState("All Staff");
+  const [filterPlace, setFilterPlace] = useState("All Locations");
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [bookRes, settingsRes] = await Promise.all([
+        bookingsAPI.getAll(),
+        settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
+      ]);
+      setBookings(bookRes.data?.data || []);
+      setHalls(settingsRes.data?.data?.halls || []);
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to load hall data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
+  const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
+
+  const filteredBookings = bookings.filter(b => {
+    if (filterHall !== "All Halls" && b.hall !== filterHall) return false;
+    const execName = b.SalesExecutive?.name || b.salesExecutiveName;
+    if (filterExecutive !== "All Staff" && execName !== filterExecutive) return false;
+    const placeName = b.Customer?.city || b.place || b.address;
+    if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    
+    if (filterDate !== "All Time") {
+      const bDate = new Date(b.date || b.createdAt);
+      const now = new Date();
+      if (filterDate === "This Month") {
+        if (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Last Month") {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
+      } else if (filterDate === "This Year") {
+        if (bDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
+  const hallMap = {};
+  
+  halls.forEach(h => {
+    hallMap[h.name] = { name: h.name, revenue: 0, bookings: 0 };
+  });
+
+  let totalBookings = 0;
+  
+  filteredBookings.forEach(b => {
+    if (b.status !== "Cancelled") {
+      const h = b.hall;
+      if (h) {
+        if (!hallMap[h]) hallMap[h] = { name: h, revenue: 0, bookings: 0 };
+        hallMap[h].bookings += 1;
+        hallMap[h].revenue += (b.totalAmount || 0);
+        totalBookings += 1;
+      }
+    }
+  });
+
+  let hallData = Object.values(hallMap).sort((a,b) => b.revenue - a.revenue);
+  if (halls.length > 0) {
+    hallData = hallData.filter(h => halls.some(m => m.name === h.name));
+  } else {
+    hallData = hallData.filter(h => h.bookings > 0);
+  }
+  
+  const topHall = hallData.length > 0 && hallData[0].revenue > 0 ? hallData[0] : null;
+  const topHallName = topHall ? topHall.name : "N/A";
+  const topHallRev = topHall ? (topHall.revenue >= 100000 ? `₹${(topHall.revenue / 100000).toFixed(1)}L` : `₹${topHall.revenue.toLocaleString()}`) : "₹0";
+
+  const handleExportPDF = () => {
+    addToast("Preparing report for export...", "success");
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <style>
+        {`
+          @media print {
+            body * { visibility: hidden; }
+            #hall-report-content, #hall-report-content * { visibility: visible; }
+            #hall-report-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 0 !important;
+            }
+            .print-hide { display: none !important; }
+            .print-show { display: block !important; }
+          }
+        `}
+      </style>
+      <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Hall Performance
@@ -26,14 +131,8 @@ export default function HallReports() {
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Compare revenue, occupancy, and utilization across venues</p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#D4A017", background: "rgba(212,160,23,0.1)", padding: "6px 12px", borderRadius: 8, border: "1px dashed #D4A017" }}>
-            STATIC PROTOTYPE
-          </span>
           <button 
-            onClick={() => {
-              window.print();
-              addToast("Report exported successfully!", "success");
-            }}
+            onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
             <Download size={14} /> Export Report
@@ -41,35 +140,53 @@ export default function HallReports() {
         </div>
       </div>
 
-      {/* Advanced Filter Bar (Mock) */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+      {/* Advanced Filter Bar */}
+      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
           <Filter size={16} /> Filters
         </div>
         
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Date: This Month</option><option>Date: Last Month</option><option>Date: This Year</option><option>Date: Custom Range...</option>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Time">Date: All Time</option>
+          <option value="This Month">Date: This Month</option>
+          <option value="Last Month">Date: Last Month</option>
+          <option value="This Year">Date: This Year</option>
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Hall: All Halls</option><option>Emerald Hall</option><option>Royal Hall</option><option>Orchid Hall</option>
+        
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Halls">Hall: All Halls</option>
+          {halls.map((h, i) => (
+            <option key={i} value={h.name}>{h.name}</option>
+          ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Executive: All Staff</option><option>Rajan P.K.</option><option>Muhammed Rafi</option><option>Sarah K.</option>
+        
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Staff">Executive: All Staff</option>
+          {uniqueExecutives.map((exec, i) => (
+            <option key={i} value={exec}>{exec}</option>
+          ))}
         </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Place: All Locations</option><option>Kannur</option><option>Thalassery</option><option>Kuthuparamba</option>
-        </select>
-        <select style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option>Gender: All</option><option>Male</option><option>Female</option>
+        
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Locations">Place: All Locations</option>
+          {uniquePlaces.map((place, i) => (
+            <option key={i} value={place}>{place}</option>
+          ))}
         </select>
       </div>
+
+      <div id="hall-report-content" style={{ padding: "10px 0" }}>
+        {/* Title for Print Only */}
+        <div style={{ display: "none" }} className="print-show">
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>Hall Performance Reports</h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterDate}</p>
+        </div>
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
         {[
-          { label: "Top Performing Hall", value: "Emerald Hall", sub: "₹8.5L Revenue", icon: Building2, color: "#1B4332", bg: "#f0faf4" },
-          { label: "Overall Occupancy", value: "68%", sub: "+12% from last month", icon: TrendingUp, color: "#D4A017", bg: "#fffbeb" },
-          { label: "Total Hall Bookings", value: "105", sub: "Across all halls", icon: Calendar, color: "#2563eb", bg: "#eff6ff" },
+          { label: "Top Performing Hall", value: topHallName, sub: `${topHallRev} Revenue`, icon: Building2, color: "#1B4332", bg: "#f0faf4" },
+          { label: "Total Hall Bookings", value: totalBookings, sub: "Across all halls", icon: Calendar, color: "#2563eb", bg: "#eff6ff" },
         ].map(k => (
           <div key={k.label} style={{ ...cardSt, display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: k.bg, color: k.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -85,23 +202,27 @@ export default function HallReports() {
       </div>
 
       {/* Charts */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
         
         {/* Revenue Comparison */}
         <div style={cardSt}>
           <p style={sTitle}>Revenue Comparison</p>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={MOCK_HALL_DATA} barSize={40}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v/100000}L`} />
-              <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [`₹${(v/100000).toFixed(1)}L`, "Revenue"]} />
-              <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
-                {MOCK_HALL_DATA.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
+            {hallData.length > 0 ? (
+              <BarChart data={hallData} barSize={40}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 100000 ? `₹${v/100000}L` : `₹${v}`} />
+                <Tooltip cursor={{ fill: "#f9fafb" }} formatter={v => [v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : `₹${v.toLocaleString()}`, "Revenue"]} />
+                <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                  {hallData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
+            )}
           </ResponsiveContainer>
         </div>
 
@@ -109,20 +230,24 @@ export default function HallReports() {
         <div style={cardSt}>
           <p style={sTitle}>Booking Distribution</p>
           <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={MOCK_HALL_DATA} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="bookings">
-                {MOCK_HALL_DATA.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
+            {hallData.length > 0 ? (
+              <PieChart>
+                <Pie data={hallData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="bookings">
+                  {hallData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
+            )}
           </ResponsiveContainer>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-            {MOCK_HALL_DATA.map((h, i) => (
+            {hallData.map((h, i) => (
               <div key={h.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#374151", fontWeight: 500 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i] }} /> {h.name}
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length] }} /> {h.name}
                 </span>
                 <span style={{ fontWeight: 700, color: "#111827" }}>{h.bookings}</span>
               </div>
@@ -131,6 +256,7 @@ export default function HallReports() {
         </div>
       </div>
 
+      </div>
     </div>
   );
 }

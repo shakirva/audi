@@ -13,7 +13,7 @@ function CustomerSkeleton() {
       </div>
       <div style={{ height: 16, background: "#f1f5f9", borderRadius: 6, width: "70%", marginBottom: 8, animation: "pulse 1.5s infinite" }} />
       <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, width: "45%", marginBottom: 16, animation: "pulse 1.5s infinite" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16, padding: "12px 0", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div style={{ height: 28, background: "#f1f5f9", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
         <div style={{ height: 28, background: "#f1f5f9", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
       </div>
@@ -126,7 +126,7 @@ export default function Customers() {
                   <MapPin size={13} /> {c.city || c.location || "Local Client"}
                 </p>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16, padding: "12px 0", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>Bookings</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: "#334155" }}>{bookingCount}</div>

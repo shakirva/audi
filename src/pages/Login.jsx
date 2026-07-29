@@ -18,8 +18,12 @@ export default function Login() {
     if (!email.trim()) { setError("Please enter your email."); return; }
     if (!password.trim()) { setError("Please enter your password."); return; }
     setLoading(true);
+    
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    let tenantSlug = parts.length > 0 ? parts[0] : null;
+    if (["login", "dashboard"].includes(tenantSlug)) tenantSlug = null;
 
-    const result = await login(email.trim(), password);
+    const result = await login(email.trim(), password, tenantSlug);
     if (!result.ok) {
       setError(result.error);
       setLoading(false);
@@ -155,34 +159,10 @@ export default function Login() {
             )}
           </button>
 
-          {/* Credential hints (for development only) */}
-          <div style={{ marginTop: 20, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Quick Login</p>
-            {[
-              { label: "👑 Owner", email: "owner@venueza.com", pass: "owner123" },
-              { label: "🧑‍💼 Manager", email: "manager@venueza.com", pass: "manager123" },
-            ].map(cred => (
-              <button key={cred.email}
-                onClick={() => { setEmail(cred.email); setPassword(cred.pass); }}
-                type="button"
-                style={{
-                  display: "block", width: "100%", textAlign: "left",
-                  padding: "6px 10px", borderRadius: 6, marginBottom: 4,
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
-                  color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
-              >
-                {cred.label}: <span style={{ color: "rgba(212,160,23,0.7)" }}>{cred.email}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 20 }}>
-          © 2026 Venueza SaaS · Sreelakshmi Convention Centre
+          © 2026 Venueza SaaS
         </p>
       </div>
 

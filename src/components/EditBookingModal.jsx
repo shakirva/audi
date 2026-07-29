@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus } from "lucide-react";
+import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "./Toast";
 
@@ -25,6 +25,14 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({});
+  const [facilitiesList, setFacilitiesList] = useState([]);
+
+  useEffect(() => {
+    // Fetch facilities from master
+    import("../services/api").then(({ mastersAPI }) => {
+      mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+    });
+  }, []);
 
   useEffect(() => {
     if (open && booking) {
@@ -55,9 +63,12 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         session: booking.session || "",
         guests: booking.guests || "",
         extraArrangements: booking.extraArrangements || "",
-        // Financial
+        facilities: booking.facilities || [],
+        // Financial (GST is inclusive: quotedAmount = totalAmount + discount)
         quotedAmount: (Number(booking.totalAmount || 0) + Number(booking.discount || 0)) || "",
         discount: booking.discount || "",
+        taxes: booking.taxes || "",
+        taxPercentage: booking.taxes && booking.totalAmount ? Math.round((Number(booking.taxes) / (Number(booking.totalAmount) - Number(booking.taxes))) * 100) : "",
         totalAmount: booking.totalAmount || "",
         advance: booking.advance || "",
         depositAmount: booking.depositAmount || "",
@@ -76,17 +87,24 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
 
   if (!open || !booking) return null;
 
-  const handleMoneyChange = (field, value) => {
-    const updated = { ...form, [field]: value };
+  const handleMoneyChange = (field, value, extraState = {}) => {
+    let updated = { ...form, [field]: value, ...extraState };
+    
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
     
-    // Auto calculate Total Amount if quoted or discount changes
+    // Total Amount = Quoted - Discount (GST is INCLUSIVE, not added on top)
     if (field === "quotedAmount" || field === "discount") {
       updated.totalAmount = Math.max(0, quoted - disc);
     }
-    
+
+    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
     const total = Number(updated.totalAmount) || 0;
+    const pct = Number(updated.taxPercentage) || 0;
+    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
+      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+    }
+    
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
     updated.balanceAmount = Math.max(0, total - adv - dep);
@@ -154,7 +172,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
             {/* ── CONTACT ── */}
             <div>
               <p style={sectionHead}><User size={14} /> Contact Details</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Customer Name *</label>
                   {inp("customerName", { required: true, placeholder: "Customer name" })}
@@ -196,7 +214,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Father Name</label>{inp("brideFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
@@ -210,7 +228,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Father Name</label>{inp("groomFatherName")}</div>
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
                 <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
@@ -258,6 +276,38 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
               </div>
             </div>
 
+            {/* ── FACILITIES ── */}
+            {facilitiesList.length > 0 && (
+              <div>
+                <p style={sectionHead}><CheckSquare size={14} /> Facilities & Add-ons</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {facilitiesList.map(f => {
+                    const checked = form.facilities?.some(x => x.id === f.id);
+                    return (
+                      <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
+                        <input type="checkbox" checked={checked} onChange={(e) => {
+                          let newFac = [...(form.facilities || [])];
+                          let newQuoted = Number(form.quotedAmount || 0);
+                          if (e.target.checked) {
+                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newQuoted += Number(f.price || 0);
+                          } else {
+                            newFac = newFac.filter(x => x.id !== f.id);
+                            newQuoted -= Number(f.price || 0);
+                          }
+                          handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                        }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
+                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
+                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── FINANCIALS ── */}
             <div>
               <p style={sectionHead}><IndianRupee size={14} /> Financial Details</p>
@@ -287,7 +337,26 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14, marginBottom: 14 }}>
+                <div>
+                  <label style={labelSt}>Tax / GST Rate (%)</label>
+                  <input type="number" min={0} value={form.taxPercentage || ""}
+                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700 }}
+                    placeholder="e.g. 18"
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+                <div>
+                  <label style={labelSt}>Tax Amount (₹)</label>
+                  <input type="number" min={0} value={form.taxes || ""}
+                    onChange={e => handleMoneyChange("taxes", e.target.value)}
+                    style={{ ...iStyle, fontWeight: 700, color: "#991b1b" }}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Advance Paid (₹)</label>
                   <input type="number" min={0} value={form.advance || ""}
@@ -338,7 +407,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                   );
                 })}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {form.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>

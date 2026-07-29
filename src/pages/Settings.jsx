@@ -4,15 +4,14 @@ import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
-import { authAPI, settingsAPI } from "../services/api";
-import { usersAPI } from "../services/api";
+import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
 
 const INIT_HALLS = [
-  { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup" },
-  { name: "Mini Hall",  icon: "🏠", price: 6000,  capacity: 150, description: "Intimate setting for smaller events" },
-  { name: "Open Stage", icon: "🌿", price: 8000,  capacity: 300, description: "Outdoor stage with natural surroundings" },
+  { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup", gstRate: 18 },
+  { name: "Mini Hall",  icon: "🏠", price: 6000,  capacity: 150, description: "Intimate setting for smaller events", gstRate: 18 },
+  { name: "Open Stage", icon: "🌿", price: 8000,  capacity: 300, description: "Outdoor stage with natural surroundings", gstRate: 18 },
 ];
 
 const iStyle = {
@@ -37,7 +36,7 @@ const sectionTitle = {
 
 export default function Settings() {
   const { addToast } = useToast();
-  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment } = useRole();
+  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo } = useRole();
   const { bookings, deleteBooking } = useBookings();
   const isOwner = role === "Owner";
   const isAdminRole = role === "Owner" || role === "Manager"; // both see full settings
@@ -52,10 +51,12 @@ export default function Settings() {
     phone:    "",
     email:    "",
     gstin:    "",
+    bookingPrefix: "",
   });
   const [showCreateHallModal, setShowCreateHallModal] = useState(false);
   const [editHallIndex, setEditHallIndex] = useState(null);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [dbUsers, setDbUsers] = useState([]);
 
   // ── Hall Pricing ──
@@ -81,9 +82,32 @@ export default function Settings() {
   // ── WhatsApp Reminder Days ──
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
+  const [facilities, setFacilities] = useState([]);
+  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
+
   useEffect(() => {
     loadSettings();
+    loadUsers();
+    loadFacilities();
   }, []);
+
+  const loadFacilities = async () => {
+    try {
+      const res = await mastersAPI.getByType("services");
+      setFacilities(res.data?.data || []);
+    } catch (e) {
+      console.error("Failed to load facilities:", e);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const res = await usersAPI.getAll();
+      setDbUsers(res.data.data || []);
+    } catch (e) {
+      console.error("Failed to load users:", e);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -97,6 +121,7 @@ export default function Settings() {
         phone: data.phone || "",
         email: data.email || "",
         gstin: data.gstin || "",
+        bookingPrefix: data.bookingPrefix || "BK",
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -147,7 +172,9 @@ export default function Settings() {
 
   const handleSaveVenue = async () => {
     try {
-      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin });
+      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin, bookingPrefix: venue.bookingPrefix });
+      // Update shared venueInfo so Sidebar/Header reflect changes immediately
+      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
       addToast("Venue settings saved! 🏛️", "success");
     } catch (e) { addToast("Failed to save", "error"); }
   };
@@ -217,6 +244,30 @@ export default function Settings() {
       await settingsAPI.update({ staff: newStaffList });
       addToast("Staff updated successfully! ✅", "success");
     } catch (e) { addToast("Failed to save staff", "error"); }
+  };
+
+  // ── Facilities & Add-ons ──
+  const handleAddFacility = async () => {
+    if (!newFacility.name.trim()) return;
+    try {
+      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services" });
+      setNewFacility({ name: "", price: "" });
+      loadFacilities();
+      addToast("Facility added! 🛠️", "success");
+    } catch (e) {
+      addToast("Failed to add facility", "error");
+    }
+  };
+
+  const handleDeleteFacility = async (id) => {
+    if (!window.confirm("Delete this facility?")) return;
+    try {
+      await mastersAPI.remove(id);
+      loadFacilities();
+      addToast("Facility deleted", "info");
+    } catch (e) {
+      addToast("Failed to delete facility", "error");
+    }
   };
 
   // ── Gallery Management ──
@@ -393,7 +444,7 @@ export default function Settings() {
 
   const StaffAdder = () => (
     <button
-      onClick={() => setShowAddStaffModal(true)}
+      onClick={() => { setEditingStaff(null); setShowAddStaffModal(true); }}
       style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "10px 18px", borderRadius: 10, border: "none",
@@ -575,7 +626,7 @@ export default function Settings() {
                   onClick={async () => {
                     try {
                       const { data } = await settingsAPI.generateTester(testerForm);
-                      setTesterCreds(data);
+                      setTesterCreds(data.data);
                       setTesterForm({ name: "", email: "", password: "" });
                       addToast("Tester credentials generated!", "success");
                     } catch(e) {
@@ -593,6 +644,10 @@ export default function Settings() {
               <div style={{ background: "#fef2f2", padding: "12px", borderRadius: 8, border: "1px dashed #fca5a5", marginTop: 8 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", margin: "0 0 8px 0" }}>Share these securely with the inspector/tester:</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div>
+                    <span style={{ fontSize: 10, color: "#b91c1c", fontWeight: 700, textTransform: "uppercase" }}>Name</span>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "monospace" }}>{testerCreds.name}</p>
+                  </div>
                   <div>
                     <span style={{ fontSize: 10, color: "#b91c1c", fontWeight: 700, textTransform: "uppercase" }}>Email</span>
                     <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "monospace" }}>{testerCreds.email}</p>
@@ -622,7 +677,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label style={labelSt}><Building2 size={11} /> Auditorium Name</label>
             <input name="name" value={venue.name} onChange={handleVenueChange} style={iStyle}
@@ -658,6 +713,13 @@ export default function Settings() {
             <input name="gstin" value={venue.gstin} onChange={handleVenueChange} style={iStyle}
               onFocus={e => e.target.style.borderColor = "#1B4332"}
               onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🔢 Booking ID Prefix</label>
+            <input name="bookingPrefix" value={venue.bookingPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. BK, LGE, etc."
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
           </div>
         </div>
 
@@ -733,6 +795,13 @@ export default function Settings() {
                     <option value="slab">Slab / Package Wise</option>
                   </select>
                 </div>
+                <div style={{ flex: "1 1 80px" }}>
+                  <label style={labelSt}>GST %</label>
+                  <input type="number" value={hall.gstRate ?? 18} onChange={e => handleHallChange(idx, "gstRate", Number(e.target.value))}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
               </div>
               <div style={{ paddingRight: 32 }}>
                 <label style={labelSt}>Description</label>
@@ -764,6 +833,60 @@ export default function Settings() {
             onMouseLeave={e => e.currentTarget.style.background = "#4b5563"}>
             <Save size={14} /> Save Halls
           </button>
+        </div>
+      </div>
+      )}
+
+      {/* ── FACILITIES & ADD-ONS (Owner & Manager) ── */}
+      {isAdminRole && (
+      <div style={cardSt}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 18 }}>🛠️</span>
+          </div>
+          <div>
+            <p style={sectionTitle}>Facilities & Add-ons</p>
+            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Create extra services that clients can add to their bookings</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+          {facilities.map((fac) => (
+            <div key={fac.id} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
+              background: "#fafafa"
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
+                {fac.price > 0 && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+              </div>
+              <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                <Trash2 size={14} color="#ef4444" />
+              </button>
+            </div>
+          ))}
+          
+          {facilities.length === 0 && (
+            <div style={{ padding: "16px", textAlign: "center", background: "#f9fafb", borderRadius: 10, border: "1px dashed #d1d5db", fontSize: 12, color: "#6b7280" }}>
+              No facilities added yet.
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelSt}>New Facility Name</label>
+            <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+          </div>
+          <div style={{ width: 150 }}>
+            <label style={labelSt}>Price (₹)</label>
+            <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+          </div>
+          <button onClick={handleAddFacility} style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
+            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
+          }}>+ Add</button>
         </div>
       </div>
       )}
@@ -1023,32 +1146,64 @@ export default function Settings() {
         <StaffAdder />
 
         <div style={{ border: "1.5px solid #f3f4f6", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
-            {["Name", "Role", "Access", "Status", ""].map(h => (
-              <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 80px", background: "#f9fafb", padding: "10px 16px", gap: 12 }}>
+            {["Name", "Password", "Role", "Access", "Status", ""].map(h => (
+              <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: h === "" ? "right" : "left" }}>{h}</span>
             ))}
           </div>
-          {staff.length === 0 ? (
+          {dbUsers.length === 0 ? (
             <p style={{ textAlign: "center", padding: "16px", fontSize: 12, color: "#9ca3af", margin: 0 }}>No staff members added.</p>
-          ) : staff.map((s, i) => {
+          ) : dbUsers.map((s, i) => {
             const roleColors = { Owner: { bg: "#f0faf4", color: "#1B4332" }, Manager: { bg: "#fffbeb", color: "#D4A017" }, Staff: { bg: "#eff6ff", color: "#2563eb" } };
             const rc = roleColors[s.role] || roleColors.Staff;
             return (
-              <div key={s.email + i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr 100px 40px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
+              <div key={s.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 1fr 100px 80px", padding: "12px 16px", gap: 12, borderTop: i > 0 ? "1px solid #f3f4f6" : "none", alignItems: "center" }}>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{s.name}</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af" }}>{s.email}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px" }}>{s.name}</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>{s.email}</p>
+                </div>
+                <div style={{ fontSize: 12, fontFamily: "monospace", color: "#4b5563", background: "#f3f4f6", padding: "4px 8px", borderRadius: 6, display: "inline-block", wordBreak: "break-all" }}>
+                  {s.plainPassword || "********"}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: rc.color, background: rc.bg, padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>{s.role}</span>
-                <span style={{ fontSize: 12, color: "#6b7280" }}>{s.access}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d", background: "#dcfce7", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>Active</span>
-                <button onClick={() => {
-                  const updated = staff.filter((_, idx) => idx !== i);
-                  setStaff(updated);
-                  handleSaveStaff(updated);
-                }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "#ef4444", display: "flex", justifyContent: "center" }}>
-                  <Trash2 size={14} />
+                <span style={{ fontSize: 12, color: "#6b7280" }}>{s.role === "Owner" || s.role === "Manager" ? "Full Access" : s.role === "Sales" ? "CRM Only" : "Basic"}</span>
+                <button onClick={async () => {
+                  try {
+                    await usersAPI.toggle(s.id);
+                    loadUsers();
+                    addToast(`User ${s.active ? 'deactivated' : 'activated'}`, "success");
+                  } catch(e) {
+                    addToast("Failed to toggle user status", "error");
+                  }
+                }} style={{ cursor: "pointer", border: "none", background: "none", fontSize: 11, fontWeight: 600, color: s.active ? "#15803d" : "#ef4444", background: s.active ? "#dcfce7" : "#fee2e2", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>
+                  {s.active ? "Active" : "Inactive"}
                 </button>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center" }}>
+                  <button onClick={() => { setEditingStaff(s); setShowAddStaffModal(true); }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "#6366f1", display: "flex", justifyContent: "center" }}>
+                    <Edit size={14} />
+                  </button>
+                  <button onClick={async () => {
+                    if (!isOwner) {
+                      addToast("Only Owners can delete users", "error");
+                      return;
+                    }
+                    if (s.role === "Owner") {
+                      addToast("Cannot delete Owner account", "error");
+                      return;
+                    }
+                    if (window.confirm("Are you sure you want to delete this user?")) {
+                      try {
+                        await usersAPI.remove(s.id);
+                        loadUsers();
+                        addToast("User deleted successfully", "success");
+                      } catch(e) {
+                        addToast("Failed to delete user", "error");
+                      }
+                    }
+                  }} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: (!isOwner || s.role === "Owner") ? "#cbd5e1" : "#ef4444", display: "flex", justifyContent: "center" }} disabled={!isOwner || s.role === "Owner"}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -1178,7 +1333,7 @@ export default function Settings() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelSt}>{newMedia.type === "image" ? "🖼️ Image URL" : "🎬 YouTube URL"}</label>
               <input
@@ -1367,6 +1522,23 @@ export default function Settings() {
           } catch(e) {
             console.error("Failed to auto-save halls to db", e);
           }
+        }}
+      />
+      <AddStaffModal 
+        open={showAddStaffModal}
+        onClose={() => { setShowAddStaffModal(false); setEditingStaff(null); }}
+        editingUser={editingStaff}
+        onSave={async (staffData, id) => {
+          if (id) {
+            await usersAPI.update(id, staffData);
+            addToast("Staff updated successfully!", "success");
+          } else {
+            await usersAPI.create(staffData);
+            addToast("Staff created successfully!", "success");
+          }
+          loadUsers();
+          setShowAddStaffModal(false);
+          setEditingStaff(null);
         }}
       />
     </div>

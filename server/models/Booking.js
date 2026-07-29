@@ -61,6 +61,7 @@ const Booking = sequelize.define("Booking", {
   ledWall: { type: DataTypes.STRING, allowNull: true },
   generator: { type: DataTypes.STRING, allowNull: true },
   cleaning: { type: DataTypes.STRING, allowNull: true },
+  facilities: { type: DataTypes.JSONB, defaultValue: [] },
   additionalServices: { type: DataTypes.TEXT, allowNull: true },
   package: { type: DataTypes.STRING, allowNull: true },
   discount: { type: DataTypes.INTEGER, defaultValue: 0 },
@@ -68,6 +69,7 @@ const Booking = sequelize.define("Booking", {
   advance: { type: DataTypes.INTEGER, defaultValue: 0 },
   totalAmount: { type: DataTypes.INTEGER, defaultValue: 0 },
   status: { type: DataTypes.ENUM("Draft", "Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed", "Cancelled"), defaultValue: "Draft" },
+  invoiceStatus: { type: DataTypes.ENUM("Pending", "Generated"), defaultValue: "Pending" },
   notes: { type: DataTypes.TEXT, defaultValue: "" },
   // ── Audit fields ──
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
@@ -77,11 +79,31 @@ const Booking = sequelize.define("Booking", {
   hooks: {
     beforeValidate: async (booking) => {
       if (!booking.bookingId) {
-        // Scope booking ID generation to tenant + environment
-        const count = await Booking.count({
+        // Fetch Settings for prefix
+        const Settings = sequelize.models.Settings;
+        let prefix = "BK";
+        if (Settings) {
+          const settings = await Settings.findOne({ where: { tenantId: booking.tenantId, environmentId: booking.environmentId } });
+          if (settings && settings.bookingPrefix) {
+            prefix = settings.bookingPrefix;
+          }
+        }
+        
+        // Find highest existing bookingId (including soft-deleted) to guarantee uniqueness
+        const lastBooking = await Booking.findOne({
           where: { tenantId: booking.tenantId, environmentId: booking.environmentId },
+          order: [["id", "DESC"]],
+          attributes: ["bookingId"],
+          paranoid: false, // include soft-deleted records
         });
-        booking.bookingId = `BK${String(count + 1).padStart(3, "0")}`;
+
+        let nextNum = 1;
+        if (lastBooking && lastBooking.bookingId) {
+          const match = lastBooking.bookingId.match(/\d+$/);
+          if (match) nextNum = parseInt(match[0], 10) + 1;
+        }
+
+        booking.bookingId = `${prefix}${String(nextNum).padStart(3, "0")}`;
       }
     }
   },

@@ -5,8 +5,34 @@ const { UnauthorizedError, NotFoundError, ConflictError, BadRequestError } = req
 const { ROLES } = require("../helpers/roles");
 
 class AuthService {
-  async login({ email, password }) {
-    const user = await userRepository.findByEmail(email);
+  async login({ email, password, tenantSlug }) {
+    let user = null;
+    
+    if (tenantSlug) {
+      // Tenant-specific login: look up user within that tenant only
+      const tenant = await Tenant.findOne({ where: { slug: tenantSlug } });
+      if (!tenant) throw new UnauthorizedError("Auditorium not found. Please check your URL.");
+      if (tenant.status !== "active") throw new UnauthorizedError("This auditorium account is currently suspended.");
+      
+      user = await userRepository.findByEmailAndTenant(email, tenant.id);
+      if (!user) throw new UnauthorizedError("Invalid credentials for this auditorium.");
+    } else {
+      // No slug provided — only SuperAdmin can log in from the root URL
+      const { User } = require("../models");
+      const users = await User.findAll({ where: { email: email.toLowerCase() } });
+      
+      if (users.length === 0) throw new UnauthorizedError("Invalid credentials");
+      
+      // Find a SuperAdmin among matches
+      const superAdmin = users.find(u => u.role === "SuperAdmin");
+      if (superAdmin) {
+        user = superAdmin;
+      } else {
+        // Not a SuperAdmin — they must use their slug URL
+        throw new UnauthorizedError("Please log in using your auditorium's link (e.g. venueza.cloud/your-auditorium).");
+      }
+    }
+    
     if (!user) throw new UnauthorizedError("Invalid credentials");
     if (!user.active) throw new UnauthorizedError("Account is disabled");
 

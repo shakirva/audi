@@ -1,5 +1,5 @@
 const BaseRepository = require("./base.repository");
-const { Payment, Receipt, Customer, Booking } = require("../models");
+const { Payment, Receipt, Customer, Booking, User } = require("../models");
 
 class PaymentRepository extends BaseRepository {
   constructor() {
@@ -19,6 +19,7 @@ class PaymentRepository extends BaseRepository {
         { model: Customer, attributes: ["id", "name", "phone"] },
         { model: Booking, attributes: ["id", "bookingId", "hall", "date"] },
         { model: Receipt, attributes: ["id", "receiptNumber", "pdfUrl", "status"] },
+        { model: User, as: "creator", attributes: ["id", "name"] }
       ],
       order: [["paymentDate", "DESC"], ["createdAt", "DESC"]],
       query,

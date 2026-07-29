@@ -1,4 +1,10 @@
-const { ChartOfAccount, JournalEntry, JournalEntryLine, Booking, Payment, Expense, FinancialPeriod, sequelize } = require("../models");
+/**
+ * Accounting Engine — Central service for all accounting operations.
+ * All modules (Payments, Expenses, Bookings) call this engine to create
+ * proper double-entry journal entries, vouchers, and update ledgers.
+ */
+
+const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt, sequelize } = require("../models");
 const { Op } = require("sequelize");
 
 class AccountingEngine {
@@ -186,17 +192,128 @@ class AccountingEngine {
       { accountId: revenueAcct.id, debit: 0, credit: booking.totalAmount }
     ];
 
-    await this.postJournal({
-      tenantId,
-      environmentId,
-      description: `Booking confirmed: ${booking.bookingNumber}`,
-      lines,
+    // 2. Create Journal Entry
+    const journal = await JournalEntry.create({
+      tenantId, environmentId,
+      date,
+      description,
+      debitAccountId: debitAccount.id,
+      creditAccountId: creditAccount.id,
+      amount,
+      sourceModule, sourceId,
+      voucherId: voucher.id,
+      customerId, bookingId,
+      notes, createdBy,
+    }, { transaction });
+
+    return { voucher, journal };
+  }
+
+  // ═══════════════════════════════════
+  // RECORD PAYMENT (called from payment.service.js)
+  // ═══════════════════════════════════
+  async onPaymentReceived(payment, { tenantId, environmentId, createdBy, transaction }) {
+    const isCash = payment.paymentMode === "Cash";
+    const debitCode = isCash ? "1001" : "1002"; // Cash or Bank
+    const creditCode = "1005"; // Customer Outstanding
+
+    await this.createEntry({
+      tenantId, environmentId,
+      date: payment.paymentDate || new Date(),
+      description: `Payment Received #${payment.paymentNumber} - ${payment.paymentMode}`,
+      debitCode,
+      creditCode,
+      amount: payment.amount,
+      voucherType: "RV", // Receipt Voucher
+      sourceModule: "Payment",
+      sourceId: payment.id,
+      customerId: payment.customerId,
+      bookingId: payment.bookingId,
+      paymentMode: payment.paymentMode,
+      referenceNumber: payment.referenceNumber,
+      createdBy,
+      transaction,
+    });
+  }
+
+  // ═══════════════════════════════════
+  // RECORD EXPENSE (called from expense.service.js)
+  // ═══════════════════════════════════
+  async onExpenseCreated(expense, { tenantId, environmentId, createdBy, paymentMode, transaction }) {
+    // Map expense category to account code
+    const categoryMap = {
+      "Electricity": "4001",
+      "Staff Salary": "4002", "Salary": "4002",
+      "Cleaning": "4003",
+      "Maintenance": "4004",
+      "Marketing": "4005",
+      "Fuel": "4006",
+      "Office Expense": "4007", "Office": "4007",
+    };
+
+    const expenseAccountCode = categoryMap[expense.category] || "4008"; // Default to Misc Expense
+    const creditCode = (paymentMode === "Bank" || paymentMode === "UPI" || paymentMode === "Bank Transfer") ? "1002" : "1001";
+
+    await this.createEntry({
+      tenantId, environmentId,
+      date: expense.date || new Date(),
+      description: `Expense: ${expense.description}`,
+      debitCode: expenseAccountCode,
+      creditCode,
+      amount: expense.amount,
+      voucherType: "EV", // Expense Voucher
+      sourceModule: "Expense",
+      sourceId: expense.id,
+      bookingId: expense.bookingId,
+      paymentMode: paymentMode || "Cash",
+      createdBy,
+      transaction,
+    });
+  }
+
+  // ═══════════════════════════════════
+  // RECORD BOOKING (customer outstanding)
+  // ═══════════════════════════════════
+  async onBookingCreated(booking, { tenantId, environmentId, createdBy, transaction }) {
+    if (!booking.totalAmount || booking.totalAmount <= 0) return;
+
+    const gstAmount = Number(booking.taxes) || 0;
+    const netRevenue = (booking.totalAmount || 0) - gstAmount;
+
+    // 1. Customer owes us the full amount → recognize as revenue (net of GST)
+    await this.createEntry({
+      tenantId, environmentId,
+      date: new Date(),
+      description: `Booking #${booking.bookingId} - ${booking.customerName}`,
+      debitCode: "1005",  // Customer Outstanding (Asset - they owe us)
+      creditCode: "3001", // Hall Booking Income (net revenue only)
+      amount: netRevenue,
+      voucherType: "JV",
       sourceModule: "Booking",
       sourceId: booking.id,
       bookingId: booking.id,
-      customerId: booking.customerId,
-      createdBy: booking.createdBy
-    }, transaction);
+      createdBy,
+      transaction,
+    });
+
+    // 2. If GST exists, record GST portion as a liability (owed to government)
+    if (gstAmount > 0) {
+      await this.createEntry({
+        tenantId, environmentId,
+        date: new Date(),
+        description: `GST on Booking #${booking.bookingId} - ${booking.customerName}`,
+        debitCode: "1005",  // Customer Outstanding (they pay GST too)
+        creditCode: "2004", // Taxes Payable (GST liability to government)
+        amount: gstAmount,
+        voucherType: "JV",
+        sourceModule: "Booking",
+        sourceId: booking.id,
+        customerId: booking.customerId,
+        bookingId: booking.id,
+        createdBy,
+        transaction,
+      });
+    }
   }
 
   /**
@@ -446,6 +563,213 @@ class AccountingEngine {
     };
   }
 
+  // ═══════════════════════════════════
+  // GENERAL LEDGER
+  // ═══════════════════════════════════
+  async getLedger({ tenantId, environmentId, accountCode, startDate, endDate, page = 1, limit = 50 }) {
+    const where = { tenantId, environmentId };
+
+    if (accountCode) {
+      const account = await ChartOfAccount.findOne({ where: { code: accountCode, tenantId, environmentId } });
+      if (account) {
+        where[Op.or] = [{ debitAccountId: account.id }, { creditAccountId: account.id }];
+      }
+    }
+
+    if (startDate && endDate) {
+      where.date = { [Op.between]: [startDate, endDate] };
+    }
+
+    const { count, rows } = await JournalEntry.findAndCountAll({
+      where,
+      include: [
+        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name", "type"] },
+        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name", "type"] },
+        { model: Customer, attributes: ["id", "name"], required: false },
+        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false },
+      ],
+      order: [["date", "DESC"], ["createdAt", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    return { data: rows, total: count, page, limit };
+  }
+
+  // ═══════════════════════════════════
+  // VOUCHER LIST
+  // ═══════════════════════════════════
+  async getVouchers({ tenantId, environmentId, voucherType, startDate, endDate, page = 1, limit = 50 }) {
+    const where = { tenantId, environmentId };
+    if (voucherType) where.voucherType = voucherType;
+    if (startDate && endDate) where.date = { [Op.between]: [startDate, endDate] };
+
+    const { count, rows } = await Voucher.findAndCountAll({
+      where,
+      include: [
+        { model: Customer, attributes: ["id", "name"], required: false },
+        { model: Booking, attributes: ["id", "bookingId", "customerName"], required: false },
+      ],
+      order: [["date", "DESC"], ["createdAt", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    return { data: rows, total: count, page, limit };
+  }
+
+  // ═══════════════════════════════════
+  // CUSTOMER LEDGER
+  // ═══════════════════════════════════
+  async getCustomerLedger(customerId, { tenantId, environmentId }) {
+    const customer = await Customer.findOne({ where: { id: customerId, tenantId, environmentId } });
+    if (!customer) return null;
+
+    // Get all bookings for this customer
+    const bookings = await Booking.findAll({
+      where: { customerId, tenantId, environmentId, status: { [Op.notIn]: ["Draft", "Cancelled"] } },
+      attributes: ["id", "bookingId", "totalAmount", "advance", "date", "eventType", "status"],
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get all payments
+    const payments = await Payment.findAll({
+      where: { customerId, tenantId, environmentId },
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get journal entries for this customer
+    const journals = await JournalEntry.findAll({
+      where: { customerId, tenantId, environmentId },
+      include: [
+        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
+        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
+      ],
+      order: [["date", "DESC"]],
+    });
+
+    const totalBooked = bookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+
+    return {
+      customer: customer.toJSON(),
+      totalBooked,
+      totalPaid,
+      outstanding: totalBooked - totalPaid,
+      bookings,
+      payments,
+      journals,
+    };
+  }
+
+  // ═══════════════════════════════════
+  // BOOKING LEDGER (FINANCIAL CENTER)
+  // ═══════════════════════════════════
+  async getBookingLedger(bookingIdParam, { tenantId, environmentId }) {
+    const { Op } = require("sequelize");
+    const whereCondition = isNaN(bookingIdParam) 
+      ? { bookingId: bookingIdParam, tenantId, environmentId }
+      : { id: bookingIdParam, tenantId, environmentId };
+
+    const booking = await Booking.findOne({ 
+      where: whereCondition,
+      include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }]
+    });
+    if (!booking) return null;
+
+    const realBookingId = booking.id;
+
+    // Get all payments for this booking
+    const payments = await Payment.findAll({
+      where: { bookingId: realBookingId, tenantId, environmentId },
+      include: [{ model: Receipt, attributes: ["receiptNumber"] }],
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get all expenses for this booking
+    const expenses = await Expense.findAll({
+      where: { bookingId: realBookingId, tenantId, environmentId },
+      order: [["createdAt", "DESC"]],
+    });
+
+    // Get journal entries for this booking
+    const journals = await JournalEntry.findAll({
+      where: { bookingId: realBookingId, tenantId, environmentId },
+      include: [
+        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
+        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
+        { model: Voucher, attributes: ["voucherNumber", "voucherType"] }
+      ],
+      order: [["date", "DESC"], ["createdAt", "DESC"]],
+    });
+
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+    const outstanding = (booking.totalAmount || 0) - totalPaid;
+    const gstAmount = Number(booking.taxes) || 0;
+    const netRevenue = (booking.totalAmount || 0) - gstAmount; // What owner actually earns
+    const netProfit = netRevenue - totalExpenses;
+
+    return {
+      booking: booking.toJSON(),
+      totalPaid,
+      totalExpenses,
+      outstanding: outstanding > 0 ? outstanding : 0,
+      gstAmount,
+      netRevenue,
+      netProfit,
+      payments,
+      expenses,
+      journals,
+    };
+  }
+
+  // ═══════════════════════════════════
+  // PROFIT & LOSS
+  // ═══════════════════════════════════
+  async getProfitLoss({ tenantId, environmentId, startDate, endDate }) {
+    const scope = { tenantId, environmentId };
+    const dateFilter = startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {};
+
+    const incomeAccounts = await ChartOfAccount.findAll({ where: { ...scope, type: "Income" } });
+    const expenseAccounts = await ChartOfAccount.findAll({ where: { ...scope, type: "Expense" } });
+
+    const incomeItems = [];
+    let totalIncome = 0;
+    for (const acct of incomeAccounts) {
+      const credits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, creditAccountId: acct.id } }) || 0;
+      const debits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, debitAccountId: acct.id } }) || 0;
+      const balance = credits - debits;
+      if (balance !== 0) {
+        incomeItems.push({ code: acct.code, name: acct.name, amount: balance });
+        totalIncome += balance;
+      }
+    }
+
+    const expenseItems = [];
+    let totalExpenses = 0;
+    for (const acct of expenseAccounts) {
+      const debits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, debitAccountId: acct.id } }) || 0;
+      const credits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, creditAccountId: acct.id } }) || 0;
+      const balance = debits - credits;
+      if (balance !== 0) {
+        expenseItems.push({ code: acct.code, name: acct.name, amount: balance });
+        totalExpenses += balance;
+      }
+    }
+
+    return {
+      income: incomeItems,
+      totalIncome,
+      expenses: expenseItems,
+      totalExpenses,
+      netProfit: totalIncome - totalExpenses,
+    };
+  }
+
+  // ═══════════════════════════════════
+  // OUTSTANDING / BOOKING PAYMENTS REPORT
+  // ═══════════════════════════════════
   async getOutstandingReport({ tenantId, environmentId, onlyOutstanding = false }) {
     const { Op } = require("sequelize");
     const { Booking, Payment, Customer } = require("../models");

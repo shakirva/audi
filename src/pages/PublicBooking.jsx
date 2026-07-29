@@ -124,7 +124,7 @@ function GallerySection({ galleryItems, phone, venueName }) {
           A Glimpse of <span style={{ color: "#D4A017" }}>Our Venue</span>
         </h2>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginTop: 6, margin: 0 }}>
-          Real events at {venueName || "Sreelakshmi Centre"}
+          Real events at {venueName || "Venueza Auditorium"}
         </p>
       </div>
 
@@ -254,7 +254,7 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions }) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Your Name *</label>
               <input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Full name" required style={iStyle}
@@ -267,7 +267,7 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions }) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6 }}>Event Type</label>
               <select value={form.eventType} onChange={e => set("eventType", e.target.value)} style={{ ...iStyle, cursor: "pointer" }}>

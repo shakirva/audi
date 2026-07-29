@@ -6,17 +6,26 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App";
 
-const queryClient = new QueryClient();
+// Calculate dynamic basename for tenant routing
+let basename = "/";
+const pathParts = window.location.pathname.split("/").filter(Boolean);
+const reservedWords = [
+  "book", "dashboard", "bookings", "calendar", "customers", "finance", 
+  "reports", "settings", "notifications", "tenants", "subscriptions",
+  "crm", "agreements", "jobs", "vendors", "masters", "roadmap", "staff",
+  "profile", "attendance", "leaves", "login"
+];
+if (pathParts.length > 0 && !reservedWords.includes(pathParts[0])) {
+  basename = `/${pathParts[0]}`;
+}
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <BrowserRouter basename={basename}>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </BrowserRouter>
   </StrictMode>
 );
 
