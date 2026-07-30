@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const availabilityService = require("../../services/availability.service");
 const { sendSuccess, sendError } = require("../../helpers/response");
+const { auth } = require("../../middleware/auth");
+const { tenantScope } = require("../../middleware/tenantScope");
+
+router.use(auth, tenantScope);
 
 router.get("/", async (req, res) => {
   try {
