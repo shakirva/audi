@@ -111,7 +111,13 @@ export default function Collections() {
                     <td style={{ padding: "16px 24px", color: "#16a34a", fontWeight: 700 }}>₹{Number(p.amount).toLocaleString()}</td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <span style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "1px solid #e2e8f0" }}>
-                        {p.creator?.name || "System"}
+                        {(() => {
+                          if (p.notes && p.notes.includes("Collected By:")) {
+                            const match = p.notes.match(/Collected By:\s*([^\n]+)/);
+                            if (match && match[1]) return match[1].trim();
+                          }
+                          return p.creator?.name || "System";
+                        })()}
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px" }}>

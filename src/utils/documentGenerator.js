@@ -245,8 +245,10 @@ export const generateInvoice = async (data) => {
   // We don't have the exact split of tax in the document, so we approximate the hall base
   // by subtracting the exact facility bases from the overall base.
   let exactFacTax = 0;
+  let facTotal = 0;
   facilities.forEach(f => {
     const p = Number(f.price || 0);
+    facTotal += p;
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
   });
