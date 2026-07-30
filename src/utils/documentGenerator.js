@@ -235,15 +235,26 @@ export const generateInvoice = async (data) => {
     hallTotal -= Number(f.price || 0);
   });
   
-  // If there's overall tax, recalculate the hall vs facility breakdown for printing
+  // In the hybrid inclusive model, totalAmount is the overall total.
+  // The taxes were calculated based on the raw prices.
   const totalTax = Number(booking.taxes || 0);
   
-  // Recalculate based on exclusive math:
-  const baseAmount = (Number(booking.totalAmount || 0) - totalTax);
-  const hallBase = Math.max(0, baseAmount - facTotal);
+  // We'll calculate the printed base as Total - Tax
+  const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
+  
+  // We don't have the exact split of tax in the document, so we approximate the hall base
+  // by subtracting the exact facility bases from the overall base.
+  let exactFacTax = 0;
+  facilities.forEach(f => {
+    const p = Number(f.price || 0);
+    const gstRate = Number(f.gst || 0);
+    if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
+  });
+  
+  const hallTax = Math.max(0, totalTax - exactFacTax);
+  const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
   
   if (totalTax > 0) {
-    const hallTax = booking.taxPercentage > 0 ? (hallBase * booking.taxPercentage / 100) : 0;
     dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (Base)`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     if (hallTax > 0) {
       dynamicBody.push([`Hall GST (${booking.taxPercentage}%)`, `Rs. ${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
@@ -258,7 +269,8 @@ export const generateInvoice = async (data) => {
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) {
       const gstAmt = (p * gstRate) / 100;
-      dynamicBody.push([`${f.name} (Base)`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      const fBase = p - gstAmt;
+      dynamicBody.push([`${f.name} (Base)`, `Rs. ${fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
       dynamicBody.push([`${f.name} GST (${gstRate}%)`, `Rs. ${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     } else {
       dynamicBody.push([`${f.name}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
