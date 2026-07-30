@@ -4,7 +4,8 @@
  * proper double-entry journal entries, vouchers, and update ledgers.
  */
 
-const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt, sequelize } = require("../models");
+const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt } = require("../models");
+const sequelize = require("../db");
 const { Op } = require("sequelize");
 
 // ── Default Chart of Accounts (seeded per tenant) ──
@@ -436,7 +437,7 @@ class AccountingEngine {
         where: { id, tenantId, environmentId },
         transaction: t
       });
-      if (!voucher) throw new NotFoundError("Voucher");
+      if (!voucher) throw new Error("Voucher not found");
       
       // Delete associated journal entries
       await JournalEntry.destroy({
