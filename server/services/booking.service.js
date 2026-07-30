@@ -27,22 +27,14 @@ class BookingService {
     });
 
     // Map for frontend compatibility (id = bookingId, _id = pk)
-    const data = rows.map((b) => ({
-      id: b.bookingId,
-      _id: b.id,
-      customerName: b.customerName,
-      phone: b.phone,
-      eventType: b.eventType,
-      hall: b.hall,
-      date: b.date,
-      session: b.session,
-      guests: b.guests,
-      advance: b.advance,
-      totalAmount: b.totalAmount,
-      status: b.status,
-      notes: b.notes,
-      createdAt: b.createdAt,
-    }));
+    const data = rows.map((b) => {
+      const bData = b.toJSON ? b.toJSON() : b;
+      return {
+        ...bData,
+        id: bData.bookingId,
+        _id: bData.id,
+      };
+    });
 
     return { data, total, page, limit };
   }
@@ -213,12 +205,20 @@ class BookingService {
       }
     }
 
-    const fields = ["customerName", "phone", "eventType", "hall", "date", "session", "guests", "advance", "totalAmount", "status", "notes", "taxes", "taxPercentage"];
+    const fields = [
+      "customerName", "phone", "eventType", "hall", "date", "session", "guests", 
+      "advance", "totalAmount", "status", "notes", "taxes", "taxPercentage",
+      "address", "clientGstNumber", "bookedBy", "bookingParty", 
+      "brideName", "brideFatherName", "brideMotherName", "bridePhone", "brideAddress", 
+      "groomName", "groomFatherName", "groomMotherName", "groomPhone", "groomAddress", 
+      "fatherName", "motherName", "email", "whatsapp", "decoration", "catering", 
+      "sound", "facilities", "specialInstructions", "package", "discount"
+    ];
     const updateData = {};
     fields.forEach((f) => {
       if (data[f] !== undefined) {
-        updateData[f] = ["guests", "advance", "totalAmount", "taxes", "taxPercentage"].includes(f)
-          ? Number(data[f])
+        updateData[f] = ["guests", "advance", "totalAmount", "taxes", "taxPercentage", "discount"].includes(f)
+          ? Number(data[f]) || 0
           : data[f];
       }
     });
