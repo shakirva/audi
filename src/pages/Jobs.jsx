@@ -24,7 +24,7 @@ function JobSkeleton() {
   );
 }
 
-function printAgreement(agr) {
+function printAgreement(agr, venueInfo = {}) {
   const customerName = agr.Booking?.Customer?.name || agr.customerName || "";
   const phone = agr.Booking?.Customer?.phone || "";
   const address = agr.Booking?.Customer?.address || "";
@@ -38,6 +38,9 @@ function printAgreement(agr) {
   const agNum = agr.agreementNumber || `AGR-${String(agr.id || "").padStart(3,"0")}`;
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
 
+  const venueName = venueInfo.name || "LAUREL GARDEN";
+  const venueSubtitle = venueInfo.subtitle || "GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN";
+
   const w = window.open("", "_blank");
   if (!w) return;
   w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
@@ -46,7 +49,7 @@ function printAgreement(agr) {
     .page-border { border: 4px solid #d32f2f; padding: 4px; }
     .inner-border { border: 2px solid #d32f2f; padding: 20px; }
     .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; }
+    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
     .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
     .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
     .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
@@ -60,8 +63,8 @@ function printAgreement(agr) {
   </style></head><body>
   <div class="page-border"><div class="inner-border">
     <div class="header">
-      <h1>LAUREL GARDEN</h1>
-      <div class="sub-header">GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN</div>
+      <h1>${venueName}</h1>
+      <div class="sub-header">${venueSubtitle}</div>
     </div>
     <div class="title">CONTRACT AGREEMENT</div>
     <div class="meta">
@@ -93,7 +96,7 @@ function printAgreement(agr) {
 
     <div class="signatures">
       <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of Laurel Garden<br>Representative with Date</div>
+      <div class="sig-line">Name & Signature of ${venueName}<br>Representative with Date</div>
     </div>
   </div></div>
   <script>window.onload=()=>{window.print();}</script>
@@ -103,7 +106,7 @@ function printAgreement(agr) {
 
 export default function Jobs() {
   const { addToast } = useToast();
-  const { user, role } = useRole();
+  const { user, role, venueInfo } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
@@ -296,7 +299,7 @@ export default function Jobs() {
             <div style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>Total Value</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#1B4332", marginBottom: 8 }}>{amount}</div>
             <button
-              onClick={() => printAgreement(selectedJob)}
+              onClick={() => printAgreement(selectedJob, venueInfo)}
               style={{ padding: "6px 12px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, display: "inline-flex", justifyContent: "center", alignItems: "center", cursor: "pointer", fontSize: 12, fontWeight: 600, gap: 6 }}
             >
               <Printer size={14} /> Print Agreement

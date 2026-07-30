@@ -3,6 +3,7 @@ import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw,
 import { motion } from "framer-motion";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../components/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
 import EditBookingModal from "../components/EditBookingModal";
 
@@ -23,7 +24,7 @@ const STATUS_STYLE = {
   Sent:    { bg: "#dbeafe", text: "#1d4ed8" },
 };
 
-function printAgreement(agr) {
+function printAgreement(agr, venueInfo = {}) {
   const customerName = agr.customerName || "";
   const phone = agr.phone || "";
   const address = agr.address || "";
@@ -51,6 +52,9 @@ function printAgreement(agr) {
 
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
 
+  const venueName = venueInfo.name || "LAUREL GARDEN";
+  const venueSubtitle = venueInfo.subtitle || "GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN";
+
   const w = window.open("", "_blank");
   if (!w) return;
   w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
@@ -59,7 +63,7 @@ function printAgreement(agr) {
     .page-border { border: 4px solid #d32f2f; padding: 4px; }
     .inner-border { border: 2px solid #d32f2f; padding: 20px; }
     .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; }
+    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
     .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
     .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
     .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
@@ -73,8 +77,8 @@ function printAgreement(agr) {
   </style></head><body>
   <div class="page-border"><div class="inner-border">
     <div class="header">
-      <h1>LAUREL GARDEN</h1>
-      <div class="sub-header">GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN</div>
+      <h1>${venueName}</h1>
+      <div class="sub-header">${venueSubtitle}</div>
     </div>
     <div class="title">CONTRACT AGREEMENT</div>
     <div class="meta">
@@ -108,7 +112,7 @@ function printAgreement(agr) {
 
     <div class="signatures">
       <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of Laurel Garden<br>Representative with Date</div>
+      <div class="sig-line">Name & Signature of ${venueName}<br>Representative with Date</div>
     </div>
   </div></div>
   <script>window.onload=()=>{window.print();}</script>
@@ -118,6 +122,7 @@ function printAgreement(agr) {
 
 export default function Agreements() {
   const { addToast } = useToast();
+  const { venueInfo } = useRole();
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -266,13 +271,13 @@ export default function Agreements() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
-                    onClick={() => printAgreement(a)}
+                    onClick={() => printAgreement(a, venueInfo)}
                     style={{ flex: 1, padding: "10px", background: "#0f172a", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", border: "none", fontWeight: 700, fontSize: 14, gap: 8, cursor: "pointer" }}
                   >
                     Preview
                   </button>
                   <button
-                    onClick={() => printAgreement(a)}
+                    onClick={() => printAgreement(a, venueInfo)}
                     style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}
                   >
                     <Printer size={16} />
