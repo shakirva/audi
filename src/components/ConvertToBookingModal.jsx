@@ -87,11 +87,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       const budget = enquiry.budget || 0;
       setFormData(prev => ({
         ...prev,
-        customerName: enquiry.Customer?.name || enquiry.customerName || "",
-        phone: enquiry.Customer?.phone || enquiry.phone || "",
-        address: enquiry.Customer?.address || "",
+        enquiryId: enquiry.id,
+        customerName: enquiry.Customer?.name || enquiry.enquirerName || enquiry.customerName || "",
+        phone: enquiry.Customer?.phone || enquiry.enquirerPhone || enquiry.phone || "",
+        address: enquiry.Customer?.address || enquiry.enquirerAddress || "",
         clientGstNumber: enquiry.Customer?.gstNumber || "",
-        place: enquiry.Customer?.city || enquiry.place || "",
+        place: enquiry.Customer?.city || enquiry.enquirerArea || enquiry.place || "",
         // Event info from enquiry
         eventType: enquiry.eventType || "",
         hall: enquiry.hallPreference || "",

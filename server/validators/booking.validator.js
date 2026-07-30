@@ -38,7 +38,7 @@ const createBookingSchema = z.object({
     sound: z.string().optional(),
     facilities: z.array(z.any()).optional(),
     specialInstructions: z.string().optional(),
-  }),
+  }).passthrough(),
 });
 
 const updateBookingSchema = z.object({
@@ -70,7 +70,7 @@ const updateBookingSchema = z.object({
     sound: z.string().optional(),
     facilities: z.array(z.any()).optional(),
     specialInstructions: z.string().optional(),
-  }),
+  }).passthrough(),
   params: z.object({
     id: z.string().min(1, "Booking ID is required"),
   }),
