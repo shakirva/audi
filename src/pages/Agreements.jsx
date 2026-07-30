@@ -3,7 +3,7 @@ import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw,
 import { motion } from "framer-motion";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
-import { useRole } from "../components/RoleContext";
+import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
 import EditBookingModal from "../components/EditBookingModal";
 
