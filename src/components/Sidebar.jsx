@@ -22,6 +22,7 @@ export default function Sidebar({ open, onClose }) {
             name: d.venueName || "",
             subtitle: d.venueSubtitle || "Auditorium",
             owner: d.ownerName || "",
+            logoUrl: d.logoUrl || null,
           });
         }
       }).catch(() => {});
@@ -138,8 +139,12 @@ export default function Sidebar({ open, onClose }) {
         
         {/* Brand */}
         <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
-        <div style={{ width: 40, height: 40, background: ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR }}>
-          <Tent size={24} />
+        <div style={{ width: 40, height: 40, background: venueInfo?.logoUrl ? "transparent" : ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR, overflow: "hidden" }}>
+          {venueInfo?.logoUrl ? (
+            <img src={venueInfo.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          ) : (
+            <Tent size={24} />
+          )}
         </div>
         <AnimatePresence>
           {!collapsed && (

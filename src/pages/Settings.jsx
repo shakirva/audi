@@ -218,7 +218,7 @@ export default function Settings() {
         logoUrl: venue.logoUrl, legalName: venue.legalName, bankName: venue.bankName, accountName: venue.accountName, accountNumber: venue.accountNumber, ifscCode: venue.ifscCode 
       });
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
-      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
+      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner, logoUrl: venue.logoUrl });
       addToast("Venue settings saved! 🏛️", "success");
     } catch (e) { addToast("Failed to save", "error"); }
   };
