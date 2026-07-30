@@ -181,8 +181,24 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
     const total = Number(updated.totalAmount) || 0;
     const pct = Number(updated.taxPercentage) || 0;
+    
+    let facilitiesTotal = 0;
+    let facilitiesTax = 0;
+    if (updated.facilities && updated.facilities.length > 0) {
+      updated.facilities.forEach(f => {
+        const fPrice = Number(f.price) || 0;
+        const fGst = Number(f.gst) || 0;
+        facilitiesTotal += fPrice;
+        if (fGst > 0) {
+          facilitiesTax += (fPrice * fGst) / (100 + fGst);
+        }
+      });
+    }
+
     if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
-      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+      const hallTotal = Math.max(0, total - facilitiesTotal);
+      const hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+      updated.taxes = Math.round(hallTax + facilitiesTax);
     }
     
     const adv = Number(updated.advance) || 0;
