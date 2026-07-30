@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, RefreshCw, Loader } from "lucide-react";
+import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, RefreshCw, Loader, Edit3, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { customersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import PageHeader from "../components/ui/PageHeader";
+import EditCustomerModal from "../components/EditCustomerModal";
 
 function CustomerSkeleton() {
   return (
@@ -28,6 +29,7 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState(null);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -50,6 +52,17 @@ export default function Customers() {
     const timer = setTimeout(() => fetchCustomers(), 300); // debounce search
     return () => clearTimeout(timer);
   }, [fetchCustomers]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this customer? This will NOT delete their bookings, but their profile will be removed.")) return;
+    try {
+      await customersAPI.remove(id);
+      addToast("Customer deleted successfully", "success");
+      fetchCustomers();
+    } catch (err) {
+      addToast("Failed to delete customer", "error");
+    }
+  };
 
   return (
     <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
@@ -118,7 +131,11 @@ export default function Customers() {
                   <div style={{ width: 48, height: 48, borderRadius: 16, background: isVIP ? "linear-gradient(135deg, #f97316, #ea580c)" : "#f1f5f9", color: isVIP ? "#fff" : "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>
                     {initials}
                   </div>
-                  {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
+                    <button onClick={() => setEditingCustomer(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}><Edit3 size={16} /></button>
+                    <button onClick={() => handleDelete(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
+                  </div>
                 </div>
                 
                 <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{name}</h3>
@@ -166,6 +183,13 @@ export default function Customers() {
           })
         )}
       </div>
+
+      <EditCustomerModal
+        open={!!editingCustomer}
+        customer={editingCustomer}
+        onClose={() => setEditingCustomer(null)}
+        onSaved={fetchCustomers}
+      />
     </div>
   );
 }

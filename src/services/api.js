@@ -114,6 +114,7 @@ export const customersAPI = {
   getById: (id) => api.get(`/v1/customers/${id}`),
   create: (data) => api.post("/v1/customers", data),
   update: (id, data) => api.put(`/v1/customers/${id}`, data),
+  remove: (id) => api.delete(`/v1/customers/${id}`),
   findOrCreate: (data) => api.post("/v1/customers/find-or-create", data),
 };
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw, Plus, Edit3, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import PageHeader from "../components/ui/PageHeader";
+import EditBookingModal from "../components/EditBookingModal";
 
 function AgreementSkeleton() {
   return (
@@ -121,6 +122,7 @@ export default function Agreements() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [editingAgreement, setEditingAgreement] = useState(null);
 
   const fetchAgreements = useCallback(async () => {
     setLoading(true);
@@ -146,6 +148,17 @@ export default function Agreements() {
     const timer = setTimeout(() => fetchAgreements(), 300);
     return () => clearTimeout(timer);
   }, [fetchAgreements]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this agreement? This will also delete the associated booking.")) return;
+    try {
+      await bookingsAPI.remove(id);
+      addToast("Agreement deleted successfully", "success");
+      fetchAgreements();
+    } catch (err) {
+      addToast("Failed to delete agreement", "error");
+    }
+  };
 
   const formatValue = (val) => {
     if (!val) return "—";
@@ -231,8 +244,12 @@ export default function Agreements() {
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fdf2f8", color: "#ec4899", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <FileSignature size={20} />
                   </div>
-                  <div style={{ background: st.bg, color: st.text, fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 10, letterSpacing: 1, textTransform: "uppercase" }}>
-                    {a.status || "Draft"}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ background: st.bg, color: st.text, fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 10, letterSpacing: 1, textTransform: "uppercase" }}>
+                      {a.status || "Draft"}
+                    </div>
+                    <button onClick={() => setEditingAgreement(a)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}><Edit3 size={16} /></button>
+                    <button onClick={() => handleDelete(a.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
                   </div>
                 </div>
                 
@@ -279,6 +296,15 @@ export default function Agreements() {
           })
         )}
       </div>
+
+      {editingAgreement && (
+        <EditBookingModal 
+          open={!!editingAgreement} 
+          booking={editingAgreement} 
+          onClose={() => setEditingAgreement(null)} 
+          onSaved={fetchAgreements} 
+        />
+      )}
     </div>
   );
 }
