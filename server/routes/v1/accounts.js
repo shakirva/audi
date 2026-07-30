@@ -22,6 +22,7 @@ router.get("/bank-book", bankBookController.getLedger);
 router.get("/dashboard", accountsDashboardController.getDashboard);
 router.get("/ledger", accountsDashboardController.getLedger);
 router.get("/vouchers", accountsDashboardController.getVouchers);
+router.delete("/vouchers/:id", accountsDashboardController.deleteVoucher);
 router.get("/chart-of-accounts", accountsDashboardController.getChartOfAccounts);
 router.get("/customer-ledger/:customerId", accountsDashboardController.getCustomerLedger);
 router.get("/booking-ledger/:bookingId", accountsDashboardController.getBookingLedger);

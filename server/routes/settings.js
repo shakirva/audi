@@ -67,7 +67,9 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
-      "gallery", "eventTypes", "sessions", "expenseCategories", "places"
+      "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+      "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "accountNumber", "ifscCode"
     ];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];

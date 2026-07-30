@@ -38,7 +38,8 @@ class SettingsService {
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
-      "bookingPrefix"
+      "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "accountNumber", "ifscCode"
     ];
     
     const updateData = {};

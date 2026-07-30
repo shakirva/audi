@@ -98,8 +98,25 @@ export default function AdvancedAccounting() {
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{v.sourceModule}</div>
                       <div style={{ fontSize: 11, color: "#94a3b8" }}>ID: {v.sourceId || "-"}</div>
                     </td>
-                    <td style={{ padding: "16px 24px", fontWeight: 700, color: v.voucherType === "RV" ? "#16a34a" : v.voucherType === "PV" ? "#ef4444" : "#0f172a" }}>
+                    <td style={{ padding: "16px 24px", fontWeight: 700, color: v.voucherType === "RV" ? "#16a34a" : v.voucherType === "PV" ? "#ef4444" : "#0f172a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       ₹{Number(v.amount).toLocaleString()}
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to permanently delete this voucher and its journal entries? This may cause financial mismatches if it was auto-generated.")) {
+                            try {
+                              await accountsAPI.deleteVoucher(v.id);
+                              addToast("Voucher deleted successfully", "success");
+                              fetchVouchers();
+                            } catch (e) {
+                              addToast("Failed to delete voucher", "error");
+                            }
+                          }
+                        }}
+                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: 4 }}
+                        title="Delete Voucher"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                      </button>
                     </td>
                   </tr>
                 ))

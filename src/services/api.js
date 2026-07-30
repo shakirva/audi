@@ -192,6 +192,7 @@ export const accountsAPI = {
   getBookingLedger: (bookingId) => api.get(`/v1/accounts/booking-ledger/${bookingId}`),
   getProfitLoss: (params) => api.get("/v1/accounts/profit-loss", { params }),
   getOutstanding: () => api.get("/v1/accounts/outstanding"),
+  deleteVoucher: (id) => api.delete(`/v1/accounts/vouchers/${id}`),
 };
 
 // ═══════════════════════════════════

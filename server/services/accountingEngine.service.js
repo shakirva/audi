@@ -429,6 +429,32 @@ class AccountingEngine {
     return { data: rows, total: count, page, limit };
   }
 
+  async deleteVoucher(id, { tenantId, environmentId }) {
+    const t = await sequelize.transaction();
+    try {
+      const voucher = await Voucher.findOne({
+        where: { id, tenantId, environmentId },
+        transaction: t
+      });
+      if (!voucher) throw new NotFoundError("Voucher");
+      
+      // Delete associated journal entries
+      await JournalEntry.destroy({
+        where: { voucherId: voucher.id, tenantId, environmentId },
+        transaction: t
+      });
+      
+      // Delete the voucher itself
+      await voucher.destroy({ transaction: t });
+      
+      await t.commit();
+      return { success: true };
+    } catch (error) {
+      await t.rollback();
+      throw error;
+    }
+  }
+
   // ═══════════════════════════════════
   // CUSTOMER LEDGER
   // ═══════════════════════════════════
