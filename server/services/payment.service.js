@@ -27,7 +27,11 @@ class PaymentService {
     let booking = null;
     
     if (data.bookingId) {
-      booking = await bookingRepository.findById(data.bookingId, { tenantId, environmentId });
+      if (typeof data.bookingId === "string" && isNaN(Number(data.bookingId))) {
+        booking = await bookingRepository.findByBookingId(data.bookingId, { tenantId, environmentId });
+      } else {
+        booking = await bookingRepository.findById(Number(data.bookingId), { tenantId, environmentId });
+      }
       if (!booking) throw new NotFoundError("Booking");
       if (!customerId) customerId = booking.customerId;
     }
@@ -43,7 +47,7 @@ class PaymentService {
         customerId = customer.id;
         
         // Optionally update booking as well
-        booking.customerId = cust.id;
+        booking.customerId = customer.id;
         await booking.save({ hooks: false });
       } catch (err) {
         console.error("Failed to auto-heal customerId for payment:", err);
