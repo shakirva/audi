@@ -45,11 +45,20 @@ const Payment = sequelize.define("Payment", {
   hooks: {
     beforeValidate: async (payment, options) => {
       if (!payment.paymentNumber) {
-        const count = await Payment.count({
-          where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
-          transaction: options.transaction
-        });
-        payment.paymentNumber = `PAY${String(count + 1).padStart(5, "0")}`;
+        // Use MAX to find the highest existing payment number (including soft-deleted rows)
+        // to avoid duplicate key collisions from paranoid-deleted records
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("paymentNumber" FROM 4) AS INTEGER)) AS max_num
+           FROM "Payments"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+          {
+            replacements: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        payment.paymentNumber = `PAY${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

@@ -45,11 +45,18 @@ const Receipt = sequelize.define("Receipt", {
   hooks: {
     beforeValidate: async (receipt, options) => {
       if (!receipt.receiptNumber) {
-        const count = await Receipt.count({
-          where: { tenantId: receipt.tenantId, environmentId: receipt.environmentId },
-          transaction: options.transaction
-        });
-        receipt.receiptNumber = `RCP${String(count + 1).padStart(5, "0")}`;
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("receiptNumber" FROM 4) AS INTEGER)) AS max_num
+           FROM "Receipts"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+          {
+            replacements: { tenantId: receipt.tenantId, environmentId: receipt.environmentId },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        receipt.receiptNumber = `RCP${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

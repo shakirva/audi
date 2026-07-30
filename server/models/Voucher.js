@@ -52,15 +52,24 @@ const Voucher = sequelize.define("Voucher", {
     beforeValidate: async (voucher, options) => {
       if (!voucher.voucherNumber) {
         const prefix = voucher.voucherType;
-        const count = await Voucher.count({
-          where: {
-            tenantId: voucher.tenantId,
-            environmentId: voucher.environmentId,
-            voucherType: voucher.voucherType,
-          },
-          transaction: options.transaction
-        });
-        voucher.voucherNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+        const prefixLen = prefix.length + 1; // +1 because SUBSTRING is 1-indexed
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("voucherNumber" FROM :prefixLen) AS INTEGER)) AS max_num
+           FROM "Vouchers"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId AND "voucherType" = :voucherType`,
+          {
+            replacements: {
+              tenantId: voucher.tenantId,
+              environmentId: voucher.environmentId,
+              voucherType: voucher.voucherType,
+              prefixLen,
+            },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        voucher.voucherNumber = `${prefix}${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

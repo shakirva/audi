@@ -12,7 +12,7 @@ const { sendError } = require("../helpers/response");
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   // Sequelize validation errors
-  if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
+  if (err.name === "SequelizeValidationError") {
     const errors = err.errors?.map((e) => ({
       field: e.path,
       message: e.message,
@@ -22,6 +22,15 @@ const errorHandler = (err, req, res, next) => {
       message: "Validation failed",
       statusCode: 422,
       errors,
+    });
+  }
+
+  // Sequelize unique constraint errors (duplicate records)
+  if (err.name === "SequelizeUniqueConstraintError") {
+    const fields = err.errors?.map((e) => e.path).filter(Boolean).join(", ") || "record";
+    return sendError(res, {
+      message: `A duplicate ${fields} already exists. Please try again.`,
+      statusCode: 409,
     });
   }
 

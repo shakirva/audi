@@ -46,12 +46,20 @@ const Job = sequelize.define("Job", {
 }, {
   paranoid: true,
   hooks: {
-    beforeCreate: async (job) => {
+    beforeCreate: async (job, options) => {
       if (!job.jobNumber) {
-        const count = await Job.count({
-          where: { tenantId: job.tenantId, environmentId: job.environmentId },
-        });
-        job.jobNumber = `JOB${String(count + 1).padStart(6, "0")}`;
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("jobNumber" FROM 4) AS INTEGER)) AS max_num
+           FROM "Jobs"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+          {
+            replacements: { tenantId: job.tenantId, environmentId: job.environmentId },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options?.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        job.jobNumber = `JOB${String(nextNum).padStart(6, "0")}`;
       }
     }
   },

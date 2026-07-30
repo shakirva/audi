@@ -41,13 +41,20 @@ const Agreement = sequelize.define("Agreement", {
 }, {
   paranoid: true, // Soft delete
   hooks: {
-    beforeCreate: async (agreement) => {
+    beforeCreate: async (agreement, options) => {
       if (!agreement.agreementNumber) {
-        // Scope agreement number generation to tenant + environment
-        const count = await Agreement.count({
-          where: { tenantId: agreement.tenantId, environmentId: agreement.environmentId },
-        });
-        agreement.agreementNumber = `AGR${String(count + 1).padStart(4, "0")}`;
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("agreementNumber" FROM 4) AS INTEGER)) AS max_num
+           FROM "Agreements"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+          {
+            replacements: { tenantId: agreement.tenantId, environmentId: agreement.environmentId },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options?.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        agreement.agreementNumber = `AGR${String(nextNum).padStart(4, "0")}`;
       }
     }
   },
