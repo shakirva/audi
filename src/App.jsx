@@ -29,7 +29,6 @@ import CRM from "./pages/CRM";
 import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
 import Masters from "./pages/Masters";
-import Users from "./pages/Users";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
