@@ -94,14 +94,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
     
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
-    
-    // Total Amount = Quoted - Discount (GST is INCLUSIVE, not added on top)
-    if (field === "quotedAmount" || field === "discount") {
-      updated.totalAmount = Math.max(0, quoted - disc);
-    }
+    const baseAmount = Math.max(0, quoted - disc);
 
-    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
-    const total = Number(updated.totalAmount) || 0;
+    // Auto-calculate GST (Exclusive): GST = Base × Rate / 100
     const pct = Number(updated.taxPercentage) || 0;
     
     let facilitiesTotal = 0;
@@ -112,19 +107,21 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         const fGst = Number(f.gst) || 0;
         facilitiesTotal += fPrice;
         if (fGst > 0) {
-          facilitiesTax += (fPrice * fGst) / (100 + fGst);
+          facilitiesTax += (fPrice * fGst) / 100;
         }
       });
     }
 
-    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
-      const hallTotal = Math.max(0, total - facilitiesTotal);
-      const hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
+      const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+      const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
       updated.taxes = Math.round(hallTax + facilitiesTax);
+      updated.totalAmount = baseAmount + updated.taxes;
     }
     
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
+    const total = Number(updated.totalAmount) || 0;
     updated.balanceAmount = Math.max(0, total - adv - dep);
     setForm(updated);
   };

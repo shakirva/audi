@@ -119,8 +119,9 @@ export const generateQuotation = async (data) => {
     body: [
       ...(Number(booking.taxes || 0) > 0 
         ? [
-            ["Net Amount (excl. GST)", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
-            ["GST (Inclusive)", `Rs. ${Number(booking.taxes).toLocaleString()}`],
+            ["Total Amount (incl. Tax)", `Rs. ${Number(booking.totalAmount).toLocaleString()}`],
+            ["Net Amount (Base)", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
+            ["Total Tax", `Rs. ${Number(booking.taxes).toLocaleString()}`],
           ]
         : [
             ["Hall Rental", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
@@ -234,13 +235,21 @@ export const generateInvoice = async (data) => {
     hallTotal -= Number(f.price || 0);
   });
   
-  // If there's overall tax, assume it applies to the remaining hall amount
-  const overallTax = Number(booking.taxes || 0);
-  if (overallTax > 0) {
-    dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (excl. GST)`, `Rs. ${(hallTotal - overallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-    dynamicBody.push(["Hall GST (Inclusive)", `Rs. ${overallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+  // If there's overall tax, recalculate the hall vs facility breakdown for printing
+  const totalTax = Number(booking.taxes || 0);
+  
+  // Recalculate based on exclusive math:
+  const baseAmount = (Number(booking.totalAmount || 0) - totalTax);
+  const hallBase = Math.max(0, baseAmount - facTotal);
+  
+  if (totalTax > 0) {
+    const hallTax = booking.taxPercentage > 0 ? (hallBase * booking.taxPercentage / 100) : 0;
+    dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (Base)`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    if (hallTax > 0) {
+      dynamicBody.push([`Hall GST (${booking.taxPercentage}%)`, `Rs. ${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    }
   } else {
-    dynamicBody.push([`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${hallTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    dynamicBody.push([`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
   }
 
   // Facilities
@@ -248,9 +257,8 @@ export const generateInvoice = async (data) => {
     const p = Number(f.price || 0);
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) {
-      const base = p / (1 + gstRate / 100);
-      const gstAmt = p - base;
-      dynamicBody.push([`${f.name} (Base)`, `Rs. ${base.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      const gstAmt = (p * gstRate) / 100;
+      dynamicBody.push([`${f.name} (Base)`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
       dynamicBody.push([`${f.name} GST (${gstRate}%)`, `Rs. ${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     } else {
       dynamicBody.push([`${f.name}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
