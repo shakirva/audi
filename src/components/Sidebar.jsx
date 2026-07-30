@@ -141,7 +141,11 @@ export default function Sidebar({ open, onClose }) {
         <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
         <div style={{ width: 40, height: 40, background: venueInfo?.logoUrl ? "transparent" : ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR, overflow: "hidden" }}>
           {venueInfo?.logoUrl ? (
-            <img src={venueInfo.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            <img 
+              src={venueInfo.logoUrl.startsWith('http') || venueInfo.logoUrl.startsWith('/') ? venueInfo.logoUrl : `https://venueza.cloud/uploads/${venueInfo.logoUrl}`} 
+              alt="Logo" 
+              style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+            />
           ) : (
             <Tent size={24} />
           )}
