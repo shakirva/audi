@@ -88,6 +88,9 @@ export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
   update: (data) => api.put("/v1/settings", data),
+  uploadLogo: (formData) => api.post("/v1/settings/upload-logo", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }),
   getCustomers: () => api.get("/v1/settings/customers"),
   getUsers: () => api.get("/v1/settings/users"),
   resetSandbox: () => api.post("/v1/settings/sandbox/reset"),

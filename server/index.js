@@ -50,7 +50,12 @@ app.use("/api/", limiter);
 app.use(requestId);
 
 // ── Body parsing ──
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// ── Static Files ──
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // ── Legacy API Routes (kept for backward compatibility) ──
 app.use("/api/auth", authRoutes);

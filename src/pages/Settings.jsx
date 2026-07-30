@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit, Edit3 } from "lucide-react";
+import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit, Edit3, UploadCloud, Loader } from "lucide-react";
 import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
@@ -64,6 +64,7 @@ export default function Settings() {
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [dbUsers, setDbUsers] = useState([]);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // ── Hall Pricing ──
   const [halls, setHalls] = useState(INIT_HALLS);
@@ -154,6 +155,33 @@ export default function Settings() {
   const handleVenueChange = (e) => {
     const { name, value } = e.target;
     setVenue(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast("Image size must be less than 5MB", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    setIsUploadingLogo(true);
+    try {
+      const res = await settingsAPI.uploadLogo(formData);
+      if (res.data && res.data.url) {
+        setVenue(prev => ({ ...prev, logoUrl: res.data.url }));
+        addToast("Logo uploaded successfully", "success");
+      }
+    } catch (err) {
+      addToast("Failed to upload logo", "error");
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleHallChange = (idx, field, value) => {
@@ -754,9 +782,22 @@ export default function Settings() {
           </div>
           <div>
             <label style={labelSt}><ImagePlus size={11} /> Logo URL</label>
-            <input name="logoUrl" value={venue.logoUrl} onChange={handleVenueChange} style={iStyle} placeholder="https://..."
-              onFocus={e => e.target.style.borderColor = "#1B4332"}
-              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input name="logoUrl" value={venue.logoUrl} onChange={handleVenueChange} style={{ ...iStyle, flex: 1 }} placeholder="https://..."
+                onFocus={e => e.target.style.borderColor = "#1B4332"}
+                onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              <label style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "0 16px", background: "#f1f5f9", border: "1px solid #e2e8f0", 
+                borderRadius: 12, cursor: isUploadingLogo ? "not-allowed" : "pointer", 
+                color: "#475569", fontWeight: 600, fontSize: 13,
+                opacity: isUploadingLogo ? 0.7 : 1
+              }}>
+                {isUploadingLogo ? <Loader size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                Upload
+                <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} disabled={isUploadingLogo} />
+              </label>
+            </div>
             <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used in PDF Receipts and Invoices</p>
           </div>
 
