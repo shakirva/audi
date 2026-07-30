@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { bookingsAPI } from "../services/api";
+import { useRole } from "./RoleContext";
 
 const BookingsContext = createContext(null);
 
 export function BookingsProvider({ children }) {
+  const { user } = useRole();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,13 +27,13 @@ export function BookingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("hm_token");
-    if (token) {
+    if (user) {
       fetchBookings();
     } else {
+      setBookings([]);
       setLoading(false);
     }
-  }, [fetchBookings]);
+  }, [user, fetchBookings]);
 
   const addBooking = async (data) => {
     try {
