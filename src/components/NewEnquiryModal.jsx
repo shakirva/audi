@@ -72,11 +72,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   useEffect(() => {
     if (editData && open) {
       setForm({
-        name: editData.Customer?.name || editData.name || "",
-        phone: editData.Customer?.phone || editData.phone || "",
-        gender: editData.Customer?.gender || "",
-        address: editData.Customer?.address || "",
-        place: editData.Customer?.city || "",
+        name: editData.enquirerName || editData.Customer?.name || editData.name || "",
+        phone: editData.enquirerPhone || editData.Customer?.phone || editData.phone || "",
+        gender: editData.gender || editData.Customer?.gender || "",
+        address: editData.enquirerAddress || editData.Customer?.address || "",
+        place: editData.enquirerArea || editData.Customer?.city || "",
         eventType: editData.eventType || "",
         tentativeDate: editData.tentativeDate ? editData.tentativeDate.split("T")[0] : "",
         session: editData.session || "",
@@ -88,7 +88,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         source: editData.source || "",
         salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
-      setPlaceQuery(editData.Customer?.city || "");
+      setPlaceQuery(editData.enquirerArea || editData.Customer?.city || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
@@ -257,15 +257,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     setLoading(true);
     try {
       if (editData) {
-        // ── EDIT MODE ── Update customer info + enquiry fields
-        await customersAPI.findOrCreate({
-          name: form.name.trim(),
-          phone: form.phone.replace(/\D/g, "").slice(-10),
-          gender: form.gender,
-          address: form.address.trim(),
-          place: form.place.trim(),
-        });
+        // ── EDIT MODE ── Update enquiry fields directly
         await enquiriesAPI.update(editData.id, {
+          enquirerName: form.name.trim(),
+          enquirerPhone: form.phone.replace(/\D/g, "").slice(-10),
+          enquirerArea: form.place.trim(),
+          enquirerAddress: form.address.trim(),
           eventType: form.eventType,
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
@@ -279,17 +276,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         });
         addToast("Enquiry updated successfully! ✏️", "success");
       } else {
-        // ── CREATE MODE ── Find or create customer then create enquiry
-        const custRes = await customersAPI.findOrCreate({
-          name: form.name.trim(),
-          phone: form.phone.replace(/\D/g, "").slice(-10),
-          gender: form.gender,
-          address: form.address.trim(),
-          place: form.place.trim(),
-        });
-        const customerId = custRes.data.data.id;
+        // ── CREATE MODE ── Create enquiry directly
         await enquiriesAPI.create({
-          customerId,
+          enquirerName: form.name.trim(),
+          enquirerPhone: form.phone.replace(/\D/g, "").slice(-10),
+          enquirerArea: form.place.trim(),
+          enquirerAddress: form.address.trim(),
           eventType: form.eventType,
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,

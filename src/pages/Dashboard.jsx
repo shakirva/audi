@@ -265,8 +265,8 @@ function ExecutiveCockpit() {
             {urgentList.length === 0 ? (
               <div style={{ padding: 12, textAlign: "center", color: "#94a3b8", fontSize: 12, background: "#f8fafc", borderRadius: 12 }}>No urgent follow-ups found.</div>
             ) : urgentList.map((enq) => {
-              const name = enq.Customer?.name || enq.enquiryNumber || 'Unknown';
-              const phone = enq.Customer?.phone || enq.phone || '';
+              const name = enq.enquirerName || enq.Customer?.name || enq.enquiryNumber || 'Unknown';
+              const phone = enq.enquirerPhone || enq.Customer?.phone || enq.phone || '';
               return (
                 <div key={enq.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, border: "1px solid #e2e8f0", borderRadius: 12, background: "#fff" }}>
                   <div>
@@ -384,7 +384,7 @@ function ReceptionCockpit() {
               ) : getStatusColumn(col.status).map(enq => (
                 <div key={enq.id} style={{ background: "#fff", padding: 16, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{enq.Customer?.name || enq.enquiryNumber}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{enq.enquirerName || enq.Customer?.name || enq.enquiryNumber}</div>
                     <span style={{ fontSize: 10, background: "#e2e8f0", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{enq.eventType}</span>
                   </div>
                   <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Date: {enq.tentativeDate || "TBD"}</div>

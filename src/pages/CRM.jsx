@@ -104,11 +104,13 @@ export default function CRM() {
   };
 
   const getEnquiryName = (enq) => {
+    if (enq.enquirerName) return enq.enquirerName;
     if (enq.Customer) return enq.Customer.name;
     return enq.customerName || "Unknown";
   };
 
   const getEnquiryPhone = (enq) => {
+    if (enq.enquirerPhone) return enq.enquirerPhone;
     if (enq.Customer) return enq.Customer.phone;
     return enq.phone || "";
   };

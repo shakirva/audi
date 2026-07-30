@@ -23,9 +23,10 @@ class EnquiryService {
   }
 
   async createEnquiry(data, { tenantId, environmentId, createdBy }) {
-    // Verify customer exists
-    const customer = await customerRepository.findById(data.customerId, { tenantId, environmentId });
-    if (!customer) throw new NotFoundError("Customer not found");
+    if (data.customerId) {
+      const customer = await customerRepository.findById(data.customerId, { tenantId, environmentId });
+      if (!customer) throw new NotFoundError("Customer not found");
+    }
 
     if (data.hallPreference && data.tentativeDate && data.session) {
       const avail = await availabilityService.checkAvailability({
