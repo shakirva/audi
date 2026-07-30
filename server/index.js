@@ -90,8 +90,17 @@ const PORT = process.env.PORT || 5000;
 
 sequelize
   .sync({ alter: true }) // creates tables if they don't exist
-  .then(() => {
+  .then(async () => {
     console.log("✅ Connected to PostgreSQL & synced tables");
+    
+    // FORCE drop NOT NULL constraints that sync(alter: true) fails to handle
+    try {
+      await sequelize.query('ALTER TABLE "Enquiries" ALTER COLUMN "customerId" DROP NOT NULL;');
+      console.log("✅ Forced DROP NOT NULL on customerId in Enquiries table");
+    } catch (e) {
+      console.log("⚠️ Could not drop NOT NULL on customerId (already dropped or table missing):", e.message);
+    }
+    
     app.listen(PORT, () => {
       console.log(`🚀 Venueza API running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
