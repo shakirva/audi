@@ -29,7 +29,7 @@ import CRM from "./pages/CRM";
 import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
 import Masters from "./pages/Masters";
-import Roadmap from "./pages/Roadmap";
+import Users from "./pages/Users";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
@@ -102,7 +102,6 @@ function AdminLayout() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
-            <Route path="/roadmap" element={<Roadmap />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
