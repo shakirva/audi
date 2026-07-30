@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, X, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Plus, X, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw, Trash2, Edit3, Search } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 
@@ -7,26 +7,46 @@ import { useToast } from "../components/Toast";
 const getMockLeaves = () => JSON.parse(localStorage.getItem("hm_leaves_mock") || "[]");
 const saveMockLeaves = (data) => localStorage.setItem("hm_leaves_mock", JSON.stringify(data));
 
-function NewLeaveModal({ open, onClose, onSuccess, user, role }) {
+function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
   const [form, setForm] = useState({ startDate: "", endDate: "", reason: "" });
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({ startDate: initialData.startDate, endDate: initialData.endDate, reason: initialData.reason });
+    } else {
+      setForm({ startDate: "", endDate: "", reason: "" });
+    }
+  }, [initialData, open]);
 
   if (!open) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = getMockLeaves();
-    const newEntry = {
-      id: Date.now(),
-      userId: user?.id || Date.now(),
-      userName: user?.name || "Unknown User",
-      role: role,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      reason: form.reason,
-      status: "Pending",
-      appliedOn: new Date().toISOString().split("T")[0],
-    };
-    saveMockLeaves([newEntry, ...data]);
+    
+    if (initialData) {
+      const idx = data.findIndex(l => l.id === initialData.id);
+      if (idx !== -1) {
+        data[idx].startDate = form.startDate;
+        data[idx].endDate = form.endDate;
+        data[idx].reason = form.reason;
+      }
+      saveMockLeaves(data);
+    } else {
+      const newEntry = {
+        id: Date.now(),
+        userId: user?.id || Date.now(),
+        userName: user?.name || "Unknown User",
+        role: role,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        reason: form.reason,
+        status: "Pending",
+        appliedOn: new Date().toISOString().split("T")[0],
+      };
+      saveMockLeaves([newEntry, ...data]);
+    }
+    
     onSuccess();
     setForm({ startDate: "", endDate: "", reason: "" });
   };
@@ -69,6 +89,8 @@ export default function LeaveRequests() {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingLeave, setEditingLeave] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -97,6 +119,21 @@ export default function LeaveRequests() {
     }
   };
 
+  const handleDelete = (id) => {
+    if (!window.confirm("Are you sure you want to delete this leave request?")) return;
+    const data = getMockLeaves().filter(l => l.id !== id);
+    saveMockLeaves(data);
+    addToast("Leave request deleted", "success");
+    fetchData();
+  };
+
+  const handleEdit = (leave) => {
+    setEditingLeave(leave);
+    setModalOpen(true);
+  };
+
+  const filteredLeaves = leaves.filter(l => l.userName.toLowerCase().includes(searchTerm.toLowerCase()));
+
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -106,15 +143,25 @@ export default function LeaveRequests() {
           </h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage absences and time-off requests.</p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          {role !== "Sales" && role !== "Operations" && (
+            <div style={{ position: "relative" }}>
+              <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+              <input 
+                type="text" 
+                placeholder="Search staff..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 220 }}
+              />
+            </div>
+          )}
           <button onClick={fetchData} style={{ background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
             <RefreshCw size={14} /> Refresh
           </button>
-          {(role === "Sales" || role === "Operations") && (
-            <button onClick={() => setModalOpen(true)} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-              <Plus size={16} /> Apply Leave
-            </button>
-          )}
+          <button onClick={() => { setEditingLeave(null); setModalOpen(true); }} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+            <Plus size={16} /> Apply Leave
+          </button>
         </div>
       </div>
 
@@ -133,10 +180,10 @@ export default function LeaveRequests() {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>Loading...</td></tr>
-            ) : leaves.length === 0 ? (
+            ) : filteredLeaves.length === 0 ? (
               <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>No leave requests found.</td></tr>
             ) : (
-              leaves.map(l => (
+              filteredLeaves.map(l => (
                 <tr key={l.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", color: "#666", fontWeight: 500 }}>{new Date(l.appliedOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                   {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{l.userName} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({l.role})</span></td>}
@@ -157,6 +204,8 @@ export default function LeaveRequests() {
                           <button onClick={() => handleUpdateStatus(l.id, "Rejected")} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><XCircle size={14} /> Reject</button>
                         </>
                       )}
+                      <button onClick={() => handleEdit(l)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}><Edit3 size={16} /></button>
+                      <button onClick={() => handleDelete(l.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={16} /></button>
                     </td>
                   )}
                 </tr>
@@ -169,9 +218,10 @@ export default function LeaveRequests() {
       <NewLeaveModal 
         open={modalOpen} 
         onClose={() => setModalOpen(false)} 
-        onSuccess={() => { setModalOpen(false); addToast("Leave request submitted successfully!", "success"); fetchData(); }}
+        onSuccess={() => { setModalOpen(false); addToast(`Leave request ${editingLeave ? 'updated' : 'submitted'} successfully!`, "success"); fetchData(); }}
         user={user}
         role={role}
+        initialData={editingLeave}
       />
     </div>
   );

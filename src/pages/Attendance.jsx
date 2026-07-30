@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Clock, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Clock, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw, Trash2, Edit3, Search } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 
@@ -12,6 +12,7 @@ export default function Attendance() {
   const { addToast } = useToast();
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // For owner/admin:
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
@@ -80,8 +81,35 @@ export default function Attendance() {
     fetchData();
   };
 
+  const handleDelete = (id) => {
+    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    const data = getMockAttendance().filter(a => a.id !== id);
+    saveMockAttendance(data);
+    addToast("Record deleted", "success");
+    fetchData();
+  };
+
+  const handleEdit = (record) => {
+    const newCheckIn = window.prompt("Enter Check In time (e.g., 09:00 AM)", record.checkIn || "");
+    const newCheckOut = window.prompt("Enter Check Out time (e.g., 06:00 PM)", record.checkOut || "");
+    
+    if (newCheckIn !== null || newCheckOut !== null) {
+      const data = getMockAttendance();
+      const idx = data.findIndex(a => a.id === record.id);
+      if (idx !== -1) {
+        if (newCheckIn !== null) data[idx].checkIn = newCheckIn;
+        if (newCheckOut !== null) data[idx].checkOut = newCheckOut;
+        saveMockAttendance(data);
+        addToast("Record updated", "success");
+        fetchData();
+      }
+    }
+  };
+
   // Check if current user checked in today
   const todayEntry = attendance.find(a => (a.userId === user?.id || a.userName === user?.name) && a.date === new Date().toISOString().split("T")[0]);
+
+  const filteredAttendance = attendance.filter(a => a.userName.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -127,14 +155,26 @@ export default function Attendance() {
       )}
 
       {role !== "Sales" && role !== "Operations" && (
-        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-          <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
-          <input 
-            type="date" 
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
-          />
+        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
+            <input 
+              type="date" 
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
+            />
+          </div>
+          <div style={{ position: "relative" }}>
+            <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+            <input 
+              type="text" 
+              placeholder="Search staff by name..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ padding: "8px 16px 8px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
+            />
+          </div>
         </div>
       )}
 
@@ -147,15 +187,16 @@ export default function Attendance() {
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Status</th>
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check In</th>
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check Out</th>
+              {role !== "Sales" && role !== "Operations" && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555", textAlign: "right" }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#999" }}>Loading...</td></tr>
-            ) : attendance.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#999" }}>No attendance records found.</td></tr>
+              <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>Loading...</td></tr>
+            ) : filteredAttendance.length === 0 ? (
+              <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>No attendance records found.</td></tr>
             ) : (
-              attendance.map(a => (
+              filteredAttendance.map(a => (
                 <tr key={a.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                   {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.userName} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.role})</span></td>}
@@ -164,6 +205,12 @@ export default function Attendance() {
                   </td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkIn || "—"}</td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkOut || "—"}</td>
+                  {role !== "Sales" && role !== "Operations" && (
+                    <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                      <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", marginRight: 8 }}><Edit3 size={16} /></button>
+                      <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={16} /></button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
