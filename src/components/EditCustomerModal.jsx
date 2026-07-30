@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { customersAPI } from "../services/api";
 import { useToast } from "./Toast";
-import Button from "./ui/Button";
 
 export default function EditCustomerModal({ open, customer, onClose, onSaved }) {
   const { addToast } = useToast();
@@ -67,8 +66,8 @@ export default function EditCustomerModal({ open, customer, onClose, onSaved }) 
             <input type="text" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid #e2e8f0", outline: "none", fontSize: 14 }} />
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-            <Button type="button" variant="secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</Button>
-            <Button type="submit" loading={loading} style={{ flex: 1 }}>Save Changes</Button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 12, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 12, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer" }}>{loading ? "Saving..." : "Save Changes"}</button>
           </div>
         </form>
       </div>
