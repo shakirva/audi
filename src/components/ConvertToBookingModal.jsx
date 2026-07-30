@@ -445,7 +445,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                           let newFac = [...(formData.facilities || [])];
                           let newQuoted = Number(formData.quotedAmount || 0);
                           if (e.target.checked) {
-                            newFac.push({ id: f.id, name: f.name, price: f.price });
+                            newFac.push({ id: f.id, name: f.name, price: f.price, gst: f.gst || 0 });
                             newQuoted += Number(f.price || 0);
                           } else {
                             newFac = newFac.filter(x => x.id !== f.id);
@@ -455,7 +455,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                         }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
                         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
-                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
+                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()} {f.gst > 0 ? ` (+ ${f.gst}% GST)` : ""}</div>}
                         </div>
                       </label>
                     );
