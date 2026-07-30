@@ -46,7 +46,8 @@ const Agreement = sequelize.define("Agreement", {
         const result = await sequelize.query(
           `SELECT MAX(CAST(SUBSTRING("agreementNumber" FROM 4) AS INTEGER)) AS max_num
            FROM "Agreements"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
+             AND "agreementNumber" ~ '^AGR[0-9]+$'`,
           {
             replacements: { tenantId: agreement.tenantId, environmentId: agreement.environmentId },
             type: sequelize.QueryTypes.SELECT,

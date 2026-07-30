@@ -51,7 +51,8 @@ const Job = sequelize.define("Job", {
         const result = await sequelize.query(
           `SELECT MAX(CAST(SUBSTRING("jobNumber" FROM 4) AS INTEGER)) AS max_num
            FROM "Jobs"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
+             AND "jobNumber" ~ '^JOB[0-9]+$'`,
           {
             replacements: { tenantId: job.tenantId, environmentId: job.environmentId },
             type: sequelize.QueryTypes.SELECT,

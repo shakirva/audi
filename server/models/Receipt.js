@@ -48,7 +48,8 @@ const Receipt = sequelize.define("Receipt", {
         const result = await sequelize.query(
           `SELECT MAX(CAST(SUBSTRING("receiptNumber" FROM 4) AS INTEGER)) AS max_num
            FROM "Receipts"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
+             AND "receiptNumber" ~ '^RCP[0-9]+$'`,
           {
             replacements: { tenantId: receipt.tenantId, environmentId: receipt.environmentId },
             type: sequelize.QueryTypes.SELECT,

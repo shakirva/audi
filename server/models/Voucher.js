@@ -56,13 +56,15 @@ const Voucher = sequelize.define("Voucher", {
         const result = await sequelize.query(
           `SELECT MAX(CAST(SUBSTRING("voucherNumber" FROM :prefixLen) AS INTEGER)) AS max_num
            FROM "Vouchers"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId AND "voucherType" = :voucherType`,
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId AND "voucherType" = :voucherType
+             AND "voucherNumber" ~ ('^' || :prefix || '[0-9]+$')`,
           {
             replacements: {
               tenantId: voucher.tenantId,
               environmentId: voucher.environmentId,
               voucherType: voucher.voucherType,
               prefixLen,
+              prefix,
             },
             type: sequelize.QueryTypes.SELECT,
             transaction: options.transaction,

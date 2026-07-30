@@ -62,7 +62,8 @@ const JournalEntry = sequelize.define("JournalEntry", {
         const result = await sequelize.query(
           `SELECT MAX(CAST(SUBSTRING("journalNumber" FROM 4) AS INTEGER)) AS max_num
            FROM "JournalEntries"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId`,
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
+             AND "journalNumber" ~ '^JRN[0-9]+$'`,
           {
             replacements: { tenantId: entry.tenantId, environmentId: entry.environmentId },
             type: sequelize.QueryTypes.SELECT,
