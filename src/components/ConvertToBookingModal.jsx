@@ -33,7 +33,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addToast } = useToast();
   const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
-  const [sendWhatsapp, setSendWhatsapp] = useState(true);
+  const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   const [formData, setFormData] = useState({
     // Contact
@@ -67,7 +67,6 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     accountName: "",
     depositAmount: "",
     balanceAmount: "",
-    extraArrangements: "",
     paymentRemarks: "",
     facilities: [],
   });
@@ -116,7 +115,6 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         receivedBy: "",
         upiId: "",
         accountName: "",
-        extraArrangements: "",
         paymentRemarks: "",
         facilities: [],
         // Reset personal
@@ -213,8 +211,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Enquired By, Booked By and Phone are required", "error");
       return;
     }
-    if (!formData.paymentMethod) {
-      addToast("Please select a Payment Method", "error");
+    if (Number(formData.advance) > 0 && !formData.paymentMethod) {
+      addToast("Please select a Payment Method for the advance payment", "error");
       return;
     }
     
@@ -246,7 +244,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       if (sendWhatsapp) {
         const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
         const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
-        const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
+        const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);
         const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
         window.open(waUrl, "_blank");
@@ -439,10 +437,6 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}><Users size={10} /> No. of Guests</label>
                   {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
                 </div>
-                <div>
-                  <label style={labelSt}>Extra Arrangements</label>
-                  {inp("extraArrangements", { placeholder: "Decoration, DJ, etc." })}
-                </div>
               </div>
             </div>
 
@@ -623,7 +617,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
                             <input 
-                              required={index === 0}
+                              required={index === 0 && Number(formData.advance) > 0}
                               value={collector.trim()} 
                               onChange={(e) => {
                                 const newArr = [...collectors];
@@ -670,8 +664,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 )}
                 {formData.paymentMethod !== "UPI" && (
                   <div>
-                    <label style={labelSt}>Collected By *</label>
-                    {inp("receivedBy", { required: true, placeholder: "Collected By" })}
+                    <label style={labelSt}>Collected By {Number(formData.advance) > 0 ? "*" : ""}</label>
+                    {inp("receivedBy", { required: Number(formData.advance) > 0, placeholder: "Collected By" })}
                   </div>
                 )}
                 <div style={{ gridColumn: formData.paymentMethod === "UPI" || formData.paymentMethod === "Bank Transfer" ? "auto" : "1 / -1" }}>

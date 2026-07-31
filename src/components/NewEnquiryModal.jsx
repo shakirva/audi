@@ -48,7 +48,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
-  const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
 
   const [form, setForm] = useState({
     name: "",

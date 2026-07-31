@@ -275,11 +275,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><Users size={10} /> No. of Guests</label>
-                  {inp("guests", { type: "number", min: 0 })}
-                </div>
-                <div>
-                  <label style={labelSt}>Extra Arrangements</label>
-                  {inp("extraArrangements", { placeholder: "Decoration, DJ, etc." })}
+                  {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
                 </div>
               </div>
               <div style={{ marginTop: 12 }}>
