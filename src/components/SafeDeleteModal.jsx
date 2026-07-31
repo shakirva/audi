@@ -276,9 +276,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
             You are about to permanently delete a <strong>{booking.status}</strong> booking.
           </p>
           <p style={{ margin: "10px 0 0", fontSize: 13, color: "#7f1d1d", lineHeight: 1.6 }}>
-            This action is entirely irreversible and all related data will be permanently destroyed. 
-            <br/><br/>
-            If the customer cancelled or changed their mind, you should highly consider changing the booking status to <strong>"Cancelled"</strong> instead to preserve your records and audit trails.
+            This action is entirely irreversible and all related financial, CRM, and accounting data will be permanently destroyed.
           </p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
