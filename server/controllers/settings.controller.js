@@ -85,7 +85,7 @@ class SettingsController {
       const actingUserRole = req.user.role;
       
       if (actingUserRole !== ROLES.OWNER && actingUserRole !== ROLES.MANAGER) {
-        if (targetUserId !== actingUserId) {
+        if (String(targetUserId) !== String(actingUserId)) {
           throw new ForbiddenError("You are not authorized to update this user's profile");
         }
         // Prevent privilege escalation: non-admins cannot change their own roles or active status
