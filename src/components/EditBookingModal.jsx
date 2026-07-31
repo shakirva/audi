@@ -79,6 +79,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         paymentMethod: booking.paymentMethod || "",
         receivedBy: booking.receivedBy || "",
         upiId: booking.upiId || "",
+        upiName: booking.upiName || "",
+        upiAmount: booking.upiAmount || "",
         accountName: booking.accountName || "",
         paymentRemarks: booking.paymentRemarks || "",
         // Notes
@@ -430,16 +432,18 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {form.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>
+                    <label style={labelSt}>UPI Payments (ID, Name, Amount & Collector)</label>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {(form.upiId || "").split(",").map((id, index, arr) => {
                         const upiNames = (form.upiName || "").split(",");
                         const upiName = upiNames[index] || "";
                         const collectors = (form.receivedBy || "").split(",");
                         const collector = collectors[index] || "";
+                        const upiAmounts = (form.upiAmount || "").split(",");
+                        const upiAmt = upiAmounts[index] || "";
                         
                         return (
-                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10 }}>
+                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10 }}>
                             <input 
                               value={id.trim()} 
                               onChange={(e) => {
@@ -465,6 +469,20 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
                             <input 
+                              type="number"
+                              min={0}
+                              value={upiAmt.trim()} 
+                              onChange={(e) => {
+                                const newArr = [...upiAmounts];
+                                newArr[index] = e.target.value.replace(/,/g, "");
+                                setForm({ ...form, upiAmount: newArr.join(",") });
+                              }} 
+                              style={iStyle}
+                              placeholder="Amount (₹)" 
+                              onFocus={e => e.target.style.borderColor = "#1B4332"}
+                              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                            />
+                            <input 
                               value={collector.trim()} 
                               onChange={(e) => {
                                 const newArr = [...collectors];
@@ -482,7 +500,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                                   ...form, 
                                   upiId: form.upiId ? form.upiId + "," : ",",
                                   upiName: form.upiName ? form.upiName + "," : ",",
-                                  receivedBy: form.receivedBy ? form.receivedBy + "," : ","
+                                  receivedBy: form.receivedBy ? form.receivedBy + "," : ",",
+                                  upiAmount: form.upiAmount ? form.upiAmount + "," : ","
                                 })} style={{ height: 37, padding: "0 12px", background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Add another UPI entry">
                                   <Plus size={16} color="#374151" />
                                 </button>
@@ -491,7 +510,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                                   ...form, 
                                   upiId: arr.filter((_, i) => i !== index).join(","),
                                   upiName: upiNames.filter((_, i) => i !== index).join(","),
-                                  receivedBy: collectors.filter((_, i) => i !== index).join(",")
+                                  receivedBy: collectors.filter((_, i) => i !== index).join(","),
+                                  upiAmount: upiAmounts.filter((_, i) => i !== index).join(",")
                                 })} style={{ height: 37, padding: "0 12px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Remove">
                                   <X size={16} color="#dc2626" />
                                 </button>

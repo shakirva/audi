@@ -233,7 +233,7 @@ class BookingService {
 
     const fields = [
       "customerName", "phone", "eventType", "hall", "date", "session", "guests", 
-      "advance", "totalAmount", "status", "notes", "taxes", "taxPercentage",
+      "totalAmount", "status", "notes", "taxes", "taxPercentage",
       "address", "clientGstNumber", "bookedBy", "bookingParty", 
       "brideName", "brideFatherName", "brideMotherName", "bridePhone", "brideAddress", 
       "groomName", "groomFatherName", "groomMotherName", "groomPhone", "groomAddress", 
@@ -243,13 +243,64 @@ class BookingService {
     const updateData = {};
     fields.forEach((f) => {
       if (data[f] !== undefined) {
-        updateData[f] = ["guests", "advance", "totalAmount", "taxes", "taxPercentage", "discount"].includes(f)
+        updateData[f] = ["guests", "totalAmount", "taxes", "taxPercentage", "discount"].includes(f)
           ? Number(data[f]) || 0
           : data[f];
       }
     });
 
     const updated = await bookingRepository.update(booking, updateData);
+
+    // Handle advance payment: if advance increased, record the difference as a proper payment
+    const newAdvance = Number(data.advance) || 0;
+    const oldAdvance = Number(booking.advance) || 0;
+    const advanceDiff = newAdvance - oldAdvance;
+
+    if (advanceDiff > 0 && data.paymentMethod) {
+      try {
+        if (data.paymentMethod === "UPI" && data.upiAmount && data.upiAmount.includes(",")) {
+          // Split UPI payment
+          const ids = (data.upiId || "").split(",");
+          const amounts = data.upiAmount.split(",");
+          const names = (data.upiName || "").split(",");
+          const collectors = (data.receivedBy || "").split(",");
+          
+          for (let i = 0; i < amounts.length; i++) {
+            const amt = Number(amounts[i]) || 0;
+            if (amt > 0) {
+              await paymentService.recordPayment({
+                bookingId: booking.id,
+                customerId: booking.customerId,
+                amount: amt,
+                paymentMode: data.paymentMethod,
+                paymentDate: new Date().toISOString(),
+                referenceNumber: ids[i] || "",
+                notes: (collectors[i] || "") + (names[i] ? ` - ${names[i]}` : ""),
+                bankId: null
+              }, { tenantId, environmentId, createdBy: data.createdBy || null });
+            }
+          }
+        } else {
+          // Standard single payment
+          await paymentService.recordPayment({
+            bookingId: booking.id,
+            customerId: booking.customerId,
+            amount: advanceDiff,
+            paymentMode: data.paymentMethod,
+            paymentDate: new Date().toISOString(),
+            referenceNumber: data.upiId || data.accountName || "",
+            notes: data.paymentRemarks || data.receivedBy || "Payment recorded via booking edit",
+            bankId: null
+          }, { tenantId, environmentId, createdBy: data.createdBy || null });
+        }
+      } catch (e) {
+        console.error("Failed to record payment during booking edit:", e);
+      }
+    } else if (advanceDiff > 0 && !data.paymentMethod) {
+      // Advance increased but no payment method selected — just update the field directly
+      updated.advance = newAdvance;
+      await updated.save({ hooks: false });
+    }
 
     return {
       id: updated.bookingId,
