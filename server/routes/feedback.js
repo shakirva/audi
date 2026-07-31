@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Feedback = require("../models/Feedback");
 const { auth } = require("../middleware/auth");
-const tenantScope = require("../middleware/tenantScope");
+const { tenantScope } = require("../middleware/tenantScope");
 
 // POST /api/feedback - Submit feedback
 router.post("/", auth, tenantScope, async (req, res, next) => {
