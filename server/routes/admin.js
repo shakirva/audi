@@ -128,4 +128,27 @@ router.patch("/tenants/:id/status", async (req, res) => {
   }
 });
 
+// PUT /api/admin/tenants/:id — Update tenant details
+router.put("/tenants/:id", async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const { name, slug, ownerName, email, phone } = req.body;
+    if (name) tenant.name = name;
+    if (slug) tenant.slug = slug;
+    if (ownerName) tenant.ownerName = ownerName;
+    if (email) tenant.email = email;
+    if (phone !== undefined) tenant.phone = phone;
+
+    await tenant.save();
+    res.json(tenant);
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: "Slug or email already in use" });
+    }
+    res.status(500).json({ error: "Failed to update tenant details" });
+  }
+});
+
 module.exports = router;

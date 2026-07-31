@@ -7,7 +7,9 @@ export default function SuperAdminTenants() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", ownerName: "", email: "", phone: "", plan: "trial" });
+  const [editTenant, setEditTenant] = useState(null);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -59,6 +61,30 @@ export default function SuperAdminTenants() {
       fetchTenants();
     } catch (e) {
       addToast(e.response?.data?.error || "Failed to create tenant", "error");
+    }
+  };
+
+  const handleEditClick = (tenant) => {
+    setEditTenant({ ...tenant });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.updateTenant(editTenant.id, {
+        name: editTenant.name,
+        slug: editTenant.slug,
+        ownerName: editTenant.ownerName,
+        email: editTenant.email,
+        phone: editTenant.phone,
+      });
+      addToast("Tenant updated successfully! 🎉", "success");
+      setShowEditModal(false);
+      setEditTenant(null);
+      fetchTenants();
+    } catch (e) {
+      addToast(e.response?.data?.error || "Failed to update tenant", "error");
     }
   };
 
@@ -136,15 +162,26 @@ export default function SuperAdminTenants() {
                   </span>
                 </td>
                 <td style={{ padding: "16px", textAlign: "right" }}>
-                  <button 
-                    onClick={() => handleToggleStatus(t.id)}
-                    style={{ 
-                      padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600,
-                      display: "inline-flex", alignItems: "center", gap: 6, color: "#374151"
-                    }}
-                  >
-                    {t.status === "active" ? <><Pause size={14} color="#b91c1c" /> Suspend</> : <><Play size={14} color="#15803d" /> Activate</>}
-                  </button>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <button 
+                      onClick={() => handleEditClick(t)}
+                      style={{ 
+                        padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600,
+                        display: "inline-flex", alignItems: "center", gap: 6, color: "#374151"
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleToggleStatus(t.id)}
+                      style={{ 
+                        padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600,
+                        display: "inline-flex", alignItems: "center", gap: 6, color: "#374151"
+                      }}
+                    >
+                      {t.status === "active" ? <><Pause size={14} color="#b91c1c" /> Suspend</> : <><Play size={14} color="#15803d" /> Activate</>}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -201,6 +238,47 @@ export default function SuperAdminTenants() {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
                 <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontWeight: 600, color: "#374151" }}>Cancel</button>
                 <button type="submit" style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "#1B4332", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Create Tenant</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {showEditModal && editTenant && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: "#fff", width: 500, borderRadius: 16, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, margin: 0 }}>Edit Tenant</h2>
+              <button onClick={() => setShowEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} color="#6b7280" /></button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Venue Name *</label>
+                  <input type="text" required value={editTenant.name} onChange={e => setEditTenant({...editTenant, name: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>URL Slug *</label>
+                  <input type="text" required value={editTenant.slug} onChange={e => setEditTenant({...editTenant, slug: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Owner Name</label>
+                  <input type="text" value={editTenant.ownerName} onChange={e => setEditTenant({...editTenant, ownerName: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Owner Email *</label>
+                  <input type="email" required value={editTenant.email} onChange={e => setEditTenant({...editTenant, email: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Phone</label>
+                  <input type="text" value={editTenant.phone || ""} onChange={e => setEditTenant({...editTenant, phone: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                <button type="button" onClick={() => setShowEditModal(false)} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontWeight: 600, color: "#374151" }}>Cancel</button>
+                <button type="submit" style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "#1B4332", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save Changes</button>
               </div>
             </form>
           </div>
