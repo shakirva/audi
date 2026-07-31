@@ -129,7 +129,7 @@ function ExecutiveCockpit() {
       // Compute Urgent Enquiries
       const allEnquiries = enqRes.data?.data || [];
       const followUpCount = allEnquiries.filter(e => ["Contacted", "Follow-up", "Customer Visit"].includes(e.status)).length;
-      const quoteCount = allEnquiries.filter(e => e.status === "Quotation Sent").length;
+      const quoteCount = 0; // Removed Quotation Sent
       const pendingCount = allBookings.filter(b => b.status === "Pending Payment").length;
 
       setUrgent([
@@ -332,7 +332,7 @@ function ReceptionCockpit() {
 
   const getStatusColumn = (columnType) => {
     if (columnType === "Open") return enquiries.filter(e => ["New Enquiry", "Contacted"].includes(e.status));
-    if (columnType === "Follow Up") return enquiries.filter(e => ["Follow-up", "Customer Visit", "Quotation Sent", "Interested"].includes(e.status));
+    if (columnType === "Follow Up") return enquiries.filter(e => ["Follow-up", "Customer Visit", "Interested"].includes(e.status));
     if (columnType === "Closed") return enquiries.filter(e => ["Booking Confirmed", "Cancelled", "Lost"].includes(e.status));
     return [];
   };

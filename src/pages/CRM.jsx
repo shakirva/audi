@@ -7,7 +7,7 @@ import ConvertToBookingModal from "../components/ConvertToBookingModal";
 import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useRole } from "../context/RoleContext";
 
-const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Lost"];
+const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Lost"];
 
 const LEAD_SCORE_STYLE = {
   Hot:  { bg: "#dcfce7", color: "#166534", label: "🟢 Hot" },

@@ -1,6 +1,6 @@
 const { z } = require("zod");
 
-const ENQUIRY_STATUSES = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Cancelled", "Lost"];
+const ENQUIRY_STATUSES = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Cancelled", "Lost"];
 
 const createEnquirySchema = z.object({
   body: z.object({
