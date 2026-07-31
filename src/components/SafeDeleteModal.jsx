@@ -70,10 +70,9 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
   const getActiveSteps = () => {
     if (!checkData || type !== "booking") return [1, 5];
     const { financial, related } = checkData;
-    const s = [1];
-    if (financial.totalPaid > 0) s.push(2);
+    const s = [1, 2];
     if (financial.totalPaid > 0 && refundAction === "refund") s.push(3);
-    if (financial.totalExpenses > 0) s.push(4);
+    s.push(4);
     if (related.hasEnquiry || related.hasCustomer) s.push('crm');
     s.push('warning');
     s.push(5);
@@ -95,18 +94,15 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
     // Step 1: Impact overview
     if (step === 1) return (
       <div style={{ padding: 28 }}>
-        <div style={st}><IndianRupee size={13} /> Financial Impact Summary</div>
-        <div style={{ background: "#f8fafc", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={ir}><span style={{ color: "#64748b" }}>Booking Amount</span><span>₹{(booking.totalAmount || 0).toLocaleString()}</span></div>
-          <div style={ir}><span style={{ color: "#64748b" }}>Payments Collected</span><span style={{ color: hasPayments ? "#dc2626" : "#10b981", fontWeight: 800 }}>₹{financial.totalPaid.toLocaleString()}</span></div>
-          {financial.payments.length > 0 && financial.payments.map((p, i) => (
-            <div key={i} style={{ ...ir, paddingLeft: 16, fontSize: 12, color: "#94a3b8" }}>
-              <span>{p.paymentNumber || `Payment ${i+1}`} — {p.paymentMode}</span>
-              <span>₹{p.amount.toLocaleString()}</span>
-            </div>
-          ))}
-          <div style={ir}><span style={{ color: "#64748b" }}>Linked Expenses</span><span style={{ color: hasExpenses ? "#f59e0b" : "#10b981" }}>₹{financial.totalExpenses.toLocaleString()}</span></div>
-          <div style={{ ...ir, borderBottom: "none" }}><span style={{ color: "#64748b" }}>Accounting Entries</span><span>{financial.journalCount} Journals · {financial.voucherCount} Vouchers</span></div>
+        <div style={st}><Briefcase size={13} /> Financial Impact Summary</div>
+        <div style={{ background: "#f8fafc", borderRadius: 16, padding: "20px 24px", marginBottom: 20 }}>
+          <div style={ir}><span>Booking Amount</span><span style={{ fontWeight: 800 }}>₹{booking.totalAmount?.toLocaleString() || 0}</span></div>
+          <div style={ir}><span>Payments Collected</span><span style={{ color: hasPayments ? "#059669" : "#64748b" }}>₹{financial.totalPaid.toLocaleString()}</span></div>
+          <div style={ir}><span>Linked Expenses</span><span style={{ color: hasExpenses ? "#dc2626" : "#64748b" }}>₹{financial.totalExpenses.toLocaleString()}</span></div>
+          <div style={{ ...ir, borderBottom: "none", paddingBottom: 0 }}>
+            <span>Accounting Entries</span>
+            <span>{financial.journalCount} Journals · {financial.voucherCount} Vouchers</span>
+          </div>
         </div>
         {(related.hasAgreement || related.hasJob) && (
           <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 14, marginBottom: 20 }}>
@@ -117,33 +113,46 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Cancel</button>
-          <button onClick={() => setStep(hasPayments ? 2 : (hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')))} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
+          <button onClick={() => setStep(2)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             <AlertTriangle size={15} /> I Understand, Continue
           </button>
         </div>
       </div>
     );
 
-    // Step 2: Refund question (only if payments > 0)
-    if (step === 2 && hasPayments) return (
+    // Step 2: Refund question (always show for friction)
+    if (step === 2) return (
       <div style={{ padding: 28 }}>
         <div style={st}><Wallet size={13} /> Advance / Payment Handling</div>
-        <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
-          <strong>₹{financial.totalPaid.toLocaleString()}</strong> has been collected in {financial.payments.length} payment(s). What should happen to this money?
-        </p>
-        <button style={optBtn(refundAction === "refund")} onClick={() => setRefundAction("refund")}>
-          💸 Refund to Customer — Record a refund entry in your Cash/Bank Book
-        </button>
-        <button style={optBtn(refundAction === "writeOff")} onClick={() => setRefundAction("writeOff")}>
-          ❌ Write Off (No Refund) — Money stays in your account, no refund processed
-        </button>
-        <button style={optBtn(refundAction === "alreadyRefunded")} onClick={() => setRefundAction("alreadyRefunded")}>
-          ✅ Already Refunded Externally — Refund was done outside this system
-        </button>
+        {hasPayments ? (
+          <>
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+              <strong>₹{financial.totalPaid.toLocaleString()}</strong> has been collected in {financial.payments.length} payment(s). What should happen to this money?
+            </p>
+            <button style={optBtn(refundAction === "refund")} onClick={() => setRefundAction("refund")}>
+              💸 Refund to Customer — Record a refund entry in your Cash/Bank Book
+            </button>
+            <button style={optBtn(refundAction === "writeOff")} onClick={() => setRefundAction("writeOff")}>
+              ❌ Write Off (No Refund) — Money stays in your account, no refund processed
+            </button>
+            <button style={optBtn(refundAction === "alreadyRefunded")} onClick={() => setRefundAction("alreadyRefunded")}>
+              ✅ Already Refunded Externally — Refund was done outside this system
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+              <strong>₹0</strong> has been collected for this booking. No refund or payment handling is required.
+            </p>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 12, color: "#166534", fontSize: 13, fontWeight: 600 }}>
+              ✓ Cleared to proceed
+            </div>
+          </>
+        )}
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(1)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(refundAction === "refund" ? 3 : (hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')))} disabled={!refundAction}
-            style={{ ...bb, flex: 1, background: refundAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAction ? 1 : 0.5 }}>
+          <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : 4)} disabled={hasPayments && !refundAction}
+            style={{ ...bb, flex: 1, background: (!hasPayments || refundAction) ? "#1B4332" : "#94a3b8", color: "#fff", opacity: (!hasPayments || refundAction) ? 1 : 0.5 }}>
             Next →
           </button>
         </div>
@@ -165,7 +174,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </button>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(2)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning'))} disabled={!refundAccount}
+          <button onClick={() => setStep(4)} disabled={!refundAccount}
             style={{ ...bb, flex: 1, background: refundAccount ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAccount ? 1 : 0.5 }}>
             Next →
           </button>
@@ -173,30 +182,43 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
       </div>
     );
 
-    // Step 4: Expense handling (only if expenses > 0)
+    // Step 4: Expense handling (always show for friction)
     if (step === 4) return (
       <div style={{ padding: 28 }}>
         <div style={st}><FileX size={13} /> Expense Handling</div>
-        <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
-          <strong>₹{financial.totalExpenses.toLocaleString()}</strong> in expenses are linked to this booking ({financial.expenses.length} item{financial.expenses.length > 1 ? "s" : ""}). What should happen?
-        </p>
-        {financial.expenses.map((e, i) => (
-          <div key={i} style={{ ...ir, fontSize: 12, color: "#64748b" }}>
-            <span>{e.category || "Expense"} — {e.description || ""}</span><span>₹{e.amount.toLocaleString()}</span>
-          </div>
-        ))}
-        <div style={{ marginTop: 12 }}>
-          <button style={optBtn(expenseAction === "delete")} onClick={() => setExpenseAction("delete")}>
-            🗑️ Delete all linked expenses — Remove them from your expense records
-          </button>
-          <button style={optBtn(expenseAction === "unlink")} onClick={() => setExpenseAction("unlink")}>
-            🔗 Keep but unlink — Expenses stay in your records as general expenses
-          </button>
-        </div>
+        {hasExpenses ? (
+          <>
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+              <strong>₹{financial.totalExpenses.toLocaleString()}</strong> in expenses are linked to this booking ({financial.expenses.length} item{financial.expenses.length > 1 ? "s" : ""}). What should happen?
+            </p>
+            {financial.expenses.map((e, i) => (
+              <div key={i} style={{ ...ir, fontSize: 12, color: "#64748b" }}>
+                <span>{e.category || "Expense"} — {e.description || ""}</span><span>₹{e.amount.toLocaleString()}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 12 }}>
+              <button style={optBtn(expenseAction === "delete")} onClick={() => setExpenseAction("delete")}>
+                🗑️ Delete all linked expenses — Remove them from your expense records
+              </button>
+              <button style={optBtn(expenseAction === "unlink")} onClick={() => setExpenseAction("unlink")}>
+                🔗 Keep but unlink — Expenses stay in your records as general expenses
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+              <strong>₹0</strong> expenses are linked to this booking. No expense handling is required.
+            </p>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 12, color: "#166534", fontSize: 13, fontWeight: 600 }}>
+              ✓ Cleared to proceed
+            </div>
+          </>
+        )}
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')} disabled={!expenseAction}
-            style={{ ...bb, flex: 1, background: expenseAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: expenseAction ? 1 : 0.5 }}>
+          <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : 2)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep(related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')} disabled={hasExpenses && !expenseAction}
+            style={{ ...bb, flex: 1, background: (!hasExpenses || expenseAction) ? "#1B4332" : "#94a3b8", color: "#fff", opacity: (!hasExpenses || expenseAction) ? 1 : 0.5 }}>
             Next →
           </button>
         </div>
@@ -236,7 +258,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
 
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button onClick={() => setStep(hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1)))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep(4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={() => setStep('warning')} disabled={(related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)}
             style={{ ...bb, flex: 1, background: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? "#94a3b8" : "#1B4332", color: "#fff", opacity: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? 0.5 : 1 }}>
             Next →
@@ -260,7 +282,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
           </p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setStep((related.hasEnquiry || related.hasCustomer) ? 'crm' : (hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1))))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep((related.hasEnquiry || related.hasCustomer) ? 'crm' : 4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={() => setStep(5)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             I understand the risks →
           </button>
