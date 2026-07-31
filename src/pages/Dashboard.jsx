@@ -81,7 +81,11 @@ function ExecutiveCockpit() {
       const upcomingCount = allBookings.filter(b => b.date && b.date >= today && b.status !== 'Cancelled' && b.status !== 'Enquiry').length;
 
       if (statsRes.data?.data) {
-        setStats({ ...statsRes.data.data, upcomingCount });
+        const ts = statsRes.data.data;
+        const healthScore = ts.totalBookings > 0 
+          ? Math.round((ts.confirmedCount / ts.totalBookings) * 100) 
+          : 100;
+        setStats({ ...ts, upcomingCount, healthScore });
       }
 
       // Compute Today's Events
@@ -129,7 +133,7 @@ function ExecutiveCockpit() {
       // Compute Urgent Enquiries
       const allEnquiries = enqRes.data?.data || [];
       const followUpCount = allEnquiries.filter(e => ["Contacted", "Follow-up", "Customer Visit"].includes(e.status)).length;
-      const quoteCount = 0; // Removed Quotation Sent
+      const quoteCount = allEnquiries.filter(e => e.status === "Quotation Sent").length;
       const pendingCount = allBookings.filter(b => b.status === "Pending Payment").length;
 
       setUrgent([
@@ -168,14 +172,14 @@ function ExecutiveCockpit() {
         <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Health Score</div>
-            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><TrendingUp size={14}/> +4% this week</div>
+            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><TrendingUp size={14}/> Conversion Rate</div>
           </div>
           <div style={{ position: "relative", width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="60" height="60" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
               <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-              <motion.circle cx="50" cy="50" r="40" fill="none" stroke={BRAND.success} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * 0.06} />
+              <motion.circle cx="50" cy="50" r="40" fill="none" stroke={BRAND.success} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - (stats.healthScore || 100)/100)} />
             </svg>
-            <div style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>94%</div>
+            <div style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{stats.healthScore || 100}%</div>
           </div>
         </div>
       </motion.div>
