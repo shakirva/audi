@@ -329,26 +329,36 @@ class BookingService {
 
     // ── Handle refund action ──
     if (totalPaid > 0 && refundAction === "refund") {
-      // Create a refund CashBook/BankBook entry for audit trail
+      const cashBookRepo = require("../repositories/cashBook.repository");
+      const bankBookRepo = require("../repositories/bankBook.repository");
+      
       const refundNote = `Refund for deleted booking ${booking.bookingId} — ${reason}`;
       if (refundAccount === "Bank") {
-        await BankBook.create({
+        const bankBal = await bankBookRepo.getLatestBalance({ tenantId, environmentId });
+        await bankBookRepo.create({
           tenantId, environmentId,
-          date: new Date(), type: "Debit", // Money going out
+          date: new Date(),
           description: refundNote,
-          amount: totalPaid,
-          category: "Booking Refund",
-          reference: booking.bookingId,
+          transactionType: "Booking Refund",
+          referenceId: booking.id,
+          referenceType: "Booking",
+          bankIn: 0,
+          bankOut: totalPaid,
+          balance: bankBal - totalPaid,
           createdBy: deletedBy,
         });
       } else {
-        await CashBook.create({
+        const cashBal = await cashBookRepo.getLatestBalance({ tenantId, environmentId });
+        await cashBookRepo.create({
           tenantId, environmentId,
-          date: new Date(), type: "Debit", // Money going out
+          date: new Date(),
           description: refundNote,
-          amount: totalPaid,
-          category: "Booking Refund",
-          reference: booking.bookingId,
+          transactionType: "Booking Refund",
+          referenceId: booking.id,
+          referenceType: "Booking",
+          cashIn: 0,
+          cashOut: totalPaid,
+          balance: cashBal - totalPaid,
           createdBy: deletedBy,
         });
       }
