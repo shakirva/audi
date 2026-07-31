@@ -5,6 +5,7 @@ import { customersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import PageHeader from "../components/ui/PageHeader";
 import EditCustomerModal from "../components/EditCustomerModal";
+import SafeDeleteModal from "../components/SafeDeleteModal";
 
 function CustomerSkeleton() {
   return (
@@ -30,6 +31,7 @@ export default function Customers() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -53,15 +55,9 @@ export default function Customers() {
     return () => clearTimeout(timer);
   }, [fetchCustomers]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this customer? This will NOT delete their bookings, but their profile will be removed.")) return;
-    try {
-      await customersAPI.remove(id);
-      addToast("Customer deleted successfully", "success");
-      fetchCustomers();
-    } catch (err) {
-      addToast("Failed to delete customer", "error");
-    }
+  const handleDelete = (c) => {
+    const name = c.name || c.customerName || "Unknown";
+    setDeleteTarget({ id: c.id, name });
   };
 
   return (
@@ -134,7 +130,7 @@ export default function Customers() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
                     <button onClick={() => setEditingCustomer(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}><Edit3 size={16} /></button>
-                    <button onClick={() => handleDelete(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
+                    <button onClick={() => handleDelete(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
                   </div>
                 </div>
                 
@@ -189,6 +185,15 @@ export default function Customers() {
         customer={editingCustomer}
         onClose={() => setEditingCustomer(null)}
         onSaved={fetchCustomers}
+      />
+      <SafeDeleteModal
+        type="customer"
+        id={deleteTarget?.id}
+        name={deleteTarget?.name}
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setDeleteTarget(null); fetchCustomers(); }}
+        addToast={addToast}
       />
     </div>
   );

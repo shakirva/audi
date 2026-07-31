@@ -3,17 +3,21 @@ import { motion } from "framer-motion";
 import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
+import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useBookings } from "../context/BookingsContext";
 import { useRole } from "../context/RoleContext";
+import { useToast } from "../components/Toast";
 import { bookingsAPI } from "../services/api";
 
 export default function Bookings() {
   const { user, role } = useRole();
+  const { addToast } = useToast();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const { bookings, refetch } = useBookings();
 
   const getStatusColor = (status) => {
@@ -241,16 +245,9 @@ export default function Bookings() {
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Pencil size={13} /> Edit
                   </button>
-                  <button onClick={async (e) => {
+                  <button onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-                      try {
-                        await bookingsAPI.remove(b.bookingId || b.id);
-                        refetch?.();
-                      } catch (err) {
-                        alert(err.response?.data?.message || "Failed to delete booking");
-                      }
-                    }
+                    setDeleteTarget({ id: b.bookingId || b.id, name: `${b.eventType} — ${b.customerName}` });
                   }}
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Trash2 size={13} /> Delete
@@ -338,16 +335,9 @@ export default function Bookings() {
                           style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Pencil size={11} /> Edit
                         </button>
-                        <button onClick={async (e) => {
+                        <button onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-                            try {
-                              await bookingsAPI.remove(b.bookingId || b.id);
-                              refetch?.();
-                            } catch (err) {
-                              alert(err.response?.data?.message || "Failed to delete booking");
-                            }
-                          }
+                          setDeleteTarget({ id: b.bookingId || b.id, name: `${b.eventType} — ${b.customerName}` });
                         }}
                           style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Trash2 size={11} /> Delete
@@ -375,16 +365,9 @@ export default function Bookings() {
           booking={detail} 
           onClose={() => setDetail(null)} 
           onEdit={(b) => { setDetail(null); setEditBooking(b); }} 
-          onDelete={async (id) => {
-            if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-              try {
-                await bookingsAPI.remove(id);
-                setDetail(null);
-                refetch?.();
-              } catch (err) {
-                alert(err.response?.data?.message || "Failed to delete booking");
-              }
-            }
+          onDelete={(id) => {
+            setDetail(null);
+            setDeleteTarget({ id, name: `${detail.eventType} — ${detail.customerName}` });
           }}
         />
       )}
@@ -393,6 +376,15 @@ export default function Bookings() {
         booking={editBooking}
         onClose={() => setEditBooking(null)}
         onSaved={() => { setEditBooking(null); refetch?.(); }}
+      />
+      <SafeDeleteModal
+        type="booking"
+        id={deleteTarget?.id}
+        name={deleteTarget?.name}
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setDeleteTarget(null); refetch?.(); }}
+        addToast={addToast}
       />
     </div>
   );

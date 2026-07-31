@@ -211,6 +211,14 @@ export const adminAPI = {
   toggleSandbox: (id) => api.patch(`/admin/tenants/${id}/toggle-sandbox`),
   toggleStatus: (id) => api.patch(`/admin/tenants/${id}/status`),
 };
+// ═══════════════════════════════════
+// DELETE PRE-CHECKS (Financial Impact)
+// ═══════════════════════════════════
+export const deleteChecksAPI = {
+  booking: (bookingId) => api.get(`/v1/delete-checks/booking/${bookingId}`),
+  customer: (customerId) => api.get(`/v1/delete-checks/customer/${customerId}`),
+  enquiry: (enquiryId) => api.get(`/v1/delete-checks/enquiry/${enquiryId}`),
+};
 
 export default api;
 

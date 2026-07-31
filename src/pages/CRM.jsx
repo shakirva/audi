@@ -4,6 +4,7 @@ import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import ConvertToBookingModal from "../components/ConvertToBookingModal";
+import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useRole } from "../context/RoleContext";
 
 const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Lost"];
@@ -34,6 +35,7 @@ export default function CRM() {
   const [hoveredEnq, setHoveredEnq] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
 
   // API state
   const [enquiries, setEnquiries] = useState([]);
@@ -80,15 +82,9 @@ export default function CRM() {
     }
   };
   
-  const handleDeleteEnquiry = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this enquiry? This action cannot be undone.")) return;
-    try {
-      await enquiriesAPI.remove(id);
-      addToast("Enquiry deleted successfully", "success");
-      fetchEnquiries();
-    } catch (err) {
-      addToast(err.response?.data?.message || "Failed to delete enquiry", "error");
-    }
+  const handleDeleteEnquiry = (enq) => {
+    const name = getEnquiryName(enq);
+    setDeleteTarget({ id: enq.id, name: `${enq.enquiryNumber || 'ENQ'} — ${name}` });
   };
 
   const handleEnquiryCreated = () => {
@@ -280,7 +276,7 @@ export default function CRM() {
                                   <CheckCircle2 size={11}/> Convert
                                 </button>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
                                   style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                                 >
                                   <Trash2 size={11}/> Delete
@@ -379,7 +375,7 @@ export default function CRM() {
                           <CheckCircle2 size={12}/> Convert
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq.id); }}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
                           style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                         >
                           <Trash2 size={12}/> Delete
@@ -402,6 +398,15 @@ export default function CRM() {
 
       <NewEnquiryModal open={showEnquiryModal} onClose={() => { setShowEnquiryModal(false); setEditEnquiry(null); }} onSuccess={handleEnquiryCreated} editData={editEnquiry} />
       <ConvertToBookingModal open={showConvertModal} enquiry={convertEnquiry} onClose={() => { setShowConvertModal(false); fetchEnquiries(); }} />
+      <SafeDeleteModal
+        type="enquiry"
+        id={deleteTarget?.id}
+        name={deleteTarget?.name}
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setDeleteTarget(null); fetchEnquiries(); }}
+        addToast={addToast}
+      />
     </div>
   );
 }
