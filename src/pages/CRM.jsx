@@ -251,7 +251,7 @@ export default function CRM() {
                             <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#999" }}>
                               <Calendar size={11} /> {enq.tentativeDate || "TBD"}
                             </div>
-                            {hoveredEnq === enq.id ? (
+                            {enq.status !== "Booking Confirmed" && hoveredEnq === enq.id ? (
                               <div style={{ display: "flex", gap: 6 }}>
                                 <select
                                   value={enq.status}
@@ -344,15 +344,22 @@ export default function CRM() {
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.eventType}</td>
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.tentativeDate || "TBD"}</td>
                     <td style={{ padding: "12px 16px" }}>
-                      <select
-                        value={enq.status}
-                        onChange={(e) => handleStatusChange(enq.id, e.target.value)}
-                        style={{
-                          fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid #bae6fd", background: "#e0f2fe", color: "#0284c7", fontWeight: 700, outline: "none", cursor: "pointer"
-                        }}
-                      >
-                        {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      {enq.status === "Booking Confirmed" ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", padding: "4px 8px", background: "#dcfce7", borderRadius: 6, display: "inline-block" }}>
+                          <CheckCircle2 size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }}/>
+                          Converted
+                        </span>
+                      ) : (
+                        <select
+                          value={enq.status}
+                          onChange={(e) => handleStatusChange(enq.id, e.target.value)}
+                          style={{
+                            fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid #bae6fd", background: "#e0f2fe", color: "#0284c7", fontWeight: 700, outline: "none", cursor: "pointer"
+                          }}
+                        >
+                          {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      )}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
                       <span style={{ background: lss.bg, color: lss.color, padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lss.label}</span>
@@ -361,26 +368,30 @@ export default function CRM() {
                       {enq.SalesExecutive?.name || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
-                          style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                        >
-                          <Edit2 size={12}/> Edit
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                          style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                        >
-                          <CheckCircle2 size={12}/> Convert
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
-                          style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                        >
-                          <Trash2 size={12}/> Delete
-                        </button>
-                      </div>
+                      {enq.status !== "Booking Confirmed" ? (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                            style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                          >
+                            <Edit2 size={12}/> Edit
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                            style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                          >
+                            <CheckCircle2 size={12}/> Convert
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
+                            style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                          >
+                            <Trash2 size={12}/> Delete
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>No actions</span>
+                      )}
                     </td>
                   </tr>
                 );
