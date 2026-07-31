@@ -167,6 +167,31 @@ class BookingController {
       next(err);
     }
   }
+
+  /**
+   * POST /api/v1/bookings/:id/safe-delete
+   * Accepts body: { reason, refundAction, refundAccount, expenseAction }
+   */
+  async safeRemove(req, res, next) {
+    try {
+      const result = await bookingService.safeDeleteBooking(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+        reason: req.body.reason,
+        refundAction: req.body.refundAction,
+        refundAccount: req.body.refundAccount,
+        expenseAction: req.body.expenseAction,
+        deletedBy: req.user?.id,
+      });
+
+      return sendSuccess(res, {
+        data: result,
+        message: "Booking deleted successfully with all financial records handled",
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new BookingController();

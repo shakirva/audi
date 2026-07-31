@@ -307,6 +307,83 @@ class BookingService {
 
     return updated;
   }
+  /**
+   * Safe Delete — handles financial cleanup before deletion.
+   * Accepts options: { reason, refundAction, refundAccount, expenseAction, deletedBy }
+   *
+   * refundAction: "refund" | "writeOff" | "alreadyRefunded"
+   * refundAccount: "Cash" | "Bank" (only when refundAction = "refund")
+   * expenseAction: "delete" | "unlink"
+   */
+  async safeDeleteBooking(bookingId, { tenantId, environmentId, reason, refundAction, refundAccount, expenseAction, deletedBy }) {
+    const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+    if (!booking) throw new NotFoundError("Booking");
+
+    if (!reason) throw new BadRequestError("Deletion reason is required");
+
+    const { Expense, JournalEntry, Voucher, Payment, Receipt, CashBook, BankBook } = require("../models");
+
+    const payments = await Payment.findAll({ where: { bookingId: booking.id, tenantId, environmentId } });
+    const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
+    const expenses = await Expense.findAll({ where: { bookingId: booking.id, tenantId, environmentId } });
+
+    // ── Handle refund action ──
+    if (totalPaid > 0 && refundAction === "refund") {
+      // Create a refund CashBook/BankBook entry for audit trail
+      const refundNote = `Refund for deleted booking ${booking.bookingId} — ${reason}`;
+      if (refundAccount === "Bank") {
+        await BankBook.create({
+          tenantId, environmentId,
+          date: new Date(), type: "Debit", // Money going out
+          description: refundNote,
+          amount: totalPaid,
+          category: "Booking Refund",
+          reference: booking.bookingId,
+          createdBy: deletedBy,
+        });
+      } else {
+        await CashBook.create({
+          tenantId, environmentId,
+          date: new Date(), type: "Debit", // Money going out
+          description: refundNote,
+          amount: totalPaid,
+          category: "Booking Refund",
+          reference: booking.bookingId,
+          createdBy: deletedBy,
+        });
+      }
+    }
+
+    // ── Handle expenses ──
+    if (expenses.length > 0) {
+      if (expenseAction === "unlink") {
+        // Keep expenses but unlink from this booking
+        await Expense.update(
+          { bookingId: null, notes: `[Unlinked from deleted booking ${booking.bookingId}] ${reason}` },
+          { where: { bookingId: booking.id, tenantId, environmentId } }
+        );
+      } else {
+        // Default: delete expenses
+        await Expense.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      }
+    }
+
+    // ── Clean up accounting records ──
+    await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+
+    // ── Delete the booking (cascades to Payments, Receipts, Agreements, Jobs) ──
+    const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
+    if (!deleted) throw new NotFoundError("Booking");
+
+    return {
+      message: "Booking deleted successfully",
+      id: bookingId,
+      refundProcessed: totalPaid > 0 && refundAction === "refund",
+      refundAmount: totalPaid > 0 && refundAction === "refund" ? totalPaid : 0,
+      expensesHandled: expenses.length,
+    };
+  }
 }
 
 module.exports = new BookingService();

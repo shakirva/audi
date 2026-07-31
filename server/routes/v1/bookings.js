@@ -70,4 +70,12 @@ router.delete("/:id",
   bookingController.remove
 );
 
+// POST /api/v1/bookings/:id/safe-delete — delete with financial options
+router.post("/:id/safe-delete",
+  auth, requireRole("Owner", "Manager", "Tester"),
+  tenantScope, subscriptionGuard,
+  auditLog("Safe Delete Booking"),
+  bookingController.safeRemove
+);
+
 module.exports = router;

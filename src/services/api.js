@@ -56,6 +56,7 @@ export const bookingsAPI = {
   updateStatus: (id, status) => api.patch(`/v1/bookings/${id}/status`, { status }),
   generateInvoice: (id) => api.post(`/v1/bookings/${id}/invoice`),
   remove: (id) => api.delete(`/v1/bookings/${id}`),
+  safeDelete: (id, options) => api.post(`/v1/bookings/${id}/safe-delete`, options),
   getStats: () => api.get("/v1/bookings/stats/dashboard"),
   getComparisonStats: () => api.get("/v1/bookings/stats/comparison"),
 };
