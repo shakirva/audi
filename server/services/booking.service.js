@@ -15,10 +15,12 @@ class BookingService {
   /**
    * List all bookings with filters.
    */
-  async listBookings({ tenantId, environmentId, status, month, hall, search, query }) {
+  async listBookings({ tenantId, environmentId, userRole, userId, status, month, hall, search, query }) {
     const { rows, total, page, limit } = await bookingRepository.findAllFiltered({
       tenantId,
       environmentId,
+      userRole,
+      userId,
       status,
       month,
       hall,
@@ -51,8 +53,8 @@ class BookingService {
   /**
    * Get dashboard statistics.
    */
-  async getDashboardStats({ tenantId, environmentId }) {
-    return bookingRepository.getDashboardStats({ tenantId, environmentId });
+  async getDashboardStats({ tenantId, environmentId, userRole, userId }) {
+    return bookingRepository.getDashboardStats({ tenantId, environmentId, userRole, userId });
   }
 
   /**

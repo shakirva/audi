@@ -4,10 +4,12 @@ const availabilityService = require("./availability.service");
 const { NotFoundError, BadRequestError, ConflictError } = require("../helpers/errors");
 
 class EnquiryService {
-  async listEnquiries({ tenantId, environmentId, search, status, salesExecutiveId, query }) {
+  async listEnquiries({ tenantId, environmentId, userRole, userId, search, status, salesExecutiveId, query }) {
     const result = await enquiryRepository.findAllFiltered({
       tenantId,
       environmentId,
+      userRole,
+      userId,
       search,
       status,
       salesExecutiveId,

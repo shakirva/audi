@@ -17,6 +17,8 @@ class BookingController {
       const result = await bookingService.listBookings({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
         status,
         month,
         hall,
@@ -42,6 +44,8 @@ class BookingController {
       const stats = await bookingService.getDashboardStats({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
       });
 
       return sendSuccess(res, {

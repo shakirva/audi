@@ -4,10 +4,16 @@ const { AgreementTemplate, AgreementVersion } = require("../models");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class AgreementService {
-  async getAll(params, { tenantId, environmentId }) {
+  async getAll(params, { tenantId, environmentId, userRole, userId }) {
+    const where = {};
+    if (userRole === "Sales") {
+      where.createdBy = userId;
+    }
+
     return agreementRepository.findAll({
       tenantId,
       environmentId,
+      where,
       query: params,
       include: [
         { 

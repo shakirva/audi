@@ -15,8 +15,11 @@ class BookingRepository extends BaseRepository {
   /**
    * Find all bookings with optional search/filter support.
    */
-  async findAllFiltered({ tenantId, environmentId, status, month, hall, search, query = {} }) {
+  async findAllFiltered({ tenantId, environmentId, userRole, userId, status, month, hall, search, query = {} }) {
     const where = {};
+    if (userRole === "Sales") {
+      where.createdBy = userId;
+    }
 
     if (status && status !== "All") where.status = status;
     if (month) where.date = { [Op.like]: `${month}%` };
@@ -53,8 +56,12 @@ class BookingRepository extends BaseRepository {
   /**
    * Get dashboard statistics.
    */
-  async getDashboardStats({ tenantId, environmentId }) {
-    const allBookings = await this.findAllUnpaginated({ tenantId, environmentId });
+  async getDashboardStats({ tenantId, environmentId, userRole, userId }) {
+    const where = {};
+    if (userRole === "Sales") {
+      where.createdBy = userId;
+    }
+    const allBookings = await this.findAllUnpaginated({ tenantId, environmentId, where });
 
     const confirmed = allBookings.filter((b) => b.status === "Confirmed" || b.status === "Completed");
     const pending = allBookings.filter((b) => b.status === "Pending Payment");

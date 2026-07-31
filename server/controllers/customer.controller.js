@@ -8,6 +8,8 @@ class CustomerController {
       const result = await customerService.listCustomers({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
         search,
         type,
         query: req.query,
