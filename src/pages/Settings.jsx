@@ -76,16 +76,27 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
 
   return (
     <div style={{ background: "#fff", borderRadius: 12, padding: 16, border: "1px solid #e5e7eb" }}>
-      <select 
-        id="rbac-role-select"
-        value={activeRole} 
-        onChange={e => setActiveRole(e.target.value)}
-        style={{ ...iStyle, marginBottom: 16, maxWidth: 200, fontSize: 14, fontWeight: 700 }}
-      >
-        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => (
-          <option key={r} value={r}>{r} Role</option>
-        ))}
-      </select>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f1f5f9" }}>
+        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => {
+          const isActive = activeRole === r;
+          return (
+            <button
+              key={r}
+              onClick={() => setActiveRole(r)}
+              style={{
+                padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: isActive ? 700 : 600,
+                border: isActive ? "1px solid #1B4332" : "1px solid #e2e8f0",
+                background: isActive ? "#f0faf4" : "#fff", 
+                color: isActive ? "#0D2418" : "#64748b", 
+                cursor: "pointer", whiteSpace: "nowrap",
+                transition: "all 0.2s"
+              }}
+            >
+              {r}
+            </button>
+          );
+        })}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
         {configurableNav.map(group => {
@@ -93,7 +104,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
           const hasAccessToMain = activePaths.includes(group.path);
           
           return (
-            <div key={group.label} style={{ background: "#f9fafb", padding: 12, borderRadius: 10, border: "1px solid #f3f4f6" }}>
+            <div key={group.label} style={{ background: "#f9fafb", padding: 12, borderRadius: 10, border: "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <input 
                   type="checkbox" 
@@ -115,7 +126,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
                       setModuleAccess({ ...moduleAccess, [activeRole]: newPaths });
                     }
                   }}
-                  style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#4f46e5" }}
+                  style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#1B4332" }}
                 />
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{group.label}</span>
               </div>
@@ -128,7 +139,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
                         type="checkbox" 
                         checked={activePaths.includes(child.path)}
                         onChange={() => handleToggle(child.path)}
-                        style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#4f46e5" }}
+                        style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#1B4332" }}
                       />
                       <span style={{ fontSize: 12, color: "#4b5563" }}>{child.label}</span>
                     </label>
@@ -141,7 +152,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
       </div>
       
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
-        <button onClick={saveAccess} style={{ padding: "8px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>
+        <button onClick={saveAccess} style={{ padding: "8px 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>
           Save Access for {activeRole}
         </button>
       </div>
@@ -677,37 +688,18 @@ export default function Settings() {
 
       {/* ── ROLE-BASED MODULE ACCESS (Owner only) ── */}
       {isOwner && (
-        <div style={{ ...cardSt, border: "1.5px solid #e0e7ff", background: "linear-gradient(135deg, #eef2ff, #f8fafc)" }}>
+        <div style={{ ...cardSt, border: "1.5px solid #e2e8f0", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Users size={18} color="#4338ca" />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Users size={18} color="#0D2418" />
             </div>
             <div>
-              <p style={{ ...sectionTitle, color: "#3730a3" }}>Role-Based Module Access</p>
-              <p style={{ fontSize: 12, color: "#4f46e5", margin: 0 }}>Configure which modules are visible to each staff role</p>
+              <p style={{ ...sectionTitle, color: "#0D2418" }}>Role-Based Module Access</p>
+              <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>Configure which modules are visible to each staff role</p>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, marginBottom: 16 }}>
-            {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => (
-              <button
-                key={r}
-                onClick={() => {
-                  // Set active role for editing (we need a state for this, let's just create an inline component/function)
-                  document.getElementById("rbac-role-select").value = r;
-                  document.getElementById("rbac-role-select").dispatchEvent(new Event("change", { bubbles: true }));
-                }}
-                id={`rbac-btn-${r}`}
-                className="rbac-role-btn"
-                style={{
-                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "1px solid #c7d2fe",
-                  background: "#fff", color: "#4f46e5", cursor: "pointer", whiteSpace: "nowrap"
-                }}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+
 
           <RoleAccessEditor moduleAccess={moduleAccess || {}} setModuleAccess={setModuleAccess} />
         </div>
