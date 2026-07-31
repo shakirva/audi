@@ -158,6 +158,7 @@ export default function Staff() {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignStaffData, setAssignStaffData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadStaff();
@@ -213,7 +214,7 @@ export default function Staff() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>
             <Users size={24} />
@@ -241,16 +242,6 @@ export default function Staff() {
           <div>
             <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Absent / Inactive</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => !s.active).length}</div>
-          </div>
-        </div>
-
-        <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>
-            <Briefcase size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>On Active Job</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>4</div>
           </div>
         </div>
       </div>
