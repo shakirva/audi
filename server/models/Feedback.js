@@ -8,15 +8,15 @@ const Feedback = sequelize.define("Feedback", {
     primaryKey: true,
   },
   tenantId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
   environmentId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
   userId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
   userName: {
