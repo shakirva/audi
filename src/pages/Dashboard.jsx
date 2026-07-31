@@ -162,7 +162,7 @@ function ExecutiveCockpit() {
     <>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px", color: "#0f172a", letterSpacing: "-1px" }}>Good Morning, {user?.name?.split(' ')[0] || "User"} 👋</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px", color: "#0f172a", letterSpacing: "-1px" }}>Hi, {user?.name?.split(' ')[0] || "User"} 👋</h1>
           <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
