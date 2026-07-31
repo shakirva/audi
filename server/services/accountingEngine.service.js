@@ -239,17 +239,10 @@ class AccountingEngine {
   async getDashboard({ tenantId, environmentId }) {
     const scope = { tenantId, environmentId };
 
-    // Cash balance
-    const lastCash = await CashBook.findOne({
-      where: scope, order: [["createdAt", "DESC"]]
-    });
-    const cashBalance = lastCash ? lastCash.balance : 0;
-
-    // Bank balance
-    const lastBank = await BankBook.findOne({
-      where: scope, order: [["createdAt", "DESC"]]
-    });
-    const bankBalance = lastBank ? lastBank.balance : 0;
+    // Cash balance from journal entries (account code 1001)
+    // We calculate this from journal entries below, so initialize to 0 first
+    let cashBalance = 0;
+    let bankBalance = 0;
 
     // Today's range
     const today = new Date();
@@ -350,6 +343,10 @@ class AccountingEngine {
     const totalLiabilities = Object.values(accountBalances).filter(a => a.type === "Liability").reduce((s, a) => s + a.balance, 0);
     const totalIncome = Object.values(accountBalances).filter(a => a.type === "Income").reduce((s, a) => s + a.balance, 0);
     const totalExpenses = Object.values(accountBalances).filter(a => a.type === "Expense").reduce((s, a) => s + a.balance, 0);
+
+    // Get cash and bank balances from the journal-calculated accountBalances
+    cashBalance = accountBalances["1001"]?.balance || 0;
+    bankBalance = accountBalances["1002"]?.balance || 0;
 
     return {
       summary: {

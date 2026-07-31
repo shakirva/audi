@@ -49,6 +49,7 @@ function ExecutiveCockpit() {
     confirmedCount: 0,
     pendingCount: 0,
     enquiryCount: 0,
+    upcomingCount: 0,
   });
 
   const [revData, setRevData] = React.useState([]);
@@ -73,13 +74,16 @@ function ExecutiveCockpit() {
         enquiriesAPI.getAll()
       ]);
 
-      if (statsRes.data?.data) {
-        setStats(statsRes.data.data);
-      }
-
       const allBookings = bookingsRes.data?.data || [];
       const today = new Date().toISOString().split('T')[0];
       
+      // Compute upcoming bookings (future dates)
+      const upcomingCount = allBookings.filter(b => b.date && b.date >= today && b.status !== 'Cancelled' && b.status !== 'Enquiry').length;
+
+      if (statsRes.data?.data) {
+        setStats({ ...statsRes.data.data, upcomingCount });
+      }
+
       // Compute Today's Events
       const todayEvts = allBookings.filter(b => b.date && b.date.startsWith(today));
       setTodaysEvents(todayEvts);
@@ -182,7 +186,7 @@ function ExecutiveCockpit() {
         <GradientCard title="Confirmed" value={stats.confirmedCount} gradient={["#40916C", "#52B788"]} delay={0.3} />
         <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.4} />
         <GradientCard title="Pending Pmt" value={stats.pendingCount} gradient={["#d97706", "#f59e0b"]} delay={0.5} />
-        <GradientCard title="Upcoming" value="14" gradient={["#0ea5e9", "#38bdf8"]} delay={0.6} />
+        <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.6} />
       </div>
 
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}

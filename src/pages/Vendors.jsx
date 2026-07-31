@@ -2,14 +2,7 @@ import React, { useState } from "react";
 import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 
-const DEMO_VENDORS = [
-  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"], totalBilled: 450000, totalPaid: 400000 },
-  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"], totalBilled: 1250000, totalPaid: 1250000 },
-  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"], totalBilled: 320000, totalPaid: 250000 },
-  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"], totalBilled: 85000, totalPaid: 50000 },
-  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"], totalBilled: 500000, totalPaid: 500000 },
-  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"], totalBilled: 45000, totalPaid: 0 }
-];
+
 
 export default function Vendors() {
   const [search, setSearch] = useState("");
@@ -20,7 +13,7 @@ export default function Vendors() {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
 
-  const allVendors = [...localVendors, ...DEMO_VENDORS].filter(v => !deletedVendors.includes(v.id));
+  const allVendors = [...localVendors].filter(v => !deletedVendors.includes(v.id));
 
   const categories = ["All", "Catering", "Decoration", "Sound & Stage", "Photography", "Event Management"];
 
@@ -164,7 +157,7 @@ export default function Vendors() {
           { label: "Total Vendors", val: allVendors.length, color: "#1B4332", bg: "#eefcf4" },
           { label: "Active Partners", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
           { label: "Pending Approval", val: allVendors.filter(v=>v.status==="Pending").length, color: "#d97706", bg: "#fffbeb" },
-          { label: "Avg Rating", val: "4.6", color: "#10b981", bg: "#ecfdf5", suffix: "⭐" },
+          { label: "Avg Rating", val: allVendors.length > 0 ? (allVendors.reduce((s, v) => s + (v.rating || 0), 0) / allVendors.length).toFixed(1) : "0", color: "#10b981", bg: "#ecfdf5", suffix: "⭐" },
         ].map((kpi, i) => (
           <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{kpi.label}</p>
