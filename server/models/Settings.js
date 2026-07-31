@@ -40,6 +40,9 @@ const Settings = sequelize.define("Settings", {
   places: { type: DataTypes.JSONB, defaultValue: ["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"] },
   
   managerRevenueEnabled: { type: DataTypes.BOOLEAN, defaultValue: true },
+  
+  // Role-Based Module Access configuration
+  moduleAccess: { type: DataTypes.JSONB, defaultValue: {} },
 }, {
   indexes: [
     { unique: true, fields: ["tenantId", "environmentId"], name: "idx_settings_tenant_env" },

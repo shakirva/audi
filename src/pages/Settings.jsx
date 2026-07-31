@@ -7,6 +7,7 @@ import { useBookings } from "../context/BookingsContext";
 import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
+import { BASE_NAVIGATION } from "../constants/navigation";
 
 const INIT_HALLS = [
   { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup", gstRate: 18 },
@@ -34,9 +35,123 @@ const sectionTitle = {
   fontWeight: 700, color: "#111827", marginBottom: 10, margin: 0,
 };
 
+const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
+  const [activeRole, setActiveRole] = useState("Manager");
+  const { addToast } = useToast();
+
+  const handleToggle = (path) => {
+    const current = moduleAccess[activeRole] || BASE_NAVIGATION.flatMap(item => [item.path, ...(item.children?.map(c => c.path) || [])]).filter(Boolean);
+    let updated;
+    if (current.includes(path)) {
+      updated = current.filter(p => p !== path);
+    } else {
+      updated = [...current, path];
+    }
+    const newAccess = { ...moduleAccess, [activeRole]: updated };
+    setModuleAccess(newAccess);
+  };
+
+  const saveAccess = async () => {
+    try {
+      await settingsAPI.update({ moduleAccess });
+      addToast("Role access configured! 🔒", "success");
+    } catch (e) {
+      addToast("Failed to save role access", "error");
+    }
+  };
+
+  // Default permissions if not set in DB
+  const defaultPaths = BASE_NAVIGATION.flatMap(item => {
+    if (item.roles.includes(activeRole)) {
+      return [item.path, ...(item.children?.map(c => c.path) || [])];
+    }
+    return [];
+  }).filter(Boolean);
+
+  const activePaths = moduleAccess[activeRole] || defaultPaths;
+
+  // Filter BASE_NAVIGATION to only show modules this role COULD theoretically access, or just show all non-SuperAdmin modules?
+  // It's better to show all modules (except SaaS Platform) so the Owner can grant access to anything.
+  const configurableNav = BASE_NAVIGATION.filter(item => item.label !== "SaaS Platform");
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: 16, border: "1px solid #e5e7eb" }}>
+      <select 
+        id="rbac-role-select"
+        value={activeRole} 
+        onChange={e => setActiveRole(e.target.value)}
+        style={{ ...iStyle, marginBottom: 16, maxWidth: 200, fontSize: 14, fontWeight: 700 }}
+      >
+        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => (
+          <option key={r} value={r}>{r} Role</option>
+        ))}
+      </select>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
+        {configurableNav.map(group => {
+          const isGroupLink = group.type === "link";
+          const hasAccessToMain = activePaths.includes(group.path);
+          
+          return (
+            <div key={group.label} style={{ background: "#f9fafb", padding: 12, borderRadius: 10, border: "1px solid #f3f4f6" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <input 
+                  type="checkbox" 
+                  checked={hasAccessToMain || (group.children && group.children.some(c => activePaths.includes(c.path)))}
+                  onChange={() => {
+                    if (isGroupLink) {
+                      handleToggle(group.path);
+                    } else {
+                      // Toggle all children
+                      const allChildrenPaths = group.children.map(c => c.path);
+                      const allChecked = allChildrenPaths.every(p => activePaths.includes(p));
+                      
+                      let newPaths = [...activePaths];
+                      if (allChecked) {
+                        newPaths = newPaths.filter(p => !allChildrenPaths.includes(p));
+                      } else {
+                        newPaths = [...new Set([...newPaths, ...allChildrenPaths])];
+                      }
+                      setModuleAccess({ ...moduleAccess, [activeRole]: newPaths });
+                    }
+                  }}
+                  style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#4f46e5" }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{group.label}</span>
+              </div>
+              
+              {group.children && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 24 }}>
+                  {group.children.map(child => (
+                    <label key={child.path} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={activePaths.includes(child.path)}
+                        onChange={() => handleToggle(child.path)}
+                        style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#4f46e5" }}
+                      />
+                      <span style={{ fontSize: 12, color: "#4b5563" }}>{child.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+        <button onClick={saveAccess} style={{ padding: "8px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>
+          Save Access for {activeRole}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function Settings() {
   const { addToast } = useToast();
-  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo } = useRole();
+  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo, moduleAccess, setModuleAccess } = useRole();
   const { bookings, deleteBooking } = useBookings();
   const isOwner = role === "Owner";
   const isAdminRole = role === "Owner" || role === "Manager"; // both see full settings
@@ -146,6 +261,7 @@ export default function Settings() {
       if (data.places && data.places.length > 0) setPlaces(data.places);
       if (data.reminderDays && data.reminderDays.length > 0) setReminderDays(data.reminderDays);
       if (data.staff) setStaff(data.staff);
+      if (data.moduleAccess) setModuleAccess(data.moduleAccess);
       setManagerRevenueEnabled(data.managerRevenueEnabled !== false);
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -611,6 +727,44 @@ export default function Settings() {
               Changes take effect immediately. Manager will see or lose access to <strong>Revenue stats, Payments & Reports</strong> on their next page load.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ── ROLE-BASED MODULE ACCESS (Owner only) ── */}
+      {isOwner && (
+        <div style={{ ...cardSt, border: "1.5px solid #e0e7ff", background: "linear-gradient(135deg, #eef2ff, #f8fafc)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Users size={18} color="#4338ca" />
+            </div>
+            <div>
+              <p style={{ ...sectionTitle, color: "#3730a3" }}>Role-Based Module Access</p>
+              <p style={{ fontSize: 12, color: "#4f46e5", margin: 0 }}>Configure which modules are visible to each staff role</p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, marginBottom: 16 }}>
+            {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => (
+              <button
+                key={r}
+                onClick={() => {
+                  // Set active role for editing (we need a state for this, let's just create an inline component/function)
+                  document.getElementById("rbac-role-select").value = r;
+                  document.getElementById("rbac-role-select").dispatchEvent(new Event("change", { bubbles: true }));
+                }}
+                id={`rbac-btn-${r}`}
+                className="rbac-role-btn"
+                style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "1px solid #c7d2fe",
+                  background: "#fff", color: "#4f46e5", cursor: "pointer", whiteSpace: "nowrap"
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
+          <RoleAccessEditor moduleAccess={moduleAccess || {}} setModuleAccess={setModuleAccess} />
         </div>
       )}
 

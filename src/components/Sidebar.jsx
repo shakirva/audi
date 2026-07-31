@@ -4,11 +4,11 @@ import { useRole } from "../context/RoleContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { settingsAPI } from "../services/api";
-import Logo from "./Logo";
+import { BASE_NAVIGATION } from "../constants/navigation";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment, moduleAccess } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
 
@@ -32,82 +32,31 @@ export default function Sidebar({ open, onClose }) {
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
 
-  const BASE_NAVIGATION = [
-    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"] },
-    { 
-      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales"],
-      children: [
-        { path: "/calendar", label: "Calendar" },
-        { path: "/crm", label: "Enquiries" },
-        { path: "/customers", label: "Customers" },
-        { path: "/bookings", label: "Bookings" },
-        { path: "/agreements", label: "Agreements" }
-      ]
-    },
-    { 
-      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
-      children: [
-        // { path: "/jobs", label: "Job Management" },
-        { path: "/vendors", label: "Vendor Management" }
-      ]
-    },
-    { 
-      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/finance/payments", label: "Payments & Receipts" },
-        { path: "/finance/booking-accounts", label: "Booking Accounts" },
-        { path: "/finance/collections", label: "Collections" },
-        { path: "/finance/expenses", label: "Purchases & Expenses" },
-        { path: "/finance/reports", label: "Financial Statements" },
-        { path: "/finance/advanced", label: "Advanced Accounting" }
-      ]
-    },
-    { 
-      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/staff", label: "Staff Management" },
-        { path: "/attendance", label: "Attendance" },
-        { path: "/leaves", label: "Leave Requests" }
-      ]
-    },
-    { 
-      type: "group", label: "Attendance & Leaves", icon: CheckSquare, id: "staff-actions", roles: ["Sales", "Operations"],
-      children: [
-        { path: "/attendance", label: "My Attendance" },
-        { path: "/leaves", label: "Leave Requests" }
-      ]
-    },
-    { 
-      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/reports", label: "Report Dashboard" },
-        { path: "/reports/sales", label: "Sales Reports 🔒" },
-        { path: "/reports/booking", label: "Booking Reports 🔒" },
-        { path: "/reports/accounts", label: "Accounts Reports 🔒" },
-        { path: "/reports/hall", label: "Hall Reports 🔒" }
-      ]
-    },
-    { 
-      type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/settings", label: "Masters Configuration" }
-      ]
-    },
-    { 
-      type: "group", label: "SaaS Platform", icon: Database, id: "saas", roles: ["SuperAdmin"],
-      children: [
-        { path: "/tenants", label: "Tenant Manager" },
-        { path: "/subscriptions", label: "Subscriptions" },
-        { path: "/feedback", label: "User Feedback" }
-      ]
-    }
-  ];
+  const getFilteredNavigation = () => {
+    const roleAccess = moduleAccess && moduleAccess[role] ? moduleAccess[role] : null;
 
-  const NAVIGATION = BASE_NAVIGATION.filter(item => {
-    if (!item.roles.includes(role)) return false;
-    if (activeEnvironment === "sandbox" && (item.label === "Staff & HR" || item.label === "Attendance & Leaves")) return false;
-    return true;
-  });
+    return BASE_NAVIGATION.map(item => {
+      // 1. Initial role check based on default array
+      if (!item.roles.includes(role)) return null;
+      if (activeEnvironment === "sandbox" && (item.label === "Staff & HR" || item.label === "Attendance & Leaves")) return null;
+
+      // 2. Custom Role-Based Module Access override (if configured for this role)
+      if (roleAccess) {
+        if (item.type === "link") {
+          if (!roleAccess.includes(item.path)) return null;
+        } else if (item.type === "group") {
+          // If it's a group, filter its children
+          const allowedChildren = item.children.filter(child => roleAccess.includes(child.path));
+          if (allowedChildren.length === 0) return null;
+          return { ...item, children: allowedChildren };
+        }
+      }
+
+      return item;
+    }).filter(Boolean);
+  };
+
+  const NAVIGATION = getFilteredNavigation();
 
   return (
     <>
