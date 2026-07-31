@@ -147,28 +147,30 @@ export default function Calendar() {
             const isSelected   = day === selected;
             const isWeekend    = [0, 6].includes((firstDay + day - 1) % 7);
             const isBlocked    = blackoutDates.includes(dateStr);
+            const isPast       = new Date(dateStr) < new Date(todayStr);
+            const isDisabled   = isBlocked || isPast;
             const avail        = availColor(day);
 
             return (
               <div key={day}
-                onClick={() => { if (!isBlocked) setSelected(day === selected ? null : day); }}
+                onClick={() => { if (!isDisabled) setSelected(day === selected ? null : day); }}
                 style={{
                   borderRadius: 8, padding: "4px 3px 5px", minHeight: 52,
-                  cursor: isBlocked ? "not-allowed" : "pointer",
+                  cursor: isDisabled ? "not-allowed" : "pointer",
                   background: isBlocked ? "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)"
-                    : isSelected ? "#1B4332" : isToday ? "#F0F4EF" : avail.bg,
+                    : isSelected ? "#1B4332" : isToday ? "#F0F4EF" : isPast ? "#f9fafb" : avail.bg,
                   border: isBlocked ? "2px solid #9ca3af"
-                    : isSelected ? "2px solid transparent" : isToday ? `2px solid #1B4332` : `2px solid ${avail.border}`,
+                    : isSelected ? "2px solid transparent" : isToday ? `2px solid #1B4332` : isPast ? "2px solid #e5e7eb" : `2px solid ${avail.border}`,
                   transition: "all 0.15s",
-                  opacity: isBlocked ? 0.65 : 1,
+                  opacity: isBlocked ? 0.65 : isPast ? 0.45 : 1,
                 }}
-                onMouseEnter={e => { if (!isSelected && !isBlocked) e.currentTarget.style.opacity = "0.8"; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = isBlocked ? "0.65" : "1"; }}
+                onMouseEnter={e => { if (!isSelected && !isDisabled) e.currentTarget.style.opacity = "0.8"; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = isBlocked ? "0.65" : isPast ? "0.45" : "1"; }}
               >
                 <div style={{
                   textAlign: "center", fontSize: 11, fontWeight: isToday ? 700 : 500,
                   color: isBlocked ? "#9ca3af"
-                    : isSelected ? "#fff" : isToday ? "#1B4332" : isWeekend ? "#ef4444" : "#374151",
+                    : isSelected ? "#fff" : isPast ? "#c0c4cc" : isToday ? "#1B4332" : isWeekend ? "#ef4444" : "#374151",
                   marginBottom: 2,
                 }}>
                   {day}
