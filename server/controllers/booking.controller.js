@@ -181,6 +181,8 @@ class BookingController {
         refundAction: req.body.refundAction,
         refundAccount: req.body.refundAccount,
         expenseAction: req.body.expenseAction,
+        enquiryAction: req.body.enquiryAction,
+        customerAction: req.body.customerAction,
         deletedBy: req.user?.id,
       });
 

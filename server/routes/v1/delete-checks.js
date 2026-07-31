@@ -71,6 +71,11 @@ router.get("/booking/:id", requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER)
           agreementStatus: agreement?.status || null,
           hasJob: !!job,
           jobStatus: job?.status || null,
+          hasEnquiry: !!booking.enquiryId,
+          enquiryId: booking.enquiryId || null,
+          hasCustomer: !!booking.customerId,
+          customerId: booking.customerId || null,
+          customerName: booking.customerName,
         },
       },
     });

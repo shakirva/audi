@@ -24,12 +24,15 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
   const [refundAction, setRefundAction] = useState("");
   const [refundAccount, setRefundAccount] = useState("");
   const [expenseAction, setExpenseAction] = useState("");
+  const [enquiryAction, setEnquiryAction] = useState(""); // "revert" | "delete"
+  const [customerAction, setCustomerAction] = useState(""); // "keep" | "delete"
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open || !id) return;
     setLoading(true); setError(null); setStep(1); setReason(""); setConfirmText("");
     setRefundAction(""); setRefundAccount(""); setExpenseAction("");
+    setEnquiryAction(""); setCustomerAction("");
     const fetch = async () => {
       try {
         const res = type === "booking" ? await deleteChecksAPI.booking(id)
@@ -51,9 +54,9 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         const d = checkData;
         const hasPayments = d?.financial?.totalPaid > 0;
         if (hasPayments || d?.financial?.totalExpenses > 0) {
-          await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction });
+          await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction, enquiryAction, customerAction });
         } else {
-          await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete" });
+          await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction });
         }
       } else if (type === "customer") await customersAPI.remove(id);
       else await enquiriesAPI.remove(id);
@@ -108,7 +111,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Cancel</button>
-          <button onClick={() => setStep(hasPayments ? 2 : (hasExpenses ? 4 : 'warning'))} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
+          <button onClick={() => setStep(hasPayments ? 2 : (hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')))} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             <AlertTriangle size={15} /> I Understand, Continue
           </button>
         </div>
@@ -133,7 +136,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </button>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(1)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(refundAction === "refund" ? 3 : (hasExpenses ? 4 : 'warning'))} disabled={!refundAction}
+          <button onClick={() => setStep(refundAction === "refund" ? 3 : (hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')))} disabled={!refundAction}
             style={{ ...bb, flex: 1, background: refundAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAction ? 1 : 0.5 }}>
             Next →
           </button>
@@ -156,7 +159,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </button>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(2)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(hasExpenses ? 4 : 'warning')} disabled={!refundAccount}
+          <button onClick={() => setStep(hasExpenses ? 4 : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning'))} disabled={!refundAccount}
             style={{ ...bb, flex: 1, background: refundAccount ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAccount ? 1 : 0.5 }}>
             Next →
           </button>
@@ -186,8 +189,50 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep('warning')} disabled={!expenseAction}
+          <button onClick={() => setStep(related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')} disabled={!expenseAction}
             style={{ ...bb, flex: 1, background: expenseAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: expenseAction ? 1 : 0.5 }}>
+            Next →
+          </button>
+        </div>
+      </div>
+    );
+
+    // Step CRM: CRM Data handling
+    if (step === 'crm') return (
+      <div style={{ padding: 28 }}>
+        <div style={st}><Users size={13} /> CRM Data Handling</div>
+        <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+          This booking is linked to CRM records. What should happen to them?
+        </p>
+
+        {related.hasEnquiry && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 8 }}>Enquiry Record:</div>
+            <button style={optBtn(enquiryAction === "revert")} onClick={() => setEnquiryAction("revert")}>
+              ↩️ Revert to "Interested" — Keep the enquiry active in your pipeline
+            </button>
+            <button style={optBtn(enquiryAction === "delete")} onClick={() => setEnquiryAction("delete")}>
+              🗑️ Delete Enquiry — Remove the enquiry entirely
+            </button>
+          </div>
+        )}
+
+        {related.hasCustomer && (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 8 }}>Customer ({related.customerName}):</div>
+            <button style={optBtn(customerAction === "keep")} onClick={() => setCustomerAction("keep")}>
+              👤 Keep Customer — They stay in your directory
+            </button>
+            <button style={optBtn(customerAction === "delete")} onClick={() => setCustomerAction("delete")}>
+              🗑️ Delete Customer — Remove customer (if no other bookings)
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button onClick={() => setStep(hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1)))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep('warning')} disabled={(related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)}
+            style={{ ...bb, flex: 1, background: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? "#94a3b8" : "#1B4332", color: "#fff", opacity: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? 0.5 : 1 }}>
             Next →
           </button>
         </div>
@@ -209,7 +254,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
           </p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setStep(hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1)))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep((related.hasEnquiry || related.hasCustomer) ? 'crm' : (hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1))))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={() => setStep(5)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             I understand the risks →
           </button>

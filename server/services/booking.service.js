@@ -315,13 +315,35 @@ class BookingService {
    * refundAccount: "Cash" | "Bank" (only when refundAction = "refund")
    * expenseAction: "delete" | "unlink"
    */
-  async safeDeleteBooking(bookingId, { tenantId, environmentId, reason, refundAction, refundAccount, expenseAction, deletedBy }) {
+  async safeDeleteBooking(bookingId, { tenantId, environmentId, reason, refundAction, refundAccount, expenseAction, deletedBy, enquiryAction, customerAction }) {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
     if (!booking) throw new NotFoundError("Booking");
 
     if (!reason) throw new BadRequestError("Deletion reason is required");
 
-    const { Expense, JournalEntry, Voucher, Payment, Receipt, CashBook, BankBook } = require("../models");
+    const { Expense, JournalEntry, Voucher, Payment, Receipt, CashBook, BankBook, Enquiry, Customer, Booking } = require("../models");
+    const { Op } = require("sequelize");
+
+    // ── Handle CRM actions before deleting booking ──
+    if (booking.enquiryId && enquiryAction) {
+      if (enquiryAction === "delete") {
+        await Enquiry.destroy({ where: { id: booking.enquiryId, tenantId, environmentId } });
+      } else if (enquiryAction === "revert") {
+        await Enquiry.update(
+          { status: "Interested", leadScore: "Hot" },
+          { where: { id: booking.enquiryId, tenantId, environmentId } }
+        );
+      }
+    }
+
+    if (booking.customerId && customerAction === "delete") {
+      const otherBookingsCount = await Booking.count({
+        where: { customerId: booking.customerId, tenantId, environmentId, id: { [Op.ne]: booking.id } }
+      });
+      if (otherBookingsCount === 0) {
+        await Customer.destroy({ where: { id: booking.customerId, tenantId, environmentId } });
+      }
+    }
 
     const payments = await Payment.findAll({ where: { bookingId: booking.id, tenantId, environmentId } });
     const totalPaid = payments.filter(p => p.status === "Completed").reduce((s, p) => s + p.amount, 0);
