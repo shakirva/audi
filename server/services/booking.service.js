@@ -212,7 +212,7 @@ class BookingService {
       "brideName", "brideFatherName", "brideMotherName", "bridePhone", "brideAddress", 
       "groomName", "groomFatherName", "groomMotherName", "groomPhone", "groomAddress", 
       "fatherName", "motherName", "email", "whatsapp", "decoration", "catering", 
-      "sound", "facilities", "specialInstructions", "package", "discount"
+      "sound", "facilities", "specialInstructions", "package", "discount", "cancellationReason"
     ];
     const updateData = {};
     fields.forEach((f) => {

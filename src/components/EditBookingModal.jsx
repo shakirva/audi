@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
+import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare, AlertTriangle, Tag } from "lucide-react";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "./Toast";
 
@@ -20,6 +20,16 @@ const sectionHead = {
   paddingBottom: 10, borderBottom: "1.5px solid #e5e7eb", marginBottom: 16,
 };
 const PAYMENT_METHODS = ["Cash", "UPI", "Bank Transfer", "Cheque"];
+const BOOKING_STATUSES = [
+  { value: "Draft",              label: "Draft",              bg: "#f1f5f9", color: "#475569", dot: "#94a3b8" },
+  { value: "Advance Pending",    label: "Advance Pending",    bg: "#fef08a", color: "#a16207", dot: "#eab308" },
+  { value: "Confirmed",          label: "Confirmed",          bg: "#dcfce7", color: "#166534", dot: "#22c55e" },
+  { value: "Agreement Pending",  label: "Agreement Pending",  bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
+  { value: "Ready For Job",      label: "Ready For Job",      bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6" },
+  { value: "Completed",          label: "Completed",          bg: "#f3e8ff", color: "#6d28d9", dot: "#7c3aed" },
+  { value: "Cancelled",          label: "Cancelled",          bg: "#fee2e2", color: "#b91c1c", dot: "#ef4444" },
+  { value: "Closed",             label: "Closed",             bg: "#e2e8f0", color: "#334155", dot: "#64748b" },
+];
 
 export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const { addToast } = useToast();
@@ -83,6 +93,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         paymentRemarks: booking.paymentRemarks || "",
         // Notes
         specialInstructions: booking.specialInstructions || booking.notes || "",
+        // Status
+        status: booking.status || "Draft",
+        cancellationReason: booking.cancellationReason || "",
       });
     }
   }, [open, booking]);
@@ -183,6 +196,58 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         {/* Body */}
         <div style={{ padding: "24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
           <form id="edit-booking-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+            {/* ── BOOKING STATUS ── */}
+            <div>
+              <p style={sectionHead}><Tag size={14} /> Booking Status</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                {BOOKING_STATUSES.map(s => {
+                  const isSelected = form.status === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, status: s.value })}
+                      style={{
+                        padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+                        border: `2px solid ${isSelected ? s.dot : "#e5e7eb"}`,
+                        background: isSelected ? s.bg : "#fff",
+                        color: isSelected ? s.color : "#9ca3af",
+                        fontWeight: isSelected ? 800 : 600, fontSize: 12,
+                        display: "flex", alignItems: "center", gap: 6,
+                        transition: "all 0.15s",
+                        boxShadow: isSelected ? `0 2px 8px ${s.dot}30` : "none",
+                      }}
+                    >
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: isSelected ? s.dot : "#d1d5db" }} />
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.status === "Cancelled" && (
+                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <AlertTriangle size={16} color="#dc2626" />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#991b1b" }}>Cancellation Warning</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: "#7f1d1d", margin: "0 0 10px", lineHeight: 1.6 }}>
+                    Cancelling this booking will mark it as cancelled in all reports. If there are any advance payments collected, you'll need to process refunds separately from the Payments section.
+                  </p>
+                  <label style={labelSt}>Cancellation Reason *</label>
+                  <textarea
+                    value={form.cancellationReason || ""}
+                    onChange={e => setForm({ ...form, cancellationReason: e.target.value })}
+                    rows={2}
+                    placeholder="Why is this booking being cancelled? (Required)"
+                    required={form.status === "Cancelled"}
+                    style={{ ...iStyle, resize: "none", lineHeight: 1.6, borderColor: "#fecaca" }}
+                    onFocus={e => e.target.style.borderColor = "#dc2626"}
+                    onBlur={e => e.target.style.borderColor = "#fecaca"}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* ── CONTACT ── */}
             <div>

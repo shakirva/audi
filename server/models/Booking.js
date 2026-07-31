@@ -72,6 +72,7 @@ const Booking = sequelize.define("Booking", {
   status: { type: DataTypes.ENUM("Draft", "Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed", "Cancelled"), defaultValue: "Draft" },
   invoiceStatus: { type: DataTypes.ENUM("Pending", "Generated"), defaultValue: "Pending" },
   notes: { type: DataTypes.TEXT, defaultValue: "" },
+  cancellationReason: { type: DataTypes.TEXT, allowNull: true },
   // ── Audit fields ──
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },
