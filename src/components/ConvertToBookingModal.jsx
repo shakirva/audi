@@ -64,6 +64,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     paymentMethod: "",
     receivedBy: "",
     upiId: "",
+    upiName: "",
+    upiAmount: "",
     accountName: "",
     depositAmount: "",
     balanceAmount: "",
@@ -114,6 +116,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         paymentMethod: "",
         receivedBy: "",
         upiId: "",
+        upiName: "",
+        upiAmount: "",
         accountName: "",
         paymentRemarks: "",
         facilities: [],
@@ -211,9 +215,27 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Enquired By, Booked By and Phone are required", "error");
       return;
     }
+    
+    // Phone validation
+    const cleanPhone = formData.phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      addToast("Phone number must be exactly 10 digits", "error");
+      return;
+    }
+
     if (Number(formData.advance) > 0 && !formData.paymentMethod) {
       addToast("Please select a Payment Method for the advance payment", "error");
       return;
+    }
+    
+    // Validate UPI amounts sum up to Advance amount
+    if (formData.paymentMethod === "UPI" && Number(formData.advance) > 0) {
+      const upiAmounts = (formData.upiAmount || "").split(",").map(v => Number(v) || 0);
+      const totalUpi = upiAmounts.reduce((a, b) => a + b, 0);
+      if (totalUpi !== Number(formData.advance)) {
+        addToast(`Sum of UPI amounts (₹${totalUpi}) does not match Advance Paid (₹${formData.advance})`, "error");
+        return;
+      }
     }
     
     // Check local state availability before sending
@@ -333,11 +355,11 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
                 <div>
                   <label style={labelSt}><Phone size={10} /> Phone Number *</label>
-                  {inp("phone", { required: true, type: "tel", placeholder: "e.g. 9447012345" })}
+                  {inp("phone", { required: true, type: "tel", placeholder: "e.g. 9447012345", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>WhatsApp Number</label>
-                  {inp("whatsapp", { type: "tel", placeholder: "If different from phone" })}
+                  {inp("whatsapp", { type: "tel", placeholder: "If different from phone", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>Booking Party</label>
@@ -369,7 +391,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
             </div>
@@ -383,7 +405,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
             </div>
@@ -582,16 +604,18 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {formData.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>
+                    <label style={labelSt}>UPI Payments (ID, Name, Amount & Collector)</label>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {(formData.upiId || "").split(",").map((id, index, arr) => {
                         const upiNames = (formData.upiName || "").split(",");
                         const upiName = upiNames[index] || "";
                         const collectors = (formData.receivedBy || "").split(",");
                         const collector = collectors[index] || "";
+                        const upiAmounts = (formData.upiAmount || "").split(",");
+                        const upiAmt = upiAmounts[index] || "";
                         
                         return (
-                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10 }}>
+                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10 }}>
                             <input 
                               value={id.trim()} 
                               onChange={(e) => {
@@ -617,6 +641,21 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
                             <input 
+                              required={Number(formData.advance) > 0}
+                              type="number"
+                              min={0}
+                              value={upiAmt.trim()} 
+                              onChange={(e) => {
+                                const newArr = [...upiAmounts];
+                                newArr[index] = e.target.value.replace(/,/g, "");
+                                setFormData({ ...formData, upiAmount: newArr.join(",") });
+                              }} 
+                              style={iStyle}
+                              placeholder="Amount (₹)" 
+                              onFocus={e => e.target.style.borderColor = "#1B4332"}
+                              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                            />
+                            <input 
                               required={index === 0 && Number(formData.advance) > 0}
                               value={collector.trim()} 
                               onChange={(e) => {
@@ -635,7 +674,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                                   ...formData, 
                                   upiId: formData.upiId ? formData.upiId + "," : ",",
                                   upiName: formData.upiName ? formData.upiName + "," : ",",
-                                  receivedBy: formData.receivedBy ? formData.receivedBy + "," : ","
+                                  receivedBy: formData.receivedBy ? formData.receivedBy + "," : ",",
+                                  upiAmount: formData.upiAmount ? formData.upiAmount + "," : ","
                                 })} style={{ height: 37, padding: "0 12px", background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Add another UPI entry">
                                   <Plus size={16} color="#374151" />
                                 </button>
@@ -644,7 +684,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                                   ...formData, 
                                   upiId: arr.filter((_, i) => i !== index).join(","),
                                   upiName: upiNames.filter((_, i) => i !== index).join(","),
-                                  receivedBy: collectors.filter((_, i) => i !== index).join(",")
+                                  receivedBy: collectors.filter((_, i) => i !== index).join(","),
+                                  upiAmount: upiAmounts.filter((_, i) => i !== index).join(",")
                                 })} style={{ height: 37, padding: "0 12px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Remove">
                                   <X size={16} color="#dc2626" />
                                 </button>

@@ -381,7 +381,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 </div>
                 <div>
                   <label style={labelSt}>Phone Number *</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} type="tel"
+                  <input name="phone" value={form.phone} onChange={handleChange} type="tel" maxLength={10}
                     placeholder="e.g. 9447012345" style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />

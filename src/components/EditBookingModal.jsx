@@ -132,6 +132,11 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       addToast("Customer name and phone are required", "error");
       return;
     }
+    const cleanPhone = form.phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      addToast("Phone number must be exactly 10 digits", "error");
+      return;
+    }
     setLoading(true);
     try {
       await bookingsAPI.update(booking.id, form);
@@ -198,11 +203,11 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><Phone size={10} /> Phone *</label>
-                  {inp("phone", { required: true, type: "tel" })}
+                  {inp("phone", { required: true, type: "tel", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>WhatsApp</label>
-                  {inp("whatsapp", { type: "tel", placeholder: "If different" })}
+                  {inp("whatsapp", { type: "tel", placeholder: "If different", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>Booking Party</label>
@@ -234,7 +239,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
             </div>
@@ -248,7 +253,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
             </div>

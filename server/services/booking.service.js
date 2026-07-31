@@ -146,18 +146,44 @@ class BookingService {
     } catch (e) {
       console.error("[BookingService] Accounting engine error:", e);
     }
+    
     if (Number(data.advance) > 0 && data.paymentMethod) {
       try {
-        await paymentService.recordPayment({
-          bookingId: booking.id,
-          customerId: booking.customerId,
-          amount: Number(data.advance),
-          paymentMode: data.paymentMethod,
-          paymentDate: new Date().toISOString(),
-          referenceNumber: data.upiId || data.accountName || "",
-          notes: data.paymentRemarks || data.receivedBy || "Advance payment at booking",
-          bankId: null // Optional depending on schema
-        }, { tenantId, environmentId, createdBy: data.createdBy || null });
+        if (data.paymentMethod === "UPI" && data.upiAmount && data.upiAmount.includes(",")) {
+          // It's a split UPI payment
+          const ids = (data.upiId || "").split(",");
+          const amounts = data.upiAmount.split(",");
+          const names = (data.upiName || "").split(",");
+          const collectors = (data.receivedBy || "").split(",");
+          
+          for (let i = 0; i < amounts.length; i++) {
+             const amt = Number(amounts[i]) || 0;
+             if (amt > 0) {
+               await paymentService.recordPayment({
+                 bookingId: booking.id,
+                 customerId: booking.customerId,
+                 amount: amt,
+                 paymentMode: data.paymentMethod,
+                 paymentDate: new Date().toISOString(),
+                 referenceNumber: ids[i] || "",
+                 notes: (collectors[i] || "") + (names[i] ? ` - ${names[i]}` : ""),
+                 bankId: null 
+               }, { tenantId, environmentId, createdBy: data.createdBy || null });
+             }
+          }
+        } else {
+          // Standard single payment (Cash, Bank Transfer, Cheque, or single UPI)
+          await paymentService.recordPayment({
+            bookingId: booking.id,
+            customerId: booking.customerId,
+            amount: Number(data.advance),
+            paymentMode: data.paymentMethod,
+            paymentDate: new Date().toISOString(),
+            referenceNumber: data.upiId || data.accountName || "",
+            notes: data.paymentRemarks || data.receivedBy || "Advance payment at booking",
+            bankId: null // Optional depending on schema
+          }, { tenantId, environmentId, createdBy: data.createdBy || null });
+        }
       } catch (e) {
         console.error("Failed to record advance payment during booking:", e);
       }
