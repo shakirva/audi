@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, X, Loader, ShieldAlert, IndianRupee, Trash2, Ban, Briefcase, ScrollText, Wallet, FileX } from "lucide-react";
+import { AlertTriangle, X, Loader, ShieldAlert, IndianRupee, Trash2, Ban, Briefcase, ScrollText, Wallet, FileX, Users } from "lucide-react";
 import { deleteChecksAPI, bookingsAPI, customersAPI, enquiriesAPI } from "../services/api";
 
 const ov = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 };
@@ -67,16 +67,22 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
   };
 
   // ── Calculate total steps for booking ──
-  const getBookingSteps = () => {
-    if (!checkData) return 1;
-    const { financial } = checkData;
-    let steps = 1; // Step 1: Impact
-    if (financial.totalPaid > 0) steps++; // Step 2: Refund question
-    if (financial.totalPaid > 0 && refundAction === "refund") steps++; // Step 3: Account
-    if (financial.totalExpenses > 0) steps++; // Expense question
-    steps++; // Final: Reason + confirm
-    return steps;
+  const getActiveSteps = () => {
+    if (!checkData || type !== "booking") return [1, 5];
+    const { financial, related } = checkData;
+    const s = [1];
+    if (financial.totalPaid > 0) s.push(2);
+    if (financial.totalPaid > 0 && refundAction === "refund") s.push(3);
+    if (financial.totalExpenses > 0) s.push(4);
+    if (related.hasEnquiry || related.hasCustomer) s.push('crm');
+    s.push('warning');
+    s.push(5);
+    return s;
   };
+
+  const activeSteps = getActiveSteps();
+  const currentStepNum = activeSteps.indexOf(step) + 1;
+  const totalSteps = activeSteps.length;
 
   // ── BOOKING FLOW ──
   const renderBooking = () => {
@@ -387,7 +393,14 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
             <AlertTriangle size={22} color="#dc2626" />
           </div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 800, color: "#991b1b" }}>Delete {typeLabel}?</h3>
+            <h3 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 800, color: "#991b1b", display: "flex", alignItems: "center", gap: 10 }}>
+              Delete {typeLabel}?
+              {!loading && !error && type === "booking" && (
+                <span style={{ fontSize: 11, fontWeight: 800, background: "#fecaca", color: "#991b1b", padding: "2px 8px", borderRadius: 10, letterSpacing: 0.5 }}>
+                  STEP {currentStepNum} OF {totalSteps}
+                </span>
+              )}
+            </h3>
             <p style={{ margin: 0, fontSize: 13, color: "#7f1d1d", fontWeight: 500 }}>{name || "This record"}</p>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", padding: 4 }}><X size={20} /></button>
