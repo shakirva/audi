@@ -227,6 +227,7 @@ export function RoleProvider({ children }) {
       setManagerRevenueEnabled,
       moduleAccess,
       setModuleAccess,
+      setUser,
     }}>
       {children}
     </RoleContext.Provider>
