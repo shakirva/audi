@@ -55,12 +55,7 @@ function ExecutiveCockpit() {
   const [revData, setRevData] = React.useState([]);
   const [distData, setDistData] = React.useState([]);
   const [todaysEvents, setTodaysEvents] = React.useState([]);
-  const [urgent, setUrgent] = React.useState([
-    { id: "0 Enquiries", details: "Need Follow-up Call", status: "Urgent" },
-    { id: "0 Quotations", details: "Pending Signature", status: "Waiting" },
-    { id: "0 Advances", details: "Payment Pending", status: "Action Needed" }
-  ]);
-  const [urgentList, setUrgentList] = React.useState([]);
+  const [thisWeeksEvents, setThisWeeksEvents] = React.useState([]);
 
   React.useEffect(() => {
     loadDashboard();
@@ -130,28 +125,15 @@ function ExecutiveCockpit() {
       }
       setRevData(revArr);
 
-      // Compute Urgent Enquiries
-      const allEnquiries = enqRes.data?.data || [];
-      const followUpCount = allEnquiries.filter(e => ["Contacted", "Follow-up", "Customer Visit"].includes(e.status)).length;
-      const quoteCount = allEnquiries.filter(e => e.status === "Quotation Sent").length;
-      const pendingCount = allBookings.filter(b => b.status === "Pending Payment").length;
-
-      setUrgent([
-        { id: `${followUpCount} Enquiries`, details: "Need Follow-up Call", status: "Urgent" },
-        { id: `${quoteCount} Quotations`, details: "Pending Signature", status: "Waiting" },
-        { id: `${pendingCount} Advances`, details: "Payment Pending", status: "Action Needed" }
-      ]);
-
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-      const urgentFollowUps = allEnquiries.filter(e => {
-        const isPending = !["Booking Confirmed", "Lost", "Cancelled"].includes(e.status);
-        const createdDate = new Date(e.createdAt || e.date || Date.now());
-        return isPending && createdDate <= threeDaysAgo;
-      }).sort((a,b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)).slice(0, 5); // top 5
+      // Compute This Week's Events
+      const endOfWeek = new Date();
+      endOfWeek.setDate(endOfWeek.getDate() + 7);
+      const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
       
-      setUrgentList(urgentFollowUps);
+      const weekEvts = allBookings.filter(b => b.date && b.date >= today && b.date <= endOfWeekStr && b.status !== 'Cancelled' && b.status !== 'Enquiry')
+                                  .sort((a,b) => new Date(a.date) - new Date(b.date));
+      
+      setThisWeeksEvents(weekEvts);
 
     } catch(err) {
       console.error("Failed to load dashboard data", err);
@@ -254,44 +236,23 @@ function ExecutiveCockpit() {
         </div>
 
         <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><MessageCircle size={18} color={BRAND.primary} /> Urgent Enquiries</h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.primary} /> This Week's Functions</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {urgent.map((enq, i) => (
-              <div key={i} style={{ background: "#f8fafc", padding: 12, borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{enq.id}</div>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>{enq.details}</div>
-                <div style={{ background: enq.status === "Urgent" ? "#fee2e2" : "#f1f5f9", color: enq.status === "Urgent" ? "#b91c1c" : "#475569", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800, textTransform: "uppercase", alignSelf: "flex-start", marginTop: 4 }}>
-                  {enq.status}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 800, color: "#475569" }}>Needs WhatsApp Follow-up (3+ Days Old)</h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {urgentList.length === 0 ? (
-              <div style={{ padding: 12, textAlign: "center", color: "#94a3b8", fontSize: 12, background: "#f8fafc", borderRadius: 12 }}>No urgent follow-ups found.</div>
-            ) : urgentList.map((enq) => {
-              const name = enq.enquirerName || enq.Customer?.name || enq.enquiryNumber || 'Unknown';
-              const phone = enq.enquirerPhone || enq.Customer?.phone || enq.phone || '';
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {thisWeeksEvents.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 14 }}>No events scheduled for the next 7 days.</div>
+            ) : thisWeeksEvents.map((evt) => {
+              // Convert date string to a readable format
+              const evtDate = new Date(evt.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
               return (
-                <div key={enq.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, border: "1px solid #e2e8f0", borderRadius: 12, background: "#fff" }}>
+                <div key={evt.id} style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{name}</div>
-                    <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{enq.eventType} • {new Date(enq.createdAt || enq.date).toLocaleDateString()}</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.eventType} - {evt.hall}</div>
+                    <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.customerName} • {evt.session} • {evtDate}</div>
                   </div>
-                  <a 
-                    href={`https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${name}, we are reaching out regarding your enquiry for ${enq.eventType}...`)}`} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", color: "#fff", padding: "6px 12px", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 700 }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12.01 2.01C6.49 2.01 2.01 6.49 2.01 12.01C2.01 13.96 2.57 15.82 3.56 17.43L2.01 22.01L6.72 20.48C8.28 21.39 10.09 21.93 12.01 21.93C17.53 21.93 22.01 17.45 22.01 11.93C22.01 6.41 17.53 2.01 12.01 2.01ZM17.13 16.3C16.92 16.89 15.93 17.4 15.34 17.51C14.88 17.61 14.16 17.71 11.83 16.75C8.84 15.53 6.94 12.48 6.79 12.28C6.64 12.08 5.56 10.63 5.56 9.14C5.56 7.64 6.32 6.9 6.64 6.58C6.91 6.31 7.33 6.18 7.74 6.18C7.88 6.18 7.99 6.18 8.1 6.19C8.42 6.2 8.58 6.21 8.79 6.72C9.05 7.37 9.7 8.95 9.78 9.11C9.86 9.27 9.94 9.49 9.83 9.7C9.72 9.91 9.61 10.03 9.45 10.21C9.29 10.39 9.12 10.51 8.97 10.72C8.82 10.93 8.64 11.16 8.84 11.51C9.04 11.85 9.7 12.92 10.66 13.77C11.9 14.86 12.9 15.19 13.27 15.35C13.64 15.51 14.07 15.48 14.33 15.2C14.67 14.83 15.09 14.25 15.52 13.67C15.84 13.24 16.21 13.3 16.58 13.43C16.96 13.57 18.96 14.56 19.34 14.74C19.71 14.93 19.96 15.02 20.05 15.18C20.14 15.34 20.14 16.14 19.82 16.89L17.13 16.3Z" />
-                    </svg>
-                    WhatsApp
-                  </a>
+                  <div style={{ background: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#dcfce7" : "#fef3c7", color: evt.status === "Confirmed" || evt.status === "Ongoing" ? "#166534" : "#b45309", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
+                    {evt.status}
+                  </div>
                 </div>
               );
             })}
