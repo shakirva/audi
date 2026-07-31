@@ -36,22 +36,26 @@ export default function Sidebar({ open, onClose }) {
     const roleAccess = moduleAccess && moduleAccess[role] ? moduleAccess[role] : null;
 
     return BASE_NAVIGATION.map(item => {
-      // 1. Initial role check based on default array
-      if (!item.roles.includes(role)) return null;
+      // Environment specific hides
       if (activeEnvironment === "sandbox" && (item.label === "Staff & HR" || item.label === "Attendance & Leaves")) return null;
+      // SaaS Platform is ALWAYS restricted to SuperAdmin, regardless of custom access config
+      if (item.label === "SaaS Platform" && role !== "SuperAdmin") return null;
 
-      // 2. Custom Role-Based Module Access override (if configured for this role)
+      // 1. Custom Role-Based Module Access override
       if (roleAccess) {
         if (item.type === "link") {
           if (!roleAccess.includes(item.path)) return null;
+          return item;
         } else if (item.type === "group") {
-          // If it's a group, filter its children
           const allowedChildren = item.children.filter(child => roleAccess.includes(child.path));
           if (allowedChildren.length === 0) return null;
           return { ...item, children: allowedChildren };
         }
       }
 
+      // 2. Default Fallback (if no custom RBAC saved in DB for this role)
+      if (!item.roles.includes(role)) return null;
+      
       return item;
     }).filter(Boolean);
   };

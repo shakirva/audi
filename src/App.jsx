@@ -58,7 +58,20 @@ const pageTitles = {
 
 // Guard: redirects to dashboard if current role lacks permission
 function ProtectedRoute({ permission, children }) {
-  const { can } = useRole();
+  const { can, role, moduleAccess } = useRole();
+  const location = useLocation();
+
+  if (role === "SuperAdmin" || role === "Owner") {
+    return can(permission) ? children : <Navigate to="/" replace />;
+  }
+
+  const customAccess = moduleAccess?.[role];
+  if (customAccess) {
+    const hasAccess = customAccess.some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+    if (hasAccess) return children;
+    return <Navigate to="/" replace />;
+  }
+
   return can(permission) ? children : <Navigate to="/" replace />;
 }
 
