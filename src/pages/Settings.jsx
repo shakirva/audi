@@ -673,62 +673,7 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* ── MANAGER ACCESS CONTROL (Owner only) ── */}
-      {isOwner && (
-        <div style={{ ...cardSt, border: "1.5px solid #fde68a", background: "linear-gradient(135deg, #fffbeb, #fefce8)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ShieldCheck size={18} color="#92400e" />
-            </div>
-            <div>
-              <p style={{ ...sectionTitle, color: "#92400e" }}>Manager Access Control</p>
-              <p style={{ fontSize: 12, color: "#a16207", margin: 0 }}>Control what Managers can see on their dashboard</p>
-            </div>
-          </div>
 
-          {/* Revenue toggle */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderRadius: 12, background: "#fff", border: "1.5px solid #fde68a", marginBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: managerRevenueEnabled ? "#d1fae5" : "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {managerRevenueEnabled ? <Eye size={16} color="#15803d" /> : <EyeOff size={16} color="#C0392B" />}
-              </div>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: 0 }}>Revenue &amp; Financial Reports</p>
-                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                  {managerRevenueEnabled
-                    ? "Managers can see revenue stats, payments & reports"
-                    : "Managers cannot see revenue stats, payments or reports"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                const newVal = !managerRevenueEnabled;
-                setManagerRevenueEnabled(newVal);
-                try {
-                  await settingsAPI.update({ managerRevenueEnabled: newVal });
-                  addToast(
-                    newVal ? "Manager revenue access enabled ✅" : "Manager revenue access disabled 🔒",
-                    newVal ? "success" : "error"
-                  );
-                } catch (e) { addToast("Update failed", "error"); }
-              }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
-            >
-              {managerRevenueEnabled
-                ? <ToggleRight size={38} color="#1B4332" />
-                : <ToggleLeft size={38} color="#9ca3af" />}
-            </button>
-          </div>
-
-          <div style={{ background: "#fef3c7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14 }}>💡</span>
-            <p style={{ fontSize: 11, color: "#92400e", margin: 0, lineHeight: 1.5 }}>
-              Changes take effect immediately. Manager will see or lose access to <strong>Revenue stats, Payments & Reports</strong> on their next page load.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── ROLE-BASED MODULE ACCESS (Owner only) ── */}
       {isOwner && (
