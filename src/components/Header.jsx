@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut } from "lucide-react";
+import { Menu, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut, Loader2, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
+import { feedbackAPI } from "../services/api";
 const notifications = [];
 
 const notifIcons = { warning: "⚠️", info: "ℹ️", reminder: "🔔" };
@@ -17,6 +18,9 @@ export default function Header({ title, onMenuClick }) {
   const [showEnvDropdown, setShowEnvDropdown] = useState(false);
   const [showSandboxConfirm, setShowSandboxConfirm] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
 
@@ -34,6 +38,24 @@ export default function Header({ title, onMenuClick }) {
     setShowSandboxConfirm(false);
     setShowEnvDropdown(false);
     switchEnvironment("sandbox");
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackContent.trim()) return;
+    setIsSubmittingFeedback(true);
+    try {
+      await feedbackAPI.submit({ content: feedbackContent });
+      setFeedbackSuccess(true);
+      setTimeout(() => {
+        setShowFeedbackModal(false);
+        setFeedbackSuccess(false);
+        setFeedbackContent("");
+      }, 2000);
+    } catch (err) {
+      alert("Failed to submit feedback. Please try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
   };
 
   return (
@@ -203,11 +225,23 @@ export default function Header({ title, onMenuClick }) {
             <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 16 }}>Your feedback helps us shape the next phase of Venueza ERP.</p>
             <textarea
               placeholder="Describe your ideas, workflows, or requested features here..."
+              value={feedbackContent}
+              onChange={(e) => setFeedbackContent(e.target.value)}
               style={{ width: "100%", height: 120, padding: 16, borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 14, resize: "none", marginBottom: 16, fontFamily: "inherit" }}
             />
-            <button onClick={() => setShowFeedbackModal(false)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
-              Submit Feedback
-            </button>
+            {feedbackSuccess ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#10b981", fontWeight: 700, padding: 12 }}>
+                <CheckCircle size={20} /> Feedback Submitted!
+              </div>
+            ) : (
+              <button 
+                onClick={handleSubmitFeedback} 
+                disabled={isSubmittingFeedback || !feedbackContent.trim()}
+                style={{ width: "100%", padding: "12px", borderRadius: 10, background: (!feedbackContent.trim() || isSubmittingFeedback) ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", fontWeight: 700, cursor: (!feedbackContent.trim() || isSubmittingFeedback) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}
+              >
+                {isSubmittingFeedback ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : "Submit Feedback"}
+              </button>
+            )}
           </div>
         </div>
       )}

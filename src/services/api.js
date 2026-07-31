@@ -84,6 +84,11 @@ export const availabilityAPI = {
   },
 };
 
+export const feedbackAPI = {
+  submit: (data) => api.post("/feedback", data),
+  getAll: () => api.get("/feedback")
+};
+
 export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),

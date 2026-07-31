@@ -1,0 +1,1 @@
+{"success":false,"message":"null value in column \"customerId\" of relation \"Enquiries\" violates not-null constraint","data":null,"errors":null,"timestamp":"2026-07-30T05:28:32.747Z","requestId":"req_5fa095475eee0c29"}

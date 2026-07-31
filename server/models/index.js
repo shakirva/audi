@@ -30,6 +30,7 @@ const BankBook = require("./BankBook");
 const ChartOfAccount = require("./ChartOfAccount");
 const JournalEntry = require("./JournalEntry");
 const Voucher = require("./Voucher");
+const Feedback = require("./Feedback");
 const {
   MasterHall, MasterPackage, MasterService, MasterEventType,
   MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory,

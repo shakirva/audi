@@ -15,6 +15,7 @@ const bookingRoutes = require("./routes/bookings");
 const expenseRoutes = require("./routes/expenses");
 const settingsRoutes = require("./routes/settings");
 const adminRoutes = require("./routes/admin");
+const feedbackRoutes = require("./routes/feedback");
 
 // ── New v1 API routes (Controller → Service → Repository) ──
 const v1Routes = require("./routes/v1");
@@ -60,9 +61,10 @@ app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 // ── Legacy API Routes (kept for backward compatibility) ──
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/expenses", expenseRoutes);
+    app.use("/api/expenses", expenseRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // ── V1 API Routes (new architecture — use these going forward) ──
 app.use("/api/v1", v1Routes);

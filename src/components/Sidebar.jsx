@@ -97,7 +97,8 @@ export default function Sidebar({ open, onClose }) {
       type: "group", label: "SaaS Platform", icon: Database, id: "saas", roles: ["SuperAdmin"],
       children: [
         { path: "/tenants", label: "Tenant Manager" },
-        { path: "/subscriptions", label: "Subscriptions" }
+        { path: "/subscriptions", label: "Subscriptions" },
+        { path: "/feedback", label: "User Feedback" }
       ]
     }
   ];

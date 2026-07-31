@@ -35,6 +35,7 @@ import Attendance from "./pages/Attendance";
 import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
 import Subscriptions from "./pages/Subscriptions";
+import Feedback from "./pages/Feedback";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
 import { usePWA } from "./hooks/usePWA";
@@ -96,6 +97,7 @@ function AdminLayout() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tenants" element={<SuperAdminTenants />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/feedback" element={<Feedback />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/agreements" element={<Agreements />} />
             <Route path="/jobs" element={<Jobs />} />
