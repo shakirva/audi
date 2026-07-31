@@ -108,7 +108,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Cancel</button>
-          <button onClick={() => setStep(2)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
+          <button onClick={() => setStep(hasPayments ? 2 : (hasExpenses ? 4 : 'warning'))} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             <AlertTriangle size={15} /> I Understand, Continue
           </button>
         </div>
@@ -133,7 +133,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </button>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(1)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(refundAction === "refund" ? 3 : (hasExpenses ? 4 : 5))} disabled={!refundAction}
+          <button onClick={() => setStep(refundAction === "refund" ? 3 : (hasExpenses ? 4 : 'warning'))} disabled={!refundAction}
             style={{ ...bb, flex: 1, background: refundAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAction ? 1 : 0.5 }}>
             Next →
           </button>
@@ -156,7 +156,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </button>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(2)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(hasExpenses ? 4 : 5)} disabled={!refundAccount}
+          <button onClick={() => setStep(hasExpenses ? 4 : 'warning')} disabled={!refundAccount}
             style={{ ...bb, flex: 1, background: refundAccount ? "#1B4332" : "#94a3b8", color: "#fff", opacity: refundAccount ? 1 : 0.5 }}>
             Next →
           </button>
@@ -186,7 +186,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(5)} disabled={!expenseAction}
+          <button onClick={() => setStep('warning')} disabled={!expenseAction}
             style={{ ...bb, flex: 1, background: expenseAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: expenseAction ? 1 : 0.5 }}>
             Next →
           </button>
@@ -194,8 +194,31 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
       </div>
     );
 
-    // Step 2 (no payments) or Step 5: Final — reason + type confirm
-    if (step === 2 && !hasPayments || step === 5) return (
+    // Step warning: Friction step to discourage deletion
+    if (step === 'warning') return (
+      <div style={{ padding: 28 }}>
+        <div style={st}><AlertTriangle size={13} /> Final Warning</div>
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#991b1b", lineHeight: 1.6, fontWeight: 600 }}>
+            You are about to permanently delete a <strong>{booking.status}</strong> booking.
+          </p>
+          <p style={{ margin: "10px 0 0", fontSize: 13, color: "#7f1d1d", lineHeight: 1.6 }}>
+            This action is entirely irreversible and all related data will be permanently destroyed. 
+            <br/><br/>
+            If the customer cancelled or changed their mind, you should highly consider changing the booking status to <strong>"Cancelled"</strong> instead to preserve your records and audit trails.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setStep(hasExpenses ? 4 : (hasPayments && refundAction === "refund" ? 3 : (hasPayments ? 2 : 1)))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep(5)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
+            I understand the risks →
+          </button>
+        </div>
+      </div>
+    );
+
+    // Step 5: Final — reason + type confirm
+    if (step === 5) return (
       <div style={{ padding: 28 }}>
         <div style={st}><ScrollText size={13} /> Reason for Deletion</div>
         <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Why is this booking being deleted? (required)" rows={3}
@@ -221,7 +244,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         <input value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder={`DELETE ${booking.bookingId}`}
           style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 700, fontFamily: "monospace", outline: "none", boxSizing: "border-box", marginBottom: 20 }} />
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setStep(hasExpenses ? 4 : (hasPayments ? 2 : 1))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep('warning')} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={handleDelete}
             disabled={!reason.trim() || confirmText !== `DELETE ${booking.bookingId}` || deleting}
             style={{ ...bb, flex: 1, background: (!reason.trim() || confirmText !== `DELETE ${booking.bookingId}`) ? "#fca5a5" : "#dc2626", color: "#fff", opacity: (!reason.trim() || confirmText !== `DELETE ${booking.bookingId}`) ? 0.6 : 1 }}>
