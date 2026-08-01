@@ -376,7 +376,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
             </div>
           )}
 
-          <form id="new-enquiry-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <form id="new-enquiry-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             
             {/* ── Customer Info ── */}
             <div>

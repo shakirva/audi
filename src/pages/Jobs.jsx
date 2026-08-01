@@ -3,6 +3,7 @@ import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileTe
 import { jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
+import { useConfirm } from "../components/ConfirmProvider";
 
 function JobSkeleton() {
   return (
@@ -105,11 +106,13 @@ function printAgreement(agr, venueInfo = {}) {
 }
 
 export default function Jobs() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
   const { user, role, venueInfo } = useRole();
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem("hm_local_checklists") || "{}") || {});
@@ -118,8 +121,18 @@ export default function Jobs() {
   const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem("hm_local_jobs") || "[]") || []);
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
-  const [staffModal, setStaffModal] = useState({ open: false, staffName: "", role: "Sales" });
+  const [staffModal, setStaffModal] = useState({ open: false, staffId: "", staffName: "", role: "Sales" });
   const [jobModal, setJobModal] = useState({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
+
+  useEffect(() => {
+    import("../services/api").then(({ settingsAPI }) => {
+      if (settingsAPI.getUsers) {
+        settingsAPI.getUsers().then(res => {
+          if (res.data.data) setUsersList(res.data.data.filter(u => u.active !== false));
+        }).catch(() => {});
+      }
+    });
+  }, []);
 
   const toggleChecklistLocal = (jobId, checklistId) => {
     const key = `${jobId}_${checklistId}`;
@@ -188,8 +201,8 @@ export default function Jobs() {
     addToast("Job created successfully", "success");
   };
 
-  const handleDeleteJob = (id) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
+  const handleDeleteJob = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this job?"))) return;
     const updated = localJobs.filter(j => j.id !== id);
     setLocalJobs(updated);
     localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
@@ -223,11 +236,29 @@ export default function Jobs() {
   const handleAddStaff = (e) => {
     e.preventDefault();
     const jId = selectedJob.id;
-    const newStaff = { User: { name: staffModal.staffName }, role: staffModal.role, name: staffModal.staffName };
+    const u = usersList.find(x => x.id === staffModal.staffId);
+    const sName = u ? u.name : staffModal.staffName;
+    const newStaff = { id: Date.now(), User: { id: staffModal.staffId, name: sName }, role: staffModal.role, name: sName, userId: staffModal.staffId };
     const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
     setLocalStaff(updated);
     localStorage.setItem("hm_local_staff", JSON.stringify(updated));
-    setStaffModal({ open: false, staffName: "", role: "Sales" });
+    setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" });
+  };
+
+  const handleRemoveTask = (taskId) => {
+    const jId = selectedJob.id;
+    const current = localTasks[jId] || [];
+    const updated = { ...localTasks, [jId]: current.filter(t => t.id !== taskId) };
+    setLocalTasks(updated);
+    localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
+  };
+
+  const handleRemoveStaff = (staffLocalId) => {
+    const jId = selectedJob.id;
+    const current = localStaff[jId] || [];
+    const updated = { ...localStaff, [jId]: current.filter(s => s.id !== staffLocalId) };
+    setLocalStaff(updated);
+    localStorage.setItem("hm_local_staff", JSON.stringify(updated));
   };
 
   const getCustomerName = (job) => {
@@ -323,9 +354,14 @@ export default function Jobs() {
                 {totalTasks === 0 ? (
                   <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
                 ) : checklists.map((task, i) => (
-                  <div key={i} onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
-                    <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
-                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none", flex: 1 }}>{task.taskName}</span>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
+                    <div onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                      <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
+                      <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
+                    </div>
+                    {task.id && !String(task.id).includes("-") && localTasks[selectedJob.id]?.some(t => t.id === task.id) && (
+                      <button onClick={(e) => { e.stopPropagation(); handleRemoveTask(task.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -345,12 +381,15 @@ export default function Jobs() {
                 ) : staff.map((s, i) => (
                   <div key={i} style={{ border: "1px solid #eaeaea", padding: 12, borderRadius: 8, display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 200 }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
-                      {s.User?.name?.charAt(0) || "?"}
+                      {s.User?.name?.charAt(0) || s.name?.charAt(0) || "?"}
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || "Unknown"}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || s.name || "Unknown"}</div>
                       <div style={{ fontSize: 12, color: "#666" }}>{s.role}</div>
                     </div>
+                    {s.id && localStaff[selectedJob.id]?.some(ls => ls.id === s.id) && (
+                      <button onClick={() => handleRemoveStaff(s.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><X size={14} /></button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -399,9 +438,31 @@ export default function Jobs() {
             <form onSubmit={handleAddStaff} style={{ background: "#fff", width: 400, borderRadius: 16, padding: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Assign Staff</h2>
-                <button type="button" onClick={() => setStaffModal({ open: false, staffName: "", role: "Sales" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
+                <button type="button" onClick={() => setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
               </div>
-              <input required type="text" value={staffModal.staffName} onChange={e => setStaffModal({ ...staffModal, staffName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12 }} placeholder="Staff Name" />
+              <select 
+                required 
+                value={staffModal.staffId} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === "custom") {
+                    setStaffModal({ ...staffModal, staffId: "custom", staffName: "" });
+                  } else {
+                    const u = usersList.find(x => x.id === val);
+                    setStaffModal({ ...staffModal, staffId: val, staffName: u ? u.name : "", role: u ? u.role : "Sales" });
+                  }
+                }} 
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12, outline: "none" }}
+              >
+                <option value="" disabled>-- Select Staff --</option>
+                {usersList.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                ))}
+                <option value="custom">Custom (Type Name)</option>
+              </select>
+              {staffModal.staffId === "custom" && (
+                <input required type="text" value={staffModal.staffName} onChange={e => setStaffModal({ ...staffModal, staffName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12 }} placeholder="Staff Name" />
+              )}
               <select required value={staffModal.role} onChange={e => setStaffModal({ ...staffModal, role: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 16 }}>
                 <option value="Operations">Operations</option>
                 <option value="Technician">Technician</option>

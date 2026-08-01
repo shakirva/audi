@@ -6,6 +6,7 @@ import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
 import EditBookingModal from "../components/EditBookingModal";
+import { useConfirm } from "../components/ConfirmProvider";
 
 function AgreementSkeleton() {
   return (
@@ -121,8 +122,9 @@ function printAgreement(agr, venueInfo = {}) {
 }
 
 export default function Agreements() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
-  const { venueInfo } = useRole();
+  const { user, role, venueInfo } = useRole();
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,7 +140,10 @@ export default function Agreements() {
       const res = await bookingsAPI.getAll(params);
       
       // Filter out enquiries if we only want confirmed/actual bookings
-      const fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
+      let fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
+      if (role === "Sales") {
+        fetched = fetched.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
+      }
       setAgreements(fetched);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load agreements";
@@ -155,7 +160,7 @@ export default function Agreements() {
   }, [fetchAgreements]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this agreement? This will also delete the associated booking.")) return;
+    if (!(await confirm("Are you sure you want to delete this agreement? This will also delete the associated booking."))) return;
     try {
       await bookingsAPI.remove(id);
       addToast("Agreement deleted successfully", "success");

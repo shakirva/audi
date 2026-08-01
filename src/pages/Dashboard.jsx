@@ -270,6 +270,7 @@ function ExecutiveCockpit() {
 
 function ReceptionCockpit() {
   const navigate = useNavigate();
+  const { user } = useRole();
   const [events, setEvents] = React.useState([]);
   const [enquiries, setEnquiries] = React.useState([]);
 
@@ -284,12 +285,16 @@ function ReceptionCockpit() {
         enquiriesAPI.getAll()
       ]);
       const allBookings = bookingsRes.data?.data || [];
+      const allEnquiries = enquiriesRes.data?.data || [];
       const today = new Date().toISOString().split('T')[0];
       
-      const todaysEvents = allBookings.filter(b => b.date && b.date.startsWith(today));
+      const filteredBookings = allBookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
+      const filteredEnquiries = allEnquiries.filter(e => e.createdBy === user?.name || e.salesExecutiveName === user?.name || e.assignedTo === user?.name || e.userId === user?.id || e.salesExecutiveId === user?.id);
+
+      const todaysEvents = filteredBookings.filter(b => b.date && b.date.startsWith(today));
       setEvents(todaysEvents);
       
-      setEnquiries(enquiriesRes.data?.data || []);
+      setEnquiries(filteredEnquiries);
     } catch(err) {
       console.error("Failed to load reception data", err);
     }

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Clock, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw, Trash2, Edit3, Search } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmProvider";
 
 // Mock API for now
 const getMockAttendance = () => JSON.parse(localStorage.getItem("hm_attendance_mock") || "[]");
 const saveMockAttendance = (data) => localStorage.setItem("hm_attendance_mock", JSON.stringify(data));
 
 export default function Attendance() {
+  const { confirm } = useConfirm();
   const { user, role } = useRole();
   const { addToast } = useToast();
   const [attendance, setAttendance] = useState([]);
@@ -81,8 +83,8 @@ export default function Attendance() {
     fetchData();
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
+  const handleDelete = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this record?"))) return;
     const data = getMockAttendance().filter(a => a.id !== id);
     saveMockAttendance(data);
     addToast("Record deleted", "success");

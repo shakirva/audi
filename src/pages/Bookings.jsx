@@ -58,7 +58,13 @@ export default function Bookings() {
   const filtered = useMemo(() => {
     let baseBookings = bookings;
     if (role === "Sales") {
-      baseBookings = baseBookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name);
+      baseBookings = baseBookings.filter(b => 
+        b.createdBy === user?.name || 
+        b.salesExecutiveName === user?.name || 
+        b.bookedBy === user?.name ||
+        b.userId === user?.id || 
+        b.salesExecutiveId === user?.id
+      );
     }
     return baseBookings.filter(b => {
       const nameMatch = !search || (b.customerName || "").toLowerCase().includes(search.toLowerCase())

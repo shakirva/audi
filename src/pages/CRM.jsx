@@ -52,7 +52,7 @@ export default function CRM() {
       const res = await enquiriesAPI.getAll(params);
       let data = res.data.data || [];
       if (role === "Sales") {
-        data = data.filter(e => e.SalesExecutive?.name === user?.name || e.assignedTo === user?.name || e.createdBy === user?.name);
+        data = data.filter(e => e.SalesExecutive?.name === user?.name || e.assignedTo === user?.name || e.createdBy === user?.name || e.userId === user?.id || e.salesExecutiveId === user?.id);
       }
       setEnquiries(data);
     } catch (err) {

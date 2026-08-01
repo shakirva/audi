@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Settings, CheckSquare, Users, CreditCard, Tag, Box, DollarSign, Plus, Edit2, Trash2, X, AlertCircle } from "lucide-react";
 import { mastersAPI } from "../services/api";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const masterCategories = [
   { id: "halls", icon: Box, label: "Hall Management" },
@@ -13,6 +14,7 @@ const masterCategories = [
 ];
 
 export default function Masters() {
+  const { confirm } = useConfirm();
   const [activeTab, setActiveTab] = useState("halls");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -88,7 +90,7 @@ export default function Masters() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    if (!(await confirm("Are you sure you want to delete this item?"))) return;
     try {
       setLoading(true);
       await mastersAPI.remove(activeTab, id);

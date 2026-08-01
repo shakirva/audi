@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, Ban } from "lucide-react";
 const hallColors = { "Main Hall": { hex: "#1B4332" }, "Mini Hall": { hex: "#2563eb" }, "Open Stage": { hex: "#D4A017" } };
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import { useBookings } from "../context/BookingsContext";
+import { useRole } from "../context/RoleContext";
 import { settingsAPI, enquiriesAPI } from "../services/api";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -24,6 +25,7 @@ const STATUS_STYLE = {
 
 export default function Calendar() {
   const now = new Date();
+  const { user, role } = useRole();
   const { bookings, refetch } = useBookings();
   const [year,  setYear]          = useState(now.getFullYear());
   const [month, setMonth]         = useState(now.getMonth());
@@ -62,7 +64,16 @@ export default function Calendar() {
     fetchEnquiries();
   }, []);
 
-  const allCalendarData = [...bookings, ...enquiries];
+  let filteredBookings = bookings;
+  let filteredEnquiries = enquiries;
+
+  if (role === "Sales") {
+    filteredBookings = bookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
+    filteredEnquiries = enquiries.filter(e => e.createdBy === user?.name || e.salesExecutiveName === user?.name || e.assignedTo === user?.name || e.userId === user?.id || e.salesExecutiveId === user?.id);
+  }
+
+  const allCalendarData = [...bookings, ...enquiries]; // Keep all for availability calculation
+  const visibleCalendarData = [...filteredBookings, ...filteredEnquiries]; // For rendering details
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay    = getFirstDay(year, month);
@@ -79,7 +90,7 @@ export default function Calendar() {
   const selectedDateStr = selected
     ? `${year}-${String(month+1).padStart(2,"0")}-${String(selected).padStart(2,"0")}`
     : null;
-  const selectedBookings = selected ? bookingsOnDay(selected) : [];
+  const selectedBookings = selected ? visibleCalendarData.filter(b => b.date === selectedDateStr) : [];
 
   // Total days grid (fill with nulls for leading blanks)
   const cells = [...Array(firstDay).fill(null), ...Array.from({length: daysInMonth}, (_, i) => i+1)];
@@ -141,7 +152,7 @@ export default function Calendar() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "8px 10px 12px", gap: 2 }}>
           {cells.map((day, i) => {
             if (!day) return <div key={i} />;
-            const dayBookings = bookingsOnDay(day);
+            const dayBookings = visibleCalendarData.filter(b => b.date === `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`);
             const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
             const isToday      = dateStr === todayStr;
             const isSelected   = day === selected;
@@ -300,7 +311,7 @@ export default function Calendar() {
           </p>
           {(() => {
             const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
-            const mb = allCalendarData.filter(b => b.date.startsWith(monthStr));
+            const mb = visibleCalendarData.filter(b => b.date.startsWith(monthStr));
             return [
               { label: "Total bookings", value: mb.length, color: "#1B4332" },
               { label: "Confirmed",      value: mb.filter(b => b.status === "Confirmed").length, color: "#15803d" },

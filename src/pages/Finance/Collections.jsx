@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Wallet, Search, ArrowRight, Printer, Trash2 } from "lucide-react";
+import { Wallet, Search, ArrowRight, Printer, Trash2, Edit2 } from "lucide-react";
 import { paymentsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { generateReceipt } from "../../utils/documentGenerator";
+import EditPaymentModal from "../../components/EditPaymentModal";
+import { useConfirm } from "../../components/ConfirmProvider";
 
 export default function Collections() {
   const { addToast } = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editPayment, setEditPayment] = useState(null);
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     fetchPayments();
@@ -27,13 +31,20 @@ export default function Collections() {
   };
 
   const handleDeletePayment = async (id) => {
-    if (window.confirm("Are you sure you want to delete this payment record? This action cannot be undone and will not automatically revert the booking balance.")) {
+    const isConfirmed = await confirm({
+      title: "Delete Collection",
+      message: "Are you sure you want to delete this payment collection? This will permanently remove it and affect associated ledgers.",
+      confirmText: "Delete",
+      type: "danger"
+    });
+
+    if (isConfirmed) {
       try {
         await paymentsAPI.remove(id);
-        addToast("Payment deleted successfully", "success");
+        addToast("Collection deleted successfully", "success");
         fetchPayments();
       } catch (err) {
-        addToast(err.response?.data?.message || "Failed to delete payment", "error");
+        addToast(err.response?.data?.message || "Failed to delete collection", "error");
       }
     }
   };
@@ -116,7 +127,7 @@ export default function Collections() {
                             const match = p.notes.match(/Collected By:\s*([^\n]+)/);
                             if (match && match[1]) return match[1].trim();
                           }
-                          return p.creator?.name || "System";
+                          return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
                         })()}
                       </span>
                     </td>
@@ -129,6 +140,9 @@ export default function Collections() {
                       </button>
                     </td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
+                      <button onClick={() => setEditPayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", marginRight: 12 }} title="Edit">
+                        <Edit2 size={16} />
+                      </button>
                       <button onClick={() => handleDeletePayment(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
                         <Trash2 size={16} />
                       </button>
@@ -140,6 +154,14 @@ export default function Collections() {
           </table>
         </div>
       </div>
+      
+      <EditPaymentModal 
+        open={!!editPayment} 
+        payment={editPayment} 
+        onClose={() => setEditPayment(null)} 
+        onSuccess={() => { setEditPayment(null); fetchPayments(); }} 
+      />
+
     </div>
   );
 }

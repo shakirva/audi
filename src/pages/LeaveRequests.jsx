@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, X, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, RefreshCw, Trash2, Edit3, Search } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmProvider";
 
 // Mock API
 const getMockLeaves = () => JSON.parse(localStorage.getItem("hm_leaves_mock") || "[]");
@@ -84,6 +85,7 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
 }
 
 export default function LeaveRequests() {
+  const { confirm } = useConfirm();
   const { user, role } = useRole();
   const { addToast } = useToast();
   const [leaves, setLeaves] = useState([]);
@@ -119,8 +121,8 @@ export default function LeaveRequests() {
     }
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm("Are you sure you want to delete this leave request?")) return;
+  const handleDelete = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this leave request?"))) return;
     const data = getMockLeaves().filter(l => l.id !== id);
     saveMockLeaves(data);
     addToast("Leave request deleted", "success");

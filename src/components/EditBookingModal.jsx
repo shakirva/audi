@@ -189,7 +189,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
 
         {/* Body */}
         <div style={{ padding: "24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
-          <form id="edit-booking-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <form id="edit-booking-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
             {/* ── CONTACT ── */}
             <div>
@@ -274,7 +274,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><Calendar size={10} /> Event Date</label>
-                  {inp("date", { type: "date" })}
+                  <div style={{ ...iStyle, padding: "8px 12px", height: 38, background: "#f8fafc", display: "flex", alignItems: "center", color: "#475569", fontWeight: 700, cursor: "not-allowed", border: "1.5px solid #e2e8f0" }}>
+                    {form.date ? new Date(form.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date selected'}
+                  </div>
                 </div>
                 <div>
                   <label style={labelSt}>Event Type</label>

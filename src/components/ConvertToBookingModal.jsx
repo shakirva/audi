@@ -308,7 +308,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
 
         {/* Body */}
         <div style={{ padding: "24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
-          <form id="convert-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <form id="convert-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
             {/* ── ENQUIRY SUMMARY (read-only) ── */}
             <div>

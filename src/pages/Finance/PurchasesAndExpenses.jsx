@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Receipt, Search, Plus, Edit, Trash2 } from "lucide-react";
 import { expensesAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../components/ConfirmProvider";
 import AddExpenseModal from "./AddExpenseModal";
 
 export default function PurchasesAndExpenses() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function PurchasesAndExpenses() {
   };
 
   const handleDeleteExpense = async (id) => {
-    if (window.confirm("Are you sure you want to delete this expense?")) {
+    if (await confirm("Are you sure you want to delete this expense?")) {
       try {
         await expensesAPI.remove(id);
         addToast("Expense deleted successfully", "success");

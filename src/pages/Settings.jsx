@@ -5,6 +5,7 @@ import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
 import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
+import { useConfirm } from "../components/ConfirmProvider";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
 import { BASE_NAVIGATION } from "../constants/navigation";
@@ -161,6 +162,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
 };
 
 export default function Settings() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
   const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo, moduleAccess, setModuleAccess } = useRole();
   const { bookings, deleteBooking } = useBookings();
@@ -446,7 +448,7 @@ export default function Settings() {
   };
 
   const handleDeleteFacility = async (id) => {
-    if (!window.confirm("Delete this facility?")) return;
+    if (!(await confirm("Delete this facility?"))) return;
     try {
       await mastersAPI.remove("services", id);
       loadFacilities();
@@ -726,7 +728,7 @@ export default function Settings() {
             </div>
             <button
               onClick={async () => {
-                if (window.confirm("Are you sure you want to reset the Sandbox? All current training data will be lost. (Production is safe).")) {
+                if (await confirm("Are you sure you want to reset the Sandbox? All current training data will be lost. (Production is safe).")) {
                   try {
                     await settingsAPI.resetSandbox();
                     addToast("Sandbox reset successfully!", "success");
@@ -1431,7 +1433,7 @@ export default function Settings() {
                       addToast("Cannot delete Owner account", "error");
                       return;
                     }
-                    if (window.confirm("Are you sure you want to delete this user?")) {
+                    if (await confirm("Are you sure you want to delete this user?")) {
                       try {
                         await usersAPI.remove(s.id);
                         loadUsers();

@@ -3,6 +3,7 @@ import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Sav
 import { usersAPI, jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
+import { useConfirm } from "../components/ConfirmProvider";
 
 function StaffModal({ open, onClose, onSuccess, editData }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "Sales", password: "" });
@@ -149,6 +150,7 @@ function AssignJobModal({ open, onClose, staffMember }) {
 }
 
 export default function Staff() {
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
@@ -177,7 +179,7 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = async (id) => {
-    if (window.confirm("Are you sure you want to delete this staff member?")) {
+    if (await confirm("Are you sure you want to delete this staff member?")) {
       try {
         await usersAPI.remove(id);
         addToast("Staff member deleted", "success");

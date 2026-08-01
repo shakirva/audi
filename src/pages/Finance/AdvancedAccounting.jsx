@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Calculator, Search, Filter } from "lucide-react";
 import { accountsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../components/ConfirmProvider";
 
 export default function AdvancedAccounting() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +104,7 @@ export default function AdvancedAccounting() {
                       ₹{Number(v.amount).toLocaleString()}
                       <button 
                         onClick={async () => {
-                          if (window.confirm("Are you sure you want to permanently delete this voucher and its journal entries? This may cause financial mismatches if it was auto-generated.")) {
+                          if (await confirm("Are you sure you want to permanently delete this voucher and its journal entries? This may cause financial mismatches if it was auto-generated.")) {
                             try {
                               await accountsAPI.deleteVoucher(v.id);
                               addToast("Voucher deleted successfully", "success");

@@ -34,6 +34,11 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
     setRefundAction(""); setRefundAccount(""); setExpenseAction("");
     setEnquiryAction(""); setCustomerAction("");
     const fetch = async () => {
+      if (type === "collection") {
+        setCheckData({});
+        setLoading(false);
+        return;
+      }
       try {
         const res = type === "booking" ? await deleteChecksAPI.booking(id)
           : type === "customer" ? await deleteChecksAPI.customer(id)
@@ -59,6 +64,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
           await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction });
         }
       } else if (type === "customer") await customersAPI.remove(id);
+      else if (type === "collection") await paymentsAPI.remove(id);
       else await enquiriesAPI.remove(id);
       addToast?.(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`, "success");
       onDeleted?.(); onClose();
@@ -404,6 +410,29 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
     );
   };
 
+  // ── COLLECTION FLOW ──
+  const renderCollection = () => {
+    return (
+      <div style={{ padding: 28 }}>
+        <div style={st}><AlertTriangle size={13} /> Final Warning</div>
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#991b1b", lineHeight: 1.6, fontWeight: 600 }}>
+            You are about to permanently delete this payment collection.
+          </p>
+          <p style={{ margin: "10px 0 0", fontSize: 13, color: "#7f1d1d", lineHeight: 1.6 }}>
+            This will reverse the booking's advance balance and automatically remove the associated receipt, cash/bank book entry, and journal vouchers.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Cancel</button>
+          <button onClick={handleDelete} disabled={deleting} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
+            {deleting ? <Loader size={15} /> : <Trash2 size={15} />} {deleting ? "Deleting..." : "Permanently Delete"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
   return (
     <div style={ov} onClick={onClose}>
@@ -436,7 +465,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
             <p style={{ color: "#dc2626", fontWeight: 600 }}>{error}</p>
             <button onClick={onClose} style={{ ...bb, margin: "12px auto 0", background: "#f1f5f9", color: "#374151" }}>Close</button>
           </div>
-        ) : type === "booking" ? renderBooking() : type === "customer" ? renderCustomer() : renderEnquiry()}
+        ) : type === "booking" ? renderBooking() : type === "customer" ? renderCustomer() : type === "collection" ? renderCollection() : renderEnquiry()}
       </div>
     </div>
   );

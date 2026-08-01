@@ -38,6 +38,7 @@ import Subscriptions from "./pages/Subscriptions";
 import Feedback from "./pages/Feedback";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
+import { ConfirmProvider } from "./components/ConfirmProvider";
 import { usePWA } from "./hooks/usePWA";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
@@ -153,12 +154,14 @@ export default function App() {
       
       <RoleProvider>
         <BookingsProvider>
-          <CommandPalette />
-          <Routes>
-            <Route path="/book/:slug" element={<PublicBooking />} />
-            {/* Main app */}
-            <Route path="/*" element={<AppGate />} />
-          </Routes>
+          <ConfirmProvider>
+            <CommandPalette />
+            <Routes>
+              <Route path="/book/:slug" element={<PublicBooking />} />
+              {/* Main app */}
+              <Route path="/*" element={<AppGate />} />
+            </Routes>
+          </ConfirmProvider>
         </BookingsProvider>
       </RoleProvider>
     </>

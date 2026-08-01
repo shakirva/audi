@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
+import { useConfirm } from "../components/ConfirmProvider";
 
 
 
 export default function Vendors() {
+  const { confirm } = useConfirm();
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
   const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
@@ -60,8 +62,9 @@ export default function Vendors() {
     setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this vendor?")) {
+  const handleDelete = async (id) => {
+    const isConfirmed = await confirm("Are you sure you want to delete this vendor?");
+    if (isConfirmed) {
       if (id.startsWith("LOCAL_")) {
         const updated = localVendors.filter(v => v.id !== id);
         setLocalVendors(updated);
@@ -104,8 +107,8 @@ export default function Vendors() {
     }
   };
 
-  const handleDeleteVendor = (id) => {
-    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+  const handleDeleteVendor = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this vendor?"))) return;
     const updated = localVendors.filter(v => v.id !== id);
     setLocalVendors(updated);
     localStorage.setItem("hm_local_vendors", JSON.stringify(updated));

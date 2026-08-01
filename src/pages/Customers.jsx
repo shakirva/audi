@@ -3,6 +3,7 @@ import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, Refres
 import { motion } from "framer-motion";
 import { customersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
 import EditCustomerModal from "../components/EditCustomerModal";
 import SafeDeleteModal from "../components/SafeDeleteModal";
@@ -26,6 +27,7 @@ function CustomerSkeleton() {
 
 export default function Customers() {
   const { addToast } = useToast();
+  const { user, role } = useRole();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +42,11 @@ export default function Customers() {
       const params = {};
       if (search) params.search = search;
       const res = await customersAPI.getAll(params);
-      setCustomers(res.data.data || []);
+      let data = res.data.data || [];
+      if (role === "Sales") {
+        data = data.filter(c => c.createdBy === user?.name || c.userId === user?.id || c.salesExecutiveId === user?.id || c.salesExecutiveName === user?.name);
+      }
+      setCustomers(data);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load customers";
       setError(msg);
