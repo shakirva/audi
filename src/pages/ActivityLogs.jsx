@@ -61,14 +61,56 @@ export default function ActivityLogs() {
     return { bg: "#f1f5f9", text: "#475569" };
   };
 
+  const getFriendlyDetails = (log) => {
+    const body = log.details?.body || {};
+    const action = log.action || "";
+
+    if (action.includes("Safe Delete Booking")) {
+      return `Reason: ${body.reason || "Not specified"}.`;
+    }
+    if (action.includes("Status")) {
+      return `Changed to: ${body.status || "Unknown"}`;
+    }
+    if (action.includes("Payment") || action.includes("Expense")) {
+      return `Amount: ₹${body.amount || 0}`;
+    }
+    if (action.includes("Customer") && body.name) {
+      return `Customer Name: ${body.name}`;
+    }
+    if (action.includes("Booking") && body.customerName) {
+      return `For: ${body.customerName}`;
+    }
+    if (action.includes("Job") && body.title) {
+      return `Job: ${body.title}`;
+    }
+    
+    // Check if there's any useful string info to show
+    const relevantKeys = ["name", "title", "status", "reason", "amount", "customerName", "eventType", "hall"];
+    const foundKeys = Object.keys(body).filter(k => relevantKeys.includes(k));
+    if (foundKeys.length > 0) {
+      return foundKeys.map(k => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${body[k]}`).join(" • ");
+    }
+    
+    return null;
+  };
+
+  const getActionIcon = (action = "") => {
+    const lower = action.toLowerCase();
+    if (lower.includes("delete") || lower.includes("remove") || lower.includes("clear")) return <Trash2 size={18} color="#ef4444" />;
+    if (lower.includes("payment") || lower.includes("expense") || lower.includes("amount")) return <FileText size={18} color="#f59e0b" />;
+    if (lower.includes("user") || lower.includes("customer") || lower.includes("staff")) return <UserIcon size={18} color="#0ea5e9" />;
+    if (lower.includes("booking") || lower.includes("event") || lower.includes("calendar")) return <Calendar size={18} color="#10b981" />;
+    return <RefreshCw size={18} color="#64748b" />;
+  };
+
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418", display: "flex", alignItems: "center", gap: 10 }}>
-            <ShieldAlert size={28} color="#0D2418" /> Activity Logs
+            <ShieldAlert size={28} color="#0D2418" /> Activity History
           </h1>
-          <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Monitor system changes, deletions, and user actions.</p>
+          <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track what happens in your venue management system.</p>
         </div>
         
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -76,16 +118,16 @@ export default function ActivityLogs() {
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
-              placeholder="Search logs (action, user, details)..." 
+              placeholder="Search history..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 300 }}
+              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 240 }}
             />
           </div>
           <button 
             onClick={fetchLogs} 
-            style={{ padding: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#64748b" }}
-            title="Refresh Logs"
+            style={{ padding: "10px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#64748b" }}
+            title="Refresh"
           >
             <RefreshCw size={18} />
           </button>
@@ -93,138 +135,53 @@ export default function ActivityLogs() {
             onClick={handleClearLogs}
             style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
           >
-            <Trash2 size={16} /> Clear Logs
+            <Trash2 size={16} /> Clear History
           </button>
         </div>
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-        <div style={{ overflowX: "auto", maxHeight: "calc(100vh - 200px)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: "#f8fafc" }}>
-              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, width: 180 }}>Timestamp</th>
-                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, width: 200 }}>User</th>
-                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, width: 220 }}>Action</th>
-                <th style={{ padding: "16px 24px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Details / Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>Loading activity logs...</td>
-                </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>No activity logs found.</td>
-                </tr>
-              ) : (
-                filteredLogs.map((log) => {
-                  const formatLogDetails = (log) => {
-                    const body = log.details?.body || {};
-                    
-                    if (log.action === "Safe Delete Booking") {
-                      return (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          {body.reason && (
-                            <div style={{ padding: "8px 12px", background: "#fee2e2", borderLeft: "3px solid #ef4444", color: "#991b1b", borderRadius: "0 6px 6px 0", fontWeight: 500, fontSize: 13 }}>
-                              <strong>Reason for deletion:</strong> {body.reason}
-                            </div>
-                          )}
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
-                              <span style={{ color: "#64748b" }}>Refund Action:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.refundAction || "N/A"}</strong>
-                            </div>
-                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
-                              <span style={{ color: "#64748b" }}>Expense Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.expenseAction || "N/A"}</strong>
-                            </div>
-                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
-                              <span style={{ color: "#64748b" }}>Enquiry Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.enquiryAction || "N/A"}</strong>
-                            </div>
-                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
-                              <span style={{ color: "#64748b" }}>Customer Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.customerAction || "N/A"}</strong>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    if (log.action?.includes("Delete") || log.action?.includes("Remove")) {
-                      const resourceId = log.resource?.split("/").pop();
-                      return (
-                        <div style={{ fontSize: 13, color: "#475569" }}>
-                          Deleted a record from the system. <br/>
-                          <span style={{ color: "#94a3b8", fontSize: 12 }}>Resource ID: {resourceId || "Unknown"}</span>
-                        </div>
-                      );
-                    }
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Loading activity history...</div>
+        ) : filteredLogs.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 16, border: "1px dashed #cbd5e1", color: "#94a3b8" }}>
+            <ShieldAlert size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#475569" }}>No activity found</div>
+            <div style={{ fontSize: 14 }}>There are no recent actions matching your search.</div>
+          </div>
+        ) : (
+          filteredLogs.map((log) => {
+            const userName = log.User?.name || "System";
+            const role = log.User?.role ? `(${log.User.role})` : "";
+            const details = getFriendlyDetails(log);
+            const timeStr = new Date(log.createdAt).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' });
+            const dateStr = new Date(log.createdAt).toLocaleDateString("en-IN", { day: 'numeric', month: 'short' });
 
-                    // Generic fallback for Create/Update
-                    const keys = Object.keys(body).filter(k => !["id", "tenantId", "createdAt", "updatedAt", "password"].includes(k));
-                    if (keys.length === 0) {
-                      return <span style={{ color: "#94a3b8", fontStyle: "italic", fontSize: 13 }}>No additional details provided.</span>;
-                    }
-                    
-                    return (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {keys.slice(0, 8).map(k => (
-                          <div key={k} style={{ fontSize: 12, background: "#f8fafc", padding: "4px 8px", borderRadius: 4, color: "#475569", border: "1px solid #e2e8f0" }}>
-                            <span style={{ color: "#94a3b8" }}>{k}:</span> {typeof body[k] === 'object' ? '...' : String(body[k]).substring(0, 30)}
-                          </div>
-                        ))}
-                        {keys.length > 8 && <div style={{ fontSize: 12, color: "#94a3b8", padding: "4px" }}>+{keys.length - 8} more</div>}
-                      </div>
-                    );
-                  };
-                  
-                  const colors = getActionColor(log.action);
-
-                  return (
-                    <tr key={log.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "16px 24px", color: "#475569", fontSize: 13 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
-                          <Calendar size={13} color="#94a3b8" />
-                          {new Date(log.createdAt).toLocaleDateString("en-IN")}
-                        </div>
-                        <div style={{ color: "#94a3b8", marginTop: 4, paddingLeft: 19 }}>
-                          {new Date(log.createdAt).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </div>
-                      </td>
-                      <td style={{ padding: "16px 24px" }}>
-                        {log.User ? (
-                          <>
-                            <div style={{ fontWeight: 600, color: "#1e293b", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-                              <UserIcon size={14} color="#64748b" />
-                              {log.User.name}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2, paddingLeft: 20 }}>
-                              {log.User.role}
-                            </div>
-                          </>
-                        ) : (
-                          <span style={{ color: "#94a3b8", fontStyle: "italic" }}>System / Unknown</span>
-                        )}
-                        <div style={{ fontSize: 11, color: "#cbd5e1", marginTop: 4, paddingLeft: 20 }}>IP: {log.ipAddress || "N/A"}</div>
-                      </td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <span style={{ display: "inline-block", padding: "6px 12px", background: colors.bg, color: colors.text, borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                          {log.action}
-                        </span>
-                        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.resource}>
-                          {log.resource}
-                        </div>
-                      </td>
-                      <td style={{ padding: "16px 24px", color: "#334155", fontSize: 13 }}>
-                        {formatLogDetails(log)}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+            return (
+              <div key={log.id} style={{ background: "#fff", borderRadius: 16, padding: "20px 24px", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", display: "flex", gap: 20, alignItems: "flex-start", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateX(4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {getActionIcon(log.action)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, color: "#1e293b", marginBottom: 4, lineHeight: 1.4 }}>
+                    <strong style={{ color: "#0f172a" }}>{userName}</strong> <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 500 }}>{role}</span> performed <strong>{log.action}</strong>
+                  </div>
+                  {details && (
+                    <div style={{ fontSize: 14, color: "#64748b", background: "#f8fafc", padding: "8px 12px", borderRadius: 8, display: "inline-block", marginTop: 4 }}>
+                      {details}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#475569" }}>{timeStr}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>{dateStr}</div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
 }
+
