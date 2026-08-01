@@ -26,6 +26,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({});
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   useEffect(() => {
     // Fetch facilities from master
@@ -146,12 +147,14 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       onSaved?.();
       onClose();
 
-      const message = `Hello ${form.customerName},\n\nYour booking details at Laural Garden Auditorium have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
-      const waPhone = form.whatsapp ? form.whatsapp : form.phone;
-      const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
-      const text = encodeURIComponent(message);
-      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
-      window.open(waUrl, "_blank");
+      if (sendWhatsapp) {
+        const message = `Hello ${form.customerName},\n\nYour booking details at Laural Garden Auditorium have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
+        const waPhone = form.whatsapp ? form.whatsapp : form.phone;
+        const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
+        const text = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+        window.open(waUrl, "_blank");
+      }
     } catch (err) {
       addToast(err.response?.data?.message || "Failed to update booking", "error");
     } finally {
@@ -548,15 +551,26 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "flex-end", gap: 12, background: "#f8f9fa" }}>
-          <button type="button" onClick={onClose} disabled={loading}
-            style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>
-            Cancel
-          </button>
-          <button type="submit" form="edit-booking-form" disabled={loading}
-            style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
-            {loading ? "Saving..." : "✅ Save Changes"}
-          </button>
+        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#475569" }}>
+            <input 
+              type="checkbox" 
+              checked={sendWhatsapp} 
+              onChange={e => setSendWhatsapp(e.target.checked)} 
+              style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }}
+            />
+            Send WhatsApp Update
+          </label>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button type="button" onClick={onClose} disabled={loading}
+              style={{ padding: "10px 20px", borderRadius: 8, background: "#fff", border: "1px solid #ddd", fontWeight: 700, cursor: "pointer", color: "#555" }}>
+              Cancel
+            </button>
+            <button type="submit" form="edit-booking-form" disabled={loading}
+              style={{ padding: "10px 28px", borderRadius: 8, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.25)", opacity: loading ? 0.7 : 1, fontSize: 14 }}>
+              {loading ? "Saving..." : "✅ Save Changes"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
