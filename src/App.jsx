@@ -57,6 +57,8 @@ const pageTitles = {
   "/finance/advanced": "Advanced Accounting",
 };
 
+import ActivityLogs from "./pages/ActivityLogs";
+
 // Guard: redirects to dashboard if current role lacks permission
 function ProtectedRoute({ permission, children }) {
   const { can, role, moduleAccess } = useRole();
@@ -108,6 +110,7 @@ function AdminLayout() {
             <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
             <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
+            <Route path="/system/activity-logs" element={<ProtectedRoute permission="canViewSettings"><ActivityLogs /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tenants" element={<SuperAdminTenants />} />
             <Route path="/subscriptions" element={<Subscriptions />} />

@@ -57,7 +57,8 @@ export const BASE_NAVIGATION = [
   { 
     type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
     children: [
-      { path: "/settings", label: "Masters Configuration" }
+      { path: "/settings", label: "Masters Configuration" },
+      { path: "/system/activity-logs", label: "Activity Logs" }
     ]
   },
   { 

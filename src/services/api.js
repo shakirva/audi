@@ -250,3 +250,11 @@ export const usersAPI = {
   toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
   remove: (id) => api.delete(`/v1/settings/users/${id}`),
 };
+
+// ═══════════════════════════════════
+// AUDIT LOGS (Activity)
+// ═══════════════════════════════════
+export const auditLogsAPI = {
+  getAll: (params) => api.get("/v1/audit-logs", { params }),
+  clear: () => api.delete("/v1/audit-logs/clear"),
+};
