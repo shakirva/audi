@@ -234,6 +234,34 @@ class AccountingEngine {
   }
 
   // ═══════════════════════════════════
+  // RECALCULATE BOOKING (when amounts are edited)
+  // ═══════════════════════════════════
+  async onBookingUpdated(booking, { tenantId, environmentId, createdBy, transaction }) {
+    // 1. Find all Vouchers created for this booking (sourceModule = 'Booking')
+    const vouchers = await Voucher.findAll({
+      where: { sourceModule: "Booking", sourceId: booking.id, tenantId, environmentId },
+      transaction
+    });
+
+    const voucherIds = vouchers.map(v => v.id);
+
+    // 2. Delete the associated Journal Entries and Vouchers
+    if (voucherIds.length > 0) {
+      await JournalEntry.destroy({
+        where: { voucherId: { [Op.in]: voucherIds }, tenantId, environmentId },
+        transaction
+      });
+      await Voucher.destroy({
+        where: { id: { [Op.in]: voucherIds }, tenantId, environmentId },
+        transaction
+      });
+    }
+
+    // 3. Recreate the entries with the new updated amounts
+    await this.onBookingCreated(booking, { tenantId, environmentId, createdBy, transaction });
+  }
+
+  // ═══════════════════════════════════
   // DASHBOARD AGGREGATIONS
   // ═══════════════════════════════════
   async getDashboard({ tenantId, environmentId }) {

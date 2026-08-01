@@ -260,6 +260,15 @@ class BookingService {
 
     const updated = await bookingRepository.update(booking, updateData);
 
+    // Rebuild the accounting journal entry (Customer Outstanding ↔ Hall Booking Income)
+    try {
+      await accountingEngine.onBookingUpdated(updated, {
+        tenantId, environmentId, createdBy: data.createdBy || null,
+      });
+    } catch (e) {
+      console.error("[BookingService] Accounting engine error on update:", e);
+    }
+
     // Handle advance payment: if advance increased, record the difference as a proper payment
     const newAdvance = Number(data.advance) || 0;
     const oldAdvance = Number(booking.advance) || 0;
