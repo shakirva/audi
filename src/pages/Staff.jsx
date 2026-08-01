@@ -274,7 +274,7 @@ export default function Staff() {
             <UserCheck size={24} />
           </div>
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Present Today</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Active Staff</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => s.active).length}</div>
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function Staff() {
             <UserX size={24} />
           </div>
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Absent / Inactive</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Inactive Staff</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => !s.active).length}</div>
           </div>
         </div>
