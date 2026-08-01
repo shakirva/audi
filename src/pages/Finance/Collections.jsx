@@ -10,6 +10,7 @@ export default function Collections() {
   const { addToast } = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [editPayment, setEditPayment] = useState(null);
   
   // New Filter States
