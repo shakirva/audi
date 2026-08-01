@@ -198,19 +198,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                     <ChevronRight size={24} color="#cbd5e1" />
                   </motion.div>
 
-                  {/* Documents Section */}
-                  <motion.div whileHover={{ background: "#f8fafc" }} onClick={() => setActiveView("documents")} style={{ background: "#fff", padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f1f5f9", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={24} /></div>
-                      <div>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>Documents & Contracts</div>
-                        <div style={{ fontSize: 14, color: "#64748b", fontWeight: 600 }}>
-                          {booking.agreements?.length ? `${booking.agreements.length} Uploaded` : "0 Uploaded"}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={24} color="#cbd5e1" />
-                  </motion.div>
+                  {/* Documents Section Removed */}
                 </div>
 
                 {/* ── ACTIVITY TIMELINE ── */}
@@ -351,30 +339,6 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
               </motion.div>
             )}
 
-            {activeView === "documents" && (
-              <motion.div key="documents" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Documents & Contracts</h3>
-                {booking.agreements && booking.agreements.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    {booking.agreements.map((doc, idx) => (
-                      <div key={idx} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 16, borderRadius: 12, display: "flex", alignItems: "center", gap: 16 }}>
-                        <div style={{ width: 40, height: 40, background: "#f1f5f9", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}><FileText size={20} /></div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{doc.name || "Agreement Document"}</div>
-                          <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>Uploaded {doc.date || ""}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ textAlign: "center", padding: "60px 0", background: "#f8fafc", borderRadius: 16, border: "2px dashed #e2e8f0" }}>
-                    <FileText size={40} color="#cbd5e1" style={{ marginBottom: 16 }} />
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#64748b" }}>No Documents Uploaded</div>
-                    <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 4 }}>Agreements or contracts will appear here.</div>
-                  </div>
-                )}
-              </motion.div>
-            )}
           </AnimatePresence>
         </div>
       </motion.div>
