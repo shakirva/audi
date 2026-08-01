@@ -428,14 +428,34 @@ class AccountingEngine {
   }
 
   async deleteVoucher(id, { tenantId, environmentId }) {
+    const voucher = await Voucher.findOne({ where: { id, tenantId, environmentId } });
+    if (!voucher) throw new Error("Voucher not found");
+    
+    // If voucher was auto-generated from a Payment, delete the Payment to ensure 
+    // all cashbooks, receipts, and booking advances are properly reverted
+    if (voucher.sourceModule === 'Payment' && voucher.sourceId) {
+      const paymentService = require("./payment.service");
+      try {
+        await paymentService.removePayment(voucher.sourceId, { tenantId, environmentId });
+        return { success: true, message: "Associated payment and voucher deleted" };
+      } catch (e) {
+        console.warn("[AccountingEngine] Payment already deleted or error:", e.message);
+      }
+    }
+
+    // If voucher was auto-generated from an Expense, delete the Expense
+    if (voucher.sourceModule === 'Expense' && voucher.sourceId) {
+      const expenseService = require("./expense.service");
+      try {
+        await expenseService.deleteExpense(voucher.sourceId, { tenantId, environmentId });
+      } catch (e) {
+        console.warn("[AccountingEngine] Expense already deleted or error:", e.message);
+      }
+    }
+
+    // Fallback: Delete manually created voucher or orphan voucher
     const t = await sequelize.transaction();
     try {
-      const voucher = await Voucher.findOne({
-        where: { id, tenantId, environmentId },
-        transaction: t
-      });
-      if (!voucher) throw new Error("Voucher not found");
-      
       // Delete associated journal entries
       await JournalEntry.destroy({
         where: { voucherId: voucher.id, tenantId, environmentId },

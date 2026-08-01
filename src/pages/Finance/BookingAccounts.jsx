@@ -9,6 +9,7 @@ export default function BookingAccounts() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
 
   useEffect(() => {
     fetchBookings();
@@ -26,10 +27,12 @@ export default function BookingAccounts() {
     }
   };
 
-  const filtered = bookings.filter(b => 
-    b.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (b.bookingId || b.id)?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = bookings.filter(b => {
+    const matchesSearch = b.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (b.bookingId || b.id)?.toString().toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "All" || b.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -50,6 +53,17 @@ export default function BookingAccounts() {
               style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
             />
           </div>
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{ padding: "10px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", background: "#fff", color: "#334155", fontWeight: 500, cursor: "pointer" }}
+          >
+            <option value="All">All Statuses</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Tentative">Tentative</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
         </div>
       </div>
 
