@@ -4,13 +4,15 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-// Mock API for now
-const getMockAttendance = () => JSON.parse(localStorage.getItem("hm_attendance_mock") || "[]");
-const saveMockAttendance = (data) => localStorage.setItem("hm_attendance_mock", JSON.stringify(data));
+// Mock API — SCOPED BY TENANT to prevent cross-tenant data leakage
+const getAttendanceKey = (tenantSlug) => `hm_attendance_${tenantSlug || 'default'}`;
+const getMockAttendance = (tenantSlug) => JSON.parse(localStorage.getItem(getAttendanceKey(tenantSlug)) || "[]");
+const saveMockAttendance = (tenantSlug, data) => localStorage.setItem(getAttendanceKey(tenantSlug), JSON.stringify(data));
 
 export default function Attendance() {
   const { confirm } = useConfirm();
-  const { user, role } = useRole();
+  const { user, role, tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
   const { addToast } = useToast();
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export default function Attendance() {
   const fetchData = () => {
     setLoading(true);
     setTimeout(() => {
-      let data = getMockAttendance();
+      let data = getMockAttendance(tSlug);
       
       // If it's a staff member, they only see their own attendance
       if (role === "Sales" || role === "Operations") {
@@ -41,7 +43,7 @@ export default function Attendance() {
   };
 
   const handleCheckIn = () => {
-    const data = getMockAttendance();
+    const data = getMockAttendance(tSlug);
     const today = new Date().toISOString().split("T")[0];
     const existing = data.find(a => (a.userId === user?.id || a.userName === user?.name) && a.date === today);
     if (existing && existing.checkIn) {
@@ -59,13 +61,13 @@ export default function Attendance() {
       checkOut: null,
       status: "Present",
     };
-    saveMockAttendance([...data, newEntry]);
+    saveMockAttendance(tSlug, [...data, newEntry]);
     addToast("Checked in successfully!", "success");
     fetchData();
   };
 
   const handleCheckOut = () => {
-    const data = getMockAttendance();
+    const data = getMockAttendance(tSlug);
     const today = new Date().toISOString().split("T")[0];
     const index = data.findIndex(a => (a.userId === user?.id || a.userName === user?.name) && a.date === today);
     if (index === -1 || !data[index].checkIn) {
@@ -78,15 +80,15 @@ export default function Attendance() {
     }
 
     data[index].checkOut = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-    saveMockAttendance(data);
+    saveMockAttendance(tSlug, data);
     addToast("Checked out successfully!", "success");
     fetchData();
   };
 
   const handleDelete = async (id) => {
     if (!(await confirm("Are you sure you want to delete this record?"))) return;
-    const data = getMockAttendance().filter(a => a.id !== id);
-    saveMockAttendance(data);
+    const data = getMockAttendance(tSlug).filter(a => a.id !== id);
+    saveMockAttendance(tSlug, data);
     addToast("Record deleted", "success");
     fetchData();
   };
@@ -96,12 +98,12 @@ export default function Attendance() {
     const newCheckOut = window.prompt("Enter Check Out time (e.g., 06:00 PM)", record.checkOut || "");
     
     if (newCheckIn !== null || newCheckOut !== null) {
-      const data = getMockAttendance();
+      const data = getMockAttendance(tSlug);
       const idx = data.findIndex(a => a.id === record.id);
       if (idx !== -1) {
         if (newCheckIn !== null) data[idx].checkIn = newCheckIn;
         if (newCheckOut !== null) data[idx].checkOut = newCheckOut;
-        saveMockAttendance(data);
+        saveMockAttendance(tSlug, data);
         addToast("Record updated", "success");
         fetchData();
       }

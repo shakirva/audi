@@ -108,17 +108,18 @@ function printAgreement(agr, venueInfo = {}) {
 export default function Jobs() {
   const { confirm } = useConfirm();
   const { addToast } = useToast();
-  const { user, role, venueInfo } = useRole();
+  const { user, role, venueInfo, tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem("hm_local_checklists") || "{}") || {});
-  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem("hm_local_tasks") || "{}") || {});
-  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem("hm_local_staff") || "{}") || {});
-  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem("hm_local_jobs") || "[]") || []);
+  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem(`hm_local_checklists_${tSlug}`) || "{}") || {});
+  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem(`hm_local_tasks_${tSlug}`) || "{}") || {});
+  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}") || {});
+  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]") || []);
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
   const [staffModal, setStaffModal] = useState({ open: false, staffId: "", staffName: "", role: "Sales" });
@@ -139,7 +140,7 @@ export default function Jobs() {
     const newState = !localChecklists[key];
     const updated = { ...localChecklists, [key]: newState };
     setLocalChecklists(updated);
-    localStorage.setItem("hm_local_checklists", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_checklists_${tSlug}`, JSON.stringify(updated));
   };
 
   const fetchJobs = useCallback(async () => {
@@ -195,7 +196,7 @@ export default function Jobs() {
     };
     const updated = [newJob, ...localJobs];
     setLocalJobs(updated);
-    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     setJobs(prev => [newJob, ...prev]);
     setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
     addToast("Job created successfully", "success");
@@ -205,7 +206,7 @@ export default function Jobs() {
     if (!(await confirm("Are you sure you want to delete this job?"))) return;
     const updated = localJobs.filter(j => j.id !== id);
     setLocalJobs(updated);
-    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     setJobs(prev => prev.filter(j => j.id !== id));
     setSelectedJob(null);
     addToast("Job deleted successfully", "success");
@@ -216,7 +217,7 @@ export default function Jobs() {
     if (isLocal) {
       const updated = localJobs.map(j => j.id === id ? { ...j, status: newStatus } : j);
       setLocalJobs(updated);
-      localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     }
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
     if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
@@ -229,7 +230,7 @@ export default function Jobs() {
     const newTask = { id: Date.now(), taskName: taskModal.taskName, isCompleted: false };
     const updated = { ...localTasks, [jId]: [...(localTasks?.[jId] || []), newTask] };
     setLocalTasks(updated);
-    localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
     setTaskModal({ open: false, taskName: "" });
   };
 
@@ -241,7 +242,7 @@ export default function Jobs() {
     const newStaff = { id: Date.now(), User: { id: staffModal.staffId, name: sName }, role: staffModal.role, name: sName, userId: staffModal.staffId };
     const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
     setLocalStaff(updated);
-    localStorage.setItem("hm_local_staff", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
     setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" });
   };
 
@@ -250,7 +251,7 @@ export default function Jobs() {
     const current = localTasks[jId] || [];
     const updated = { ...localTasks, [jId]: current.filter(t => t.id !== taskId) };
     setLocalTasks(updated);
-    localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
   };
 
   const handleRemoveStaff = (staffLocalId) => {
@@ -258,7 +259,7 @@ export default function Jobs() {
     const current = localStaff[jId] || [];
     const updated = { ...localStaff, [jId]: current.filter(s => s.id !== staffLocalId) };
     setLocalStaff(updated);
-    localStorage.setItem("hm_local_staff", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
   };
 
   const getCustomerName = (job) => {

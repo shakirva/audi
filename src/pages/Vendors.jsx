@@ -2,15 +2,18 @@ import React, { useState } from "react";
 import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useRole } from "../context/RoleContext";
 
 
 
 export default function Vendors() {
   const { confirm } = useConfirm();
+  const { tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
-  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
-  const [deletedVendors, setDeletedVendors] = useState(() => JSON.parse(localStorage.getItem("hm_deleted_vendors") || "[]") || []);
+  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_local_vendors_${tSlug}`) || "[]") || []);
+  const [deletedVendors, setDeletedVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_deleted_vendors_${tSlug}`) || "[]") || []);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
@@ -38,7 +41,7 @@ export default function Vendors() {
         tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [] 
       } : v);
       setLocalVendors(updated);
-      localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     } else {
       const newVendor = { 
         id: "LOCAL_" + Date.now(), 
@@ -56,7 +59,7 @@ export default function Vendors() {
       };
       const updated = [newVendor, ...localVendors];
       setLocalVendors(updated);
-      localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     }
     setModalOpen(false);
     setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
@@ -68,11 +71,11 @@ export default function Vendors() {
       if (id.startsWith("LOCAL_")) {
         const updated = localVendors.filter(v => v.id !== id);
         setLocalVendors(updated);
-        localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+        localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
       } else {
         const updated = [...deletedVendors, id];
         setDeletedVendors(updated);
-        localStorage.setItem("hm_deleted_vendors", JSON.stringify(updated));
+        localStorage.setItem(`hm_deleted_vendors_${tSlug}`, JSON.stringify(updated));
       }
     }
   };
@@ -101,7 +104,7 @@ export default function Vendors() {
     const nextStatus = currentStatus === "Active" ? "Inactive" : currentStatus === "Inactive" ? "Pending" : "Active";
     const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     if (selectedVendor && selectedVendor.id === id) {
       setSelectedVendor({ ...selectedVendor, status: nextStatus });
     }
@@ -111,7 +114,7 @@ export default function Vendors() {
     if (!(await confirm("Are you sure you want to delete this vendor?"))) return;
     const updated = localVendors.filter(v => v.id !== id);
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     setSelectedVendor(null);
   };
 
@@ -128,7 +131,7 @@ export default function Vendors() {
       return v;
     });
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
   };
 
   return (

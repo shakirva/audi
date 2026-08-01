@@ -4,9 +4,10 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-// Mock API
-const getMockLeaves = () => JSON.parse(localStorage.getItem("hm_leaves_mock") || "[]");
-const saveMockLeaves = (data) => localStorage.setItem("hm_leaves_mock", JSON.stringify(data));
+// Mock API — SCOPED BY TENANT to prevent cross-tenant data leakage
+const getStorageKey = (tenantSlug) => `hm_leaves_${tenantSlug || 'default'}`;
+const getMockLeaves = (tenantSlug) => JSON.parse(localStorage.getItem(getStorageKey(tenantSlug)) || "[]");
+const saveMockLeaves = (tenantSlug, data) => localStorage.setItem(getStorageKey(tenantSlug), JSON.stringify(data));
 
 function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
   const [form, setForm] = useState({ startDate: "", endDate: "", reason: "" });
@@ -23,7 +24,10 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = getMockLeaves();
+    // Get tenant slug from URL for scoping
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const tenantSlug = parts.length > 0 ? parts[0] : 'default';
+    const data = getMockLeaves(tenantSlug);
     
     if (initialData) {
       const idx = data.findIndex(l => l.id === initialData.id);
@@ -32,10 +36,11 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
         data[idx].endDate = form.endDate;
         data[idx].reason = form.reason;
       }
-      saveMockLeaves(data);
+      saveMockLeaves(tenantSlug, data);
     } else {
       const newEntry = {
         id: Date.now(),
+        tenantSlug: tenantSlug,
         userId: user?.id || Date.now(),
         userName: user?.name || "Unknown User",
         role: role,
@@ -45,7 +50,7 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
         status: "Pending",
         appliedOn: new Date().toISOString().split("T")[0],
       };
-      saveMockLeaves([newEntry, ...data]);
+      saveMockLeaves(tenantSlug, [newEntry, ...data]);
     }
     
     onSuccess();
@@ -86,7 +91,8 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
 
 export default function LeaveRequests() {
   const { confirm } = useConfirm();
-  const { user, role } = useRole();
+  const { user, role, tenant } = useRole();
+  const tenantSlug = tenant?.slug || 'default';
   const { addToast } = useToast();
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +107,7 @@ export default function LeaveRequests() {
   const fetchData = () => {
     setLoading(true);
     setTimeout(() => {
-      let data = getMockLeaves();
+      let data = getMockLeaves(tenantSlug);
       if (role === "Sales" || role === "Operations") {
         data = data.filter(l => l.userId === user?.id || l.userName === user?.name);
       }
@@ -111,11 +117,11 @@ export default function LeaveRequests() {
   };
 
   const handleUpdateStatus = (id, status) => {
-    const data = getMockLeaves();
+    const data = getMockLeaves(tenantSlug);
     const idx = data.findIndex(l => l.id === id);
     if (idx !== -1) {
       data[idx].status = status;
-      saveMockLeaves(data);
+      saveMockLeaves(tenantSlug, data);
       addToast(`Leave request ${status.toLowerCase()}!`, "success");
       fetchData();
     }
@@ -123,8 +129,8 @@ export default function LeaveRequests() {
 
   const handleDelete = async (id) => {
     if (!(await confirm("Are you sure you want to delete this leave request?"))) return;
-    const data = getMockLeaves().filter(l => l.id !== id);
-    saveMockLeaves(data);
+    const data = getMockLeaves(tenantSlug).filter(l => l.id !== id);
+    saveMockLeaves(tenantSlug, data);
     addToast("Leave request deleted", "success");
     fetchData();
   };
