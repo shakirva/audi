@@ -48,10 +48,10 @@ export const BASE_NAVIGATION = [
     type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Accounts"],
     children: [
       { path: "/reports", label: "Report Dashboard" },
-      { path: "/reports/sales", label: "Sales Reports 🔒" },
-      { path: "/reports/booking", label: "Booking Reports 🔒" },
-      { path: "/reports/accounts", label: "Accounts Reports 🔒" },
-      { path: "/reports/hall", label: "Hall Reports 🔒" }
+      { path: "/reports/sales", label: "Sales Reports" },
+      { path: "/reports/booking", label: "Booking Reports" },
+      { path: "/reports/accounts", label: "Accounts Reports" },
+      { path: "/reports/hall", label: "Hall Reports" }
     ]
   },
   { 

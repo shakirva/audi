@@ -14,7 +14,7 @@ export default function AccountsReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterDate, setFilterDate] = useState("All Time");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -131,9 +131,55 @@ export default function AccountsReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    import("jspdf").then(({ default: jsPDF }) => {
+      import("jspdf-autotable").then(() => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Accounts & Finance Report", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Net Revenue: ${formatLakhs(totalRev)}`, 14, 40);
+        doc.text(`Total Expenses: ${formatLakhs(totalExp)}`, 60, 40);
+        doc.text(`Net Profit: ${formatLakhs(netProfit)}`, 110, 40);
+        doc.text(`Margin: ${margin}%`, 160, 40);
+
+        const tableColumn = ["Date", "Type", "Category/Event", "Details", "Amount"];
+        const tableRows = [];
+
+        filteredBookings.forEach(b => {
+          const date = new Date(b.date || b.createdAt).toLocaleDateString();
+          const name = b.Customer?.name || b.customerName || "N/A";
+          const event = b.eventType || "N/A";
+          const total = b.totalAmount ? `+ Rs ${b.totalAmount}` : "0";
+          tableRows.push([date, "Income", event, name, total]);
+        });
+
+        filteredExpenses.forEach(e => {
+          const date = new Date(e.date || e.createdAt).toLocaleDateString();
+          const category = e.category || "N/A";
+          const desc = e.description || "N/A";
+          const amount = e.amount ? `- Rs ${e.amount}` : "0";
+          tableRows.push([date, "Expense", category, desc, amount]);
+        });
+
+        tableRows.sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 45,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [27, 67, 50] }
+        });
+
+        doc.save(`Accounts_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+      });
+    });
   };
 
   return (

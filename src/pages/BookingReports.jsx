@@ -15,7 +15,7 @@ export default function BookingReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterDate, setFilterDate] = useState("All Time");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -106,9 +106,50 @@ export default function BookingReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    import("jspdf").then(({ default: jsPDF }) => {
+      import("jspdf-autotable").then(() => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Booking Report", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Total Bookings: ${totalBookings}`, 14, 40);
+        doc.text(`Completed: ${completed}`, 60, 40);
+        doc.text(`Upcoming: ${upcoming}`, 100, 40);
+        doc.text(`Cancelled: ${cancelled} (${cancelRate}%)`, 140, 40);
+
+        const tableColumn = ["Date", "ID", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
+        const tableRows = [];
+
+        filteredBookings.forEach(b => {
+          const date = new Date(b.date || b.createdAt).toLocaleDateString();
+          const id = b.bookingId || "N/A";
+          const name = b.Customer?.name || b.customerName || "N/A";
+          const event = b.eventType || "N/A";
+          const hall = b.hall || "N/A";
+          const status = b.status || "N/A";
+          const adv = b.advance ? `Rs ${b.advance}` : "0";
+          const total = b.totalAmount ? `Rs ${b.totalAmount}` : "0";
+          
+          tableRows.push([date, id, name, event, hall, status, adv, total]);
+        });
+
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 45,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [27, 67, 50] }
+        });
+
+        doc.save(`Booking_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+      });
+    });
   };
 
   return (

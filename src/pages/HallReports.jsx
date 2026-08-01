@@ -15,7 +15,7 @@ export default function HallReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterDate, setFilterDate] = useState("All Time");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -99,9 +99,39 @@ export default function HallReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    import("jspdf").then(({ default: jsPDF }) => {
+      import("jspdf-autotable").then(() => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Hall Performance Report", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Top Performing Hall: ${topHallName}`, 14, 40);
+        doc.text(`Total Hall Bookings: ${totalBookings}`, 100, 40);
+
+        const tableColumn = ["Hall", "Bookings", "Total Revenue"];
+        const tableRows = [];
+
+        hallData.forEach(h => {
+          tableRows.push([h.name, h.bookings, `Rs ${h.revenue}`]);
+        });
+
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 45,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [27, 67, 50] }
+        });
+
+        doc.save(`Hall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+      });
+    });
   };
 
   return (
