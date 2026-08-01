@@ -161,6 +161,10 @@ class BookingService {
           for (let i = 0; i < amounts.length; i++) {
              const amt = Number(amounts[i]) || 0;
              if (amt > 0) {
+               const col = collectors[i] ? collectors[i].trim() : "";
+               const nte = (names[i] ? ` - ${names[i]}` : "");
+               const formattedNotes = col ? `Collected By: ${col}\n${nte}` : nte;
+               
                await paymentService.recordPayment({
                  bookingId: booking.id,
                  customerId: booking.customerId,
@@ -168,13 +172,16 @@ class BookingService {
                  paymentMode: data.paymentMethod,
                  paymentDate: new Date().toISOString(),
                  referenceNumber: ids[i] || "",
-                 notes: (collectors[i] || "") + (names[i] ? ` - ${names[i]}` : ""),
+                 notes: formattedNotes,
                  bankId: null 
                }, { tenantId, environmentId, createdBy: data.createdBy || null });
              }
           }
         } else {
-          // Standard single payment (Cash, Bank Transfer, Cheque, or single UPI)
+          const col = data.receivedBy ? data.receivedBy.trim() : "";
+          const baseNotes = data.paymentRemarks || "Advance payment at booking";
+          const formattedNotes = col ? `Collected By: ${col}\n${baseNotes}` : baseNotes;
+
           await paymentService.recordPayment({
             bookingId: booking.id,
             customerId: booking.customerId,
@@ -182,7 +189,7 @@ class BookingService {
             paymentMode: data.paymentMethod,
             paymentDate: new Date().toISOString(),
             referenceNumber: data.upiId || data.accountName || "",
-            notes: data.paymentRemarks || data.receivedBy || "Advance payment at booking",
+            notes: formattedNotes,
             bankId: null // Optional depending on schema
           }, { tenantId, environmentId, createdBy: data.createdBy || null });
         }
