@@ -10,8 +10,12 @@ export default function Collections() {
   const { addToast } = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [editPayment, setEditPayment] = useState(null);
+  
+  // New Filter States
+  const [filterDate, setFilterDate] = useState("All Time");
+  const [filterMode, setFilterMode] = useState("All Modes");
+  const [filterCollectedBy, setFilterCollectedBy] = useState("All Staff");
   const { confirm } = useConfirm();
 
   useEffect(() => {
@@ -51,11 +55,54 @@ export default function Collections() {
     }
   };
 
-  const filtered = payments.filter(p => 
-    p.paymentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.Booking?.bookingId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.Customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const uniqueModes = Array.from(new Set(payments.map(p => p.paymentMode).filter(Boolean)));
+  const uniqueCollectors = Array.from(new Set(payments.map(p => {
+    if (p.notes && p.notes.includes("Collected By:")) {
+      const match = p.notes.match(/Collected By:\s*([^\n]+)/);
+      if (match && match[1]) return match[1].trim();
+    }
+    return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
+  }).filter(Boolean)));
+
+  const filtered = payments.filter(p => {
+    // 1. Search filter
+    const matchesSearch = 
+      p.paymentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.Booking?.bookingId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.amount?.toString().includes(searchTerm) ||
+      p.Customer?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    // 2. Mode filter
+    if (filterMode !== "All Modes" && p.paymentMode !== filterMode) return false;
+
+    // 3. Collected By filter
+    if (filterCollectedBy !== "All Staff") {
+      let collector = p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
+      if (p.notes && p.notes.includes("Collected By:")) {
+        const match = p.notes.match(/Collected By:\s*([^\n]+)/);
+        if (match && match[1]) collector = match[1].trim();
+      }
+      if (collector !== filterCollectedBy) return false;
+    }
+
+    // 4. Date filter
+    if (filterDate !== "All Time") {
+      const pDate = new Date(p.paymentDate || p.createdAt);
+      const now = new Date();
+      if (filterDate === "This Month") {
+        if (pDate.getMonth() !== now.getMonth() || pDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Last Month") {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        if (pDate.getMonth() !== lastMonth.getMonth() || pDate.getFullYear() !== lastMonth.getFullYear()) return false;
+      } else if (filterDate === "This Year") {
+        if (pDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -70,13 +117,37 @@ export default function Collections() {
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
-              placeholder="Search by ID or Customer..." 
+              placeholder="Search by ID, Booking, Amount..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
             />
           </div>
         </div>
+      </div>
+
+      {/* Advanced Filter Bar */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+          <option value="All Time">Date: All Time</option>
+          <option value="This Month">Date: This Month</option>
+          <option value="Last Month">Date: Last Month</option>
+          <option value="This Year">Date: This Year</option>
+        </select>
+        
+        <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+          <option value="All Modes">Mode: All Modes</option>
+          {uniqueModes.map((m, i) => (
+            <option key={i} value={m}>{m}</option>
+          ))}
+        </select>
+        
+        <select value={filterCollectedBy} onChange={(e) => setFilterCollectedBy(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+          <option value="All Staff">Collected By: All Staff</option>
+          {uniqueCollectors.map((c, i) => (
+            <option key={i} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
