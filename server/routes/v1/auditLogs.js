@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const auditLogController = require("../../controllers/auditLog.controller");
-const { auth, requireRole, tenantScope, subscriptionGuard } = require("../../middleware/auth");
+const { auth, requireRole } = require("../../middleware/auth");
+const { tenantScope } = require("../../middleware/tenantScope");
+const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
 const { ROLES } = require("../../helpers/roles");
 
 // Only Owners and Managers can view activity logs
