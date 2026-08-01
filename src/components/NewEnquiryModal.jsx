@@ -46,8 +46,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
   const eventTypeRef = useRef(null);
   const [eventTypeToConfirm, setEventTypeToConfirm] = useState(null);
-  const [newSessionName, setNewSessionName] = useState("Morning");
-  const [newSessionTime, setNewSessionTime] = useState("09:00 AM - 02:00 PM");
+  const [selectedSessions, setSelectedSessions] = useState(["Morning"]);
   
   // Dynamic settings
   const [settingsHalls, setSettingsHalls] = useState([]);
@@ -906,22 +905,22 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               Add New Event Type?
             </h3>
             <p style={{ margin: "0 0 16px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-              Permanently add <strong>"{eventTypeToConfirm}"</strong>? Please define at least one initial session for this event.
+              Permanently add <strong>"{eventTypeToConfirm}"</strong>? Please select available sessions for this event. (You can customize timings later in Settings)
             </p>
 
             <div style={{ marginBottom: 24, textAlign: "left" }}>
-               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Initial Session Name *</label>
-               <select value={newSessionName} onChange={e => setNewSessionName(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", marginBottom: 12, boxSizing: "border-box", background: "#f9fafb" }}>
-                 <option value="">-- Select Session --</option>
-                 <option value="Morning">Morning</option>
-                 <option value="Afternoon">Afternoon</option>
-                 <option value="Evening">Evening</option>
-                 <option value="Night">Night</option>
-                 <option value="Full Day">Full Day</option>
-               </select>
-               
-               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Session Time (Optional)</label>
-               <input value={newSessionTime} onChange={e => setNewSessionTime(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", boxSizing: "border-box" }} placeholder="e.g. 09:00 AM - 02:00 PM" />
+               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 10 }}>Available Sessions *</label>
+               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                 {["Morning", "Afternoon", "Evening", "Night", "Full Day"].map(s => (
+                   <label key={s} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: selectedSessions.includes(s) ? "#f0faf4" : "#f9fafb", padding: "6px 12px", borderRadius: 8, border: `1px solid ${selectedSessions.includes(s) ? "#1B4332" : "#e5e7eb"}` }}>
+                     <input type="checkbox" checked={selectedSessions.includes(s)} onChange={(e) => {
+                       if (e.target.checked) setSelectedSessions([...selectedSessions, s]);
+                       else setSelectedSessions(selectedSessions.filter(x => x !== s));
+                     }} style={{ margin: 0, accentColor: "#1B4332" }} />
+                     <span style={{ fontSize: 13, fontWeight: 600, color: selectedSessions.includes(s) ? "#1B4332" : "#4b5563" }}>{s}</span>
+                   </label>
+                 ))}
+               </div>
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
@@ -932,13 +931,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 Cancel
               </button>
               <button
-                disabled={!newSessionName.trim()}
+                disabled={selectedSessions.length === 0}
                 onClick={async () => {
                   const newEvt = eventTypeToConfirm;
-                  const newSessions = newSessionName.trim() ? [{ name: newSessionName.trim(), time: newSessionTime.trim() }] : [];
+                  const newSessions = selectedSessions.map(s => ({ name: s, time: "" }));
                   const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: newSessions }];
                   setSettingsEventTypes(newEventTypes);
-                  setForm(prev => ({ ...prev, eventType: newEvt, session: newSessionName.trim() }));
+                  setForm(prev => ({ ...prev, eventType: newEvt, session: selectedSessions[0] }));
                   setEventTypeQuery(newEvt);
                   setEventTypeToConfirm(null);
                   try {
@@ -946,7 +945,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     addToast(`"${newEvt}" added to Event Types!`, "success");
                   } catch(e) {}
                 }}
-                style={{ flex: 1, padding: "12px", background: !newSessionName.trim() ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: !newSessionName.trim() ? "not-allowed" : "pointer" }}
+                style={{ flex: 1, padding: "12px", background: selectedSessions.length === 0 ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: selectedSessions.length === 0 ? "not-allowed" : "pointer" }}
               >
                 Yes, Add It
               </button>
