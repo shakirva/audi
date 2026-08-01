@@ -65,12 +65,13 @@ export default function Collections() {
   }).filter(Boolean)));
 
   const filtered = payments.filter(p => {
+    const sTerm = searchTerm.toLowerCase();
     // 1. Search filter
     const matchesSearch = 
-      p.paymentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.Booking?.bookingId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.amount?.toString().includes(searchTerm) ||
-      p.Customer?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      (p.paymentNumber || "").toLowerCase().includes(sTerm) || 
+      (p.Booking?.bookingId || "").toLowerCase().includes(sTerm) ||
+      (p.amount ? p.amount.toString().includes(searchTerm) : false) ||
+      (p.Customer?.name || "").toLowerCase().includes(sTerm);
     
     if (!matchesSearch) return false;
 
