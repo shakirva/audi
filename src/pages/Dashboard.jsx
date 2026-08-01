@@ -166,13 +166,12 @@ function ExecutiveCockpit() {
         </div>
       </motion.div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 24, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 24, marginBottom: 24 }}>
         <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
-        <GradientCard title="Confirmed" value={stats.confirmedCount} gradient={["#40916C", "#52B788"]} delay={0.3} />
-        <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.4} />
-        <GradientCard title="Pending Pmt" value={stats.pendingCount} gradient={["#d97706", "#f59e0b"]} delay={0.5} />
-        <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.6} />
+        <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.3} />
+        <GradientCard title="Pending Pmt" value={stats.pendingCount} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
+        <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
       </div>
 
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
