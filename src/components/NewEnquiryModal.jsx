@@ -41,6 +41,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   // Custom confirmation popup state
   const [placeToConfirm, setPlaceToConfirm] = useState(null);
   
+  // Event Type autocomplete
+  const [eventTypeQuery, setEventTypeQuery] = useState("");
+  const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
+  const eventTypeRef = useRef(null);
+  const [eventTypeToConfirm, setEventTypeToConfirm] = useState(null);
+  
   // Dynamic settings
   const [settingsHalls, setSettingsHalls] = useState([]);
   const [settingsEventTypes, setSettingsEventTypes] = useState([]);
@@ -89,11 +95,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
       setPlaceQuery(editData.enquirerArea || editData.Customer?.city || "");
+      setEventTypeQuery(editData.eventType || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
       setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "" });
       setPlaceQuery("");
+      setEventTypeQuery("");
       setUserEditedBudget(false);
     }
   }, [editData, open, role, user]);
@@ -214,6 +222,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       if (placeRef.current && !placeRef.current.contains(e.target)) {
         setShowPlaceDropdown(false);
       }
+      if (eventTypeRef.current && !eventTypeRef.current.contains(e.target)) {
+        setShowEventTypeDropdown(false);
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -231,6 +242,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     if (typeof p !== 'string') return false;
     return p.toLowerCase().includes((placeQuery || "").toLowerCase());
   });
+
+  const filteredEventTypes = (settingsEventTypes.length > 0 ? settingsEventTypes.map(t => typeof t === "string" ? t : t.name) : EVENT_TYPES)
+    .filter(t => t.toLowerCase().includes((eventTypeQuery || "").toLowerCase()));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -496,19 +510,71 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 <Calendar size={12} /> Event Details
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
+                <div ref={eventTypeRef} style={{ position: "relative" }}>
                   <label style={labelSt}>Event Type *</label>
-                  <select required name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
-                    <option value="" disabled>-- Select --</option>
-                    {settingsEventTypes.length > 0
-                      ? settingsEventTypes.map(t => {
-                          const name = typeof t === "string" ? t : t.name;
-                          return <option key={name} value={name}>{name}</option>;
-                        })
-                      : EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <input
+                    required
+                    type="text"
+                    name="eventType"
+                    value={eventTypeQuery || form.eventType}
+                    onChange={e => {
+                      setEventTypeQuery(e.target.value);
+                      setForm(prev => ({ ...prev, eventType: e.target.value }));
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onFocus={() => setShowEventTypeDropdown(true)}
+                    placeholder="e.g. Wedding"
+                    style={iStyle}
+                    autoComplete="off"
+                  />
+                  {showEventTypeDropdown && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+                      background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
+                    }}>
+                      {filteredEventTypes.length > 0 ? (
+                        filteredEventTypes.map(t => (
+                          <div
+                            key={t}
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setForm(prev => ({ ...prev, eventType: t }));
+                              setEventTypeQuery(t);
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8,
+                              borderBottom: "1px solid #f3f4f6"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            {t}
+                          </div>
+                        ))
+                      ) : (
+                        eventTypeQuery.trim() !== "" && (
+                          <div
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setEventTypeToConfirm(eventTypeQuery.trim());
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#0284c7", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8, fontWeight: 600
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#e0f2fe"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            <Plus size={14} /> Add "{eventTypeQuery}" as new Event Type
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div style={{ position: "relative" }}>
                   <label style={labelSt}>Event Date *</label>
@@ -782,6 +848,57 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                   try {
                     await settingsAPI.update({ places: newPlaces });
                     addToast(`"${newPlace}" added to places!`, "success");
+                  } catch(e) {}
+                }}
+                style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Yes, Add It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Custom Event Type Confirmation Modal ── */}
+      {eventTypeToConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", backdropFilter: "blur(4px)",
+          zIndex: 99999, display: "flex", justifyContent: "center", alignItems: "center"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 400,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Calendar size={24} color="#15803d" />
+              </div>
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
+              Add New Event Type?
+            </h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Are you sure you want to permanently add <strong>"{eventTypeToConfirm}"</strong> to your system's Event Type list?
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setEventTypeToConfirm(null)}
+                style={{ flex: 1, padding: "12px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const newEvt = eventTypeToConfirm;
+                  const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: [] }];
+                  setSettingsEventTypes(newEventTypes);
+                  setForm(prev => ({ ...prev, eventType: newEvt }));
+                  setEventTypeQuery(newEvt);
+                  setEventTypeToConfirm(null);
+                  try {
+                    await settingsAPI.update({ eventTypes: newEventTypes });
+                    addToast(`"${newEvt}" added to Event Types!`, "success");
                   } catch(e) {}
                 }}
                 style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
