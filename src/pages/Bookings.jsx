@@ -59,11 +59,11 @@ export default function Bookings() {
     let baseBookings = bookings;
     if (role === "Sales") {
       baseBookings = baseBookings.filter(b => 
-        b.createdBy === user?.name || 
-        b.salesExecutiveName === user?.name || 
-        b.bookedBy === user?.name ||
-        b.userId === user?.id || 
-        b.salesExecutiveId === user?.id
+        b.createdBy === user?.id ||
+        b.salesExecutiveId === user?.id ||
+        b.bookedBy === user?.name || 
+        b.salesExecutiveName === user?.name ||
+        b.userId === user?.id
       );
     }
     return baseBookings.filter(b => {
