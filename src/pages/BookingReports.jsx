@@ -21,6 +21,7 @@ export default function BookingReports() {
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
+  const [filterParty, setFilterParty] = useState("All Parties");
 
   useEffect(() => {
     loadData();
@@ -45,6 +46,7 @@ export default function BookingReports() {
 
   const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
   const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
+  const uniqueParties = Array.from(new Set(bookings.map(b => b.bookedBy || b.bookingParty).filter(Boolean)));
 
   const filteredBookings = bookings.filter(b => {
     if (filterHall !== "All Halls" && b.hall !== filterHall) return false;
@@ -54,6 +56,9 @@ export default function BookingReports() {
     
     const placeName = b.Customer?.city || b.place || b.address;
     if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    
+    const partyName = b.bookedBy || b.bookingParty;
+    if (filterParty !== "All Parties" && partyName !== filterParty) return false;
     
     if (filterDate !== "All Time") {
       const bDate = new Date(b.date || b.createdAt);
@@ -218,6 +223,13 @@ export default function BookingReports() {
           <option value="All Locations">Place: All Locations</option>
           {uniquePlaces.map((place, i) => (
             <option key={i} value={place}>{place}</option>
+          ))}
+        </select>
+        
+        <select value={filterParty} onChange={(e) => setFilterParty(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Parties">Booked By: All</option>
+          {uniqueParties.map((party, i) => (
+            <option key={i} value={party}>{party}</option>
           ))}
         </select>
       </div>
