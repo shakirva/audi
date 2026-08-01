@@ -20,6 +20,7 @@ import HallReports from "./pages/HallReports";
 import AccountsReports from "./pages/AccountsReports";
 import SalesReports from "./pages/SalesReports";
 import BookingReports from "./pages/BookingReports";
+import CustomerReports from "./pages/CustomerReports";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
 import PublicBooking from "./pages/PublicBooking";
@@ -109,6 +110,7 @@ function AdminLayout() {
             <Route path="/reports/booking" element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
             <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
             <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
+            <Route path="/reports/customer" element={<ProtectedRoute permission="canViewReports"><CustomerReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
             <Route path="/system/activity-logs" element={<ProtectedRoute permission="canViewSettings"><ActivityLogs /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
