@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus, CheckSquare } from "lucide-react";
-import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI, usersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
 import SmartDatePicker from "./SmartDatePicker";
@@ -76,10 +76,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    import("../services/api").then(({ mastersAPI }) => {
+    import("../services/api").then(({ mastersAPI, usersAPI }) => {
       mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+      usersAPI.getAll().then(res => setUsers(res.data?.data || []));
     });
   }, []);
 
@@ -655,7 +657,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                               onFocus={e => e.target.style.borderColor = "#1B4332"}
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
-                            <input 
+                            <select
                               required={index === 0 && Number(formData.advance) > 0}
                               value={collector.trim()} 
                               onChange={(e) => {
@@ -664,10 +666,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                                 setFormData({ ...formData, receivedBy: newArr.join(",") });
                               }} 
                               style={iStyle}
-                              placeholder="Collected By" 
                               onFocus={e => e.target.style.borderColor = "#1B4332"}
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-                            />
+                            >
+                              <option value="">-- Collected By --</option>
+                              {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                            </select>
                             <div style={{ display: "flex", alignItems: "center" }}>
                               {index === arr.length - 1 ? (
                                 <button type="button" onClick={() => setFormData({ 
@@ -706,7 +710,15 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 {formData.paymentMethod !== "UPI" && (
                   <div>
                     <label style={labelSt}>Collected By {Number(formData.advance) > 0 ? "*" : ""}</label>
-                    {inp("receivedBy", { required: Number(formData.advance) > 0, placeholder: "Collected By" })}
+                    <select
+                      required={Number(formData.advance) > 0}
+                      value={formData.receivedBy}
+                      onChange={e => setFormData({ ...formData, receivedBy: e.target.value })}
+                      style={iStyle}
+                    >
+                      <option value="">-- Select Staff --</option>
+                      {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                    </select>
                   </div>
                 )}
                 <div style={{ gridColumn: formData.paymentMethod === "UPI" || formData.paymentMethod === "Bank Transfer" ? "auto" : "1 / -1" }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, usersAPI } from "../services/api";
 import { useToast } from "./Toast";
 
 const iStyle = {
@@ -26,12 +26,14 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({});
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [users, setUsers] = useState([]);
   const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   useEffect(() => {
     // Fetch facilities from master
-    import("../services/api").then(({ mastersAPI }) => {
+    import("../services/api").then(({ mastersAPI, usersAPI }) => {
       mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+      usersAPI.getAll().then(res => setUsers(res.data?.data || []));
     });
   }, []);
 
@@ -487,7 +489,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                               onFocus={e => e.target.style.borderColor = "#1B4332"}
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
-                            <input 
+                            <select 
                               value={collector.trim()} 
                               onChange={(e) => {
                                 const newArr = [...collectors];
@@ -495,10 +497,12 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                                 setForm({ ...form, receivedBy: newArr.join(",") });
                               }} 
                               style={iStyle}
-                              placeholder="Collected By" 
                               onFocus={e => e.target.style.borderColor = "#1B4332"}
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-                            />
+                            >
+                              <option value="">-- Collected By --</option>
+                              {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                            </select>
                             <div style={{ display: "flex", alignItems: "center" }}>
                               {index === arr.length - 1 ? (
                                 <button type="button" onClick={() => setForm({ 
@@ -537,7 +541,14 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 {form.paymentMethod !== "UPI" && (
                   <div>
                     <label style={labelSt}>Collected By</label>
-                    {inp("receivedBy", { placeholder: "Collected By" })}
+                    <select
+                      value={form.receivedBy || ""}
+                      onChange={e => setForm({ ...form, receivedBy: e.target.value })}
+                      style={iStyle}
+                    >
+                      <option value="">-- Select Staff --</option>
+                      {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                    </select>
                   </div>
                 )}
                 <div>

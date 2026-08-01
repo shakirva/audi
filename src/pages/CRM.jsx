@@ -122,12 +122,7 @@ export default function CRM() {
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track leads and convert enquiries into bookings.</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <button
-            onClick={() => navigate("/calendar")}
-            style={{ padding: "12px 20px", borderRadius: 16, border: "none", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: 15, boxShadow: "0 8px 16px rgba(27,67,50,0.2)" }}
-          >
-            <Plus size={18} /> New Enquiry
-          </button>
+          {/* New Enquiry button removed as per request */}
         </div>
       </div>
 

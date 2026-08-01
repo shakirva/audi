@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
-import { paymentsAPI } from "../services/api";
+import { paymentsAPI, usersAPI } from "../services/api";
 import { useToast } from "./Toast";
 
 export default function EditPaymentModal({ open, payment, onClose, onSuccess }) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
   
   // Payment form state
   const [amount, setAmount] = useState("");
@@ -52,6 +53,12 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
       }
     }
   }, [open, payment]);
+
+  React.useEffect(() => {
+    if (open) {
+      usersAPI.getAll().then(res => setUsers(res.data?.data || []));
+    }
+  }, [open]);
 
   if (!open || !payment) return null;
 
@@ -139,14 +146,15 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Collected By <span style={{ color: "#ef4444" }}>*</span></label>
-                <input 
-                  type="text" 
+                <select 
                   value={collectedBy}
                   onChange={e => setCollectedBy(e.target.value)}
-                  placeholder="Staff Name..."
                   required
-                  style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                />
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff" }}
+                >
+                  <option value="">-- Select Staff --</option>
+                  {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                </select>
               </div>
             </div>
 
