@@ -222,11 +222,13 @@ export default function Staff() {
 
   const handleDeleteStaff = async (id) => {
     if (await confirm("Are you sure you want to delete this staff member?")) {
+      // Optimistic update for instant UI feedback
+      setStaffList(prev => prev.filter(s => s.id !== id));
       try {
         await usersAPI.remove(id);
         addToast("Staff member deleted", "success");
-        setStaffList(prev => prev.filter(s => s.id !== id));
       } catch (err) {
+        loadStaff(); // revert if failed
         addToast(err.response?.data?.error || err.response?.data?.message || "Failed to delete staff", "error");
       }
     }
