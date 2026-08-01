@@ -911,7 +911,14 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
 
             <div style={{ marginBottom: 24, textAlign: "left" }}>
                <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Initial Session Name *</label>
-               <input value={newSessionName} onChange={e => setNewSessionName(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", marginBottom: 12, boxSizing: "border-box" }} placeholder="e.g. Morning" />
+               <select value={newSessionName} onChange={e => setNewSessionName(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", marginBottom: 12, boxSizing: "border-box", background: "#f9fafb" }}>
+                 <option value="">-- Select Session --</option>
+                 <option value="Morning">Morning</option>
+                 <option value="Afternoon">Afternoon</option>
+                 <option value="Evening">Evening</option>
+                 <option value="Night">Night</option>
+                 <option value="Full Day">Full Day</option>
+               </select>
                
                <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Session Time (Optional)</label>
                <input value={newSessionTime} onChange={e => setNewSessionTime(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", boxSizing: "border-box" }} placeholder="e.g. 09:00 AM - 02:00 PM" />

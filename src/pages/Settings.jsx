@@ -592,7 +592,14 @@ export default function Settings() {
                   )}
                   
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                    <input id={`sess_name_${item.name}`} placeholder="New Session Name (e.g. Morning)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} />
+                    <select id={`sess_name_${item.name}`} style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb", background: "#f9fafb" }}>
+                      <option value="">-- Select Session --</option>
+                      <option value="Morning">Morning</option>
+                      <option value="Afternoon">Afternoon</option>
+                      <option value="Evening">Evening</option>
+                      <option value="Night">Night</option>
+                      <option value="Full Day">Full Day</option>
+                    </select>
                     <input id={`sess_time_${item.name}`} placeholder="Time (e.g. 9am - 2pm)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} onKeyDown={e => {
                       if (e.key === "Enter") {
                         e.preventDefault();
