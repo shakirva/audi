@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2 } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
@@ -27,6 +28,7 @@ function KPISkeleton() {
 export default function CRM() {
   const { user, role } = useRole();
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState("board");
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
@@ -121,7 +123,7 @@ export default function CRM() {
         </div>
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => { setShowEnquiryModal(true); setEditEnquiry(null); }}
+            onClick={() => navigate("/calendar")}
             style={{ padding: "12px 20px", borderRadius: 16, border: "none", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: 15, boxShadow: "0 8px 16px rgba(27,67,50,0.2)" }}
           >
             <Plus size={18} /> New Enquiry
