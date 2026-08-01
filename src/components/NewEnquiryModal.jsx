@@ -46,6 +46,8 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
   const eventTypeRef = useRef(null);
   const [eventTypeToConfirm, setEventTypeToConfirm] = useState(null);
+  const [newSessionName, setNewSessionName] = useState("Morning");
+  const [newSessionTime, setNewSessionTime] = useState("09:00 AM - 02:00 PM");
   
   // Dynamic settings
   const [settingsHalls, setSettingsHalls] = useState([]);
@@ -903,9 +905,18 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
             <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
               Add New Event Type?
             </h3>
-            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-              Are you sure you want to permanently add <strong>"{eventTypeToConfirm}"</strong> to your system's Event Type list?
+            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Permanently add <strong>"{eventTypeToConfirm}"</strong>? Please define at least one initial session for this event.
             </p>
+
+            <div style={{ marginBottom: 24, textAlign: "left" }}>
+               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Initial Session Name *</label>
+               <input value={newSessionName} onChange={e => setNewSessionName(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", marginBottom: 12, boxSizing: "border-box" }} placeholder="e.g. Morning" />
+               
+               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Session Time (Optional)</label>
+               <input value={newSessionTime} onChange={e => setNewSessionTime(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", boxSizing: "border-box" }} placeholder="e.g. 09:00 AM - 02:00 PM" />
+            </div>
+
             <div style={{ display: "flex", gap: 12 }}>
               <button
                 onClick={() => setEventTypeToConfirm(null)}
@@ -914,11 +925,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 Cancel
               </button>
               <button
+                disabled={!newSessionName.trim()}
                 onClick={async () => {
                   const newEvt = eventTypeToConfirm;
-                  const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: [] }];
+                  const newSessions = newSessionName.trim() ? [{ name: newSessionName.trim(), time: newSessionTime.trim() }] : [];
+                  const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: newSessions }];
                   setSettingsEventTypes(newEventTypes);
-                  setForm(prev => ({ ...prev, eventType: newEvt }));
+                  setForm(prev => ({ ...prev, eventType: newEvt, session: newSessionName.trim() }));
                   setEventTypeQuery(newEvt);
                   setEventTypeToConfirm(null);
                   try {
@@ -926,7 +939,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     addToast(`"${newEvt}" added to Event Types!`, "success");
                   } catch(e) {}
                 }}
-                style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+                style={{ flex: 1, padding: "12px", background: !newSessionName.trim() ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: !newSessionName.trim() ? "not-allowed" : "pointer" }}
               >
                 Yes, Add It
               </button>
