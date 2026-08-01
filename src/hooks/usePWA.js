@@ -116,6 +116,11 @@ export function usePWA() {
     setHasUpdate(false);
   }, []);
 
+  // ── Dismiss install ──
+  const dismissInstall = useCallback(() => {
+    setIsInstallable(false);
+  }, []);
+
   // ── Clear all caches (for logout) ──
   const clearCaches = useCallback(async () => {
     if ("serviceWorker" in navigator) {
@@ -139,6 +144,7 @@ export function usePWA() {
     installApp,
     applyUpdate,
     dismissUpdate,
+    dismissInstall,
     clearCaches,
   };
 }
