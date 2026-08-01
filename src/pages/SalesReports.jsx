@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from "recharts";
 import { Download, Users, TrendingUp, Crosshair, Trophy, Filter } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
 import { enquiriesAPI, settingsAPI } from "../services/api";
 
@@ -111,48 +113,45 @@ export default function SalesReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    import("jspdf").then(({ default: jsPDF }) => {
-      import("jspdf-autotable").then(() => {
-        const doc = new jsPDF();
-        
-        doc.setFontSize(18);
-        doc.text("Sales & CRM Report", 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(0);
-        doc.text(`Total Enquiries: ${totalEnquiries}`, 14, 40);
-        doc.text(`Avg. Budgets: ${formattedAvgDeal}`, 80, 40);
-        doc.text(`Top Source: ${topSource} (${topSourcePercent}%)`, 140, 40);
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Sales & CRM Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Total Enquiries: ${totalEnquiries}`, 14, 40);
+    doc.text(`Avg. Budgets: ${formattedAvgDeal}`, 80, 40);
+    doc.text(`Top Source: ${topSource} (${topSourcePercent}%)`, 140, 40);
 
-        const tableColumn = ["Date", "Customer", "Phone", "Event", "Hall", "Status", "Executive", "Budget"];
-        const tableRows = [];
+    const tableColumn = ["Date", "Customer", "Phone", "Event", "Hall", "Status", "Executive", "Budget"];
+    const tableRows = [];
 
-        filteredEnquiries.forEach(e => {
-          const date = new Date(e.createdAt).toLocaleDateString();
-          const name = e.Customer?.name || e.customerName || "N/A";
-          const phone = e.Customer?.phone || e.phone || "N/A";
-          const event = e.eventType || "N/A";
-          const hall = e.hallPreference || e.hall || "N/A";
-          const status = e.status || "N/A";
-          const exec = e.SalesExecutive?.name || e.salesExecutiveName || "N/A";
-          const budget = e.budget ? `Rs ${e.budget}` : "N/A";
-          tableRows.push([date, name, phone, event, hall, status, exec, budget]);
-        });
-
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: 45,
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [27, 67, 50] }
-        });
-
-        doc.save(`Sales_Report_${new Date().toISOString().split("T")[0]}.pdf`);
-      });
+    filteredEnquiries.forEach(e => {
+      const date = new Date(e.createdAt).toLocaleDateString();
+      const name = e.Customer?.name || e.customerName || "N/A";
+      const phone = e.Customer?.phone || e.phone || "N/A";
+      const event = e.eventType || "N/A";
+      const hall = e.hallPreference || e.hall || "N/A";
+      const status = e.status || "N/A";
+      const exec = e.SalesExecutive?.name || e.salesExecutiveName || "N/A";
+      const budget = e.budget ? `Rs ${e.budget}` : "N/A";
+      tableRows.push([date, name, phone, event, hall, status, exec, budget]);
     });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [27, 67, 50] }
+    });
+
+    doc.save(`Sales_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (

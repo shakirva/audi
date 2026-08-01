@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, TrendingUp, AlertCircle, Building2, Filter } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
 import { bookingsAPI, settingsAPI } from "../services/api";
 
@@ -93,45 +95,42 @@ export default function HallReports() {
     hallData = hallData.filter(h => h.bookings > 0);
   }
   
-  const topHall = hallData.length > 0 && hallData[0].revenue > 0 ? hallData[0] : null;
+  const topHall = hallData.length > 0 ? hallData[0] : null;
   const topHallName = topHall ? topHall.name : "N/A";
   const topHallRev = topHall ? (topHall.revenue >= 100000 ? `₹${(topHall.revenue / 100000).toFixed(1)}L` : `₹${topHall.revenue.toLocaleString()}`) : "₹0";
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    import("jspdf").then(({ default: jsPDF }) => {
-      import("jspdf-autotable").then(() => {
-        const doc = new jsPDF();
-        
-        doc.setFontSize(18);
-        doc.text("Hall Performance Report", 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(0);
-        doc.text(`Top Performing Hall: ${topHallName}`, 14, 40);
-        doc.text(`Total Hall Bookings: ${totalBookings}`, 100, 40);
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Hall Performance Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Top Performing Hall: ${topHallName}`, 14, 40);
+    doc.text(`Total Hall Bookings: ${totalBookings}`, 100, 40);
 
-        const tableColumn = ["Hall", "Bookings", "Total Revenue"];
-        const tableRows = [];
+    const tableColumn = ["Hall", "Bookings", "Total Revenue"];
+    const tableRows = [];
 
-        hallData.forEach(h => {
-          tableRows.push([h.name, h.bookings, `Rs ${h.revenue}`]);
-        });
-
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: 45,
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [27, 67, 50] }
-        });
-
-        doc.save(`Hall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
-      });
+    hallData.forEach(h => {
+      tableRows.push([h.name, h.bookings, `Rs ${h.revenue}`]);
     });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [27, 67, 50] }
+    });
+
+    doc.save(`Hall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (

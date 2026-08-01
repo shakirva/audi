@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line } from "recharts";
 import { Download, CalendarCheck, Ban, CalendarDays, CheckCircle2, Filter } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
 import { bookingsAPI, settingsAPI } from "../services/api";
 
@@ -106,50 +108,47 @@ export default function BookingReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    import("jspdf").then(({ default: jsPDF }) => {
-      import("jspdf-autotable").then(() => {
-        const doc = new jsPDF();
-        
-        doc.setFontSize(18);
-        doc.text("Booking Report", 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(0);
-        doc.text(`Total Bookings: ${totalBookings}`, 14, 40);
-        doc.text(`Completed: ${completed}`, 60, 40);
-        doc.text(`Upcoming: ${upcoming}`, 100, 40);
-        doc.text(`Cancelled: ${cancelled} (${cancelRate}%)`, 140, 40);
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Booking Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Total Bookings: ${totalBookings}`, 14, 40);
+    doc.text(`Completed: ${completed}`, 60, 40);
+    doc.text(`Upcoming: ${upcoming}`, 100, 40);
+    doc.text(`Cancelled: ${cancelled} (${cancelRate}%)`, 140, 40);
 
-        const tableColumn = ["Date", "ID", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
-        const tableRows = [];
+    const tableColumn = ["Date", "ID", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
+    const tableRows = [];
 
-        filteredBookings.forEach(b => {
-          const date = new Date(b.date || b.createdAt).toLocaleDateString();
-          const id = b.bookingId || "N/A";
-          const name = b.Customer?.name || b.customerName || "N/A";
-          const event = b.eventType || "N/A";
-          const hall = b.hall || "N/A";
-          const status = b.status || "N/A";
-          const adv = b.advance ? `Rs ${b.advance}` : "0";
-          const total = b.totalAmount ? `Rs ${b.totalAmount}` : "0";
-          
-          tableRows.push([date, id, name, event, hall, status, adv, total]);
-        });
-
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: 45,
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [27, 67, 50] }
-        });
-
-        doc.save(`Booking_Report_${new Date().toISOString().split("T")[0]}.pdf`);
-      });
+    filteredBookings.forEach(b => {
+      const date = new Date(b.date || b.createdAt).toLocaleDateString();
+      const id = b.bookingId || "N/A";
+      const name = b.Customer?.name || b.customerName || "N/A";
+      const event = b.eventType || "N/A";
+      const hall = b.hall || "N/A";
+      const status = b.status || "N/A";
+      const adv = b.advance ? `Rs ${b.advance}` : "0";
+      const total = b.totalAmount ? `Rs ${b.totalAmount}` : "0";
+      
+      tableRows.push([date, id, name, event, hall, status, adv, total]);
     });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [27, 67, 50] }
+    });
+
+    doc.save(`Booking_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
