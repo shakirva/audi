@@ -98,6 +98,7 @@ export default function PaymentsAndReceipts() {
               Complete booking financial center. Track, collect, and manage all payments.
             </p>
           </div>
+        </div>
       </div>
 
       {/* KPI Cards */}

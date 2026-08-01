@@ -119,6 +119,13 @@ export default function CRM() {
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>Sales Pipeline</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track leads and convert enquiries into bookings.</p>
         </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            onClick={() => { setShowEnquiryModal(true); setEditEnquiry(null); }}
+            style={{ padding: "12px 20px", borderRadius: 16, border: "none", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: 15, boxShadow: "0 8px 16px rgba(27,67,50,0.2)" }}
+          >
+            <Plus size={18} /> New Enquiry
+          </button>
         </div>
       </div>
 
