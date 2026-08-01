@@ -143,7 +143,7 @@ export default function Calendar() {
         {/* Day cells */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "8px 10px 12px", gap: 2 }}>
           {cells.map((day, i) => {
-            if (!day) return <div key={i} />;
+            if (!day) return <div key={`empty-${i}`} />;
             const dayBookings = visibleCalendarData.filter(b => b.date === `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`);
             const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
             const isToday      = dateStr === todayStr;
@@ -155,7 +155,7 @@ export default function Calendar() {
             const avail        = availColor(day);
 
             return (
-              <div key={day}
+              <div key={`day-${day}`}
                 onClick={() => { if (!isDisabled) setSelected(day === selected ? null : day); }}
                 style={{
                   borderRadius: 8, padding: "4px 3px 5px", minHeight: 52,
