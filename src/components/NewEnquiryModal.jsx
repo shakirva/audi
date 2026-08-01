@@ -578,12 +578,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 </div>
                 <div style={{ position: "relative" }}>
                   <label style={labelSt}>Event Date *</label>
-                  <SmartDatePicker 
-                    value={form.tentativeDate} 
-                    onChange={handleChange} 
-                    hallPreference={form.hallPreference}
-                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
-                  />
+                  <div style={{ ...iStyle, padding: "8px 12px", height: 40, background: "#f8fafc", display: "flex", alignItems: "center", color: "#475569", fontWeight: 700, cursor: "not-allowed", border: "1.5px solid #e2e8f0" }}>
+                    {form.tentativeDate ? new Date(form.tentativeDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date selected'}
+                  </div>
                   {form.tentativeDate && form.hallPreference && (
                     <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
                       {fetchingAvailability ? "Checking availability..." : availability.status}
