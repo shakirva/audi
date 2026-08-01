@@ -58,7 +58,7 @@ export default function Calendar() {
 
   useEffect(() => {
     settingsAPI.get()
-      .then(res => { if (res.data.blackoutDates) setBlackoutDates(res.data.blackoutDates); })
+      .then(res => { if (res.data.data?.blackoutDates) setBlackoutDates(res.data.data.blackoutDates); })
       .catch(console.error);
       
     fetchEnquiries();

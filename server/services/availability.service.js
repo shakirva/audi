@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const Booking = require("../models/Booking");
 const Enquiry = require("../models/Enquiry");
+const Settings = require("../models/Settings");
 
 class AvailabilityService {
   /**
@@ -10,6 +11,11 @@ class AvailabilityService {
   async checkAvailability({ tenantId, environmentId, hall, date, session, ignoreBookingId = null }) {
     // Standardize inputs
     if (!hall || !date || !session) return { available: false, reason: "Missing parameters" };
+
+    const settings = await Settings.findOne({ where: { tenantId, environmentId } });
+    if (settings && settings.blackoutDates && settings.blackoutDates.includes(date)) {
+      return { available: false, reason: "Date is blocked by administration" };
+    }
 
     const whereClause = {
       tenantId,

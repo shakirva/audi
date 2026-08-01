@@ -318,7 +318,7 @@ function PublicBookingInner() {
 
   useEffect(() => {
     settingsAPI.getPublic(slug).then(res => {
-      setVenueInfo(res.data);
+      setVenueInfo(res.data.data);
       setLoading(false);
     }).catch(err => {
       console.error(err);
