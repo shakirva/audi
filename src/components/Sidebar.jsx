@@ -210,7 +210,6 @@ export default function Sidebar({ open, onClose }) {
           {!collapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || "Venueza User"}</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{role}</div>
             </div>
           )}
         </div>
