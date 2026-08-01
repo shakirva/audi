@@ -78,7 +78,7 @@ const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
   return (
     <div style={{ background: "#fff", borderRadius: 12, padding: 16, border: "1px solid #e5e7eb" }}>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f1f5f9" }}>
-        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Staff"].map(r => {
+        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Coordinator", "Staff", "Security", "Technician", "Cleaner"].map(r => {
           const isActive = activeRole === r;
           return (
             <button
