@@ -225,7 +225,7 @@ export default function Staff() {
       try {
         await usersAPI.remove(id);
         addToast("Staff member deleted", "success");
-        loadStaff();
+        setStaffList(prev => prev.filter(s => s.id !== id));
       } catch (err) {
         addToast(err.response?.data?.error || err.response?.data?.message || "Failed to delete staff", "error");
       }
