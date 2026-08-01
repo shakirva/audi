@@ -9,7 +9,7 @@ export default function BookingAccounts() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterBalance, setFilterBalance] = useState("All");
 
   useEffect(() => {
     fetchBookings();
@@ -30,8 +30,15 @@ export default function BookingAccounts() {
   const filtered = bookings.filter(b => {
     const matchesSearch = b.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (b.bookingId || b.id)?.toString().toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "All" || b.status === filterStatus;
-    return matchesSearch && matchesStatus;
+                          
+    let matchesBalance = true;
+    if (filterBalance === "Pending") {
+      matchesBalance = Number(b.advance || 0) < Number(b.totalAmount || 0);
+    } else if (filterBalance === "Paid") {
+      matchesBalance = Number(b.advance || 0) >= Number(b.totalAmount || 0) && Number(b.totalAmount || 0) > 0;
+    }
+    
+    return matchesSearch && matchesBalance;
   });
 
   return (
@@ -54,15 +61,13 @@ export default function BookingAccounts() {
             />
           </div>
           <select 
-            value={filterStatus} 
-            onChange={(e) => setFilterStatus(e.target.value)}
+            value={filterBalance} 
+            onChange={(e) => setFilterBalance(e.target.value)}
             style={{ padding: "10px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", background: "#fff", color: "#334155", fontWeight: 500, cursor: "pointer" }}
           >
-            <option value="All">All Statuses</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="Completed">Completed</option>
-            <option value="Tentative">Tentative</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="All">All Balances</option>
+            <option value="Pending">Pending Balance</option>
+            <option value="Paid">Fully Paid</option>
           </select>
         </div>
       </div>
