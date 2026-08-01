@@ -15,6 +15,7 @@ export default function Bookings() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
@@ -71,9 +72,19 @@ export default function Bookings() {
         || (b.eventType || "").toLowerCase().includes(search.toLowerCase())
         || (b.hall || "").toLowerCase().includes(search.toLowerCase());
       const statusMatch = !statusFilter || b.status === statusFilter;
-      return nameMatch && statusMatch;
+      
+      let paymentMatch = true;
+      if (paymentFilter) {
+        const total = Number(b.totalAmount) || 0;
+        const paid = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+        const balance = total - paid;
+        if (paymentFilter === "balance_due") paymentMatch = balance > 0;
+        else if (paymentFilter === "fully_paid") paymentMatch = balance <= 0 && total > 0;
+      }
+      
+      return nameMatch && statusMatch && paymentMatch;
     });
-  }, [bookings, search, statusFilter, role, user]);
+  }, [bookings, search, statusFilter, paymentFilter, role, user]);
 
   const uniqueStatuses = [...new Set(bookings.map(b => b.status).filter(Boolean))];
 
@@ -115,6 +126,14 @@ export default function Bookings() {
             style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
             <option value="">All Status</option>
             {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Payment Filter */}
+          <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
+            <option value="">All Payments</option>
+            <option value="balance_due">Balance Due</option>
+            <option value="fully_paid">Fully Paid</option>
           </select>
 
           {/* View Toggle */}
