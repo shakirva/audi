@@ -43,6 +43,11 @@ export default function Sidebar({ open, onClose }) {
 
       // 1. Custom Role-Based Module Access override
       if (roleAccess) {
+        // Deduplicate attendance menus based on role type
+        const isAdminRole = ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"].includes(role);
+        if (item.label === "Staff & HR" && !isAdminRole) return null;
+        if (item.label === "Attendance & Leaves" && isAdminRole) return null;
+
         if (item.type === "link") {
           if (!roleAccess.includes(item.path)) return null;
           return item;
