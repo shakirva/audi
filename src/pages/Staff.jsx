@@ -4,6 +4,7 @@ import { usersAPI, jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useRole } from "../context/RoleContext";
 
 function StaffModal({ open, onClose, onSuccess, editData }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "Sales", password: "" });
@@ -83,7 +84,7 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
   );
 }
 
-function AssignJobModal({ open, onClose, staffMember }) {
+function AssignJobModal({ open, onClose, staffMember, tSlug }) {
   const [jobTitle, setJobTitle] = useState("");
   const [jobDate, setJobDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,8 +104,46 @@ function AssignJobModal({ open, onClose, staffMember }) {
     if (!jobTitle.trim()) return addToast("Please enter a job title", "error");
     
     setLoading(true);
-    // Mocking the API call for now since they want to add directly without the complex Job/Booking system
+    
     setTimeout(() => {
+      
+      const jobId = "LOCAL_" + Date.now();
+      const newJob = {
+        id: jobId,
+        jobNumber: "JOB" + String(Date.now()).slice(-4),
+        customerName: "Internal Task",
+        eventType: jobTitle,
+        status: "Planning",
+        createdAt: new Date().toISOString(),
+        eventDate: jobDate,
+        hall: "N/A",
+        Booking: { 
+          customerName: "Internal Task", 
+          eventType: jobTitle, 
+          hall: "N/A", 
+          date: jobDate,
+          session: "Full Day",
+          totalAmount: 0
+        }
+      };
+
+      // 1. Add Job to localJobs
+      const localJobs = JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]");
+      localJobs.unshift(newJob);
+      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(localJobs));
+
+      // 2. Assign staff to localStaff for this job
+      const localStaff = JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}");
+      const newStaff = { 
+        id: Date.now(), 
+        User: { id: staffMember.id, name: staffMember.name }, 
+        role: staffMember.role || "Staff", 
+        name: staffMember.name, 
+        userId: staffMember.id 
+      };
+      localStaff[jobId] = [newStaff];
+      localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(localStaff));
+
       setLoading(false);
       addToast(`Assigned "${jobTitle}" to ${staffMember.name} successfully!`, "success");
       onClose();
@@ -152,6 +191,9 @@ function AssignJobModal({ open, onClose, staffMember }) {
 export default function Staff() {
   const { confirm } = useConfirm();
   const navigate = useNavigate();
+  const { tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
+
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
   const [staffList, setStaffList] = useState([]);
@@ -185,7 +227,7 @@ export default function Staff() {
         addToast("Staff member deleted", "success");
         loadStaff();
       } catch (err) {
-        addToast("Failed to delete staff", "error");
+        addToast(err.response?.data?.error || err.response?.data?.message || "Failed to delete staff", "error");
       }
     }
   };
@@ -336,6 +378,7 @@ export default function Staff() {
         open={assignModalOpen}
         onClose={() => setAssignModalOpen(false)}
         staffMember={assignStaffData}
+        tSlug={tSlug}
       />
     </div>
   );
