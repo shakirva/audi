@@ -10,10 +10,6 @@ class EnquiryRepository extends BaseRepository {
   async findAllFiltered({ tenantId, environmentId, userRole, userId, search, status, salesExecutiveId, query = {} }) {
     const where = {};
 
-    if (userRole === "Sales") {
-      where.createdBy = userId;
-    }
-
     if (status) where.status = status;
     if (salesExecutiveId) where.salesExecutiveId = salesExecutiveId;
     

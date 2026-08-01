@@ -64,16 +64,8 @@ export default function Calendar() {
     fetchEnquiries();
   }, []);
 
-  let filteredBookings = bookings;
-  let filteredEnquiries = enquiries;
-
-  if (role === "Sales") {
-    filteredBookings = bookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
-    filteredEnquiries = enquiries.filter(e => e.createdBy === user?.name || e.salesExecutiveName === user?.name || e.assignedTo === user?.name || e.userId === user?.id || e.salesExecutiveId === user?.id);
-  }
-
   const allCalendarData = [...bookings, ...enquiries]; // Keep all for availability calculation
-  const visibleCalendarData = [...filteredBookings, ...filteredEnquiries]; // For rendering details
+  const visibleCalendarData = [...bookings, ...enquiries]; // For rendering details
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay    = getFirstDay(year, month);

@@ -17,9 +17,6 @@ class BookingRepository extends BaseRepository {
    */
   async findAllFiltered({ tenantId, environmentId, userRole, userId, status, month, hall, search, query = {} }) {
     const where = {};
-    if (userRole === "Sales") {
-      where.createdBy = userId;
-    }
 
     if (status && status !== "All") where.status = status;
     if (month) where.date = { [Op.like]: `${month}%` };
@@ -58,9 +55,6 @@ class BookingRepository extends BaseRepository {
    */
   async getDashboardStats({ tenantId, environmentId, userRole, userId }) {
     const where = {};
-    if (userRole === "Sales") {
-      where.createdBy = userId;
-    }
     const allBookings = await this.findAllUnpaginated({ tenantId, environmentId, where });
 
     const confirmed = allBookings.filter((b) => b.status === "Confirmed" || b.status === "Completed");
