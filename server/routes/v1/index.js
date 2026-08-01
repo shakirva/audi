@@ -26,6 +26,8 @@ const jobRoutes = require("./jobs");
 const accountRoutes = require("./accounts");
 const availabilityRoutes = require("./availability");
 const deleteCheckRoutes = require("./delete-checks");
+const attendanceRoutes = require("./attendance");
+const leavesRoutes = require("./leaves");
 
 // Mount routes
 router.use("/bookings", bookingRoutes);
@@ -43,6 +45,8 @@ router.use("/jobs", jobRoutes);
 router.use("/accounts", accountRoutes);
 router.use("/availability", availabilityRoutes);
 router.use("/delete-checks", deleteCheckRoutes);
+router.use("/attendance", attendanceRoutes);
+router.use("/leaves", leavesRoutes);
 
 // Future v1 routes will be added here:
 // router.use("/enquiries", enquiryRoutes);

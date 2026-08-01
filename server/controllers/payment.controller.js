@@ -60,6 +60,19 @@ class PaymentController {
     }
   }
 
+  async update(req, res, next) {
+    try {
+      const result = await paymentService.updatePayment(req.params.id, req.body, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+        updatedBy: req.user.id,
+      });
+      return sendSuccess(res, { data: result, message: "Payment updated successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getReceipt(req, res, next) {
     try {
       const result = await paymentService.getReceipt(req.params.paymentId, {

@@ -4,11 +4,7 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-// Mock API — SCOPED BY TENANT to prevent cross-tenant data leakage
-const getStorageKey = (tenantSlug) => `hm_leaves_${tenantSlug || 'default'}`;
-const getMockLeaves = (tenantSlug) => JSON.parse(localStorage.getItem(getStorageKey(tenantSlug)) || "[]");
-const saveMockLeaves = (tenantSlug, data) => localStorage.setItem(getStorageKey(tenantSlug), JSON.stringify(data));
-
+import { leavesAPI } from "../services/api";
 function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
   const [form, setForm] = useState({ startDate: "", endDate: "", reason: "" });
 
@@ -22,39 +18,28 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
 
   if (!open) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Get tenant slug from URL for scoping
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    const tenantSlug = parts.length > 0 ? parts[0] : 'default';
-    const data = getMockLeaves(tenantSlug);
-    
-    if (initialData) {
-      const idx = data.findIndex(l => l.id === initialData.id);
-      if (idx !== -1) {
-        data[idx].startDate = form.startDate;
-        data[idx].endDate = form.endDate;
-        data[idx].reason = form.reason;
+    try {
+      if (initialData) {
+        await leavesAPI.update(initialData.id, {
+          startDate: form.startDate,
+          endDate: form.endDate,
+          reason: form.reason
+        });
+      } else {
+        await leavesAPI.create({
+          startDate: form.startDate,
+          endDate: form.endDate,
+          reason: form.reason
+        });
       }
-      saveMockLeaves(tenantSlug, data);
-    } else {
-      const newEntry = {
-        id: Date.now(),
-        tenantSlug: tenantSlug,
-        userId: user?.id || Date.now(),
-        userName: user?.name || "Unknown User",
-        role: role,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        reason: form.reason,
-        status: "Pending",
-        appliedOn: new Date().toISOString().split("T")[0],
-      };
-      saveMockLeaves(tenantSlug, [newEntry, ...data]);
+      onSuccess();
+      setForm({ startDate: "", endDate: "", reason: "" });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save leave request");
     }
-    
-    onSuccess();
-    setForm({ startDate: "", endDate: "", reason: "" });
   };
 
   return (
@@ -91,8 +76,7 @@ function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
 
 export default function LeaveRequests() {
   const { confirm } = useConfirm();
-  const { user, role, tenant } = useRole();
-  const tenantSlug = tenant?.slug || 'default';
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,35 +88,40 @@ export default function LeaveRequests() {
     fetchData();
   }, []);
 
-  const fetchData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      let data = getMockLeaves(tenantSlug);
-      if (role === "Sales" || role === "Operations") {
-        data = data.filter(l => l.userId === user?.id || l.userName === user?.name);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await leavesAPI.getAll();
+      if (res.data?.success) {
+        setLeaves(res.data.data);
       }
-      setLeaves(data);
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to fetch leave requests", "error");
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
-  const handleUpdateStatus = (id, status) => {
-    const data = getMockLeaves(tenantSlug);
-    const idx = data.findIndex(l => l.id === id);
-    if (idx !== -1) {
-      data[idx].status = status;
-      saveMockLeaves(tenantSlug, data);
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      await leavesAPI.update(id, { status });
       addToast(`Leave request ${status.toLowerCase()}!`, "success");
       fetchData();
+    } catch (err) {
+      addToast("Failed to update status", "error");
     }
   };
 
   const handleDelete = async (id) => {
     if (!(await confirm("Are you sure you want to delete this leave request?"))) return;
-    const data = getMockLeaves(tenantSlug).filter(l => l.id !== id);
-    saveMockLeaves(tenantSlug, data);
-    addToast("Leave request deleted", "success");
-    fetchData();
+    try {
+      await leavesAPI.delete(id);
+      addToast("Leave request deleted", "success");
+      fetchData();
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to delete", "error");
+    }
   };
 
   const handleEdit = (leave) => {
@@ -140,7 +129,7 @@ export default function LeaveRequests() {
     setModalOpen(true);
   };
 
-  const filteredLeaves = leaves.filter(l => l.userName.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredLeaves = leaves.filter(l => l.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -194,7 +183,7 @@ export default function LeaveRequests() {
               filteredLeaves.map(l => (
                 <tr key={l.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", color: "#666", fontWeight: 500 }}>{new Date(l.appliedOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                  {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{l.userName} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({l.role})</span></td>}
+                  {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{l.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({l.User?.role})</span></td>}
                   <td style={{ padding: "16px 20px", color: "#333", fontWeight: 600 }}>{new Date(l.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} to {new Date(l.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                   <td style={{ padding: "16px 20px", color: "#555", maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.reason}>{l.reason}</td>
                   <td style={{ padding: "16px 20px" }}>

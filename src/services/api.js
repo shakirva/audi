@@ -220,6 +220,23 @@ export const deleteChecksAPI = {
   customer: (customerId) => api.get(`/v1/delete-checks/customer/${customerId}`),
   enquiry: (enquiryId) => api.get(`/v1/delete-checks/enquiry/${enquiryId}`),
 };
+// ═══════════════════════════════════
+// HR & STAFF
+// ═══════════════════════════════════
+export const attendanceAPI = {
+  getAll: (params) => api.get("/v1/attendance", { params }),
+  checkIn: () => api.post("/v1/attendance/check-in"),
+  checkOut: () => api.post("/v1/attendance/check-out"),
+  update: (id, data) => api.put(`/v1/attendance/${id}`, data),
+  remove: (id) => api.delete(`/v1/attendance/${id}`),
+};
+
+export const leavesAPI = {
+  getAll: () => api.get("/v1/leaves"),
+  create: (data) => api.post("/v1/leaves", data),
+  update: (id, data) => api.put(`/v1/leaves/${id}`, data),
+  remove: (id) => api.delete(`/v1/leaves/${id}`),
+};
 
 export default api;
 

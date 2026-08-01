@@ -4,15 +4,10 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-// Mock API — SCOPED BY TENANT to prevent cross-tenant data leakage
-const getAttendanceKey = (tenantSlug) => `hm_attendance_${tenantSlug || 'default'}`;
-const getMockAttendance = (tenantSlug) => JSON.parse(localStorage.getItem(getAttendanceKey(tenantSlug)) || "[]");
-const saveMockAttendance = (tenantSlug, data) => localStorage.setItem(getAttendanceKey(tenantSlug), JSON.stringify(data));
-
+import { attendanceAPI } from "../services/api";
 export default function Attendance() {
   const { confirm } = useConfirm();
-  const { user, role, tenant } = useRole();
-  const tSlug = tenant?.slug || 'default';
+  const { user, role } = useRole();
   const { addToast } = useToast();
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,95 +20,80 @@ export default function Attendance() {
     fetchData();
   }, [selectedDate]);
 
-  const fetchData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      let data = getMockAttendance(tSlug);
-      
-      // If it's a staff member, they only see their own attendance
-      if (role === "Sales" || role === "Operations") {
-        data = data.filter(a => a.userId === user?.id || a.userName === user?.name);
-      } else {
-        // Owner/Admin sees attendance for the selected date
-        data = data.filter(a => a.date === selectedDate);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Admin/Owner view for selected date
+      const params = {};
+      if (role !== "Sales" && role !== "Operations") {
+        params.date = selectedDate;
       }
-      setAttendance(data);
+      
+      const res = await attendanceAPI.getAll(params);
+      if (res.data?.success) {
+        setAttendance(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to fetch attendance data", "error");
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
-  const handleCheckIn = () => {
-    const data = getMockAttendance(tSlug);
-    const today = new Date().toISOString().split("T")[0];
-    const existing = data.find(a => (a.userId === user?.id || a.userName === user?.name) && a.date === today);
-    if (existing && existing.checkIn) {
-      addToast("You have already checked in today.", "error");
-      return;
+  const handleCheckIn = async () => {
+    try {
+      const res = await attendanceAPI.checkIn();
+      if (res.data?.success) {
+        addToast("Checked in successfully!", "success");
+        fetchData();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to check in", "error");
     }
-    
-    const newEntry = {
-      id: Date.now(),
-      userId: user?.id || Date.now(),
-      userName: user?.name || "Unknown User",
-      role: role,
-      date: today,
-      checkIn: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
-      checkOut: null,
-      status: "Present",
-    };
-    saveMockAttendance(tSlug, [...data, newEntry]);
-    addToast("Checked in successfully!", "success");
-    fetchData();
   };
 
-  const handleCheckOut = () => {
-    const data = getMockAttendance(tSlug);
-    const today = new Date().toISOString().split("T")[0];
-    const index = data.findIndex(a => (a.userId === user?.id || a.userName === user?.name) && a.date === today);
-    if (index === -1 || !data[index].checkIn) {
-      addToast("You need to check in first.", "error");
-      return;
+  const handleCheckOut = async () => {
+    try {
+      const res = await attendanceAPI.checkOut();
+      if (res.data?.success) {
+        addToast("Checked out successfully!", "success");
+        fetchData();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to check out", "error");
     }
-    if (data[index].checkOut) {
-      addToast("You have already checked out.", "error");
-      return;
-    }
-
-    data[index].checkOut = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-    saveMockAttendance(tSlug, data);
-    addToast("Checked out successfully!", "success");
-    fetchData();
   };
 
   const handleDelete = async (id) => {
     if (!(await confirm("Are you sure you want to delete this record?"))) return;
-    const data = getMockAttendance(tSlug).filter(a => a.id !== id);
-    saveMockAttendance(tSlug, data);
-    addToast("Record deleted", "success");
-    fetchData();
-  };
-
-  const handleEdit = (record) => {
-    const newCheckIn = window.prompt("Enter Check In time (e.g., 09:00 AM)", record.checkIn || "");
-    const newCheckOut = window.prompt("Enter Check Out time (e.g., 06:00 PM)", record.checkOut || "");
-    
-    if (newCheckIn !== null || newCheckOut !== null) {
-      const data = getMockAttendance(tSlug);
-      const idx = data.findIndex(a => a.id === record.id);
-      if (idx !== -1) {
-        if (newCheckIn !== null) data[idx].checkIn = newCheckIn;
-        if (newCheckOut !== null) data[idx].checkOut = newCheckOut;
-        saveMockAttendance(tSlug, data);
-        addToast("Record updated", "success");
-        fetchData();
-      }
+    try {
+      await attendanceAPI.delete(id);
+      addToast("Record deleted", "success");
+      fetchData();
+    } catch (err) {
+      addToast("Failed to delete record", "error");
     }
   };
 
-  // Check if current user checked in today
-  const todayEntry = attendance.find(a => (a.userId === user?.id || a.userName === user?.name) && a.date === new Date().toISOString().split("T")[0]);
+  const handleEdit = async (record) => {
+    const newCheckIn = window.prompt("Enter Check In time (e.g., 09:00 AM)", record.checkIn || "");
+    if (newCheckIn === null) return;
+    const newCheckOut = window.prompt("Enter Check Out time (e.g., 06:00 PM)", record.checkOut || "");
+    if (newCheckOut === null) return;
+    
+    try {
+      await attendanceAPI.update(record.id, { checkIn: newCheckIn, checkOut: newCheckOut });
+      addToast("Record updated", "success");
+      fetchData();
+    } catch (err) {
+      addToast("Failed to update record", "error");
+    }
+  };
 
-  const filteredAttendance = attendance.filter(a => a.userName.toLowerCase().includes(searchTerm.toLowerCase()));
+  const todayEntry = attendance.find(a => a.userId === user?.id && a.date === new Date().toISOString().split("T")[0]);
+
+  const filteredAttendance = attendance.filter(a => a.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -203,7 +183,7 @@ export default function Attendance() {
               filteredAttendance.map(a => (
                 <tr key={a.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                  {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.userName} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.role})</span></td>}
+                  {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
                   <td style={{ padding: "16px 20px" }}>
                     <span style={{ background: a.status === "Present" ? "#dcfce7" : "#fee2e2", color: a.status === "Present" ? "#166534" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
                   </td>

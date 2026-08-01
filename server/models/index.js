@@ -31,6 +31,8 @@ const ChartOfAccount = require("./ChartOfAccount");
 const JournalEntry = require("./JournalEntry");
 const Voucher = require("./Voucher");
 const Feedback = require("./Feedback");
+const Attendance = require("./Attendance");
+const LeaveRequest = require("./LeaveRequest");
 const {
   MasterHall, MasterPackage, MasterService, MasterEventType,
   MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory,
@@ -63,6 +65,8 @@ Tenant.hasMany(BankBook, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(ChartOfAccount, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(JournalEntry, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Voucher, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Attendance, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(LeaveRequest, { foreignKey: "tenantId", onDelete: "CASCADE" });
 
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -120,6 +124,8 @@ User.hasMany(JobStaff, { foreignKey: "userId", onDelete: "CASCADE" });
 User.hasMany(JobTimeline, { foreignKey: "userId", onDelete: "SET NULL" });
 User.hasMany(JobChecklist, { foreignKey: "completedBy", onDelete: "SET NULL" });
 User.hasMany(JobDocument, { foreignKey: "uploadedBy", onDelete: "SET NULL" });
+User.hasMany(Attendance, { foreignKey: "userId", onDelete: "CASCADE" });
+User.hasMany(LeaveRequest, { foreignKey: "userId", onDelete: "CASCADE" });
 
 // ── Job has many ──
 Job.hasMany(JobStaff, { foreignKey: "jobId", onDelete: "CASCADE" });
@@ -155,6 +161,8 @@ BankBook.belongsTo(Tenant, { foreignKey: "tenantId" });
 ChartOfAccount.belongsTo(Tenant, { foreignKey: "tenantId" });
 JournalEntry.belongsTo(Tenant, { foreignKey: "tenantId" });
 Voucher.belongsTo(Tenant, { foreignKey: "tenantId" });
+Attendance.belongsTo(Tenant, { foreignKey: "tenantId" });
+LeaveRequest.belongsTo(Tenant, { foreignKey: "tenantId" });
 
 // ── Belongs to Environment ──
 Booking.belongsTo(Environment, { foreignKey: "environmentId" });
@@ -234,12 +242,15 @@ JobDocument.belongsTo(User, { as: "UploadedByUser", foreignKey: "uploadedBy" });
 
 AccountStatement.belongsTo(Customer, { foreignKey: "customerId" });
 
+Attendance.belongsTo(User, { as: "User", foreignKey: "userId" });
+LeaveRequest.belongsTo(User, { as: "User", foreignKey: "userId" });
+
 module.exports = { 
   Tenant, Environment, Subscription, User, Booking, Expense, Settings, AuditLog, Customer, Enquiry, FollowUp,
   Agreement, AgreementTemplate, AgreementVersion, Payment, Receipt,
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
   AccountStatement, CashBook, BankBook,
-  ChartOfAccount, JournalEntry, Voucher,
+  ChartOfAccount, JournalEntry, Voucher, Attendance, LeaveRequest,
   MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory 
 };
 
