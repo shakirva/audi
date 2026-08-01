@@ -37,7 +37,7 @@ const textLight = [100, 116, 139]; // Slate 500
 const drawHeader = async (doc, title, booking, settings = {}) => {
   // Header background
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 40, "F");
+  doc.rect(0, 0, 210, 48, "F");
 
   // Logo / Brand
   doc.setTextColor(255, 255, 255);
@@ -46,7 +46,7 @@ const drawHeader = async (doc, title, booking, settings = {}) => {
   if (settings.logoUrl) {
     try {
       const imgData = await fetchImage(settings.logoUrl);
-      doc.addImage(imgData, 'PNG', 14, 5, 30, 30); // 30x30 logo
+      doc.addImage(imgData, 'PNG', 14, 9, 30, 30); // 30x30 logo
       textX = 50;
     } catch (e) {
       console.warn("Failed to load logo", e);
@@ -56,19 +56,22 @@ const drawHeader = async (doc, title, booking, settings = {}) => {
   // Reduce font size to prevent overlapping
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 18);
+  doc.text(settings.venueName || "VENUEZA", textX, 20);
   
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 25);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 26);
   
   let contactStr = [];
   if (settings.phone) contactStr.push(settings.phone);
   if (settings.email) contactStr.push(settings.email);
-  if (settings.gstin) contactStr.push(`GSTIN: ${settings.gstin}`);
   
   if (contactStr.length > 0) {
-    doc.text(contactStr.join(" | "), textX, 31);
+    doc.text(contactStr.join(" | "), textX, 32);
+  }
+
+  if (settings.gstin) {
+    doc.text(`GSTIN: ${settings.gstin}`, textX, 38);
   }
 
   // Title & Info
@@ -456,7 +459,7 @@ export const generateReceipt = async (payment, booking) => {
   
   // Header
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 45, "F");
+  doc.rect(0, 0, 210, 48, "F");
 
   // Logo / Brand
   doc.setTextColor(255, 255, 255);
@@ -465,7 +468,7 @@ export const generateReceipt = async (payment, booking) => {
   if (settings.logoUrl) {
     try {
       const imgData = await fetchImage(settings.logoUrl);
-      doc.addImage(imgData, 'PNG', 14, 10, 30, 30);
+      doc.addImage(imgData, 'PNG', 14, 9, 30, 30);
       textX = 50;
     } catch (e) {
       console.warn("Failed to load logo", e);
@@ -474,26 +477,29 @@ export const generateReceipt = async (payment, booking) => {
 
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 22);
+  doc.text(settings.venueName || "VENUEZA", textX, 20);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 29);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 27);
   
   let contactStr = [];
   if (settings.phone) contactStr.push(settings.phone);
   if (settings.email) contactStr.push(settings.email);
-  if (settings.gstin) contactStr.push(`GSTIN: ${settings.gstin}`);
   
   if (contactStr.length > 0) {
-    doc.text(contactStr.join(" | "), textX, 36);
+    doc.text(contactStr.join(" | "), textX, 33);
+  }
+
+  if (settings.gstin) {
+    doc.text(`GSTIN: ${settings.gstin}`, textX, 39);
   }
 
   doc.setFontSize(16);
   doc.text("OFFICIAL RECEIPT", 196, 25, { align: "right" });
   doc.setFontSize(10);
   doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 32, { align: "right" });
-  doc.text(`Receipt No: ${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}`, 196, 38, { align: "right" });
+  doc.text(`Receipt No: ${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}`, 196, 39, { align: "right" });
 
   // Receipt Body Border
   doc.setDrawColor(200, 200, 200);
