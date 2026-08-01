@@ -53,22 +53,29 @@ const drawHeader = async (doc, title, booking, settings = {}) => {
     }
   }
 
-  doc.setFontSize(22);
+  // Reduce font size to prevent overlapping
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 20);
+  doc.text(settings.venueName || "VENUEZA", textX, 18);
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 27);
-  if (settings.phone || settings.email) {
-    doc.text(`${settings.phone || ""} ${settings.email ? "| " + settings.email : ""}`, textX, 34);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 25);
+  
+  let contactStr = [];
+  if (settings.phone) contactStr.push(settings.phone);
+  if (settings.email) contactStr.push(settings.email);
+  if (settings.gstin) contactStr.push(`GSTIN: ${settings.gstin}`);
+  
+  if (contactStr.length > 0) {
+    doc.text(contactStr.join(" | "), textX, 31);
   }
 
   // Title & Info
-  doc.setFontSize(22);
-  doc.text(title, 196, 25, { align: "right" });
-  doc.setFontSize(10);
-  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 196, 32, { align: "right" });
+  doc.setFontSize(16);
+  doc.text(title, 196, 22, { align: "right" });
+  doc.setFontSize(9);
+  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 196, 30, { align: "right" });
 };
 
 const drawFooter = (doc, settings = {}) => {
@@ -98,8 +105,9 @@ export const generateQuotation = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`Name: ${booking.Customer?.name || booking.customerName || "N/A"}`, 14, 62);
   doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
-  if (booking.clientGstNumber || booking.Customer?.gstNumber) {
-    doc.text(`GSTIN: ${booking.clientGstNumber || booking.Customer?.gstNumber}`, 14, 74);
+  const clientGst = booking.clientGstNumber || booking.Customer?.gstNumber;
+  if (clientGst && clientGst !== "undefined" && clientGst !== "null") {
+    doc.text(`GSTIN: ${clientGst}`, 14, 74);
   }
   
   // Event Info
@@ -152,10 +160,12 @@ export const generateAgreement = async (data) => {
   doc.setFont("helvetica", "bold");
   doc.text("Terms & Conditions of Booking", 14, 55);
   
+  const clientGst = booking.clientGstNumber || booking.Customer?.gstNumber;
+  
   // Custom Table for Contract fields matching the physical format
   const tableData = [
     ["Name of the Host", booking.customerName || "N/A"],
-    ...(booking.clientGstNumber || booking.Customer?.gstNumber ? [["Client GSTIN", booking.clientGstNumber || booking.Customer?.gstNumber]] : []),
+    ...(clientGst && clientGst !== "undefined" && clientGst !== "null" ? [["Client GSTIN", clientGst]] : []),
     ["Date & Time of function", `${booking.date ? new Date(booking.date).toLocaleDateString("en-IN") : "TBD"} | ${booking.session || "Full Day"}`],
     ["Address", booking.address || "N/A"],
     ["Email & Mobile No", `${booking.email || ""} | ${booking.phone || ""}`],
@@ -213,8 +223,9 @@ export const generateInvoice = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 14, 62);
   doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
-  if (booking.clientGstNumber || booking.Customer?.gstNumber) {
-    doc.text(`GSTIN: ${booking.clientGstNumber || booking.Customer?.gstNumber}`, 14, 74);
+  const clientGst = booking.clientGstNumber || booking.Customer?.gstNumber;
+  if (clientGst && clientGst !== "undefined" && clientGst !== "null") {
+    doc.text(`GSTIN: ${clientGst}`, 14, 74);
   }
   
   doc.setFont("helvetica", "bold");
@@ -461,20 +472,26 @@ export const generateReceipt = async (payment, booking) => {
     }
   }
 
-  doc.setFontSize(26);
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 25);
+  doc.text(settings.venueName || "VENUEZA", textX, 22);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 32);
-  if (settings.phone || settings.email) {
-    doc.text(`${settings.phone || ""} ${settings.email ? "| " + settings.email : ""}`, textX, 38);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 29);
+  
+  let contactStr = [];
+  if (settings.phone) contactStr.push(settings.phone);
+  if (settings.email) contactStr.push(settings.email);
+  if (settings.gstin) contactStr.push(`GSTIN: ${settings.gstin}`);
+  
+  if (contactStr.length > 0) {
+    doc.text(contactStr.join(" | "), textX, 36);
   }
 
-  doc.setFontSize(22);
+  doc.setFontSize(16);
   doc.text("OFFICIAL RECEIPT", 196, 25, { align: "right" });
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 32, { align: "right" });
   doc.text(`Receipt No: ${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}`, 196, 38, { align: "right" });
 
