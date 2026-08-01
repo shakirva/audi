@@ -13,6 +13,8 @@ export default function Attendance() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const isStaffView = role !== "Owner" && role !== "SuperAdmin";
+
   // For owner/admin:
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
 
@@ -25,7 +27,7 @@ export default function Attendance() {
       setLoading(true);
       // Admin/Owner view for selected date
       const params = {};
-      if (role !== "Sales" && role !== "Operations") {
+      if (!isStaffView) {
         params.date = selectedDate;
       }
       
@@ -100,7 +102,7 @@ export default function Attendance() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>
-            {role === "Sales" || role === "Operations" ? "My Attendance" : "Staff Attendance"}
+            {isStaffView ? "My Attendance" : "Staff Attendance"}
           </h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track daily check-ins and working hours.</p>
         </div>
@@ -111,7 +113,7 @@ export default function Attendance() {
         </div>
       </div>
 
-      {(role === "Sales" || role === "Operations") && (
+      {isStaffView && (
         <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #eaeaea", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h3 style={{ margin: "0 0 8px", fontSize: 18, color: "#111" }}>Today's Status</h3>
@@ -138,7 +140,7 @@ export default function Attendance() {
         </div>
       )}
 
-      {role !== "Sales" && role !== "Operations" && (
+      {!isStaffView && (
         <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
@@ -167,11 +169,11 @@ export default function Attendance() {
           <thead>
             <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Date</th>
-              {role !== "Sales" && role !== "Operations" && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Staff Member</th>}
+              {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Staff Member</th>}
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Status</th>
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check In</th>
               <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check Out</th>
-              {role !== "Sales" && role !== "Operations" && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555", textAlign: "right" }}>Actions</th>}
+              {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555", textAlign: "right" }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -183,13 +185,13 @@ export default function Attendance() {
               filteredAttendance.map(a => (
                 <tr key={a.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                  {role !== "Sales" && role !== "Operations" && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
+                  {!isStaffView && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
                   <td style={{ padding: "16px 20px" }}>
                     <span style={{ background: a.status === "Present" ? "#dcfce7" : "#fee2e2", color: a.status === "Present" ? "#166534" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
                   </td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkIn || "—"}</td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkOut || "—"}</td>
-                  {role !== "Sales" && role !== "Operations" && (
+                  {!isStaffView && (
                     <td style={{ padding: "16px 20px", textAlign: "right" }}>
                       <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", marginRight: 8 }}><Edit3 size={16} /></button>
                       <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={16} /></button>
