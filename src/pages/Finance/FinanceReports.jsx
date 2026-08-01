@@ -31,14 +31,6 @@ export default function FinanceReports() {
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Finance Reports</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Real-time Profit & Loss statement based on double-entry ledgers.</p>
         </div>
-        
-        <button 
-          onClick={fetchReport}
-          disabled={loading}
-          style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "10px 16px", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: loading ? "not-allowed" : "pointer" }}
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
       </div>
 
       {loading && !report ? (

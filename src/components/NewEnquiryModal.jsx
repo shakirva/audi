@@ -246,25 +246,34 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const filteredEventTypes = (settingsEventTypes.length > 0 ? settingsEventTypes.map(t => typeof t === "string" ? t : t.name) : EVENT_TYPES)
     .filter(t => t.toLowerCase().includes((eventTypeQuery || "").toLowerCase()));
 
+  const isFormValid = Boolean(
+    form.name?.trim() &&
+    form.phone?.trim() &&
+    form.gender &&
+    form.place?.trim() &&
+    form.address?.trim() &&
+    form.eventType?.trim() &&
+    form.tentativeDate &&
+    form.hallPreference &&
+    form.session &&
+    form.guestCount !== "" &&
+    form.budget !== "" &&
+    form.leadScore &&
+    form.salesExecutiveId &&
+    form.source
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!form.name || !form.name.trim() || !form.phone || !form.phone.trim()) {
-      setError("Customer name and phone are required.");
+    if (!isFormValid) {
+      setError("Please fill all mandatory fields marked with (*).");
       return;
     }
     const cleanPhone = (form.phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) {
       setError("Please enter a valid 10-digit phone number.");
-      return;
-    }
-    if (!form.hallPreference) {
-      setError("Please select a Hall.");
-      return;
-    }
-    if (!form.session) {
-      setError("Please select a Session.");
       return;
     }
 
@@ -369,13 +378,6 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         {/* Body */}
         <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
           
-          {error && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
-              <AlertCircle size={16} color="#ef4444" />
-              <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{error}</span>
-            </div>
-          )}
-
           <form id="new-enquiry-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             
             {/* ── Customer Info ── */}
@@ -430,7 +432,15 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                       setForm(prev => ({ ...prev, place: e.target.value }));
                       setShowPlaceDropdown(true);
                     }}
-                    onFocus={() => setShowPlaceDropdown(true)}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#1B4332";
+                      setShowPlaceDropdown(true);
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e7eb";
+                      // Use timeout to allow click events on dropdown items to fire
+                      setTimeout(() => setShowPlaceDropdown(false), 150);
+                    }}
                     placeholder="e.g. Kannur"
                     style={iStyle}
                     autoComplete="off"
@@ -522,7 +532,14 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                       setForm(prev => ({ ...prev, eventType: e.target.value }));
                       setShowEventTypeDropdown(true);
                     }}
-                    onFocus={() => setShowEventTypeDropdown(true)}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#1B4332";
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e7eb";
+                      setTimeout(() => setShowEventTypeDropdown(false), 150);
+                    }}
                     placeholder="e.g. Wedding"
                     style={iStyle}
                     autoComplete="off"
@@ -578,9 +595,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 </div>
                 <div style={{ position: "relative" }}>
                   <label style={labelSt}>Event Date *</label>
-                  <div style={{ ...iStyle, padding: "8px 12px", height: 40, background: "#f8fafc", display: "flex", alignItems: "center", color: "#475569", fontWeight: 700, cursor: "not-allowed", border: "1.5px solid #e2e8f0" }}>
-                    {form.tentativeDate ? new Date(form.tentativeDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date selected'}
-                  </div>
+                  <SmartDatePicker 
+                    value={form.tentativeDate} 
+                    onChange={handleChange} 
+                    hallPreference={form.hallPreference}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40, fontWeight: 700, borderColor: form.tentativeDate ? "#e2e8f0" : "#e5e7eb" }}
+                  />
                   {form.tentativeDate && form.hallPreference && (
                     <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
                       {fetchingAvailability ? "Checking availability..." : availability.status}
@@ -792,15 +812,23 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", gap: 12, background: "#f8f9fa" }}>
-          <button type="button" onClick={onClose}
-            style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, cursor: "pointer", color: "#555", fontSize: 14 }}>
-            Cancel
-          </button>
-          <button type="submit" form="new-enquiry-form" disabled={loading}
-            style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
-            {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
-          </button>
+        <div style={{ background: "#f8f9fa", borderTop: "1px solid #eaeaea", display: "flex", flexDirection: "column" }}>
+          {error && (
+            <div style={{ margin: "16px 24px 0 24px", display: "flex", alignItems: "center", gap: 10, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px" }}>
+              <AlertCircle size={16} color="#ef4444" />
+              <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{error}</span>
+            </div>
+          )}
+          <div style={{ padding: "16px 24px", display: "flex", gap: 12 }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, cursor: "pointer", color: "#555", fontSize: 14 }}>
+              Cancel
+            </button>
+            <button type="submit" form="new-enquiry-form" disabled={loading}
+              style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
+              {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
+            </button>
+          </div>
         </div>
       </div>
       </div>

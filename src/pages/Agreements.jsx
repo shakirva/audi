@@ -209,9 +209,6 @@ export default function Agreements() {
             <input type="text" placeholder="Search agreements..." value={search} onChange={e => setSearch(e.target.value)}
               style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
-          <button onClick={fetchAgreements} style={{ padding: "12px 16px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#475569" }}>
-            <RefreshCw size={16} />
-          </button>
         </div>
         <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
           {!loading && `${agreements.length} agreement${agreements.length !== 1 ? "s" : ""}`}

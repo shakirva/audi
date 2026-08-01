@@ -494,12 +494,6 @@ export default function Jobs() {
           }}>
             <Plus size={16} /> Create Job
           </button>
-          <button onClick={fetchJobs} style={{
-            background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8,
-            padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
-          }}>
-            <RefreshCw size={14} /> Refresh
-          </button>
         </div>
       </div>
 

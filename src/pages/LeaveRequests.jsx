@@ -153,9 +153,6 @@ export default function LeaveRequests() {
               />
             </div>
           )}
-          <button onClick={fetchData} style={{ background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-            <RefreshCw size={14} /> Refresh
-          </button>
           <button onClick={() => { setEditingLeave(null); setModalOpen(true); }} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
             <Plus size={16} /> Apply Leave
           </button>

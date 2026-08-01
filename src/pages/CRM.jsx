@@ -119,13 +119,6 @@ export default function CRM() {
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>Sales Pipeline</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track leads and convert enquiries into bookings.</p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button
-            onClick={fetchEnquiries}
-            style={{ background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
         </div>
       </div>
 

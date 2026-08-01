@@ -124,13 +124,7 @@ export default function ActivityLogs() {
               style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 240 }}
             />
           </div>
-          <button 
-            onClick={fetchLogs} 
-            style={{ padding: "10px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#64748b" }}
-            title="Refresh"
-          >
-            <RefreshCw size={18} />
-          </button>
+
           <button 
             onClick={handleClearLogs}
             style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}

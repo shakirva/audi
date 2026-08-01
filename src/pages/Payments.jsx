@@ -175,9 +175,6 @@ export default function Payments() {
             <Filter size={16} /> Filter
           </button>
         </div>
-        <button onClick={fetchData} style={{ padding: "12px 16px", borderRadius: 16, border: "none", background: "#f1f5f9", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#475569" }}>
-          <RefreshCw size={16} />
-        </button>
       </div>
 
       {/* Booking Payment Cards */}

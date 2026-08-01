@@ -106,11 +106,6 @@ export default function Attendance() {
           </h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track daily check-ins and working hours.</p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={fetchData} style={{ background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, padding: "10px 16px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
       </div>
 
       {isStaffView && (

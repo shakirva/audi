@@ -98,10 +98,6 @@ export default function PaymentsAndReceipts() {
               Complete booking financial center. Track, collect, and manage all payments.
             </p>
           </div>
-        </div>
-        <button onClick={fetchBookings} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontWeight: 600 }}>
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
       </div>
 
       {/* KPI Cards */}
