@@ -120,13 +120,64 @@ export default function ActivityLogs() {
                 </tr>
               ) : (
                 filteredLogs.map((log) => {
-                  const colors = getActionColor(log.action);
+                  const formatLogDetails = (log) => {
+                    const body = log.details?.body || {};
+                    
+                    if (log.action === "Safe Delete Booking") {
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {body.reason && (
+                            <div style={{ padding: "8px 12px", background: "#fee2e2", borderLeft: "3px solid #ef4444", color: "#991b1b", borderRadius: "0 6px 6px 0", fontWeight: 500, fontSize: 13 }}>
+                              <strong>Reason for deletion:</strong> {body.reason}
+                            </div>
+                          )}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
+                              <span style={{ color: "#64748b" }}>Refund Action:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.refundAction || "N/A"}</strong>
+                            </div>
+                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
+                              <span style={{ color: "#64748b" }}>Expense Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.expenseAction || "N/A"}</strong>
+                            </div>
+                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
+                              <span style={{ color: "#64748b" }}>Enquiry Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.enquiryAction || "N/A"}</strong>
+                            </div>
+                            <div style={{ fontSize: 12, background: "#f8fafc", padding: "6px 10px", borderRadius: 6, border: "1px solid #f1f5f9" }}>
+                              <span style={{ color: "#64748b" }}>Customer Record:</span> <strong style={{ color: "#334155", textTransform: "capitalize" }}>{body.customerAction || "N/A"}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    if (log.action?.includes("Delete") || log.action?.includes("Remove")) {
+                      const resourceId = log.resource?.split("/").pop();
+                      return (
+                        <div style={{ fontSize: 13, color: "#475569" }}>
+                          Deleted a record from the system. <br/>
+                          <span style={{ color: "#94a3b8", fontSize: 12 }}>Resource ID: {resourceId || "Unknown"}</span>
+                        </div>
+                      );
+                    }
+
+                    // Generic fallback for Create/Update
+                    const keys = Object.keys(body).filter(k => !["id", "tenantId", "createdAt", "updatedAt", "password"].includes(k));
+                    if (keys.length === 0) {
+                      return <span style={{ color: "#94a3b8", fontStyle: "italic", fontSize: 13 }}>No additional details provided.</span>;
+                    }
+                    
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {keys.slice(0, 8).map(k => (
+                          <div key={k} style={{ fontSize: 12, background: "#f8fafc", padding: "4px 8px", borderRadius: 4, color: "#475569", border: "1px solid #e2e8f0" }}>
+                            <span style={{ color: "#94a3b8" }}>{k}:</span> {typeof body[k] === 'object' ? '...' : String(body[k]).substring(0, 30)}
+                          </div>
+                        ))}
+                        {keys.length > 8 && <div style={{ fontSize: 12, color: "#94a3b8", padding: "4px" }}>+{keys.length - 8} more</div>}
+                      </div>
+                    );
+                  };
                   
-                  // Extract reasons from safe-delete requests
-                  let reasonText = "";
-                  if (log.details?.body?.reason) {
-                    reasonText = log.details.body.reason;
-                  }
+                  const colors = getActionColor(log.action);
 
                   return (
                     <tr key={log.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -164,15 +215,7 @@ export default function ActivityLogs() {
                         </div>
                       </td>
                       <td style={{ padding: "16px 24px", color: "#334155", fontSize: 13 }}>
-                        {reasonText && (
-                          <div style={{ marginBottom: 8, padding: "8px 12px", background: "#fff1f2", borderLeft: "3px solid #f43f5e", borderRadius: "0 6px 6px 0", color: "#9f1239", fontWeight: 500 }}>
-                            <strong>Reason:</strong> {reasonText}
-                          </div>
-                        )}
-                        
-                        <div style={{ maxHeight: 60, overflowY: "auto", background: "#f8fafc", padding: "8px 12px", borderRadius: 6, border: "1px solid #f1f5f9", fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>
-                          {JSON.stringify(log.details?.body || log.details || {}, null, 2)}
-                        </div>
+                        {formatLogDetails(log)}
                       </td>
                     </tr>
                   );
