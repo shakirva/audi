@@ -31,12 +31,14 @@ export default function Collections() {
   };
 
   const handleDeletePayment = async (id) => {
-    const isConfirmed = await confirm({
-      title: "Delete Collection",
-      message: "Are you sure you want to delete this payment collection? This will permanently remove it and affect associated ledgers.",
-      confirmText: "Delete",
-      type: "danger"
-    });
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this payment collection? This will permanently remove it and affect associated ledgers.",
+      {
+        title: "Delete Collection",
+        confirmText: "Delete",
+        isDanger: true
+      }
+    );
 
     if (isConfirmed) {
       try {
