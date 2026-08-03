@@ -73,7 +73,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         quotedAmount: (Number(booking.totalAmount || 0) + Number(booking.discount || 0)) || "",
         discount: booking.discount || "",
         taxes: booking.taxes || "",
-        taxPercentage: booking.taxes && booking.totalAmount ? Math.round((Number(booking.taxes) / (Number(booking.totalAmount) - Number(booking.taxes))) * 100) : "",
+        taxPercentage: booking.taxPercentage !== undefined && booking.taxPercentage !== null ? booking.taxPercentage : "",
         totalAmount: booking.totalAmount || "",
         advance: booking.advance || "",
         depositAmount: booking.depositAmount || "",

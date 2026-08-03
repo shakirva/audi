@@ -33,11 +33,25 @@ export default function InvoiceModal({ booking, onClose }) {
   const balance = totalAmt - advance;
   const taxes = Number(booking.taxes || 0);
   const subtotal = totalAmt - taxes;
-  const gstPct = taxes > 0 ? Math.round((taxes / subtotal) * 100) : 0;
   
   let facilitiesTotal = 0;
+  let facilitiesTax = 0;
   if (booking.facilities && booking.facilities.length > 0) {
-     facilitiesTotal = booking.facilities.reduce((sum, f) => sum + (Number(f.price || 0) * Number(f.count || 1)), 0);
+     booking.facilities.forEach(f => {
+       const fCount = Number(f.count || 1);
+       const fPrice = Number(f.price || 0) * fCount;
+       const fGst = Number(f.gst || 0);
+       facilitiesTotal += fPrice;
+       if (fGst > 0) facilitiesTax += (fPrice * fGst) / 100;
+     });
+  }
+
+  const hallTax = Math.max(0, taxes - facilitiesTax);
+  const hallBase = Math.max(0, subtotal - (facilitiesTotal - facilitiesTax));
+  
+  let gstPct = Number(booking.taxPercentage);
+  if (!gstPct && hallBase > 0) {
+    gstPct = Math.round((hallTax / hallBase) * 100);
   }
   
   const formattedDate = (() => {
