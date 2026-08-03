@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, X, Loader, ShieldAlert, IndianRupee, Trash2, Ban, Briefcase, ScrollText, Wallet, FileX, Users } from "lucide-react";
+import { AlertTriangle, X, Loader, ShieldAlert, IndianRupee, Trash2, Ban, Briefcase, ScrollText, Wallet, FileX, Users, Receipt } from "lucide-react";
 import { deleteChecksAPI, bookingsAPI, customersAPI, enquiriesAPI } from "../services/api";
 
 const ov = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 };
@@ -26,13 +26,14 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
   const [expenseAction, setExpenseAction] = useState("");
   const [enquiryAction, setEnquiryAction] = useState(""); // "revert" | "delete"
   const [customerAction, setCustomerAction] = useState(""); // "keep" | "delete"
+  const [collectionAction, setCollectionAction] = useState(""); // "delete" | "keep"
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open || !id) return;
     setLoading(true); setError(null); setStep(1); setReason(""); setConfirmText("");
     setRefundAction(""); setRefundAccount(""); setExpenseAction("");
-    setEnquiryAction(""); setCustomerAction("");
+    setEnquiryAction(""); setCustomerAction(""); setCollectionAction("");
     const fetch = async () => {
       if (type === "collection") {
         setCheckData({});
@@ -59,9 +60,9 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         const d = checkData;
         const hasPayments = d?.financial?.totalPaid > 0;
         if (hasPayments || d?.financial?.totalExpenses > 0) {
-          await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction, enquiryAction, customerAction });
+          await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction, enquiryAction, customerAction, collectionAction });
         } else {
-          await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction });
+          await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction, collectionAction });
         }
       } else if (type === "customer") await customersAPI.remove(id);
       else if (type === "collection") await paymentsAPI.remove(id);
@@ -79,6 +80,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
     const s = [1, 2];
     if (financial.totalPaid > 0 && refundAction === "refund") s.push(3);
     s.push(4);
+    if (financial.totalPaid > 0) s.push('collections');
     if (related.hasEnquiry || related.hasCustomer) s.push('crm');
     s.push('warning');
     s.push(5);
@@ -223,8 +225,38 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button onClick={() => setStep(hasPayments && refundAction === "refund" ? 3 : 2)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
-          <button onClick={() => setStep(related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')} disabled={hasExpenses && !expenseAction}
+          <button onClick={() => setStep(hasPayments ? 'collections' : (related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning'))} disabled={hasExpenses && !expenseAction}
             style={{ ...bb, flex: 1, background: (!hasExpenses || expenseAction) ? "#1B4332" : "#94a3b8", color: "#fff", opacity: (!hasExpenses || expenseAction) ? 1 : 0.5 }}>
+            Next →
+          </button>
+        </div>
+      </div>
+    );
+
+    // Step Collections: Collection History handling
+    if (step === 'collections') return (
+      <div style={{ padding: 28 }}>
+        <div style={st}><Receipt size={13} /> Collection History</div>
+        <p style={{ fontSize: 14, color: "#374151", marginBottom: 16, lineHeight: 1.6 }}>
+          <strong>{financial.payments.length}</strong> payment record{financial.payments.length > 1 ? "s" : ""} totalling <strong>₹{financial.totalPaid.toLocaleString()}</strong> exist in the Collections register. What should happen to them?
+        </p>
+        {financial.payments.map((p, i) => (
+          <div key={i} style={{ ...ir, fontSize: 12, color: "#64748b" }}>
+            <span>{p.paymentNumber || `Payment ${i + 1}`} — {p.paymentMode || "Cash"}</span><span>₹{Number(p.amount).toLocaleString()}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 12 }}>
+          <button style={optBtn(collectionAction === "delete")} onClick={() => setCollectionAction("delete")}>
+            🗑️ Delete all collection records — Remove from Collections register permanently
+          </button>
+          <button style={optBtn(collectionAction === "keep")} onClick={() => setCollectionAction("keep")}>
+            📋 Keep collection history — Records remain in Collections but unlinked from this booking
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button onClick={() => setStep(4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep(related.hasEnquiry || related.hasCustomer ? 'crm' : 'warning')} disabled={!collectionAction}
+            style={{ ...bb, flex: 1, background: collectionAction ? "#1B4332" : "#94a3b8", color: "#fff", opacity: collectionAction ? 1 : 0.5 }}>
             Next →
           </button>
         </div>
@@ -264,7 +296,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
         )}
 
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button onClick={() => setStep(4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep(hasPayments ? 'collections' : 4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={() => setStep('warning')} disabled={(related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)}
             style={{ ...bb, flex: 1, background: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? "#94a3b8" : "#1B4332", color: "#fff", opacity: ((related.hasEnquiry && !enquiryAction) || (related.hasCustomer && !customerAction)) ? 0.5 : 1 }}>
             Next →
@@ -286,7 +318,7 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
           </p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setStep((related.hasEnquiry || related.hasCustomer) ? 'crm' : 4)} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
+          <button onClick={() => setStep((related.hasEnquiry || related.hasCustomer) ? 'crm' : (hasPayments ? 'collections' : 4))} style={{ ...bb, flex: 1, background: "#f1f5f9", color: "#374151" }}>Back</button>
           <button onClick={() => setStep(5)} style={{ ...bb, flex: 1, background: "#dc2626", color: "#fff" }}>
             I understand the risks →
           </button>
@@ -307,6 +339,9 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
             <div style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", marginBottom: 8 }}>YOUR SELECTIONS</div>
             {hasPayments && <div style={{ fontSize: 12, color: "#374151", marginBottom: 4, fontWeight: 600 }}>
               💰 Payments (₹{financial.totalPaid.toLocaleString()}): {refundAction === "refund" ? `Refund via ${refundAccount}` : refundAction === "writeOff" ? "Write off" : "Already refunded"}
+            </div>}
+            {hasPayments && <div style={{ fontSize: 12, color: "#374151", marginBottom: 4, fontWeight: 600 }}>
+              🧾 Collections: {collectionAction === "delete" ? "Delete all records" : "Keep & unlink"}
             </div>}
             {hasExpenses && <div style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>
               📦 Expenses (₹{financial.totalExpenses.toLocaleString()}): {expenseAction === "delete" ? "Delete" : "Keep & unlink"}
