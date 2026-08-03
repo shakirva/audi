@@ -131,17 +131,25 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [open, enquiry]);
 
-  // Fetch settings to auto-fill GST rate
+  const [settings, setSettings] = useState({});
+
   useEffect(() => {
-    if (open && formData.hall) {
-      const fetchSettings = async () => {
-        try {
-          const res = await settingsAPI.get();
-          const halls = res.data.data.halls || [];
-          const selectedHall = halls.find(h => h.name === formData.hall);
-          if (selectedHall && selectedHall.gstRate !== undefined) {
-            setFormData(prev => {
-              const pct = Number(selectedHall.gstRate) || 0;
+    if (open) {
+      import("../services/api").then(({ settingsAPI }) => {
+        settingsAPI.get().then(res => setSettings(res.data?.data || {}));
+      }).catch(() => {});
+    }
+  }, [open]);
+
+  // Auto-fill GST rate when hall changes
+  useEffect(() => {
+    if (formData.hall && settings.halls) {
+      const selectedHall = settings.halls.find(h => h.name === formData.hall);
+      if (selectedHall && selectedHall.gstRate !== undefined) {
+        setFormData(prev => {
+          if (prev.taxPercentage === selectedHall.gstRate) return prev;
+          
+          const pct = Number(selectedHall.gstRate) || 0;
               
               const quoted = Number(prev.quotedAmount) || 0;
               const disc = Number(prev.discount) || 0;
@@ -167,13 +175,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               const totalTaxes = Math.round(hallTax + facilitiesTax);
               
               return { ...prev, taxPercentage: pct, taxes: totalTaxes };
-            });
-          }
-        } catch (e) { console.warn("Could not fetch hall GST settings"); }
-      };
-      fetchSettings();
+        });
+      }
     }
-  }, [formData.hall, open]);
+  }, [formData.hall, settings]);
 
   // Fetch real-time availability
   useEffect(() => {
@@ -588,8 +593,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Tax / GST Rate (%)</label>
                   <input type="number" min={0} value={formData.taxPercentage}
                     readOnly
-                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }}
-                    placeholder="e.g. 18" />
+                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }} />
                 </div>
                 <div>
                   <label style={labelSt}>Tax Amount (₹)</label>

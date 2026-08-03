@@ -97,10 +97,34 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   useEffect(() => {
     if (form.hall && settings.halls) {
       const selectedHall = settings.halls.find(h => h.name === form.hall);
-      if (selectedHall && selectedHall.gstRate !== undefined && selectedHall.gstRate !== form.taxPercentage) {
-        // Trigger handleMoneyChange with the new taxPercentage
-        const newPct = Number(selectedHall.gstRate);
-        handleMoneyChange("taxPercentage", newPct);
+      if (selectedHall && selectedHall.gstRate !== undefined) {
+        setForm(prev => {
+          if (prev.taxPercentage === selectedHall.gstRate) return prev; // No change
+          
+          const pct = Number(selectedHall.gstRate) || 0;
+          const quoted = Number(prev.quotedAmount) || 0;
+          const disc = Number(prev.discount) || 0;
+          const baseAmount = Math.max(0, quoted - disc);
+          
+          let facilitiesTotal = 0;
+          let facilitiesTax = 0;
+          if (prev.facilities && prev.facilities.length > 0) {
+            prev.facilities.forEach(f => {
+              const count = Number(f.count) || 1;
+              const fPrice = Number(f.price) || 0;
+              const totalFPrice = fPrice * count;
+              const fGst = Number(f.gst) || 0;
+              facilitiesTotal += totalFPrice;
+              if (fGst > 0) facilitiesTax += (totalFPrice * fGst) / 100;
+            });
+          }
+          
+          const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+          const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+          const newTaxes = Math.round(hallTax + facilitiesTax);
+          
+          return { ...prev, taxPercentage: pct, taxes: newTaxes };
+        });
       }
     }
   }, [form.hall, settings]);
@@ -421,8 +445,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                   <label style={labelSt}>Tax / GST Rate (%)</label>
                   <input type="number" min={0} value={form.taxPercentage || ""}
                     readOnly
-                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }}
-                    placeholder="e.g. 18" />
+                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }} />
                 </div>
                 <div>
                   <label style={labelSt}>Tax Amount (₹)</label>
