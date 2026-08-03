@@ -198,21 +198,11 @@ class BookingService {
       }
     }
 
+    const bData = booking.toJSON ? booking.toJSON() : booking;
     return {
-      id: booking.bookingId,
-      _id: booking.id,
-      customerName: booking.customerName,
-      phone: booking.phone,
-      eventType: booking.eventType,
-      hall: booking.hall,
-      date: booking.date,
-      session: booking.session,
-      guests: booking.guests,
-      advance: booking.advance,
-      totalAmount: booking.totalAmount,
-      status: booking.status,
-      notes: booking.notes,
-      createdAt: booking.createdAt,
+      ...bData,
+      id: bData.bookingId,
+      _id: bData.id,
     };
   }
 
@@ -320,20 +310,11 @@ class BookingService {
       await updated.save({ hooks: false });
     }
 
+    const bData = updated.toJSON ? updated.toJSON() : updated;
     return {
-      id: updated.bookingId,
-      _id: updated.id,
-      customerName: updated.customerName,
-      phone: updated.phone,
-      eventType: updated.eventType,
-      hall: updated.hall,
-      date: updated.date,
-      session: updated.session,
-      guests: updated.guests,
-      advance: updated.advance,
-      totalAmount: updated.totalAmount,
-      status: updated.status,
-      notes: updated.notes,
+      ...bData,
+      id: bData.bookingId,
+      _id: bData.id,
     };
   }
 
