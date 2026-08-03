@@ -120,8 +120,23 @@ export default function InvoiceModal({ booking, onClose }) {
   };
 
   const handleWhatsApp = () => {
+    let facText = "";
+    if (booking.facilities && booking.facilities.length > 0) {
+      facText = "\n✨ Facilities & Add-ons:\n" + booking.facilities.map(f => {
+        let det = `  - ${f.name}`;
+        if (f.count > 1) det += ` (Qty: ${f.count})`;
+        if (f.time) det += ` [${f.time}]`;
+        det += ` = ₹${(Number(f.price || 0) * Number(f.count || 1)).toLocaleString()}`;
+        return det;
+      }).join("\n") + "\n";
+    }
+
     const msg = encodeURIComponent(
-      `Dear ${booking.customerName},\n\nPlease find your invoice details below:\n\n🧾 Invoice: ${invoiceNo}\n📅 Date: ${formattedDate}\n🏛️ Hall: ${booking.hall} (${booking.session})\n💰 Total: ₹${booking.totalAmount.toLocaleString()}\n✅ Advance: ₹${advance.toLocaleString()}\n⚠️ Balance: ₹${balance.toLocaleString()}\n\nThank you! 🙏 — ${venueInfo.name}`
+      `Dear ${booking.customerName},\n\nPlease find your invoice details below:\n\n🧾 Invoice: ${invoiceNo}\n📅 Date: ${formattedDate}\n🏛️ Hall: ${booking.hall} (${booking.session})\n` +
+      `\n📊 Base Rate: ₹${subtotal.toLocaleString()}\n` +
+      `📝 GST (${gstPct}%): ₹${taxes.toLocaleString()}\n` +
+      facText + 
+      `\n💰 Final Total: ₹${totalAmt.toLocaleString()}\n✅ Advance Paid: ₹${advance.toLocaleString()}\n⚠️ Balance Due: ₹${balance.toLocaleString()}\n\nThank you! 🙏 — ${venueInfo.name}`
     );
     const phoneNum = `91${booking.phone}`;
     const waUrl = `https://wa.me/${phoneNum}?text=${msg}`;
