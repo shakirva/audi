@@ -140,12 +140,33 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
           const halls = res.data.data.halls || [];
           const selectedHall = halls.find(h => h.name === formData.hall);
           if (selectedHall && selectedHall.gstRate !== undefined) {
-            // Use functional updater to get latest formData (avoids stale closure)
             setFormData(prev => {
               const pct = Number(selectedHall.gstRate) || 0;
-              const total = Number(prev.totalAmount) || 0;
-              const taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
-              return { ...prev, taxPercentage: pct, taxes };
+              
+              const quoted = Number(prev.quotedAmount) || 0;
+              const disc = Number(prev.discount) || 0;
+              const baseAmount = Math.max(0, quoted - disc);
+              
+              let facilitiesTotal = 0;
+              let facilitiesTax = 0;
+              if (prev.facilities && prev.facilities.length > 0) {
+                prev.facilities.forEach(f => {
+                  const count = Number(f.count) || 1;
+                  const fPrice = Number(f.price) || 0;
+                  const totalFPrice = fPrice * count;
+                  const fGst = Number(f.gst) || 0;
+                  facilitiesTotal += totalFPrice;
+                  if (fGst > 0) {
+                    facilitiesTax += (totalFPrice * fGst) / 100;
+                  }
+                });
+              }
+              
+              const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+              const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+              const totalTaxes = Math.round(hallTax + facilitiesTax);
+              
+              return { ...prev, taxPercentage: pct, taxes: totalTaxes };
             });
           }
         } catch (e) { console.warn("Could not fetch hall GST settings"); }
@@ -566,11 +587,9 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div>
                   <label style={labelSt}>Tax / GST Rate (%)</label>
                   <input type="number" min={0} value={formData.taxPercentage}
-                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 700 }}
-                    placeholder="e.g. 18"
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                    readOnly
+                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }}
+                    placeholder="e.g. 18" />
                 </div>
                 <div>
                   <label style={labelSt}>Tax Amount (₹)</label>

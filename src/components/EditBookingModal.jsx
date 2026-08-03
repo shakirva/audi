@@ -27,13 +27,14 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const [form, setForm] = useState({});
   const [facilitiesList, setFacilitiesList] = useState([]);
   const [users, setUsers] = useState([]);
+  const [settings, setSettings] = useState({});
   const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   useEffect(() => {
-    // Fetch facilities from master
-    import("../services/api").then(({ mastersAPI, usersAPI }) => {
+    import("../services/api").then(({ mastersAPI, usersAPI, settingsAPI }) => {
       mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
       usersAPI.getAll().then(res => setUsers(res.data?.data || []));
+      settingsAPI.get().then(res => setSettings(res.data?.data || {}));
     });
   }, []);
 
@@ -91,6 +92,18 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       });
     }
   }, [open, booking]);
+
+  // Auto-fetch GST rate if hall changes and it matches a setting
+  useEffect(() => {
+    if (form.hall && settings.halls) {
+      const selectedHall = settings.halls.find(h => h.name === form.hall);
+      if (selectedHall && selectedHall.gstRate !== undefined && selectedHall.gstRate !== form.taxPercentage) {
+        // Trigger handleMoneyChange with the new taxPercentage
+        const newPct = Number(selectedHall.gstRate);
+        handleMoneyChange("taxPercentage", newPct);
+      }
+    }
+  }, [form.hall, settings]);
 
   if (!open || !booking) return null;
 
@@ -407,11 +420,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 <div>
                   <label style={labelSt}>Tax / GST Rate (%)</label>
                   <input type="number" min={0} value={form.taxPercentage || ""}
-                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 700 }}
-                    placeholder="e.g. 18"
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                    readOnly
+                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }}
+                    placeholder="e.g. 18" />
                 </div>
                 <div>
                   <label style={labelSt}>Tax Amount (₹)</label>
