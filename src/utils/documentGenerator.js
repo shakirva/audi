@@ -256,19 +256,17 @@ export const generateInvoice = async (data) => {
   // We'll calculate the printed base as Total - Tax
   const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
   
-  // We don't have the exact split of tax in the document, so we approximate the hall base
-  // by subtracting the exact facility bases from the overall base.
   let exactFacTax = 0;
-  let facTotal = 0;
+  let facBaseTotal = 0;
   facilities.forEach(f => {
     const p = Number(f.price || 0) * Number(f.count || 1);
-    facTotal += p;
+    facBaseTotal += p;
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
   });
   
   const hallTax = Math.max(0, totalTax - exactFacTax);
-  const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
+  const hallBase = Math.max(0, baseAmount - facBaseTotal);
   
   // Calculate effective hall tax percentage if missing
   let hallTaxPct = Number(booking.taxPercentage);
@@ -288,10 +286,10 @@ export const generateInvoice = async (data) => {
   // Facilities
   facilities.forEach(f => {
     const count = Number(f.count || 1);
-    const p = Number(f.price || 0) * count;
+    const fBase = Number(f.price || 0) * count; // Form treats price as exclusive base
     const gstRate = Number(f.gst || 0);
-    const gstAmt = (p * gstRate) / 100;
-    const fBase = p - gstAmt;
+    const gstAmt = (fBase * gstRate) / 100;
+    const fTotal = fBase + gstAmt;
 
     dynamicBody.push([
       f.name,
@@ -299,7 +297,7 @@ export const generateInvoice = async (data) => {
       f.time || "-",
       fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
-      p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      fTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]);
   });
 
