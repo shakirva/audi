@@ -313,8 +313,12 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       {booking.facilities.map((fac, idx) => (
                         <div key={idx} style={{ background: "#f0faf4", border: "1px solid #bbf7d0", padding: "12px 16px", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>{fac.name}</span>
-                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{Number(fac.price).toLocaleString()}</span>}
+                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>
+                            {fac.name}
+                            {fac.count > 1 ? ` (x${fac.count})` : ''}
+                            {fac.time ? ` [${fac.time}]` : ''}
+                          </span>
+                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{(Number(fac.price) * Number(fac.count || 1)).toLocaleString()}</span>}
                         </div>
                       ))}
                     </div>

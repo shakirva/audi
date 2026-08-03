@@ -186,11 +186,13 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     let facilitiesTax = 0;
     if (updated.facilities && updated.facilities.length > 0) {
       updated.facilities.forEach(f => {
+        const count = Number(f.count) || 1;
         const fPrice = Number(f.price) || 0;
+        const totalFPrice = fPrice * count;
         const fGst = Number(f.gst) || 0;
-        facilitiesTotal += fPrice;
+        facilitiesTotal += totalFPrice;
         if (fGst > 0) {
-          facilitiesTax += (fPrice * fGst) / 100;
+          facilitiesTax += (totalFPrice * fGst) / 100;
         }
       });
     }
@@ -470,26 +472,61 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <p style={sectionHead}><CheckSquare size={14} /> Facilities & Add-ons</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   {facilitiesList.map(f => {
-                    const checked = formData.facilities?.some(x => x.id === f.id);
+                    const facilityItem = formData.facilities?.find(x => x.id === f.id);
+                    const checked = !!facilityItem;
                     return (
-                      <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
-                        <input type="checkbox" checked={checked} onChange={(e) => {
-                          let newFac = [...(formData.facilities || [])];
-                          let newQuoted = Number(formData.quotedAmount || 0);
-                          if (e.target.checked) {
-                            newFac.push({ id: f.id, name: f.name, price: f.price, gst: f.gst || 0 });
-                            newQuoted += Number(f.price || 0);
-                          } else {
-                            newFac = newFac.filter(x => x.id !== f.id);
-                            newQuoted -= Number(f.price || 0);
-                          }
-                          handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
-                        }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
-                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
-                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()} {f.gst > 0 ? ` (+ ${f.gst}% GST)` : ""}</div>}
-                        </div>
-                      </label>
+                      <div key={f.id} style={{ display: "flex", flexDirection: "column", gap: 8, background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                          <input type="checkbox" checked={checked} onChange={(e) => {
+                            let newFac = [...(formData.facilities || [])];
+                            let newQuoted = Number(formData.quotedAmount || 0);
+                            if (e.target.checked) {
+                              newFac.push({ id: f.id, name: f.name, price: f.price, gst: f.gst || 0, count: 1, time: "" });
+                              newQuoted += Number(f.price || 0);
+                            } else {
+                              if (facilityItem) {
+                                newQuoted -= (Number(facilityItem.price || 0) * Number(facilityItem.count || 1));
+                              }
+                              newFac = newFac.filter(x => x.id !== f.id);
+                            }
+                            handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                          }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
+                          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
+                            {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()} {f.gst > 0 ? ` (+ ${f.gst}% GST)` : ""}</div>}
+                          </div>
+                        </label>
+                        {checked && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginLeft: 26, marginTop: 4 }}>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Count/Qty</label>
+                              <input type="number" min="1" value={facilityItem.count || 1} onChange={(e) => {
+                                const newCount = Number(e.target.value) || 1;
+                                let newFac = [...(formData.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  const oldCount = Number(newFac[idx].count) || 1;
+                                  newFac[idx].count = newCount;
+                                  let newQuoted = Number(formData.quotedAmount || 0);
+                                  newQuoted = newQuoted - (Number(f.price || 0) * oldCount) + (Number(f.price || 0) * newCount);
+                                  handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Time/Duration</label>
+                              <input type="text" placeholder="e.g. 9 AM - 12 PM" value={facilityItem.time || ""} onChange={(e) => {
+                                let newFac = [...(formData.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  newFac[idx].time = e.target.value;
+                                  setFormData({ ...formData, facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

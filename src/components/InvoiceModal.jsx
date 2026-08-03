@@ -29,8 +29,17 @@ export default function InvoiceModal({ booking, onClose }) {
   if (!booking) return null;
 
   const advance = Number(booking.advance ?? booking.advancePaid ?? 0);
-  const balance = booking.totalAmount - advance;
-  const hallRental = booking.totalAmount;
+  const totalAmt = Number(booking.totalAmount || 0);
+  const balance = totalAmt - advance;
+  const taxes = Number(booking.taxes || 0);
+  const subtotal = totalAmt - taxes;
+  const gstPct = taxes > 0 ? Math.round((taxes / subtotal) * 100) : 0;
+  
+  let facilitiesTotal = 0;
+  if (booking.facilities && booking.facilities.length > 0) {
+     facilitiesTotal = booking.facilities.reduce((sum, f) => sum + (Number(f.price || 0) * Number(f.count || 1)), 0);
+  }
+  
   const formattedDate = (() => {
     try { return new Date(booking.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }); }
     catch { return booking.date; }
@@ -84,12 +93,19 @@ export default function InvoiceModal({ booking, onClose }) {
     </div>
     <table>
       <tr><th>Description</th><th>Details</th><th style="text-align:right">Amount</th></tr>
-      <tr><td>Hall Rental (${booking.hall})</td><td>${booking.session} session</td><td style="text-align:right">₹${hallRental.toLocaleString()}</td></tr>
+      <tr><td>Hall Rental (${booking.hall})</td><td>${booking.session} session</td><td style="text-align:right">₹${(totalAmt - facilitiesTotal - taxes).toLocaleString()}</td></tr>
+      ${booking.facilities?.map(f => `
+        <tr>
+          <td>${f.name}</td>
+          <td>${f.count > 1 ? `Qty: ${f.count} ` : ''}${f.time ? `Time: ${f.time}` : ''}</td>
+          <td style="text-align:right">₹${(Number(f.price || 0) * Number(f.count || 1)).toLocaleString()}</td>
+        </tr>
+      `).join("") || ""}
     </table>
     <div class="totals">
-      <div class="total-row"><span>Subtotal</span><span>₹${booking.totalAmount.toLocaleString()}</span></div>
-      <div class="total-row"><span>GST (0% — Composite)</span><span>₹0</span></div>
-      <div class="total-row grand"><span>TOTAL</span><span>₹${booking.totalAmount.toLocaleString()}</span></div>
+      <div class="total-row"><span>Base Rate (Subtotal)</span><span>₹${subtotal.toLocaleString()}</span></div>
+      <div class="total-row"><span>GST (${gstPct}%)</span><span>₹${taxes.toLocaleString()}</span></div>
+      <div class="total-row grand"><span>TOTAL</span><span>₹${totalAmt.toLocaleString()}</span></div>
       <div class="total-row paid"><span>Advance Received</span><span>- ₹${advance.toLocaleString()}</span></div>
       <div class="total-row balance"><span style="font-weight:700">BALANCE DUE</span><span style="font-weight:800">₹${balance.toLocaleString()}</span></div>
     </div>
@@ -168,12 +184,14 @@ export default function InvoiceModal({ booking, onClose }) {
 
           {/* Line items */}
           <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: 12, marginBottom: 12 }}>
-            {[
-              { desc: `Hall Rental (${booking.hall}) — ${booking.session}`, amt: hallRental }
-            ].map(item => (
-              <div key={item.desc} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: "#374151" }}>
-                <span>{item.desc}</span>
-                <span style={{ fontWeight: 600 }}>₹{item.amt.toLocaleString()}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: "#374151" }}>
+              <span>Hall Rental (${booking.hall}) — ${booking.session}</span>
+              <span style={{ fontWeight: 600 }}>₹{(totalAmt - facilitiesTotal - taxes).toLocaleString()}</span>
+            </div>
+            {booking.facilities?.map(f => (
+              <div key={f.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: "#374151" }}>
+                <span>{f.name} {f.count > 1 ? `(x${f.count})` : ''} {f.time ? `[${f.time}]` : ''}</span>
+                <span style={{ fontWeight: 600 }}>₹{(Number(f.price || 0) * Number(f.count || 1)).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -181,10 +199,13 @@ export default function InvoiceModal({ booking, onClose }) {
           {/* Totals */}
           <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12, color: "#6b7280" }}>
-              <span>Subtotal</span><span>₹{booking.totalAmount.toLocaleString()}</span>
+              <span>Base Rate (Subtotal)</span><span>₹{subtotal.toLocaleString()}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12, color: "#6b7280" }}>
+              <span>GST ({gstPct}%)</span><span>₹{taxes.toLocaleString()}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13, fontWeight: 800, color: "#111827", borderTop: "1px solid #e5e7eb", paddingTop: 8 }}>
-              <span>TOTAL</span><span>₹{booking.totalAmount.toLocaleString()}</span>
+              <span>TOTAL</span><span>₹{totalAmt.toLocaleString()}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#15803d", marginBottom: 6 }}>
               <span>Advance Received</span><span style={{ fontWeight: 700 }}>₹{advance.toLocaleString()}</span>
