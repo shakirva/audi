@@ -7,6 +7,7 @@ import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
 import EditBookingModal from "../components/EditBookingModal";
 import { useConfirm } from "../components/ConfirmProvider";
+import { generateAgreement } from "../utils/documentGenerator";
 
 function AgreementSkeleton() {
   return (
@@ -25,101 +26,6 @@ const STATUS_STYLE = {
   Sent:    { bg: "#dbeafe", text: "#1d4ed8" },
 };
 
-function printAgreement(agr, venueInfo = {}) {
-  const customerName = agr.customerName || "";
-  const phone = agr.phone || "";
-  const address = agr.address || "";
-  const eventType = agr.eventType || "";
-  const dateStr = agr.date ? new Date(agr.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
-  const session = agr.session || "";
-  const hall = agr.hall ? ` - ${agr.hall}` : "";
-  const total = Number(agr.totalAmount) || 0;
-  const discount = Number(agr.discount) || 0;
-  const quoted = total + discount;
-  const advance = Number(agr.advance) || 0;
-  const deposit = Number(agr.depositAmount) || 0;
-  const balance = total - advance - deposit;
-  const guests = agr.guests || "";
-  const agNum = agr.bookingId || `AGR-${String(agr._id || agr.id).padStart(3,"0")}`;
-
-  const hostFull = `${customerName}${agr.bookedBy && agr.bookedBy !== customerName ? ` (Booked by: ${agr.bookedBy})` : ""}${agr.bookingParty ? ` [${agr.bookingParty}]` : ""}`;
-  const phoneFull = `${phone}${agr.whatsapp ? ` / WA: ${agr.whatsapp}` : ""}`;
-  
-  const brideParents = (agr.brideFatherName || agr.brideMotherName) ? ` (D/o ${[agr.brideFatherName, agr.brideMotherName].filter(Boolean).join(" & ")})` : "";
-  const brideFull = agr.brideName ? `${agr.brideName}${brideParents}${agr.bridePhone ? ` — Ph: ${agr.bridePhone}` : ""}${agr.brideAddress ? `, ${agr.brideAddress}` : ""}` : "";
-  
-  const groomParents = (agr.groomFatherName || agr.groomMotherName) ? ` (S/o ${[agr.groomFatherName, agr.groomMotherName].filter(Boolean).join(" & ")})` : "";
-  const groomFull = agr.groomName ? `${agr.groomName}${groomParents}${agr.groomPhone ? ` — Ph: ${agr.groomPhone}` : ""}${agr.groomAddress ? `, ${agr.groomAddress}` : ""}` : "";
-
-  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
-
-  const venueName = venueInfo.name || "LAUREL GARDEN";
-  const venueSubtitle = venueInfo.subtitle || "GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN";
-
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
-    .page-border { border: 4px solid #d32f2f; padding: 4px; }
-    .inner-border { border: 2px solid #d32f2f; padding: 20px; }
-    .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
-    .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
-    .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
-    .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px 0; font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
-    .label { font-weight: bold; }
-    .value { border-bottom: 1px dashed #000; font-family: 'Caveat', cursive; font-size: 18px; padding-left: 10px; }
-    .footer-note { text-align: center; color: #d32f2f; font-weight: bold; font-style: italic; margin-bottom: 40px; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; text-align: center; }
-    .sig-line { border-top: 1px dashed #000; padding-top: 5px; width: 300px; }
-    @media print { body { padding: 0; margin: 10px; } .page-border { border: 2px solid #d32f2f; } }
-  </style></head><body>
-  <div class="page-border"><div class="inner-border">
-    <div class="header">
-      <h1>${venueName}</h1>
-      <div class="sub-header">${venueSubtitle}</div>
-    </div>
-    <div class="title">CONTRACT AGREEMENT</div>
-    <div class="meta">
-      <div>REF NO: <span>${agNum}</span></div>
-      <div>Date: <span style="border-bottom: 1px dashed #000; padding: 0 20px;">${today}</span></div>
-    </div>
-    
-    <div class="form-grid">
-      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${hostFull}</div>
-      <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
-      <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
-      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phoneFull}</div>
-      <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
-      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}${hall}</div>
-      
-      <div style="grid-column: 1 / -1; height: 15px;"></div>
-      
-      <div class="label">Bride Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${brideFull}</div>
-      <div class="label">Groom Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${groomFull}</div>
-      <div class="label">Quoted Amount</div><div class="value">:&nbsp;&nbsp; ₹${quoted.toLocaleString()}</div>
-      <div class="label">Discount</div><div class="value">:&nbsp;&nbsp; ₹${discount.toLocaleString()}</div>
-      <div class="label">Final Total Amount</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
-      <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
-      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; ₹${deposit.toLocaleString()}</div>
-      <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
-      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; ${agr.extraArrangements || ""}</div>
-      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; ${agr.notes || agr.specialInstructions || ""}</div>
-    </div>
-
-    <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
-
-    <div class="signatures">
-      <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of ${venueName}<br>Representative with Date</div>
-    </div>
-  </div></div>
-  <script>window.onload=()=>{window.print();}</script>
-  </body></html>`);
-  w.document.close();
-}
 
 export default function Agreements() {
   const { confirm } = useConfirm();
@@ -273,13 +179,13 @@ export default function Agreements() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
-                    onClick={() => printAgreement(a, venueInfo)}
+                    onClick={() => generateAgreement({ booking: a })}
                     style={{ flex: 1, padding: "10px", background: "#0f172a", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", border: "none", fontWeight: 700, fontSize: 14, gap: 8, cursor: "pointer" }}
                   >
                     Preview
                   </button>
                   <button
-                    onClick={() => printAgreement(a, venueInfo)}
+                    onClick={() => generateAgreement({ booking: a })}
                     style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}
                   >
                     <Printer size={16} />

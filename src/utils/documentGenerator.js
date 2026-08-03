@@ -187,12 +187,13 @@ export const generateAgreement = async (data) => {
     startY: 65,
     theme: "grid",
     body: tableData,
-    styles: { fontSize: 11, cellPadding: 6 },
+    styles: { fontSize: 10, cellPadding: 4 },
     columnStyles: {
       0: { fontStyle: "bold", textColor: primaryColor, fillColor: [248, 250, 252], cellWidth: 70 },
       1: { textColor: textDark }
     },
-    alternateRowStyles: { fillColor: [255, 255, 255] }
+    alternateRowStyles: { fillColor: [255, 255, 255] },
+    margin: { bottom: 30 } // Leave space for signatures
   });
 
   const finalY = doc.lastAutoTable.finalY || 160;

@@ -25,85 +25,7 @@ function JobSkeleton() {
   );
 }
 
-function printAgreement(agr, venueInfo = {}) {
-  const customerName = agr.Booking?.Customer?.name || agr.customerName || "";
-  const phone = agr.Booking?.Customer?.phone || "";
-  const address = agr.Booking?.Customer?.address || "";
-  const eventType = agr.Booking?.eventType || "";
-  const dateStr = agr.Booking?.date ? new Date(agr.Booking.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
-  const session = agr.Booking?.session || "";
-  const total = agr.totalAmount || agr.Booking?.totalAmount || 0;
-  const advance = agr.advanceAmount || agr.Booking?.advance || 0;
-  const balance = agr.balanceAmount || (total - advance) || 0;
-  const guests = agr.Booking?.guestCount || "";
-  const agNum = agr.agreementNumber || `AGR-${String(agr.id || "").padStart(3,"0")}`;
-  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
-
-  const venueName = venueInfo.name || "LAUREL GARDEN";
-  const venueSubtitle = venueInfo.subtitle || "GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN";
-
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
-    .page-border { border: 4px solid #d32f2f; padding: 4px; }
-    .inner-border { border: 2px solid #d32f2f; padding: 20px; }
-    .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
-    .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
-    .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
-    .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px 0; font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
-    .label { font-weight: bold; }
-    .value { border-bottom: 1px dashed #000; font-family: 'Caveat', cursive; font-size: 18px; padding-left: 10px; }
-    .footer-note { text-align: center; color: #d32f2f; font-weight: bold; font-style: italic; margin-bottom: 40px; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; text-align: center; }
-    .sig-line { border-top: 1px dashed #000; padding-top: 5px; width: 300px; }
-    @media print { body { padding: 0; margin: 10px; } .page-border { border: 2px solid #d32f2f; } }
-  </style></head><body>
-  <div class="page-border"><div class="inner-border">
-    <div class="header">
-      <h1>${venueName}</h1>
-      <div class="sub-header">${venueSubtitle}</div>
-    </div>
-    <div class="title">CONTRACT AGREEMENT</div>
-    <div class="meta">
-      <div>REF NO: <span>${agNum}</span></div>
-      <div>Date: <span style="border-bottom: 1px dashed #000; padding: 0 20px;">${today}</span></div>
-    </div>
-    
-    <div class="form-grid">
-      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${customerName}</div>
-      <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
-      <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
-      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phone}</div>
-      <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
-      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}</div>
-      
-      <div style="grid-column: 1 / -1; height: 15px;"></div>
-      
-      <div class="label">Bride Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Groom Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Total Amount (Estimated)</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
-      <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
-      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
-      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; </div>
-    </div>
-
-    <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
-
-    <div class="signatures">
-      <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of ${venueName}<br>Representative with Date</div>
-    </div>
-  </div></div>
-  <script>window.onload=()=>{window.print();}</script>
-  </body></html>`);
-  w.document.close();
-}
+import { generateAgreement } from "../utils/documentGenerator";
 
 export default function Jobs() {
   const { confirm } = useConfirm();
@@ -331,7 +253,7 @@ export default function Jobs() {
             <div style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>Total Value</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#1B4332", marginBottom: 8 }}>{amount}</div>
             <button
-              onClick={() => printAgreement(selectedJob, venueInfo)}
+              onClick={() => generateAgreement({ booking: selectedJob.Booking || selectedJob })}
               style={{ padding: "6px 12px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, display: "inline-flex", justifyContent: "center", alignItems: "center", cursor: "pointer", fontSize: 12, fontWeight: 600, gap: 6 }}
             >
               <Printer size={14} /> Print Agreement
