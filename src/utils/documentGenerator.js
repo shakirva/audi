@@ -246,7 +246,7 @@ export const generateInvoice = async (data) => {
   
   // Deduct facility prices from hallTotal to get the actual hall cost
   facilities.forEach(f => {
-    hallTotal -= Number(f.price || 0);
+    hallTotal -= (Number(f.price || 0) * Number(f.count || 1));
   });
   
   // In the hybrid inclusive model, totalAmount is the overall total.
@@ -261,7 +261,7 @@ export const generateInvoice = async (data) => {
   let exactFacTax = 0;
   let facTotal = 0;
   facilities.forEach(f => {
-    const p = Number(f.price || 0);
+    const p = Number(f.price || 0) * Number(f.count || 1);
     facTotal += p;
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
@@ -270,10 +270,16 @@ export const generateInvoice = async (data) => {
   const hallTax = Math.max(0, totalTax - exactFacTax);
   const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
   
+  // Calculate effective hall tax percentage if missing
+  let hallTaxPct = Number(booking.taxPercentage);
+  if (!hallTaxPct && hallBase > 0) {
+    hallTaxPct = Math.round((hallTax / hallBase) * 100);
+  }
+  
   if (totalTax > 0) {
     dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (Base)`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     if (hallTax > 0) {
-      dynamicBody.push([`Hall GST (${booking.taxPercentage}%)`, `Rs. ${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      dynamicBody.push([`Hall GST (${hallTaxPct || 0}%)`, `Rs. ${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     }
   } else {
     dynamicBody.push([`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
@@ -281,15 +287,21 @@ export const generateInvoice = async (data) => {
 
   // Facilities
   facilities.forEach(f => {
-    const p = Number(f.price || 0);
+    const count = Number(f.count || 1);
+    const p = Number(f.price || 0) * count;
     const gstRate = Number(f.gst || 0);
+    
+    let facName = f.name;
+    if (count > 1) facName += ` (Qty: ${count})`;
+    if (f.time) facName += ` [${f.time}]`;
+
     if (gstRate > 0) {
       const gstAmt = (p * gstRate) / 100;
       const fBase = p - gstAmt;
-      dynamicBody.push([`${f.name} (Base)`, `Rs. ${fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      dynamicBody.push([`${facName} (Base)`, `Rs. ${fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
       dynamicBody.push([`${f.name} GST (${gstRate}%)`, `Rs. ${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     } else {
-      dynamicBody.push([`${f.name}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+      dynamicBody.push([`${facName}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
     }
   });
 
