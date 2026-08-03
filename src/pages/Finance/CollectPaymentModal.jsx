@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
-import { paymentsAPI } from "../../services/api";
+import { paymentsAPI, usersAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { useRole } from "../../context/RoleContext";
 
 export default function CollectPaymentModal({ open, booking, onClose, onSuccess }) {
   const { addToast } = useToast();
+  const { user } = useRole();
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
   
   // Payment form state
   const [amount, setAmount] = useState("");
@@ -16,6 +19,13 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
   const [collectedBy, setCollectedBy] = useState("");
   const [upiName, setUpiName] = useState("");
   const [bankName, setBankName] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      if (user?.name) setCollectedBy(user.name);
+      usersAPI.getAll().then(res => setUsers(res.data?.data || [])).catch(console.error);
+    }
+  }, [open, user]);
 
   if (!open || !booking) return null;
 
@@ -120,14 +130,17 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Collected By <span style={{ color: "#ef4444" }}>*</span></label>
-                <input 
-                  type="text" 
+                <select 
                   value={collectedBy}
                   onChange={e => setCollectedBy(e.target.value)}
-                  placeholder="Staff Name..."
                   required
-                  style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                />
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff", cursor: "pointer" }}
+                >
+                  <option value="">Select Staff...</option>
+                  {users.map(u => (
+                    <option key={u.id || u._id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
