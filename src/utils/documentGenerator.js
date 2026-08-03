@@ -176,9 +176,12 @@ export const generateAgreement = async (data) => {
     ["Nature of Function", booking.eventType || "N/A"],
     ["Bride Name & Address", `${booking.brideName || ""} ${booking.brideAddress ? "- " + booking.brideAddress : ""}`.trim() || "N/A"],
     ["Groom Name & Address", `${booking.groomName || ""} ${booking.groomAddress ? "- " + booking.groomAddress : ""}`.trim() || "N/A"],
-    ["Total Amount (Estimated)", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
+    ["Quoted Amount", `Rs. ${Number((Number(booking.totalAmount || 0) + Number(booking.discount || 0))).toLocaleString()}`],
+    ["Discount", `Rs. ${Number(booking.discount || 0).toLocaleString()}`],
+    ["Final Total Amount", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
     ["Advance Paid", `Rs. ${Number(booking.advance || 0).toLocaleString()}`],
-    ["Balance Amount Payable", `Rs. ${Number(data.outstanding || 0).toLocaleString()}`],
+    ["Deposit Amount Paid", `Rs. ${Number(booking.depositAmount || 0).toLocaleString()}`],
+    ["Balance Amount Payable", `Rs. ${Math.max(0, Number(booking.totalAmount || 0) - Number(booking.advance || 0) - Number(booking.depositAmount || 0)).toLocaleString()}`],
     ["Extra arrangements if any", booking.additionalServices || booking.specialInstructions || "N/A"],
     ["Any Remarks", booking.notes || "N/A"]
   ];
