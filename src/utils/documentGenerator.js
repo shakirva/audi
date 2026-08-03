@@ -276,49 +276,50 @@ export const generateInvoice = async (data) => {
     hallTaxPct = Math.round((hallTax / hallBase) * 100);
   }
   
-  if (totalTax > 0) {
-    dynamicBody.push([`${booking.eventType || "Event"} at ${booking.hall || "Venue"} (Base)`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-    if (hallTax > 0) {
-      dynamicBody.push([`Hall GST (${hallTaxPct || 0}%)`, `Rs. ${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-    }
-  } else {
-    dynamicBody.push([`Event Booking: ${booking.eventType || "Event"} at ${booking.hall || "Venue"}`, `Rs. ${hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-  }
+  dynamicBody.push([
+    `${booking.eventType || "Event"} at ${booking.hall || "Venue"}`,
+    "1",
+    booking.session || "-",
+    hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct || 0}%)` : "-",
+    (hallBase + hallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  ]);
 
   // Facilities
   facilities.forEach(f => {
     const count = Number(f.count || 1);
     const p = Number(f.price || 0) * count;
     const gstRate = Number(f.gst || 0);
-    
-    let facName = f.name;
-    if (count > 1) facName += ` (Qty: ${count})`;
-    if (f.time) facName += ` [${f.time}]`;
+    const gstAmt = (p * gstRate) / 100;
+    const fBase = p - gstAmt;
 
-    if (gstRate > 0) {
-      const gstAmt = (p * gstRate) / 100;
-      const fBase = p - gstAmt;
-      dynamicBody.push([`${facName} (Base)`, `Rs. ${fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-      dynamicBody.push([`${f.name} GST (${gstRate}%)`, `Rs. ${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-    } else {
-      dynamicBody.push([`${facName}`, `Rs. ${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
-    }
+    dynamicBody.push([
+      f.name,
+      count.toString(),
+      f.time || "-",
+      fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
+      p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ]);
   });
 
   if (Number(booking.discount || 0) > 0) {
-    dynamicBody.push(["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+    dynamicBody.push([
+      "Discount Applied", "-", "-", "-", "-",
+      `- ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
   }
 
   // Summary Table
-    autoTable(doc, {
+  autoTable(doc, {
     startY: 80,
     headStyles: { fillColor: primaryColor, textColor: 255 },
-    head: [["Item Description", "Amount (INR)"]],
+    head: [["Item Description", "Qty", "Time", "Base (INR)", "GST (INR)", "Total (INR)"]],
     body: dynamicBody,
     foot: [
-      ["Gross Total", `Rs. ${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
-      ["Total Paid", `Rs. ${Number(totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
-      ["Balance Due", `Rs. ${Number(outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
+      ["Gross Total", "", "", "", "", `${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ["Total Paid", "", "", "", "", `${Number(totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ["Balance Due", "", "", "", "", `${Number(outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
     ],
     footStyles: { fillColor: [248, 250, 252], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
