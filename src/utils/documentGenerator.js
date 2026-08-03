@@ -256,40 +256,46 @@ export const generateInvoice = async (data) => {
   // We'll calculate the printed base as Total - Tax
   const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
   
+  // We don't have the exact split of tax in the document, so we approximate the hall base
+  // by subtracting the exact facility bases from the overall base.
   let exactFacTax = 0;
-  let facBaseTotal = 0;
+  let facTotal = 0;
   facilities.forEach(f => {
     const p = Number(f.price || 0) * Number(f.count || 1);
-    facBaseTotal += p;
+    facTotal += p;
     const gstRate = Number(f.gst || 0);
     if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
   });
   
   const hallTax = Math.max(0, totalTax - exactFacTax);
-  const hallBase = Math.max(0, baseAmount - facBaseTotal);
+  const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
   
-  // Calculate effective hall tax percentage if missing
+  // Find configured hall tax percentage
   let hallTaxPct = Number(booking.taxPercentage);
-  if (!hallTaxPct && hallBase > 0) {
-    hallTaxPct = Math.round((hallTax / hallBase) * 100);
+  if (!hallTaxPct && settings.halls) {
+    const selectedHall = settings.halls.find(h => h.name === booking.hall);
+    if (selectedHall) {
+      hallTaxPct = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+    }
   }
+  if (!hallTaxPct) hallTaxPct = 18; // Force fallback to 18% as requested
   
   dynamicBody.push([
     `${booking.eventType || "Event"} at ${booking.hall || "Venue"}`,
     "1",
     booking.session || "-",
     hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct || 0}%)` : "-",
+    hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct}%)` : "-",
     (hallBase + hallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   ]);
 
   // Facilities
   facilities.forEach(f => {
     const count = Number(f.count || 1);
-    const fBase = Number(f.price || 0) * count; // Form treats price as exclusive base
+    const p = Number(f.price || 0) * count;
     const gstRate = Number(f.gst || 0);
-    const gstAmt = (fBase * gstRate) / 100;
-    const fTotal = fBase + gstAmt;
+    const gstAmt = (p * gstRate) / 100;
+    const fBase = p - gstAmt;
 
     dynamicBody.push([
       f.name,
@@ -297,7 +303,7 @@ export const generateInvoice = async (data) => {
       f.time || "-",
       fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
-      fTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]);
   });
 

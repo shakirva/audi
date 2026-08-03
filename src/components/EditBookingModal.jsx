@@ -124,7 +124,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
           const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
           const newTaxes = Math.round(hallTax + facilitiesTax);
           
-          return { ...prev, taxPercentage: pct, taxes: newTaxes, totalAmount: baseAmount + newTaxes };
+          return { ...prev, taxPercentage: pct, taxes: newTaxes };
         });
       }
     }
@@ -158,10 +158,10 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
     }
 
     if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
+      updated.totalAmount = baseAmount; // Total remains Quoted - Discount
       const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
       const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
       updated.taxes = Math.round(hallTax + facilitiesTax);
-      updated.totalAmount = baseAmount + updated.taxes;
     }
     
     const adv = Number(updated.advance) || 0;
