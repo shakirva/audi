@@ -341,11 +341,20 @@ class BookingService {
     // Manually delete related accounting records (Expenses, Journals, Vouchers)
     // because they are not configured with ON DELETE CASCADE in the associations.
     // (Payments, Receipts, Agreements, Jobs DO have CASCADE and will be deleted automatically)
-    const { Expense, JournalEntry, Voucher } = require("../models");
+    const { Expense, JournalEntry, Voucher, Payment, Receipt, Job, Agreement, AgreementVersion } = require("../models");
     
     await Expense.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
     await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
     await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    
+    await Receipt.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await Payment.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+
+    try {
+      await AgreementVersion.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      await Agreement.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      await Job.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    } catch (e) {}
 
     // Now delete the booking itself using the correct repository method
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
@@ -480,7 +489,21 @@ class BookingService {
     await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
     await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
 
-    // ── Delete the booking (cascades to Payments, Receipts, Agreements, Jobs) ──
+    // ── Clean up CRM / Collections / Operations records ──
+    // We explicitly destroy these because ON DELETE CASCADE might not be active at the DB schema level.
+    await Receipt.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    await Payment.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    
+    try {
+      const { Job, Agreement, AgreementVersion } = require("../models");
+      await AgreementVersion.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      await Agreement.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      await Job.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    } catch (e) {
+      console.warn("Could not explicitly delete Jobs/Agreements", e);
+    }
+
+    // ── Delete the booking ──
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
 
