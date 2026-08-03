@@ -97,11 +97,12 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   useEffect(() => {
     if (form.hall && settings.halls) {
       const selectedHall = settings.halls.find(h => h.name === form.hall);
-      if (selectedHall && selectedHall.gstRate !== undefined) {
+      if (selectedHall) {
         setForm(prev => {
-          if (prev.taxPercentage === selectedHall.gstRate) return prev; // No change
+          const gstRate = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+          if (prev.taxPercentage === gstRate) return prev; // No change
           
-          const pct = Number(selectedHall.gstRate) || 0;
+          const pct = Number(gstRate) || 0;
           const quoted = Number(prev.quotedAmount) || 0;
           const disc = Number(prev.discount) || 0;
           const baseAmount = Math.max(0, quoted - disc);

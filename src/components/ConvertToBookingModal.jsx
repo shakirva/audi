@@ -145,11 +145,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   useEffect(() => {
     if (formData.hall && settings.halls) {
       const selectedHall = settings.halls.find(h => h.name === formData.hall);
-      if (selectedHall && selectedHall.gstRate !== undefined) {
+      if (selectedHall) {
         setFormData(prev => {
-          if (prev.taxPercentage === selectedHall.gstRate) return prev;
+          const gstRate = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+          if (prev.taxPercentage === gstRate) return prev;
           
-          const pct = Number(selectedHall.gstRate) || 0;
+          const pct = Number(gstRate) || 0;
               
               const quoted = Number(prev.quotedAmount) || 0;
               const disc = Number(prev.discount) || 0;
