@@ -92,7 +92,7 @@ export default function Attendance() {
   const handleDelete = async (id) => {
     if (!(await confirm("Are you sure you want to delete this record?"))) return;
     try {
-      await attendanceAPI.delete(id);
+      await attendanceAPI.remove(id);
       addToast("Record deleted", "success");
       fetchData();
     } catch (err) {
