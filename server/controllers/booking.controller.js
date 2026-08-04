@@ -187,6 +187,7 @@ class BookingController {
         expenseAction: req.body.expenseAction,
         enquiryAction: req.body.enquiryAction,
         customerAction: req.body.customerAction,
+        collectionAction: req.body.collectionAction,
         deletedBy: req.user?.id,
       });
 

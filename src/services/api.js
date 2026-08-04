@@ -225,8 +225,8 @@ export const deleteChecksAPI = {
 // ═══════════════════════════════════
 export const attendanceAPI = {
   getAll: (params) => api.get("/v1/attendance", { params }),
-  checkIn: () => api.post("/v1/attendance/check-in"),
-  checkOut: () => api.post("/v1/attendance/check-out"),
+  checkIn: (data) => api.post("/v1/attendance/check-in", data),
+  checkOut: (data) => api.post("/v1/attendance/check-out", data),
   update: (id, data) => api.put(`/v1/attendance/${id}`, data),
   remove: (id) => api.delete(`/v1/attendance/${id}`),
 };

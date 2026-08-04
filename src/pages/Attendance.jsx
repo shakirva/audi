@@ -4,7 +4,7 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-import { attendanceAPI } from "../services/api";
+import { attendanceAPI, usersAPI } from "../services/api";
 export default function Attendance() {
   const { confirm } = useConfirm();
   const { user, role } = useRole();
@@ -31,9 +31,31 @@ export default function Attendance() {
         params.date = selectedDate;
       }
       
-      const res = await attendanceAPI.getAll(params);
-      if (res.data?.success) {
-        setAttendance(res.data.data);
+      const [attRes, userRes] = await Promise.all([
+        attendanceAPI.getAll(params),
+        !isStaffView ? usersAPI.getAll() : Promise.resolve({ data: { success: true, data: [] } })
+      ]);
+
+      let attData = attRes.data?.success ? attRes.data.data : [];
+      
+      if (!isStaffView && userRes.data?.success) {
+        const allUsers = userRes.data.data.filter(u => u.status !== false && u.role !== "SuperAdmin");
+        const combined = allUsers.map(u => {
+          const record = attData.find(a => a.userId === u.id);
+          if (record) return record;
+          return {
+            id: `virtual-${u.id}`,
+            userId: u.id,
+            User: { id: u.id, name: u.name, role: u.role },
+            date: selectedDate,
+            status: "Not Marked",
+            checkIn: null,
+            checkOut: null
+          };
+        });
+        setAttendance(combined);
+      } else {
+        setAttendance(attData);
       }
     } catch (err) {
       console.error(err);
@@ -90,6 +112,30 @@ export default function Attendance() {
       fetchData();
     } catch (err) {
       addToast("Failed to update record", "error");
+    }
+  };
+
+  const handleAdminCheckIn = async (userId, userDate) => {
+    try {
+      const res = await attendanceAPI.checkIn({ userId, date: userDate });
+      if (res.data?.success) {
+        addToast("Staff checked in successfully", "success");
+        fetchData();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to check in staff", "error");
+    }
+  };
+
+  const handleAdminCheckOut = async (userId, userDate) => {
+    try {
+      const res = await attendanceAPI.checkOut({ userId, date: userDate });
+      if (res.data?.success) {
+        addToast("Staff checked out successfully", "success");
+        fetchData();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to check out staff", "error");
     }
   };
 
@@ -182,14 +228,28 @@ export default function Attendance() {
                   <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                   {!isStaffView && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
                   <td style={{ padding: "16px 20px" }}>
-                    <span style={{ background: a.status === "Present" ? "#dcfce7" : "#fee2e2", color: a.status === "Present" ? "#166534" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
+                    <span style={{ background: a.status === "Present" ? "#dcfce7" : a.status === "Not Marked" ? "#f1f5f9" : "#fee2e2", color: a.status === "Present" ? "#166534" : a.status === "Not Marked" ? "#64748b" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
                   </td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkIn || "—"}</td>
                   <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkOut || "—"}</td>
                   {!isStaffView && (
                     <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                      <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", marginRight: 8 }}><Edit3 size={16} /></button>
-                      <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={16} /></button>
+                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+                        {!a.checkIn ? (
+                          <button onClick={() => handleAdminCheckIn(a.userId, a.date)} style={{ background: "#1B4332", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check In</button>
+                        ) : !a.checkOut ? (
+                          <button onClick={() => handleAdminCheckOut(a.userId, a.date)} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check Out</button>
+                        ) : (
+                          <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", padding: "6px 12px" }}>Completed</span>
+                        )}
+                        
+                        {a.id && !a.id.toString().startsWith("virtual") && (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", padding: 0 }}><Edit3 size={16} /></button>
+                            <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: 0 }}><Trash2 size={16} /></button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

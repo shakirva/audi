@@ -399,8 +399,9 @@ class BookingService {
    * refundAction: "refund" | "writeOff" | "alreadyRefunded"
    * refundAccount: "Cash" | "Bank" (only when refundAction = "refund")
    * expenseAction: "delete" | "unlink"
+   * collectionAction: "delete" | "keep"
    */
-  async safeDeleteBooking(bookingId, { tenantId, environmentId, reason, refundAction, refundAccount, expenseAction, deletedBy, enquiryAction, customerAction }) {
+  async safeDeleteBooking(bookingId, { tenantId, environmentId, reason, refundAction, refundAccount, expenseAction, deletedBy, enquiryAction, customerAction, collectionAction }) {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
     if (!booking) throw new NotFoundError("Booking");
 
@@ -489,10 +490,23 @@ class BookingService {
     await JournalEntry.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
     await Voucher.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
 
-    // ── Clean up CRM / Collections / Operations records ──
-    // We explicitly destroy these because ON DELETE CASCADE might not be active at the DB schema level.
-    await Receipt.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
-    await Payment.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    // ── Handle collection history ──
+    // We explicitly handle these because ON DELETE CASCADE might not be active at the DB schema level.
+    if (collectionAction === "keep") {
+      // Keep collection records but unlink from this booking
+      await Receipt.update(
+        { bookingId: null },
+        { where: { bookingId: booking.id, tenantId, environmentId } }
+      );
+      await Payment.update(
+        { bookingId: null, notes: require("sequelize").literal(`CONCAT(notes, '\n[Unlinked from deleted booking ${booking.bookingId}]')`) },
+        { where: { bookingId: booking.id, tenantId, environmentId } }
+      );
+    } else {
+      // Default: delete all collection records
+      await Receipt.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+      await Payment.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
+    }
     
     try {
       const { Job, Agreement, AgreementVersion } = require("../models");

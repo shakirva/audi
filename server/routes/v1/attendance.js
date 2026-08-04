@@ -36,17 +36,24 @@ router.get("/", async (req, res) => {
 router.post("/check-in", async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
+    const dateToUse = req.body.date || today;
     
+    let targetUserId = req.user.id;
+    // Allow Owner, SuperAdmin, Manager to specify a different user
+    if (req.body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
+      targetUserId = req.body.userId;
+    }
+
     // Check if already checked in today
     const existing = await Attendance.findOne({
-      where: { tenantId: req.tenantId, userId: req.user.id, date: today }
+      where: { tenantId: req.tenantId, userId: targetUserId, date: dateToUse }
     });
 
     if (existing && existing.checkIn) {
       return res.status(400).json({ error: "Already checked in today" });
     }
 
-    const checkInTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const checkInTime = req.body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
     
     let record;
     if (existing) {
@@ -54,15 +61,19 @@ router.post("/check-in", async (req, res) => {
     } else {
       record = await Attendance.create({
         tenantId: req.tenantId,
-        userId: req.user.id,
-        date: today,
+        userId: targetUserId,
+        date: dateToUse,
         checkIn: checkInTime,
         status: "Present",
         createdBy: req.user.id,
       });
     }
 
-    res.json({ success: true, data: record });
+    const updatedRecord = await Attendance.findByPk(record.id, {
+      include: [{ model: User, as: "User", attributes: ["id", "name", "role"] }]
+    });
+
+    res.json({ success: true, data: updatedRecord });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Check-in failed" });
@@ -73,9 +84,15 @@ router.post("/check-in", async (req, res) => {
 router.post("/check-out", async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
+    const dateToUse = req.body.date || today;
     
+    let targetUserId = req.user.id;
+    if (req.body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
+      targetUserId = req.body.userId;
+    }
+
     const existing = await Attendance.findOne({
-      where: { tenantId: req.tenantId, userId: req.user.id, date: today }
+      where: { tenantId: req.tenantId, userId: targetUserId, date: dateToUse }
     });
 
     if (!existing || !existing.checkIn) {
@@ -85,10 +102,14 @@ router.post("/check-out", async (req, res) => {
       return res.status(400).json({ error: "Already checked out today" });
     }
 
-    const checkOutTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const checkOutTime = req.body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
     await existing.update({ checkOut: checkOutTime, updatedBy: req.user.id });
 
-    res.json({ success: true, data: existing });
+    const updatedRecord = await Attendance.findByPk(existing.id, {
+      include: [{ model: User, as: "User", attributes: ["id", "name", "role"] }]
+    });
+
+    res.json({ success: true, data: updatedRecord });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Check-out failed" });
