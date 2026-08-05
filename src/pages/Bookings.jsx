@@ -99,12 +99,12 @@ export default function Bookings() {
   };
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'DM Sans', 'Inter', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
 
       {/* ── HEADER ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 4px", color: "#0f172a", letterSpacing: "-1px" }}>Bookings</h1>
+          <h1 className="hm-page-heading">Bookings</h1>
           <p style={{ margin: 0, fontSize: 14, color: "#64748b", fontWeight: 500 }}>
             {filtered.length} booking{filtered.length !== 1 ? "s" : ""} found
           </p>
@@ -112,7 +112,7 @@ export default function Bookings() {
       </div>
 
       {/* ── TOOLBAR ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+      <div className="hm-bookings-toolbar">
         {/* Search */}
         <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 340 }}>
           <Search size={16} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
@@ -172,7 +172,7 @@ export default function Bookings() {
 
       {/* ── GRID VIEW ── */}
       {viewMode === "grid" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
+        <div className="hm-booking-cards">
           {filtered.map((b, i) => {
             const st = getStatusColor(b.status);
             const balance = (b.totalAmount || 0) - (b.advance || 0) - (b.depositAmount || 0);
@@ -299,7 +299,7 @@ export default function Bookings() {
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e5e7eb" }}>
                 {["#", "Customer", "Event Type", "Hall", "Session", "Date", "Guests", "Total (₹)", "Balance (₹)", "Status", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "12px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} className={["Hall", "Session", "Guests"].includes(h) ? "hm-desktop-only" : ""} style={{ padding: "12px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -326,12 +326,12 @@ export default function Bookings() {
                         {eventIcon(b.eventType)} {b.eventType || "—"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 14px", color: "#374151", fontWeight: 600 }}>{b.hall || "—"}</td>
-                    <td style={{ padding: "12px 14px", color: "#374151" }}>{b.session || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151", fontWeight: 600 }}>{b.hall || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151" }}>{b.session || "—"}</td>
                     <td style={{ padding: "12px 14px", color: "#374151", whiteSpace: "nowrap" }}>
                       {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                     </td>
-                    <td style={{ padding: "12px 14px", color: "#374151" }}>{b.guests || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151" }}>{b.guests || "—"}</td>
                     <td style={{ padding: "12px 14px", fontWeight: 700, color: "#374151" }}>
                       {b.totalAmount ? `₹${Number(b.totalAmount).toLocaleString()}` : "—"}
                     </td>

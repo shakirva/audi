@@ -146,9 +146,9 @@ function ExecutiveCockpit() {
 
   return (
     <>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="hm-dash-greeting" style={{ background: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px", color: "#0f172a", letterSpacing: "-1px" }}>Hi, {user?.name?.split(' ')[0] || "User"} 👋</h1>
+          <h1 className="hm-dash-title">Hi, {user?.name?.split(' ')[0] || "User"} 👋</h1>
           <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
@@ -166,7 +166,7 @@ function ExecutiveCockpit() {
         </div>
       </motion.div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 24, marginBottom: 24 }}>
+      <div className="hm-dash-stats">
         <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
         <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.3} />
@@ -225,10 +225,11 @@ function ExecutiveCockpit() {
           <div style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={distData.length ? distData : eventDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                <Pie data={distData.length ? distData : eventDistData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5}>
                   {(distData.length ? distData : eventDistData).map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip trigger="click" />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -309,8 +310,8 @@ function ReceptionCockpit() {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 20px 40px rgba(13,36,24,0.2)" }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px" }}>Reception Desk 👋</h1>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="hm-dash-greeting" style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff", boxShadow: "0 20px 40px rgba(13,36,24,0.2)", display: "block" }}>
+          <h1 className="hm-dash-title" style={{ color: "#fff" }}>Reception Desk 👋</h1>
           <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Fast creation and calendar view.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <button onClick={() => navigate("/calendar")} style={{ padding: "16px", background: BRAND.accent, color: BRAND.primary, border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -322,7 +323,7 @@ function ReceptionCockpit() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="hm-dash-greeting" style={{ background: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.02)", display: "block" }}>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Today's Live Events</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {events.length === 0 ? (
@@ -344,7 +345,7 @@ function ReceptionCockpit() {
 
       <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Follow-up Queue (CRM)</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
+        <div className="hm-crm-columns">
           {[
             { label: "New / Open", status: "Open" }, 
             { label: "Follow Up", status: "Follow Up" }, 
@@ -380,10 +381,10 @@ function ReceptionCockpit() {
 function OperationsCockpit() {
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ background: "#fff", borderRadius: 32, padding: 40, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="hm-dash-greeting" style={{ background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <div>
-          <h1 style={{ fontSize: 40, fontWeight: 800, margin: "0 0 16px", color: "#0f172a", letterSpacing: "-1px" }}>Operations Command 🛠️</h1>
-          <p style={{ margin: 0, fontSize: 18, color: "#64748b", fontWeight: 500 }}>Track live jobs, vendors, and hall logistics.</p>
+          <h1 className="hm-dash-title">Operations Command 🛠️</h1>
+          <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Track live jobs, vendors, and hall logistics.</p>
         </div>
       </motion.div>
 
@@ -444,7 +445,7 @@ export default function Dashboard() {
   const { role } = useRole();
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-dash-wrapper">
       {role === "Owner" || role === "Manager" || role === "Admin" ? (
         <ExecutiveCockpit />
       ) : role === "Sales" ? (

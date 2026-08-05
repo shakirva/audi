@@ -91,8 +91,7 @@ export default function Sidebar({ open, onClose }) {
       <motion.div 
         initial={false}
         animate={{ 
-          width: collapsed ? 80 : 280,
-          x: 0 // handled by CSS transform on mobile
+          width: collapsed ? 80 : 280
         }}
         className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:top-0 h-screen flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ 

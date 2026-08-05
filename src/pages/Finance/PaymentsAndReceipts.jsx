@@ -85,7 +85,7 @@ export default function PaymentsAndReceipts() {
   const formatMoney = (val) => `₹${Number(val).toLocaleString()}`;
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div className="hm-bookings-wrapper">
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>

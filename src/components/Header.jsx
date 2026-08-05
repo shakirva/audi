@@ -61,15 +61,15 @@ export default function Header({ title, onMenuClick }) {
   return (
     <>
       {isSandbox && role !== "Tester" && (
-        <div style={{ background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "8px 24px", fontSize: 13, zIndex: 40, position: "relative", boxShadow: "0 2px 10px rgba(239,68,68,0.3)" }}>
+        <div className="hm-sandbox-banner" style={{ background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "8px 24px", fontSize: 13, zIndex: 40, position: "relative", boxShadow: "0 2px 10px rgba(239,68,68,0.3)" }}>
           <AlertTriangle size={16} />
           <div>
             <strong style={{ fontWeight: 800 }}>SANDBOX MODE — Training Environment.</strong>
-            <span style={{ marginLeft: 6, opacity: 0.9 }}>Changes here never affect Production.</span>
+            <span className="hm-sandbox-detail" style={{ marginLeft: 6, opacity: 0.9 }}>Changes here never affect Production.</span>
           </div>
         </div>
       )}
-      <header style={{
+      <header className="hm-header-bar" style={{
       background: "#fff",
       borderBottom: "1px solid #e5e7eb",
       boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
@@ -107,7 +107,7 @@ export default function Header({ title, onMenuClick }) {
         }}
       >
         <MessageSquarePlus size={16} />
-        Feedback
+        <span className="hm-feedback-text">Feedback</span>
       </button>
 
       {/* Environment Switcher */}

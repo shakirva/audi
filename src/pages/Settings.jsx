@@ -684,20 +684,40 @@ export default function Settings() {
     <div className="hm-settings-container" style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ── Page Header ── */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
-          Settings
-        </h1>
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="hm-page-heading">Settings</h1>
         <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
           Manage your auditorium profile, hall pricing and preferences
         </p>
+      </div>
+
+      {/* ── QUICK NAV (Mobile) ── */}
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, marginBottom: 24, borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap", position: "sticky", top: 60, background: "#fff", zIndex: 20 }} className="hm-hide-scrollbar">
+        {[
+          { id: "roles", label: "Roles" },
+          { id: "sandbox", label: "Sandbox" },
+          { id: "venue", label: "Venue" },
+          { id: "halls", label: "Halls" },
+          { id: "pricing", label: "Pricing" },
+          { id: "reminders", label: "Reminders" },
+          { id: "staff", label: "Staff" },
+          { id: "gallery", label: "Gallery" }
+        ].map(n => (
+          <button key={n.id} onClick={() => {
+            const el = document.getElementById(n.id);
+            if (el) {
+              const y = el.getBoundingClientRect().top + window.scrollY - 120;
+              window.scrollTo({ top: y, behavior: 'smooth' });
+            }
+          }} style={{ padding: "8px 16px", borderRadius: 20, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600, color: "#333", cursor: "pointer" }}>{n.label}</button>
+        ))}
       </div>
 
 
 
       {/* ── ROLE-BASED MODULE ACCESS (Owner only) ── */}
       {isOwner && (
-        <div style={{ ...cardSt, border: "1.5px solid #e2e8f0", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
+        <div id="roles" style={{ ...cardSt, border: "1.5px solid #e2e8f0", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Users size={18} color="#0D2418" />
@@ -716,7 +736,7 @@ export default function Settings() {
 
       {/* ── SANDBOX MANAGEMENT (Owner only) ── */}
       {isOwner && activeEnvironment === "sandbox" && (
-        <div style={{ ...cardSt, border: "1.5px solid #fecaca", background: "linear-gradient(135deg, #fef2f2, #fff1f2)" }}>
+        <div id="sandbox" style={{ ...cardSt, border: "1.5px solid #fecaca", background: "linear-gradient(135deg, #fef2f2, #fff1f2)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fecaca", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Database size={18} color="#991b1b" />
@@ -825,7 +845,7 @@ export default function Settings() {
 
       {/* ── VENUE INFO CARD (Owner & Manager) ── */}
       {isAdminRole && (
-        <div style={cardSt}>
+        <div id="venue" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Building2 size={18} color="#1B4332" />
@@ -952,7 +972,7 @@ export default function Settings() {
 
       {/* ── HALL MANAGEMENT (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="halls" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Building2 size={18} color="#4b5563" />
@@ -1142,7 +1162,7 @@ export default function Settings() {
 
       {/* ── HALL PRICING CONFIGURATION (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="pricing" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <IndianRupee size={18} color="#D4A017" />
@@ -1268,7 +1288,7 @@ export default function Settings() {
       )}
 
       {/* ── WHATSAPP REMINDER SCHEDULE ── */}
-      <div style={cardSt}>
+      <div id="reminders" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 18 }}>📲</span>
@@ -1378,7 +1398,7 @@ export default function Settings() {
       </div>
 
       {/* ── STAFF & ROLES ── */}
-      <div style={cardSt}>
+      <div id="staff" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1548,7 +1568,7 @@ export default function Settings() {
 
       {/* ── GALLERY MANAGEMENT (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="gallery" style={cardSt}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -398,7 +398,6 @@ button, input, select, textarea {
     display: block !important;
     width: 100% !important;
     overflow-x: auto !important;
-    white-space: nowrap !important;
     -webkit-overflow-scrolling: touch;
   }
 }
@@ -425,7 +424,243 @@ button, input, select, textarea {
 
 /* Form inputs span full width on small screens to prevent layout breaks */
 @media (max-width: 767px) {
-  input, select, textarea {
-    width: 100% !important;
+  .hm-main-content input,
+  .hm-main-content select,
+  .hm-main-content textarea,
+  .modal-overlay input,
+  .modal-overlay select,
+  .modal-overlay textarea {
+    max-width: 100% !important;
+  }
+  
+  .hm-desktop-only {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 1 — DASHBOARD RESPONSIVE FIXES
+   ═══════════════════════════════════════════════════════ */
+
+/* Dashboard stat cards: 2 cols mobile, 3 tablet, 5 desktop */
+.hm-dash-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .hm-dash-stats { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+@media (min-width: 1024px) {
+  .hm-dash-stats { grid-template-columns: repeat(5, 1fr); gap: 24px; }
+}
+
+/* Dashboard greeting card: stack on mobile */
+.hm-dash-greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .hm-dash-greeting {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-radius: 24px;
+    margin-bottom: 24px;
+  }
+}
+
+/* Dashboard wrapper: responsive padding */
+.hm-dash-wrapper {
+  padding: 16px;
+  max-width: 1600px;
+  margin: 0 auto;
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+@media (min-width: 768px) {
+  .hm-dash-wrapper { padding: 20px 24px; }
+}
+@media (min-width: 1024px) {
+  .hm-dash-wrapper { padding: 24px 32px; }
+}
+
+/* Dashboard CRM follow-up queue: 1 col mobile, 3 desktop */
+.hm-crm-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .hm-crm-columns { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1024px) {
+  .hm-crm-columns { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+}
+
+/* Dashboard title: responsive font */
+.hm-dash-title {
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 800;
+  margin: 0 0 8px;
+  color: #0f172a;
+  letter-spacing: -1px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 2 — HEADER RESPONSIVE FIXES
+   ═══════════════════════════════════════════════════════ */
+
+/* Hide feedback text on mobile, show only icon */
+.hm-feedback-text { display: none; }
+@media (min-width: 768px) {
+  .hm-feedback-text { display: inline !important; }
+}
+
+/* Compact header on mobile */
+@media (max-width: 767px) {
+  .hm-header-bar {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  .hm-header-bar h2 {
+    font-size: 16px !important;
+  }
+  .hm-sandbox-banner {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
+  .hm-sandbox-banner .hm-sandbox-detail {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 3 — BOOKINGS & CRM RESPONSIVE FIXES
+   ═══════════════════════════════════════════════════════ */
+
+/* Bookings page wrapper */
+.hm-bookings-wrapper {
+  padding: 16px;
+  max-width: 1600px;
+  margin: 0 auto;
+  font-family: 'DM Sans', 'Inter', sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+@media (min-width: 768px) {
+  .hm-bookings-wrapper { padding: 24px 32px; }
+}
+@media (min-width: 1024px) {
+  .hm-bookings-wrapper { padding: 32px 40px; }
+}
+
+/* Booking cards grid: responsive minmax */
+.hm-booking-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .hm-booking-cards { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+}
+@media (min-width: 1024px) {
+  .hm-booking-cards { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+}
+
+/* CRM page wrapper */
+.hm-crm-wrapper {
+  padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: 'DM Sans', sans-serif;
+}
+@media (min-width: 768px) {
+  .hm-crm-wrapper { padding: 24px; }
+}
+
+/* CRM KPI cards: 2 cols mobile, 4 desktop */
+.hm-crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .hm-crm-kpis { grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+}
+
+/* CRM toolbar: stack on mobile */
+.hm-crm-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .hm-crm-toolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+}
+
+/* Bookings toolbar: stack on mobile */
+.hm-bookings-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .hm-bookings-toolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 4 — BOTTOM NAV SAFE AREA
+   ═══════════════════════════════════════════════════════ */
+
+.hm-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+/* Page title responsive */
+.hm-page-heading {
+  font-size: clamp(20px, 5vw, 32px);
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+  letter-spacing: -1px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 5 — MODAL RESPONSIVE IMPROVEMENTS
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  /* Ensure modals don't use hardcoded width */
+  .modal-overlay > div {
+    width: calc(100% - 24px) !important;
+    max-width: 100% !important;
+    margin: 12px auto !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+  /* Modal form grids become single column */
+  .modal-overlay [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
   }
 }

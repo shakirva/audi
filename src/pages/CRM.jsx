@@ -114,11 +114,11 @@ export default function CRM() {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="hm-crm-wrapper">
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>Sales Pipeline</h1>
+          <h1 className="hm-page-heading">Sales Pipeline</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track leads and convert enquiries into bookings.</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
@@ -127,7 +127,7 @@ export default function CRM() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+      <div className="hm-crm-kpis">
         {loading ? (
           [1,2,3,4].map(i => <KPISkeleton key={i} />)
         ) : (
@@ -149,7 +149,7 @@ export default function CRM() {
       </div>
 
       {/* View Toggles & Filters */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+      <div className="hm-crm-toolbar">
         <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
           <button onClick={() => setViewMode("board")} style={{
             background: viewMode === "board" ? "#fff" : "transparent", border: "none", borderRadius: 6,
@@ -313,7 +313,7 @@ export default function CRM() {
             <thead>
               <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eaeaea" }}>
                 {["Enquiry #", "Customer", "Event", "Date", "Stage", "Lead Score", "Assigned", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 700, color: "#555", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                  <th key={h} className={["Date", "Lead Score", "Assigned"].includes(h) ? "hm-desktop-only" : ""} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 700, color: "#555", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -339,7 +339,7 @@ export default function CRM() {
                     </td>
                     <td style={{ padding: "12px 16px", fontWeight: 600 }}>{getEnquiryName(enq)}</td>
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.eventType}</td>
-                    <td style={{ padding: "12px 16px", color: "#666" }}>{enq.tentativeDate || "TBD"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 16px", color: "#666" }}>{enq.tentativeDate || "TBD"}</td>
                     <td style={{ padding: "12px 16px" }}>
                       {enq.status === "Booking Confirmed" ? (
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", padding: "4px 8px", background: "#dcfce7", borderRadius: 6, display: "inline-block" }}>
@@ -358,10 +358,10 @@ export default function CRM() {
                         </select>
                       )}
                     </td>
-                    <td style={{ padding: "12px 16px" }}>
+                    <td className="hm-desktop-only" style={{ padding: "12px 16px" }}>
                       <span style={{ background: lss.bg, color: lss.color, padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lss.label}</span>
                     </td>
-                    <td style={{ padding: "12px 16px", color: "#666" }}>
+                    <td className="hm-desktop-only" style={{ padding: "12px 16px", color: "#666" }}>
                       {enq.SalesExecutive?.name || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
