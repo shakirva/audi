@@ -138,7 +138,7 @@ export default function Vendors() {
     <div className="hm-bookings-wrapper" style={{ maxWidth: 1400, fontFamily: "'DM Sans', sans-serif" }}>
       
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
@@ -158,7 +158,7 @@ export default function Vendors() {
       </div>
 
       {/* KPI ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {[
           { label: "Total Vendors", val: allVendors.length, color: "#1B4332", bg: "#eefcf4" },
           { label: "Active Partners", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
@@ -176,7 +176,7 @@ export default function Vendors() {
       </div>
 
       {/* FILTERS */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 mb-10 items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
         <div className="relative w-full sm:w-80 flex-shrink-0">
           <Search size={16} style={{ position: "absolute", left: 14, top: 12, color: "#94a3b8" }} />
           <input 
@@ -197,7 +197,7 @@ export default function Vendors() {
       </div>
 
       {/* VENDOR GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(vendor => (
           <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 
