@@ -227,27 +227,32 @@ export default function Reports() {
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ── DATE RANGE FILTER ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap", background: "#fff", borderRadius: 10, padding: "10px 12px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>📅</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 200, flexWrap: "wrap", paddingBottom: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>From</label>
-            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-              style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+      <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 14 }}>📅</span> Date Range Filter
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>To</label>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#1B4332", background: "#f0faf4", padding: "4px 10px", borderRadius: 20 }}>
+            {bookings.length} found
+          </span>
+        </div>
+        
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>From</label>
+            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>To</label>
             <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-              style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
           </div>
           <button onClick={() => { setFromDate(defaultFrom); setToDate(defaultTo); }}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", fontSize: 10, color: "#6b7280", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>
+            style={{ padding: "0 12px", height: "35px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 11, fontWeight: 700, color: "#64748b", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
             Reset
           </button>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#1B4332", background: "#F0F4EF", padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>
-          {bookings.length} found
-        </span>
       </div>
 
       {/* ── SUMMARY STATS ── */}

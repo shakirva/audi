@@ -166,21 +166,21 @@ export default function CRM() {
             <List size={16} /> List
           </button>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ position: "relative" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
             <Search size={16} style={{ position: "absolute", left: 12, top: 10, color: "#999" }} />
             <input
               type="text"
               placeholder="Search name or phone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ padding: "8px 12px 8px 36px", border: "1px solid #ddd", borderRadius: 8, outline: "none", minWidth: 220 }}
+              style={{ padding: "8px 12px 8px 36px", border: "1px solid #ddd", borderRadius: 8, outline: "none", width: "100%", boxSizing: "border-box" }}
             />
           </div>
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, cursor: "pointer", background: "#fff" }}
+            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, cursor: "pointer", background: "#fff", flex: "0 1 auto" }}
           >
             <option value="">All Stages</option>
             {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}

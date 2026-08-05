@@ -108,15 +108,15 @@ export default function Agreements() {
         color="#1B4332"
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 260 }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <Search size={18} style={{ position: "absolute", left: 16, top: 14, color: "#94a3b8" }} />
             <input type="text" placeholder="Search agreements..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
+              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: "100%", outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
         </div>
-        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500, whiteSpace: "nowrap" }}>
           {!loading && `${agreements.length} agreement${agreements.length !== 1 ? "s" : ""}`}
         </div>
       </div>

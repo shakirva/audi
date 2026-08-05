@@ -114,13 +114,13 @@ export default function Bookings() {
       {/* ── TOOLBAR ── */}
       <div className="hm-bookings-toolbar">
         {/* Search */}
-        <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 340 }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 200, width: "100%" }}>
           <Search size={16} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input type="text" placeholder="Search bookings..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none", fontSize: 13, fontWeight: 500, boxSizing: "border-box" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {/* Status Filter */}
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
