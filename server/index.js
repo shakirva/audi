@@ -123,6 +123,29 @@ sequelize
       console.log("⚠️ Could not drop NOT NULL on customerId (already dropped or table missing):", e.message);
     }
     
+    // FIX: Add 'Afternoon' to enum_Bookings_session if missing
+    try {
+      await sequelize.query("ALTER TYPE \"enum_Bookings_session\" ADD VALUE 'Afternoon'");
+      console.log("✅ Added 'Afternoon' to enum_Bookings_session");
+    } catch (e) {
+      // Ignored - usually means it already exists
+    }
+    
+    // FIX: Reset Enquiries that are "Booking Confirmed" but have no actual Booking
+    try {
+      const result = await sequelize.query(`
+        UPDATE "Enquiries" 
+        SET status = 'Interested' 
+        WHERE status = 'Booking Confirmed' AND id NOT IN (
+          SELECT "enquiryId" FROM "Bookings" WHERE "enquiryId" IS NOT NULL
+        )
+      `);
+      console.log("✅ Reset stuck Enquiries");
+    } catch (e) {
+      console.log("⚠️ Could not reset stuck Enquiries:", e.message);
+    }
+
+    
     app.listen(PORT, () => {
       console.log(`🚀 Venueza API running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);

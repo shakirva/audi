@@ -50,7 +50,7 @@ const Booking = sequelize.define("Booking", {
   eventType: { type: DataTypes.STRING, allowNull: true },
   hall: { type: DataTypes.STRING, allowNull: true },
   date: { type: DataTypes.STRING, allowNull: true },
-  session: { type: DataTypes.ENUM("Morning", "Evening", "Full Day"), defaultValue: "Full Day" },
+  session: { type: DataTypes.ENUM("Morning", "Afternoon", "Evening", "Full Day"), defaultValue: "Full Day" },
   guests: { type: DataTypes.INTEGER, defaultValue: 0 },
   decoration: { type: DataTypes.STRING, allowNull: true },
   catering: { type: DataTypes.STRING, allowNull: true },
