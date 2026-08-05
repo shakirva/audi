@@ -67,7 +67,7 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
       
       <PageHeader 
         title="Customer Directory" 
