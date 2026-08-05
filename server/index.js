@@ -95,6 +95,26 @@ sequelize
   .then(async () => {
     console.log("✅ Connected to PostgreSQL & synced tables");
     
+    // FIX: Populate missing createdBy in Bookings from Enquiries
+    try {
+      const { Booking, Enquiry } = require('./models');
+      const bookings = await Booking.findAll({ where: { createdBy: null } });
+      for (const b of bookings) {
+        if (b.enquiryId) {
+          const enq = await Enquiry.findByPk(b.enquiryId);
+          if (enq && enq.createdBy) {
+            b.createdBy = enq.createdBy;
+            await b.save();
+          } else if (enq && enq.salesExecutiveId) {
+            b.createdBy = enq.salesExecutiveId;
+            await b.save();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to run booking createdBy fix:", err);
+    }
+    
     // FORCE drop NOT NULL constraints that sync(alter: true) fails to handle
     try {
       await sequelize.query('ALTER TABLE "Enquiries" ALTER COLUMN "customerId" DROP NOT NULL;');

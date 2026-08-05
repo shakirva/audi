@@ -81,6 +81,10 @@ class BookingController {
    */
   async create(req, res, next) {
     try {
+      if (!req.body.createdBy && req.user && req.user.id) {
+        req.body.createdBy = req.user.id;
+      }
+      
       const booking = await bookingService.createBooking(req.body, {
         tenantId: req.tenantId,
         environmentId: req.environmentId,
