@@ -91,7 +91,7 @@ function AdminLayout() {
   }, []);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
