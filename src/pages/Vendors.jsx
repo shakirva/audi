@@ -135,7 +135,7 @@ export default function Vendors() {
   };
 
   return (
-    <div className="hm-bookings-wrapper" style={{ maxWidth: 1400, fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="p-6 lg:p-10" style={{ maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", borderRadius: 24 }}>
       
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
