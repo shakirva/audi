@@ -135,10 +135,10 @@ export default function Vendors() {
   };
 
   return (
-    <div style={{ padding: "30px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="p-4 sm:p-8 lg:p-10" style={{ maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
       
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
@@ -176,15 +176,15 @@ export default function Vendors() {
       </div>
 
       {/* FILTERS */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, alignItems: "center", background: "#fff", padding: 12, borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-        <div style={{ position: "relative", width: 320 }}>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="relative w-full sm:w-80 flex-shrink-0">
           <Search size={16} style={{ position: "absolute", left: 14, top: 12, color: "#94a3b8" }} />
           <input 
             type="text" placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", background: "#f8fafc" }}
           />
         </div>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+        <div className="flex gap-2 overflow-x-auto w-full pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
           {categories.map(c => (
             <button key={c} onClick={() => setFilterCat(c)} style={{
               padding: "8px 16px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
@@ -197,7 +197,7 @@ export default function Vendors() {
       </div>
 
       {/* VENDOR GRID */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map(vendor => (
           <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 

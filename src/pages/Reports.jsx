@@ -237,20 +237,20 @@ export default function Reports() {
           </span>
         </div>
         
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 calc(50% - 5px)", minWidth: 120 }}>
             <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>From</label>
             <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: "1 1 calc(50% - 5px)", minWidth: 120 }}>
             <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>To</label>
             <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
           </div>
           <button onClick={() => { setFromDate(defaultFrom); setToDate(defaultTo); }}
-            style={{ padding: "0 12px", height: "35px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 11, fontWeight: 700, color: "#64748b", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-            Reset
+            style={{ padding: "0 12px", height: "35px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 11, fontWeight: 700, color: "#64748b", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", flex: "1 1 100%" }}>
+            Reset Filter
           </button>
         </div>
       </div>
