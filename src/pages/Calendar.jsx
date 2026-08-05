@@ -117,7 +117,7 @@ export default function Calendar() {
 
       {/* ── CALENDAR CARD ── */}
       <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.06)", overflowX: "auto", minWidth: 0 }}>
-        <div style={{ minWidth: 420 }}>
+        <div style={{ minWidth: "100%" }}>
 
         {/* Month nav */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap", gap: 8 }}>

@@ -101,8 +101,12 @@ export default function PaymentsAndReceipts() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Top Section */}
+      <div className="hm-payments-top-section" style={{ display: "flex", flexDirection: "column" }}>
+        
+        {/* KPI Cards */}
+        <div className="hm-payments-balances" style={{ order: window.innerWidth < 768 ? 2 : 1 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
           <div style={{ width: 36, height: 36, background: "#f0fdf4", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <ArrowUpRight size={18} color="#16a34a" />
@@ -137,8 +141,11 @@ export default function PaymentsAndReceipts() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between" }}>
+        </div>
+
+        {/* Toolbar */}
+        <div className="hm-payments-toolbar" style={{ order: window.innerWidth < 768 ? 1 : 2 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
           <button onClick={() => setViewMode("card")} style={{
             background: viewMode === "card" ? "#fff" : "transparent", border: "none", borderRadius: 6,
@@ -170,6 +177,8 @@ export default function PaymentsAndReceipts() {
           <button style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "0 16px", borderRadius: 10, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
             <Filter size={16} /> Filter
           </button>
+        </div>
+          </div>
         </div>
       </div>
 
