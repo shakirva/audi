@@ -135,7 +135,7 @@ export default function Vendors() {
   };
 
   return (
-    <div className="p-4 sm:p-8 lg:p-10" style={{ maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
       
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">

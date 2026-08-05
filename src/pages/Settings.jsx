@@ -691,8 +691,8 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* ── QUICK NAV (Mobile) ── */}
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, marginBottom: 24, borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap", position: "sticky", top: 60, background: "#fff", zIndex: 20 }} className="hm-hide-scrollbar">
+      {/* ── QUICK NAV ── */}
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-gray-200 whitespace-nowrap sticky top-[-16px] lg:top-[-28px] z-20 hm-hide-scrollbar pt-4 lg:pt-0" style={{ background: "#F0F4EF" }}>
         {[
           { id: "roles", label: "Roles" },
           { id: "sandbox", label: "Sandbox" },
@@ -706,10 +706,10 @@ export default function Settings() {
           <button key={n.id} onClick={() => {
             const el = document.getElementById(n.id);
             if (el) {
-              const y = el.getBoundingClientRect().top + window.scrollY - 120;
-              window.scrollTo({ top: y, behavior: 'smooth' });
+              const y = el.getBoundingClientRect().top + document.querySelector('.hm-main-content').scrollTop - document.querySelector('.hm-main-content').getBoundingClientRect().top - 80;
+              document.querySelector('.hm-main-content').scrollTo({ top: y, behavior: 'smooth' });
             }
-          }} style={{ padding: "8px 16px", borderRadius: 20, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600, color: "#333", cursor: "pointer" }}>{n.label}</button>
+          }} style={{ padding: "8px 16px", borderRadius: 20, background: "#fff", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600, color: "#333", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>{n.label}</button>
         ))}
       </div>
 
