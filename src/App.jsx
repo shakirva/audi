@@ -50,7 +50,7 @@ const pageTitles = {
   "/bookings": "Bookings",
   "/calendar": "Calendar",
   "/customers": "Customers",
-  "/finance/payments": "Payments & Receipts",
+  "/finance/payments": "Payments",
   "/finance/booking-accounts": "Booking Accounts",
   "/finance/collections": "Collections",
   "/finance/expenses": "Purchases & Expenses",

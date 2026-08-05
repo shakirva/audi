@@ -680,8 +680,4 @@ table {
   min-width: max-content;
 }
 
-/* Global overflow fix to prevent shaking */
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
+

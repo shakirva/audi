@@ -229,13 +229,17 @@ export default function Reports() {
       {/* ── DATE RANGE FILTER ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap", background: "#fff", borderRadius: 10, padding: "10px 12px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>📅</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 200, overflowX: "auto", flexWrap: "wrap", paddingBottom: 4 }}>
-          <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>From</label>
-          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-            style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
-          <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>To</label>
-          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-            style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 200, flexWrap: "wrap", paddingBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>From</label>
+            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>To</label>
+            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+          </div>
           <button onClick={() => { setFromDate(defaultFrom); setToDate(defaultTo); }}
             style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", fontSize: 10, color: "#6b7280", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>
             Reset
