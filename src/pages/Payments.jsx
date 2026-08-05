@@ -199,7 +199,7 @@ export default function Payments() {
                 onClick={() => setSelectedBooking(b)}
                 style={{ background: "#fff", borderRadius: 20, padding: "24px 32px", border: "1px solid #f1f5f9", cursor: "pointer", transition: "all 0.2s" }}
               >
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 20 }}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: isFullyPaid ? "#dcfce7" : "#fffbeb", color: isFullyPaid ? "#16a34a" : "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isFullyPaid ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
@@ -217,12 +217,13 @@ export default function Payments() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 12, width: "100%", flexWrap: "wrap" }}>
-                    <button style={{ flex: 1, padding: "8px 16px", borderRadius: 10, background: "#f1f5f9", color: "#0f172a", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", minWidth: 100 }}>View History</button>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <button className="flex-1 sm:flex-none" style={{ padding: "8px 16px", borderRadius: 10, background: "#f1f5f9", color: "#0f172a", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>View History</button>
                     {!isFullyPaid && (
                       <button 
+                        className="flex-1 sm:flex-none"
                         onClick={(e) => { e.stopPropagation(); setSelectedBooking(b); setIsCollectPaymentOpen(true); }}
-                        style={{ flex: 1, padding: "8px 16px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", minWidth: 120 }}>
+                        style={{ padding: "8px 16px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                         Collect Payment
                       </button>
                     )}
