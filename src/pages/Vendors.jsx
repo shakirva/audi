@@ -158,25 +158,23 @@ export default function Vendors() {
       </div>
 
       {/* KPI ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6" style={{ marginBottom: 40 }}>
         {[
-          { label: "Total Vendors", val: allVendors.length, color: "#1B4332", bg: "#eefcf4" },
-          { label: "Active Partners", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
-          { label: "Pending Approval", val: allVendors.filter(v=>v.status==="Pending").length, color: "#d97706", bg: "#fffbeb" },
-          { label: "Avg Rating", val: allVendors.length > 0 ? (allVendors.reduce((s, v) => s + (v.rating || 0), 0) / allVendors.length).toFixed(1) : "0", color: "#10b981", bg: "#ecfdf5", suffix: "⭐" },
+          { label: "Total Vendors", val: allVendors.length, color: "#1B4332" },
+          { label: "Active Vendors", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9" },
+          { label: "Non-Active Vendors", val: allVendors.filter(v=>v.status!=="Active").length, color: "#ef4444" }
         ].map((kpi, i) => (
           <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{kpi.label}</p>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
               <h3 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: kpi.color }}>{kpi.val}</h3>
-              {kpi.suffix && <span style={{ fontSize: 14 }}>{kpi.suffix}</span>}
             </div>
           </div>
         ))}
       </div>
 
       {/* FILTERS */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-10 items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm" style={{ marginBottom: 48 }}>
         <div className="relative w-full sm:w-80 flex-shrink-0">
           <Search size={16} style={{ position: "absolute", left: 14, top: 12, color: "#94a3b8" }} />
           <input 
