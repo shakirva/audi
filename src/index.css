@@ -664,3 +664,18 @@ button, input, select, textarea {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   GLOBAL TABLE RESPONSIVENESS FIX
+   ═══════════════════════════════════════════════════════ */
+div:has(> table) {
+  overflow-x: auto !important;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+div:has(> table)::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+table {
+  min-width: max-content;
+}

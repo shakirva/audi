@@ -1,13 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BookOpen, CalendarDays, CreditCard, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CreditCard, Menu } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 
 const allItems = [
   { to: "/",          icon: LayoutDashboard, label: "Home",     permission: null },
-  { to: "/bookings",  icon: BookOpen,         label: "Bookings", permission: null },
+  { to: "/crm",       icon: Users,           label: "CRM",      permission: null },
   { to: "/calendar",  icon: CalendarDays,     label: "Calendar", permission: null },
-  { to: "/finance/payments",  icon: CreditCard,       label: "Payments", permission: "canViewPayments" },
-  { to: "/reports",   icon: BarChart3,        label: "Reports",  permission: "canViewReports" },
+  { to: "/finance/payments",  icon: CreditCard,       label: "Finance", permission: "canViewPayments" },
 ];
 
 export default function BottomNav() {
@@ -46,6 +45,22 @@ export default function BottomNav() {
           </NavLink>
         );
       })}
+      
+      {/* Menu Toggle Button */}
+      <button 
+        onClick={() => window.dispatchEvent(new Event('toggleSidebar'))}
+        style={{
+          flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", padding: "8px 4px 6px", gap: 2,
+          fontSize: 10, fontWeight: 700, border: "none", background: "transparent",
+          color: "#9ca3af", cursor: "pointer", transition: "color 0.15s",
+        }}
+      >
+        <div style={{ padding: 6, borderRadius: 12, background: "transparent" }}>
+          <Menu size={18} />
+        </div>
+        Menu
+      </button>
       <style>{`@media (min-width: 1024px) { .hallmaster-bottomnav { display: none !important; } }`}</style>
     </nav>
   );

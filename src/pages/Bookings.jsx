@@ -183,7 +183,7 @@ export default function Bookings() {
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                 whileHover={{ y: -6, boxShadow: "0 20px 48px rgba(0,0,0,0.08)" }}
                 onClick={() => setDetail(b)}
-                style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: 0 }}
+                style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: 0, overflow: "hidden", wordBreak: "break-word" }}
               >
                 {/* Card top */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
@@ -292,10 +292,9 @@ export default function Bookings() {
         </div>
       )}
 
-      {/* ── LIST / TABLE VIEW ── */}
       {viewMode === "list" && (
-        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", overflowX: "auto", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e5e7eb" }}>
                 {["#", "Customer", "Event Type", "Hall", "Session", "Date", "Guests", "Total (₹)", "Balance (₹)", "Status", "Actions"].map(h => (

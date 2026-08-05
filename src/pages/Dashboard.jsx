@@ -176,7 +176,7 @@ function ExecutiveCockpit() {
 
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
-        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", overflow: "hidden" }}>
+        <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", overflow: "hidden" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Revenue Trend</h3>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -196,7 +196,7 @@ function ExecutiveCockpit() {
           </div>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.accent} /> Today's Events</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {todaysEvents.length === 0 ? (
@@ -220,7 +220,7 @@ function ExecutiveCockpit() {
       {/* Row 2: Event Distribution (4 cols) + Urgent Enquiries (8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
         
-        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", overflow: "hidden" }}>
+        <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", overflow: "hidden" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>Event Distribution</h3>
           <div style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -235,7 +235,7 @@ function ExecutiveCockpit() {
           </div>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 24, padding: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+        <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}><Calendar size={18} color={BRAND.primary} /> This Week's Functions</h3>
           
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

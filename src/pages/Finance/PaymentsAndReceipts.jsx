@@ -180,8 +180,8 @@ export default function PaymentsAndReceipts() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No bookings found.</div>
         ) : viewMode === "table" ? (
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflowX: "auto", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                   <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Booking</th>
@@ -240,7 +240,7 @@ export default function PaymentsAndReceipts() {
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               
               return (
-                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)", overflow: "hidden", wordBreak: "break-word" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
                     <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                       <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>

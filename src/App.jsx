@@ -84,6 +84,12 @@ function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const title = pageTitles[location.pathname] || "Venueza";
 
+  React.useEffect(() => {
+    const handleToggle = () => setSidebarOpen(true);
+    window.addEventListener('toggleSidebar', handleToggle);
+    return () => window.removeEventListener('toggleSidebar', handleToggle);
+  }, []);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
