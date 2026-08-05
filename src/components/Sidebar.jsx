@@ -41,27 +41,33 @@ export default function Sidebar({ open, onClose }) {
       // SaaS Platform is ALWAYS restricted to SuperAdmin, regardless of custom access config
       if (item.label === "SaaS Platform" && role !== "SuperAdmin") return null;
 
+      let currentItem = { ...item };
+      
+      if (currentItem.type === "group" && activeEnvironment === "sandbox") {
+        currentItem.children = currentItem.children.filter(child => child.label !== "Activity Logs");
+      }
+
       // 1. Custom Role-Based Module Access override
       if (roleAccess) {
         // Deduplicate attendance menus based on role type
         const isAdminRole = ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"].includes(role);
-        if (item.label === "Staff & HR" && !isAdminRole) return null;
-        if (item.label === "Attendance & Leaves" && isAdminRole) return null;
+        if (currentItem.label === "Staff & HR" && !isAdminRole) return null;
+        if (currentItem.label === "Attendance & Leaves" && isAdminRole) return null;
 
-        if (item.type === "link") {
-          if (!roleAccess.includes(item.path)) return null;
-          return item;
-        } else if (item.type === "group") {
-          const allowedChildren = item.children.filter(child => roleAccess.includes(child.path));
+        if (currentItem.type === "link") {
+          if (!roleAccess.includes(currentItem.path)) return null;
+          return currentItem;
+        } else if (currentItem.type === "group") {
+          const allowedChildren = currentItem.children.filter(child => roleAccess.includes(child.path));
           if (allowedChildren.length === 0) return null;
-          return { ...item, children: allowedChildren };
+          return { ...currentItem, children: allowedChildren };
         }
       }
 
       // 2. Default Fallback (if no custom RBAC saved in DB for this role)
-      if (!item.roles.includes(role)) return null;
+      if (!currentItem.roles.includes(role)) return null;
       
-      return item;
+      return currentItem;
     }).filter(Boolean);
   };
 
