@@ -120,7 +120,7 @@ export default function Header({ title, onMenuClick }) {
               background: "#fff", color: "#111827", boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
             }}
           >
-            {isSandbox ? <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> Sandbox</> : <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> Production</>}
+            {isSandbox ? <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> <span className="hm-env-text">Sandbox</span></> : <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> <span className="hm-env-text">Production</span></>}
             <ChevronDown size={14} style={{ color: "#6b7280" }} />
           </button>
           

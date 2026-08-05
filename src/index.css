@@ -680,4 +680,12 @@ table {
   min-width: max-content;
 }
 
+.hm-env-text { display: none; }
+@media (min-width: 768px) {
+  .hm-env-text { display: inline !important; }
+}
 
+#root {
+  overflow-x: hidden;
+  width: 100%;
+}

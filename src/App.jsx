@@ -95,7 +95,7 @@ function AdminLayout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
-        <main className="hm-main-content" style={{ flex: 1, overflowY: "auto" }}>
+        <main className="hm-main-content" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxWidth: "100vw" }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

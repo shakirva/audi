@@ -151,7 +151,7 @@ function ExecutiveCockpit() {
           <h1 className="hm-dash-title">Hi, {user?.name?.split(' ')[0] || "User"} 👋</h1>
           <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Health Score</div>
             <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><TrendingUp size={14}/> Conversion Rate</div>
