@@ -293,8 +293,8 @@ export default function Staff() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-12">
-        <div style={{ position: "relative" }} className="w-full sm:w-72">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 mb-12 items-start lg:items-center">
+        <div style={{ position: "relative" }} className="w-full lg:w-72 shrink-0">
           <Search size={18} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input 
             type="text" 
@@ -305,7 +305,7 @@ export default function Staff() {
           />
         </div>
         
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, maxWidth: "100%" }} className="scrollbar-hide">
+        <div className="flex flex-row gap-2 overflow-x-auto flex-nowrap lg:flex-wrap w-full pb-2 scrollbar-hide">
           {roles.map(r => (
             <button key={r} onClick={() => setFilterRole(r)} style={{
               padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
@@ -320,7 +320,7 @@ export default function Staff() {
       </div>
 
       {/* Staff Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filteredStaff.map(staff => (
           <div key={staff.id} style={{
             background: "#fff", borderRadius: 16, border: "1px solid #eaeaea", padding: 24,
