@@ -266,30 +266,60 @@ export default function BookingFinancialDashboard() {
             {data.payments.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No payments recorded yet.</div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Receipt No</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Mode</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                <div className="hidden md:block">
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Receipt No</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Mode</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.payments.map(p => (
+                        <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "16px", fontWeight: 600, color: "#334155" }}>{p.Receipt?.receiptNumber || "-"}</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>{p.paymentMode}</td>
+                          <td style={{ padding: "16px", fontWeight: 700, color: "#16a34a" }}>{formatMoney(p.amount)}</td>
+                          <td style={{ padding: "16px", display: "flex", gap: 8 }}>
+                            <button onClick={() => generateReceipt(p, data.booking)} style={{ padding: "4px 8px", fontSize: 12, borderRadius: 4, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>Print Receipt</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="block md:hidden flex flex-col gap-4">
                   {data.payments.map(p => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "16px", fontWeight: 600, color: "#334155" }}>{p.Receipt?.receiptNumber || "-"}</td>
-                      <td style={{ padding: "16px", color: "#475569" }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                      <td style={{ padding: "16px", color: "#475569" }}>{p.paymentMode}</td>
-                      <td style={{ padding: "16px", fontWeight: 700, color: "#16a34a" }}>{formatMoney(p.amount)}</td>
-                      <td style={{ padding: "16px", display: "flex", gap: 8 }}>
-                        <button onClick={() => generateReceipt(p, data.booking)} style={{ padding: "4px 8px", fontSize: 12, borderRadius: 4, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>Print Receipt</button>
-                      </td>
-                    </tr>
+                    <div key={p.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{p.Receipt?.receiptNumber || "-"}</div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{new Date(p.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#16a34a" }}>
+                          {formatMoney(p.amount)}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
+                        <div style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, color: "#475569" }}>
+                          {p.paymentMode}
+                        </div>
+                        <button onClick={() => generateReceipt(p, data.booking)} style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#0f172a", cursor: "pointer" }}>
+                          Print Receipt
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -308,28 +338,58 @@ export default function BookingFinancialDashboard() {
             {data.expenses.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No direct expenses recorded yet.</div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Category</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Description</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Paid From</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                <div className="hidden md:block">
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Category</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Description</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Paid From</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.expenses.map(e => (
+                        <tr key={e.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "16px", color: "#475569" }}>{new Date(e.date).toLocaleDateString()}</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>{e.category}</td>
+                          <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>{e.description}</td>
+                          <td style={{ padding: "16px", fontWeight: 700, color: "#dc2626" }}>{formatMoney(e.amount)}</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>Cash</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="block md:hidden flex flex-col gap-4">
                   {data.expenses.map(e => (
-                    <tr key={e.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "16px", color: "#475569" }}>{new Date(e.date).toLocaleDateString()}</td>
-                      <td style={{ padding: "16px", color: "#475569" }}>{e.category}</td>
-                      <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>{e.description}</td>
-                      <td style={{ padding: "16px", fontWeight: 700, color: "#dc2626" }}>{formatMoney(e.amount)}</td>
-                      <td style={{ padding: "16px", color: "#475569" }}>Cash</td>
-                    </tr>
+                    <div key={e.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{e.description}</div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{new Date(e.date).toLocaleDateString()} • {e.category}</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#dc2626" }}>
+                          {formatMoney(e.amount)}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>
+                          Paid From
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                          Cash
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -341,42 +401,89 @@ export default function BookingFinancialDashboard() {
               <button onClick={() => generateStatement(data)} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13, color: "#334155" }}>Print Statement</button>
             </div>
             
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
-                  <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Particulars</th>
-                  <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Debit</th>
-                  <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Credit</th>
-                  <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Running Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "16px", color: "#475569" }}>{new Date(data.booking.date).toLocaleDateString()}</td>
-                  <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>Booking Finalized (Gross Amount)</td>
-                  <td style={{ padding: "16px", fontWeight: 700, color: "#dc2626" }}>{formatMoney(data.booking.totalAmount)}</td>
-                  <td style={{ padding: "16px", color: "#475569" }}>-</td>
-                  <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</td>
-                </tr>
-                
-                {(() => {
-                  let runningBalance = data.booking.totalAmount || 0;
-                  return [...data.payments].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).map(p => {
-                    runningBalance -= p.amount;
-                    return (
-                      <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "16px", color: "#475569" }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                        <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>Receipt #{p.Receipt?.receiptNumber || "-"} ({p.paymentMode})</td>
-                        <td style={{ padding: "16px", color: "#475569" }}>-</td>
-                        <td style={{ padding: "16px", fontWeight: 700, color: "#16a34a" }}>{formatMoney(p.amount)}</td>
-                        <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(runningBalance)}</td>
-                      </tr>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
+            <div className="hidden md:block">
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Date</th>
+                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Particulars</th>
+                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Debit</th>
+                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Credit</th>
+                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "16px", color: "#475569" }}>{new Date(data.booking.date).toLocaleDateString()}</td>
+                    <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>Booking Finalized (Gross Amount)</td>
+                    <td style={{ padding: "16px", fontWeight: 700, color: "#dc2626" }}>{formatMoney(data.booking.totalAmount)}</td>
+                    <td style={{ padding: "16px", color: "#475569" }}>-</td>
+                    <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</td>
+                  </tr>
+                  
+                  {(() => {
+                    let runningBalance = data.booking.totalAmount || 0;
+                    return [...data.payments].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).map(p => {
+                      runningBalance -= p.amount;
+                      return (
+                        <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "16px", color: "#475569" }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td style={{ padding: "16px", color: "#334155", fontWeight: 500 }}>Receipt #{p.Receipt?.receiptNumber || "-"} ({p.paymentMode})</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>-</td>
+                          <td style={{ padding: "16px", fontWeight: 700, color: "#16a34a" }}>{formatMoney(p.amount)}</td>
+                          <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(runningBalance)}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="block md:hidden flex flex-col gap-4">
+              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>Booking Finalized</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{new Date(data.booking.date).toLocaleDateString()}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 700, textTransform: "uppercase" }}>Debit</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
+                  <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Running Balance</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{formatMoney(data.booking.totalAmount)}</span>
+                </div>
+              </div>
+
+              {(() => {
+                let runningBalance = data.booking.totalAmount || 0;
+                return [...data.payments].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).map(p => {
+                  runningBalance -= p.amount;
+                  return (
+                    <div key={p.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>Receipt #{p.Receipt?.receiptNumber || "-"}</div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{new Date(p.createdAt).toLocaleDateString()} • {p.paymentMode}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, textTransform: "uppercase" }}>Credit</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{formatMoney(p.amount)}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
+                        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Running Balance</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{formatMoney(runningBalance)}</span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
         )}
 
@@ -387,28 +494,60 @@ export default function BookingFinancialDashboard() {
             {data.journals.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No journal entries generated.</div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Voucher</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Description</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Debit A/C</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Credit A/C</th>
-                    <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                <div className="hidden md:block">
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Voucher</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Description</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Debit A/C</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Credit A/C</th>
+                        <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.journals.map(j => (
+                        <tr key={j.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "16px", fontWeight: 600, color: "#334155" }}>{j.Voucher?.voucherNumber}</td>
+                          <td style={{ padding: "16px", color: "#475569" }}>{j.description}</td>
+                          <td style={{ padding: "16px", color: "#16a34a", fontWeight: 500 }}>{j.DebitAccount?.name}</td>
+                          <td style={{ padding: "16px", color: "#dc2626", fontWeight: 500 }}>{j.CreditAccount?.name}</td>
+                          <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(j.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="block md:hidden flex flex-col gap-4">
                   {data.journals.map(j => (
-                    <tr key={j.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "16px", fontWeight: 600, color: "#334155" }}>{j.Voucher?.voucherNumber}</td>
-                      <td style={{ padding: "16px", color: "#475569" }}>{j.description}</td>
-                      <td style={{ padding: "16px", color: "#16a34a", fontWeight: 500 }}>{j.DebitAccount?.name}</td>
-                      <td style={{ padding: "16px", color: "#dc2626", fontWeight: 500 }}>{j.CreditAccount?.name}</td>
-                      <td style={{ padding: "16px", fontWeight: 700, color: "#0f172a" }}>{formatMoney(j.amount)}</td>
-                    </tr>
+                    <div key={j.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{j.Voucher?.voucherNumber}</div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{j.description}</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                          {formatMoney(j.amount)}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2" style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#16a34a", fontWeight: 700, textTransform: "uppercase" }}>Debit A/C</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{j.DebitAccount?.name}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 700, textTransform: "uppercase" }}>Credit A/C</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{j.CreditAccount?.name}</div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         )}
