@@ -305,17 +305,16 @@ export default function Staff() {
           />
         </div>
         
-        <div className="flex flex-row gap-2 overflow-x-auto flex-nowrap lg:flex-wrap w-full pb-2 scrollbar-hide">
-          {roles.map(r => (
-            <button key={r} onClick={() => setFilterRole(r)} style={{
-              padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-              background: filterRole === r ? "#1B4332" : "#fff",
-              color: filterRole === r ? "#fff" : "#475569",
-              border: filterRole === r ? "none" : "1px solid #cbd5e1",
-            }}>
-              {r}
-            </button>
-          ))}
+        <div className="w-full lg:w-auto shrink-0">
+          <select 
+            value={filterRole} 
+            onChange={(e) => setFilterRole(e.target.value)}
+            style={{ width: "100%", padding: "10px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", cursor: "pointer", background: "#fff", color: "#475569", fontWeight: 600, fontFamily: "inherit" }}
+          >
+            {roles.map(r => (
+              <option key={r} value={r}>Role: {r}</option>
+            ))}
+          </select>
         </div>
       </div>
 

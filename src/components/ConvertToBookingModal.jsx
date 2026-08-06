@@ -487,7 +487,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   {inp("eventType", { placeholder: "Wedding, Engagement..." })}
                 </div>
                 <div>
-                  <label style={labelSt}><Users size={10} /> No. of Guests</label>
+                  <label style={labelSt}>No. of Guests</label>
                   {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
                 </div>
               </div>
@@ -576,7 +576,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Discount (₹)</label>
                   <input type="number" min={0} value={formData.discount}
                     onChange={e => handleMoneyChange("discount", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 700, color: "#d97706" }}
+                    style={{ ...iStyle, fontWeight: 700, fontSize: 14, color: "#d97706" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
@@ -584,7 +584,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Final Total Amount (₹)</label>
                   <input type="number" min={0} value={formData.totalAmount}
                     onChange={e => handleMoneyChange("totalAmount", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 800, fontSize: 15, background: "#f8fafc" }}
+                    style={{ ...iStyle, fontWeight: 700, fontSize: 14, background: "#f8fafc" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
