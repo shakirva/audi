@@ -108,7 +108,7 @@ export default function Collections() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Collections Register</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track and reconcile all received payments.</p>
@@ -152,7 +152,8 @@ export default function Collections() {
         </select>
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      {/* Desktop Table View */}
+      <div className="hidden md:block" style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
@@ -228,6 +229,73 @@ export default function Collections() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="block md:hidden flex flex-col gap-4">
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading collections...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No collections found.</div>
+        ) : (
+          filtered.map((p) => {
+            const collector = (() => {
+              if (p.notes && p.notes.includes("Collected By:")) {
+                const match = p.notes.match(/Collected By:\s*([^\n]+)/);
+                if (match && match[1]) return match[1].trim();
+              }
+              return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
+            })();
+            
+            return (
+              <div key={p.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{p.Booking?.bookingId || "-"}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{p.Customer?.name || "-"}</div>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
+                    ₹{Number(p.amount).toLocaleString()}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4" style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Receipt ID</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.Receipts && p.Receipts.length > 0 ? p.Receipts[0].receiptNumber : p.paymentNumber}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Date</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{new Date(p.paymentDate || p.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Mode</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.paymentMode}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Collected By</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{collector}</div>
+                  </div>
+                </div>
+                
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button 
+                    onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
+                    style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155" }}
+                  >
+                    <Printer size={16} /> Receipt
+                  </button>
+                  <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDeletePayment(p.id)} style={{ border: "1px solid #e2e8f0", background: "#fee2e2", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#ef4444" }} title="Delete">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
       
       <EditPaymentModal 

@@ -49,7 +49,7 @@ export default function PurchasesAndExpenses() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Purchases & Expenses</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage vendor purchases, bills, and all business expenses.</p>
@@ -76,7 +76,8 @@ export default function PurchasesAndExpenses() {
         </div>
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      {/* Desktop Table View */}
+      <div className="hidden md:block" style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
@@ -116,7 +117,7 @@ export default function PurchasesAndExpenses() {
                     <td style={{ padding: "16px 24px", color: "#ef4444", fontWeight: 700 }}>₹{Number(e.amount).toLocaleString()}</td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
                       <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                        <button onClick={() => { setEditExpense(e); setIsModalOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }} title="Edit">
+                        <button onClick={() => { setEditExpense(e); setIsModalOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6" }} title="Edit">
                           <Edit size={16} />
                         </button>
                         <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
@@ -130,6 +131,53 @@ export default function PurchasesAndExpenses() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="block md:hidden flex flex-col gap-4">
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Loading expenses...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No expenses found.</div>
+        ) : (
+          filtered.map((e) => (
+            <div key={e.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{e.description || "Expense"}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                    <span style={{ display: "inline-block", padding: "2px 6px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 4, fontWeight: 600 }}>
+                      {e.category}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444" }}>
+                  ₹{Number(e.amount).toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 mb-4" style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Date</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{new Date(e.date).toLocaleDateString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Mode</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{e.paymentMode || "Cash"}</div>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
+                <button onClick={() => { setEditExpense(e); setIsModalOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
+                  <Edit size={14} /> Edit
+                </button>
+                <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, marginLeft: 12 }}>
+                  <Trash2 size={14} /> Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {isModalOpen && (

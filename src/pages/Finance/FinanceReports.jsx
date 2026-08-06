@@ -26,7 +26,7 @@ export default function FinanceReports() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Finance Reports</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Real-time Profit & Loss statement based on double-entry ledgers.</p>
