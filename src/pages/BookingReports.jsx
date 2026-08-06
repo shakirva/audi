@@ -182,8 +182,8 @@ export default function BookingReports() {
           </h1>
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Analyze booking volumes, event types, and cancellations</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button 
+        <div className="w-full sm:w-auto" style={{ display: "flex", gap: 10 }}>
+          <button className="w-full sm:w-auto justify-center" 
             onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
@@ -193,40 +193,43 @@ export default function BookingReports() {
       </div>
 
       {/* Advanced Filter Bar */}
-      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+      <div className="print-hide flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div className="hidden sm:flex" style={{ alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+          <Filter size={16} /> Filters
+        </div>
+        <div className="flex sm:hidden items-center gap-2 mb-2 text-[#1B4332] font-bold text-sm w-full border-b border-gray-100 pb-2">
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Time">Date: All Time</option>
           <option value="This Month">Date: This Month</option>
           <option value="Last Month">Date: Last Month</option>
           <option value="This Year">Date: This Year</option>
         </select>
         
-        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
             <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
         
-        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Staff">Executive: All Staff</option>
           {uniqueExecutives.map((exec, i) => (
             <option key={i} value={exec}>{exec}</option>
           ))}
         </select>
         
-        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Locations">Place: All Locations</option>
           {uniquePlaces.map((place, i) => (
             <option key={i} value={place}>{place}</option>
           ))}
         </select>
         
-        <select value={filterParty} onChange={(e) => setFilterParty(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterParty} onChange={(e) => setFilterParty(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Parties">Booked By: All</option>
           {uniqueParties.map((party, i) => (
             <option key={i} value={party}>{party}</option>
