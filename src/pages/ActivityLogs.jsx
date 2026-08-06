@@ -104,8 +104,8 @@ export default function ActivityLogs() {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div className="p-4 sm:p-6" style={{ maxWidth: 900, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418", display: "flex", alignItems: "center", gap: 10 }}>
             <ShieldAlert size={28} color="#0D2418" /> Activity History
@@ -113,21 +113,23 @@ export default function ActivityLogs() {
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track what happens in your venue management system.</p>
         </div>
         
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
+        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3 items-stretch sm:items-center">
+          <div style={{ position: "relative" }} className="w-full sm:w-auto">
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
               placeholder="Search history..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 240 }}
+              className="w-full sm:w-64"
+              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }}
             />
           </div>
 
           <button 
             onClick={handleClearLogs}
-            style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+            className="w-full sm:w-auto justify-center"
+            style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxSizing: "border-box" }}
           >
             <Trash2 size={16} /> Clear History
           </button>
@@ -152,21 +154,23 @@ export default function ActivityLogs() {
             const dateStr = new Date(log.createdAt).toLocaleDateString("en-IN", { day: 'numeric', month: 'short' });
 
             return (
-              <div key={log.id} style={{ background: "#fff", borderRadius: 16, padding: "20px 24px", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", display: "flex", gap: 20, alignItems: "flex-start", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateX(4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {getActionIcon(log.action)}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, color: "#1e293b", marginBottom: 4, lineHeight: 1.4 }}>
-                    <strong style={{ color: "#0f172a" }}>{userName}</strong> <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 500 }}>{role}</span> performed <strong>{log.action}</strong>
+              <div key={log.id} className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5" style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateX(4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
+                <div className="flex w-full sm:w-auto items-start gap-4 flex-1">
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {getActionIcon(log.action)}
                   </div>
-                  {details && (
-                    <div style={{ fontSize: 14, color: "#64748b", background: "#f8fafc", padding: "8px 12px", borderRadius: 8, display: "inline-block", marginTop: 4 }}>
-                      {details}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, color: "#1e293b", marginBottom: 4, lineHeight: 1.4 }}>
+                      <strong style={{ color: "#0f172a" }}>{userName}</strong> <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 500 }}>{role}</span> performed <strong>{log.action}</strong>
                     </div>
-                  )}
+                    {details && (
+                      <div style={{ fontSize: 14, color: "#64748b", background: "#f8fafc", padding: "8px 12px", borderRadius: 8, display: "inline-block", marginTop: 4 }}>
+                        {details}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div className="w-full sm:w-auto flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-end mt-2 sm:mt-0 sm:text-right flex-shrink-0 border-t sm:border-0 border-slate-100 pt-3 sm:pt-0">
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#475569" }}>{timeStr}</div>
                   <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>{dateStr}</div>
                 </div>
