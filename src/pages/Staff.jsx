@@ -293,7 +293,7 @@ export default function Staff() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-12">
         <div style={{ position: "relative" }} className="w-full sm:w-72">
           <Search size={18} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input 
