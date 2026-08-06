@@ -145,7 +145,7 @@ export default function BookingFinancialDashboard() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 8, borderBottom: "1px solid #e2e8f0", marginBottom: 32 }}>
+      <div style={{ display: "flex", gap: 8, borderBottom: "1px solid #e2e8f0", marginBottom: 32, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
         {tabs.map(tab => {
           const active = activeTab === tab.id;
           return (

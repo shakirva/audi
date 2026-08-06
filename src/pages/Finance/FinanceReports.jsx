@@ -96,7 +96,7 @@ export default function FinanceReports() {
                 {(report.netProfit || 0) >= 0 ? "+" : "-"} ₹{Math.abs(report.netProfit || 0).toLocaleString()}
               </h1>
             </div>
-            <div style={{ background: "rgba(255,255,255,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="hidden md:block" style={{ background: "rgba(255,255,255,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
               <BarChart3 size={48} color="#fff" style={{ opacity: 0.8 }} />
             </div>
           </div>

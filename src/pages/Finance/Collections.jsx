@@ -114,37 +114,38 @@ export default function Collections() {
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Track and reconcile all received payments.</p>
         </div>
         
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto" style={{ gap: 12, alignItems: "stretch" }}>
+          <div style={{ position: "relative", flex: 1 }}>
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
               placeholder="Search by ID, Booking, Amount..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
+              className="w-full"
+              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none" }}
             />
           </div>
         </div>
       </div>
 
       {/* Advanced Filter Bar */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+      <div className="flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+        <select className="w-full sm:w-auto" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
           <option value="All Time">Date: All Time</option>
           <option value="This Month">Date: This Month</option>
           <option value="Last Month">Date: Last Month</option>
           <option value="This Year">Date: This Year</option>
         </select>
         
-        <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+        <select className="w-full sm:w-auto" value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
           <option value="All Modes">Mode: All Modes</option>
           {uniqueModes.map((m, i) => (
             <option key={i} value={m}>{m}</option>
           ))}
         </select>
         
-        <select value={filterCollectedBy} onChange={(e) => setFilterCollectedBy(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+        <select className="w-full sm:w-auto" value={filterCollectedBy} onChange={(e) => setFilterCollectedBy(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
           <option value="All Staff">Collected By: All Staff</option>
           {uniqueCollectors.map((c, i) => (
             <option key={i} value={c}>{c}</option>

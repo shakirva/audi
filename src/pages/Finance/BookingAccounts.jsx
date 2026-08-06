@@ -49,20 +49,22 @@ export default function BookingAccounts() {
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>The single source of truth for every booking's financials.</p>
         </div>
         
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto" style={{ gap: 12, alignItems: "stretch" }}>
+          <div style={{ position: "relative", flex: 1 }}>
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
               placeholder="Search bookings..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
+              className="w-full"
+              style={{ padding: "10px 16px 10px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none" }}
             />
           </div>
           <select 
             value={filterBalance} 
             onChange={(e) => setFilterBalance(e.target.value)}
+            className="w-full sm:w-auto"
             style={{ padding: "10px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", background: "#fff", color: "#334155", fontWeight: 500, cursor: "pointer" }}
           >
             <option value="All">All Balances</option>
