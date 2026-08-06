@@ -113,6 +113,28 @@ export default function CRM() {
     return enq.phone || "";
   };
 
+  const getConflictStatus = useCallback((enq) => {
+    if (["Booking Confirmed", "Lost", "Cancelled"].includes(enq.status)) return false;
+    if (!enq.tentativeDate) return false;
+    
+    return enquiries.some(e => {
+      if (e.status !== "Booking Confirmed") return false;
+      if (e.tentativeDate !== enq.tentativeDate) return false;
+      
+      // If sessions are specified and they don't overlap, no conflict
+      if (e.session && enq.session && e.session !== enq.session && e.session !== "Full Day" && enq.session !== "Full Day") {
+        return false;
+      }
+      
+      // If halls are specified and different, no conflict
+      if (e.hallPreference && enq.hallPreference && e.hallPreference !== enq.hallPreference) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [enquiries]);
+
   return (
     <div className="hm-crm-wrapper">
       {/* Header */}
@@ -228,7 +250,9 @@ export default function CRM() {
                           onMouseEnter={() => setHoveredEnq(enq.id)}
                           onMouseLeave={() => setHoveredEnq(null)}
                           style={{
-                            background: "#fff", padding: "14px", borderRadius: 8, border: "1px solid #eaeaea",
+                            background: getConflictStatus(enq) ? "#fffafa" : "#fff", 
+                            padding: "14px", borderRadius: 8, 
+                            border: getConflictStatus(enq) ? "1px solid #fecaca" : "1px solid #eaeaea",
                             boxShadow: "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
                             transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none"
                           }}>
@@ -247,6 +271,11 @@ export default function CRM() {
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#999" }}>
                               <Calendar size={11} /> {enq.tentativeDate || "TBD"}
+                              {getConflictStatus(enq) && (
+                                <span style={{ marginLeft: 4, background: "#fee2e2", color: "#dc2626", padding: "2px 4px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
+                                  ⚠️ UNAVAILABLE
+                                </span>
+                              )}
                             </div>
                             {enq.status !== "Booking Confirmed" && hoveredEnq === enq.id ? (
                               <div style={{ display: "flex", gap: 6 }}>
@@ -339,7 +368,16 @@ export default function CRM() {
                     </td>
                     <td style={{ padding: "12px 16px", fontWeight: 600 }}>{getEnquiryName(enq)}</td>
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.eventType}</td>
-                    <td className="hm-desktop-only" style={{ padding: "12px 16px", color: "#666" }}>{enq.tentativeDate || "TBD"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 16px", color: "#666" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {enq.tentativeDate || "TBD"}
+                        {getConflictStatus(enq) && (
+                          <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
+                            ⚠️ UNAVAILABLE
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: "12px 16px" }}>
                       {enq.status === "Booking Confirmed" ? (
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", padding: "4px 8px", background: "#dcfce7", borderRadius: 6, display: "inline-block" }}>
