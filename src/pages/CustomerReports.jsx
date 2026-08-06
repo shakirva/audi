@@ -97,8 +97,8 @@ export default function CustomerReports() {
   };
 
   return (
-    <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <div className="p-4 sm:p-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Customer Reports
@@ -153,8 +153,8 @@ export default function CustomerReports() {
           ))}
         </div>
 
-        {/* Data Table */}
-        <div style={{ ...cardSt, padding: 0, overflow: "hidden" }}>
+        {/* Desktop Data Table */}
+        <div className="hidden md:block" style={{ ...cardSt, padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #f3f4f6" }}>
             <p style={{ ...sTitle, margin: 0 }}>Customer Directory</p>
           </div>
@@ -198,6 +198,49 @@ export default function CustomerReports() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Mobile View Data Table */}
+        <div className="block md:hidden">
+          <h2 style={{ ...sTitle, marginBottom: 16 }}>Customer Directory</h2>
+          <div className="flex flex-col gap-4">
+            {filteredBookings.length === 0 ? (
+               <div style={{ textAlign: "center", padding: 30, color: "#9ca3af", fontSize: 14, background: "#fff", borderRadius: 12 }}>No customers found</div>
+            ) : (
+               filteredBookings.map((b, i) => (
+                  <div key={b.id || i} style={{ background: "#fff", borderRadius: 12, padding: 16, border: "1px solid #f3f4f6", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                     <div className="flex justify-between items-start mb-3">
+                       <div>
+                         <div style={{ fontWeight: 700, color: "#111827", fontSize: 15 }}>{b.customerName || b.Customer?.name || "N/A"}</div>
+                         <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{b.Customer?.city || b.place || b.address || "No City"}</div>
+                       </div>
+                       <div style={{ background: "#f3f4f6", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, color: "#374151" }}>
+                         {new Date(b.date || b.createdAt).toLocaleDateString()}
+                       </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-3 mb-3">
+                       <div>
+                         <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", fontWeight: 600 }}>Phone</div>
+                         <div style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{b.phone || b.Customer?.phone || "N/A"}</div>
+                       </div>
+                       <div>
+                         <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", fontWeight: 600 }}>Event</div>
+                         <div style={{ fontSize: 13, color: "#1B4332", fontWeight: 600 }}>{b.eventType || "N/A"}</div>
+                       </div>
+                     </div>
+                     {(b.brideName || b.groomName) && (
+                       <div style={{ background: "#f9fafb", padding: 10, borderRadius: 8, fontSize: 13 }}>
+                         <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>Couple Details</div>
+                         <div className="flex flex-col gap-1">
+                           {b.brideName && <div><span style={{ color: "#ec4899", fontWeight: 600 }}>B:</span> {b.brideName}</div>}
+                           {b.groomName && <div><span style={{ color: "#3b82f6", fontWeight: 600 }}>G:</span> {b.groomName}</div>}
+                         </div>
+                       </div>
+                     )}
+                  </div>
+               ))
+            )}
           </div>
         </div>
       </div>
