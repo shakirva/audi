@@ -125,21 +125,23 @@ export default function BookingFinancialDashboard() {
   const timelineEvents = buildTimeline();
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="p-4 sm:p-8 md:p-10" style={{ maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", paddingBottom: "100px" }}>
       {/* Header */}
-      <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <Link to="/finance/booking-accounts" style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 8, borderRadius: 8, color: "#64748b", textDecoration: "none", display: "flex", alignItems: "center" }}>
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 16 }}>
+        <Link to="/finance/booking-accounts" style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 8, borderRadius: 8, color: "#64748b", textDecoration: "none", display: "flex", alignItems: "center", marginTop: 4 }}>
           <ArrowLeft size={18} />
         </Link>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "#0f172a" }}>Booking Financial Center</h1>
-            <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "#0f172a", lineHeight: 1.2 }}>Booking Financial Center</h1>
+            <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
               {data.booking.bookingId}
             </span>
           </div>
-          <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
-            Customer: <strong style={{ color: "#334155" }}>{data.booking.Customer?.name}</strong> • Event: {new Date(data.booking.date).toLocaleDateString()}
+          <div style={{ fontSize: 14, color: "#64748b", marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+            <span>Customer: <strong style={{ color: "#334155" }}>{data.booking.Customer?.name}</strong></span>
+            <span className="hidden sm:inline">•</span>
+            <span>Event: {new Date(data.booking.date).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
