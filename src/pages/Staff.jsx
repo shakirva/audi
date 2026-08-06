@@ -245,7 +245,7 @@ export default function Staff() {
   return (
     <div className="p-4 sm:p-6" style={{ maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", paddingBottom: "100px" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8" style={{ marginBottom: 32 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Staff & HR</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage employee attendance, roles, and job assignments.</p>

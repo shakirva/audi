@@ -133,7 +133,7 @@ export default function LeaveRequests() {
 
   return (
     <div className="p-4 sm:p-6" style={{ maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6" style={{ marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>
             {role === "Sales" || role === "Operations" ? "My Leave Requests" : "Staff Leave Requests"}
