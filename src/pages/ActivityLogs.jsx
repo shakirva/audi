@@ -105,7 +105,7 @@ export default function ActivityLogs() {
 
   return (
     <div className="p-4 sm:p-6" style={{ maxWidth: 900, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4 mb-12">
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418", display: "flex", alignItems: "center", gap: 10 }}>
             <ShieldAlert size={28} color="#0D2418" /> Activity History
