@@ -101,7 +101,11 @@ const Booking = sequelize.define("Booking", {
 
         let nextNum = 1;
         if (lastBooking && lastBooking.bookingId) {
-          const match = lastBooking.bookingId.match(/\d+$/);
+          let idPart = lastBooking.bookingId;
+          if (idPart.startsWith(prefix)) {
+            idPart = idPart.substring(prefix.length);
+          }
+          const match = idPart.match(/\d+$/);
           if (match) nextNum = parseInt(match[0], 10) + 1;
         }
 
