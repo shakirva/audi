@@ -173,13 +173,20 @@ export default function SmartDatePicker({
               const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const isSelected = value === dateStr;
               
+              const dateObj = new Date(year, month - 1, day);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const isPast = dateObj < today;
+              
               let statusObj = monthAvail[dateStr];
               
               let bgColor = "transparent";
               let borderColor = "transparent";
               let textColor = "#111";
 
-              if (hallPreference && statusObj) {
+              if (isPast) {
+                textColor = "#d1d5db";
+              } else if (hallPreference && statusObj) {
                 if (statusObj.status === "Fully Booked") {
                   bgColor = "#fee2e2";
                   borderColor = "#ef4444";
@@ -200,26 +207,26 @@ export default function SmartDatePicker({
               return (
                 <div 
                   key={day}
-                  onClick={() => handleSelectDate(day)}
+                  onClick={() => { if (!isPast) handleSelectDate(day); }}
                   style={{
                     height: 36,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 6,
-                    cursor: "pointer",
+                    cursor: isPast ? "not-allowed" : "pointer",
                     background: isSelected ? "#1B4332" : bgColor,
                     color: isSelected ? "#fff" : textColor,
                     fontWeight: isSelected || isToday ? 800 : 600,
                     fontSize: 13,
-                    border: isSelected ? "1px solid transparent" : isToday ? "1px solid #1B4332" : `1px solid ${borderColor}`,
+                    border: isSelected ? "1px solid transparent" : isToday && !isPast ? "1px solid #1B4332" : `1px solid ${borderColor}`,
                     transition: "all 0.15s"
                   }}
                   onMouseEnter={e => {
-                    if (!isSelected) e.currentTarget.style.opacity = "0.7";
+                    if (!isSelected && !isPast) e.currentTarget.style.opacity = "0.7";
                   }}
                   onMouseLeave={e => {
-                    if (!isSelected) e.currentTarget.style.opacity = "1";
+                    if (!isSelected && !isPast) e.currentTarget.style.opacity = "1";
                   }}
                 >
                   {day}
