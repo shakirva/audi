@@ -515,102 +515,6 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </div>
             </div>
 
-            {/* ── Event Info ── */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <Calendar size={12} /> Event Details
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div ref={eventTypeRef} style={{ position: "relative" }}>
-                  <label style={labelSt}>Event Type *</label>
-                  <input
-                    required
-                    type="text"
-                    name="eventType"
-                    value={eventTypeQuery || form.eventType}
-                    onChange={e => {
-                      setEventTypeQuery(e.target.value);
-                      setForm(prev => ({ ...prev, eventType: e.target.value }));
-                      setShowEventTypeDropdown(true);
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#1B4332";
-                      setShowEventTypeDropdown(true);
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#e5e7eb";
-                      setTimeout(() => setShowEventTypeDropdown(false), 150);
-                    }}
-                    placeholder="e.g. Wedding"
-                    style={iStyle}
-                    autoComplete="off"
-                  />
-                  {showEventTypeDropdown && (
-                    <div style={{
-                      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
-                      background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                      border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
-                    }}>
-                      {filteredEventTypes.length > 0 ? (
-                        filteredEventTypes.map(t => (
-                          <div
-                            key={t}
-                            onMouseDown={e => e.preventDefault()}
-                            onClick={() => {
-                              setForm(prev => ({ ...prev, eventType: t }));
-                              setEventTypeQuery(t);
-                              setShowEventTypeDropdown(false);
-                            }}
-                            style={{
-                              padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
-                              display: "flex", alignItems: "center", gap: 8,
-                              borderBottom: "1px solid #f3f4f6"
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
-                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                          >
-                            {t}
-                          </div>
-                        ))
-                      ) : (
-                        eventTypeQuery.trim() !== "" && (
-                          <div
-                            onMouseDown={e => e.preventDefault()}
-                            onClick={() => {
-                              setEventTypeToConfirm(eventTypeQuery.trim());
-                              setShowEventTypeDropdown(false);
-                            }}
-                            style={{
-                              padding: "10px 14px", fontSize: 13, color: "#0284c7", cursor: "pointer",
-                              display: "flex", alignItems: "center", gap: 8, fontWeight: 600
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = "#e0f2fe"}
-                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                          >
-                            <Plus size={14} /> Add "{eventTypeQuery}" as new Event Type
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div style={{ position: "relative" }}>
-                  <label style={labelSt}>Event Date *</label>
-                  <SmartDatePicker 
-                    value={form.tentativeDate} 
-                    onChange={handleChange} 
-                    hallPreference={form.hallPreference}
-                    style={{ ...iStyle, padding: "8px 12px", height: 40, fontWeight: 700, borderColor: form.tentativeDate ? "#e2e8f0" : "#e5e7eb" }}
-                  />
-                  {form.tentativeDate && form.hallPreference && (
-                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
-                      {fetchingAvailability ? "Checking availability..." : availability.status}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* ── Hall & Session ── */}
             <div>
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
@@ -724,6 +628,102 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     No sessions available on this date for the selected hall.
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* ── Event Info ── */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <Calendar size={12} /> Event Details
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div ref={eventTypeRef} style={{ position: "relative" }}>
+                  <label style={labelSt}>Event Type *</label>
+                  <input
+                    required
+                    type="text"
+                    name="eventType"
+                    value={eventTypeQuery || form.eventType}
+                    onChange={e => {
+                      setEventTypeQuery(e.target.value);
+                      setForm(prev => ({ ...prev, eventType: e.target.value }));
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#1B4332";
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e7eb";
+                      setTimeout(() => setShowEventTypeDropdown(false), 150);
+                    }}
+                    placeholder="e.g. Wedding"
+                    style={iStyle}
+                    autoComplete="off"
+                  />
+                  {showEventTypeDropdown && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+                      background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
+                    }}>
+                      {filteredEventTypes.length > 0 ? (
+                        filteredEventTypes.map(t => (
+                          <div
+                            key={t}
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setForm(prev => ({ ...prev, eventType: t }));
+                              setEventTypeQuery(t);
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8,
+                              borderBottom: "1px solid #f3f4f6"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            {t}
+                          </div>
+                        ))
+                      ) : (
+                        eventTypeQuery.trim() !== "" && (
+                          <div
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setEventTypeToConfirm(eventTypeQuery.trim());
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#0284c7", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8, fontWeight: 600
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#e0f2fe"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            <Plus size={14} /> Add "{eventTypeQuery}" as new Event Type
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ position: "relative" }}>
+                  <label style={labelSt}>Event Date *</label>
+                  <SmartDatePicker 
+                    value={form.tentativeDate} 
+                    onChange={handleChange} 
+                    hallPreference={form.hallPreference}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40, fontWeight: 700, borderColor: form.tentativeDate ? "#e2e8f0" : "#e5e7eb" }}
+                  />
+                  {form.tentativeDate && form.hallPreference && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
