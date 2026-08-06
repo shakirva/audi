@@ -144,7 +144,7 @@ export default function Attendance() {
   const filteredAttendance = attendance.filter(a => a.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="p-4 sm:p-6" style={{ maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", color: "#0D2418" }}>
@@ -155,17 +155,18 @@ export default function Attendance() {
       </div>
 
       {isStaffView && (
-        <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #eaeaea", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="flex flex-col sm:flex-row" style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #eaeaea", marginBottom: 24, justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
           <div>
             <h3 style={{ margin: "0 0 8px", fontSize: 18, color: "#111" }}>Today's Status</h3>
             <div style={{ fontSize: 14, color: "#666", display: "flex", alignItems: "center", gap: 6 }}>
               <CalendarIcon size={14} /> {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ display: "flex" }}>
             <button 
               onClick={handleCheckIn}
               disabled={!!todayEntry?.checkIn}
+              className="w-full sm:w-auto justify-center"
               style={{ background: todayEntry?.checkIn ? "#f1f5f9" : "#1B4332", color: todayEntry?.checkIn ? "#94a3b8" : "#fff", padding: "12px 24px", borderRadius: 10, fontWeight: 700, border: "none", cursor: todayEntry?.checkIn ? "not-allowed" : "pointer", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}
             >
               <CheckCircle size={18} /> {todayEntry?.checkIn ? `Checked In at ${todayEntry.checkIn}` : "Check In"}
@@ -173,6 +174,7 @@ export default function Attendance() {
             <button 
               onClick={handleCheckOut}
               disabled={!todayEntry?.checkIn || !!todayEntry?.checkOut}
+              className="w-full sm:w-auto justify-center"
               style={{ background: !todayEntry?.checkIn || todayEntry?.checkOut ? "#f1f5f9" : "#dc2626", color: !todayEntry?.checkIn || todayEntry?.checkOut ? "#94a3b8" : "#fff", padding: "12px 24px", borderRadius: 10, fontWeight: 700, border: "none", cursor: (!todayEntry?.checkIn || todayEntry?.checkOut) ? "not-allowed" : "pointer", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}
             >
               <XCircle size={18} /> {todayEntry?.checkOut ? `Checked Out at ${todayEntry.checkOut}` : "Check Out"}
@@ -182,7 +184,7 @@ export default function Attendance() {
       )}
 
       {!isStaffView && (
-        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="flex flex-col sm:flex-row gap-4" style={{ marginBottom: 20, alignItems: "flex-start", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
             <input 
@@ -192,72 +194,128 @@ export default function Attendance() {
               style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
             />
           </div>
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} className="w-full sm:w-72">
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
               placeholder="Search staff by name..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: "8px 16px 8px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: 250 }}
+              style={{ padding: "8px 16px 8px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", width: "100%" }}
             />
           </div>
         </div>
       )}
 
-      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #eaeaea", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-          <thead>
-            <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
-              <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Date</th>
-              {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Staff Member</th>}
-              <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Status</th>
-              <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check In</th>
-              <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check Out</th>
-              {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555", textAlign: "right" }}>Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>Loading...</td></tr>
-            ) : filteredAttendance.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#999" }}>No attendance records found.</td></tr>
-            ) : (
-              filteredAttendance.map(a => (
-                <tr key={a.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                  {!isStaffView && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
-                  <td style={{ padding: "16px 20px" }}>
-                    <span style={{ background: a.status === "Present" ? "#dcfce7" : a.status === "Not Marked" ? "#f1f5f9" : "#fee2e2", color: a.status === "Present" ? "#166534" : a.status === "Not Marked" ? "#64748b" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
-                  </td>
-                  <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkIn || "—"}</td>
-                  <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkOut || "—"}</td>
-                  {!isStaffView && (
-                    <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-                        {!a.checkIn ? (
-                          <button onClick={() => handleAdminCheckIn(a.userId, a.date)} style={{ background: "#1B4332", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check In</button>
-                        ) : !a.checkOut ? (
-                          <button onClick={() => handleAdminCheckOut(a.userId, a.date)} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check Out</button>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", padding: "6px 12px" }}>Completed</span>
-                        )}
-                        
-                        {a.id && !a.id.toString().startsWith("virtual") && (
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", padding: 0 }}><Edit3 size={16} /></button>
-                            <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: 0 }}><Trash2 size={16} /></button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  )}
+      {loading ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>Loading...</div>
+      ) : filteredAttendance.length === 0 ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "#999", background: "#fff", borderRadius: 12, border: "1px solid #eaeaea" }}>No attendance records found.</div>
+      ) : (
+        <>
+          <div className="hidden md:block" style={{ background: "#fff", borderRadius: 12, border: "1px solid #eaeaea", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
+                  <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Date</th>
+                  {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Staff Member</th>}
+                  <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Status</th>
+                  <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check In</th>
+                  <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555" }}>Check Out</th>
+                  {!isStaffView && <th style={{ padding: "16px 20px", fontWeight: 700, color: "#555", textAlign: "right" }}>Actions</th>}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {filteredAttendance.map(a => (
+                  <tr key={a.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "16px 20px", fontWeight: 600, color: "#333" }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
+                    {!isStaffView && <td style={{ padding: "16px 20px", color: "#111", fontWeight: 600 }}>{a.User?.name} <span style={{ fontSize: 12, color: "#666", fontWeight: 400 }}>({a.User?.role})</span></td>}
+                    <td style={{ padding: "16px 20px" }}>
+                      <span style={{ background: a.status === "Present" ? "#dcfce7" : a.status === "Not Marked" ? "#f1f5f9" : "#fee2e2", color: a.status === "Present" ? "#166534" : a.status === "Not Marked" ? "#64748b" : "#dc2626", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.status}</span>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkIn || "—"}</td>
+                    <td style={{ padding: "16px 20px", color: "#555", fontWeight: 500 }}>{a.checkOut || "—"}</td>
+                    {!isStaffView && (
+                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+                          {!a.checkIn ? (
+                            <button onClick={() => handleAdminCheckIn(a.userId, a.date)} style={{ background: "#1B4332", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check In</button>
+                          ) : !a.checkOut ? (
+                            <button onClick={() => handleAdminCheckOut(a.userId, a.date)} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check Out</button>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", padding: "6px 12px" }}>Completed</span>
+                          )}
+                          
+                          {a.id && !a.id.toString().startsWith("virtual") && (
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", padding: 0 }}><Edit3 size={16} /></button>
+                              <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: 0 }}><Trash2 size={16} /></button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden flex flex-col gap-4">
+            {filteredAttendance.map(a => (
+              <div key={a.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #eaeaea", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div>
+                    {!isStaffView ? (
+                      <>
+                        <div style={{ fontWeight: 700, color: "#111", fontSize: 15 }}>{a.User?.name}</div>
+                        <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{a.User?.role} • {new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontWeight: 700, color: "#111", fontSize: 15 }}>{new Date(a.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+                    )}
+                  </div>
+                  <div>
+                    <span style={{ background: a.status === "Present" ? "#dcfce7" : a.status === "Not Marked" ? "#f1f5f9" : "#fee2e2", color: a.status === "Present" ? "#166534" : a.status === "Not Marked" ? "#64748b" : "#dc2626", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, display: "inline-block" }}>{a.status}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4" style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Check In</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{a.checkIn || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Check Out</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{a.checkOut || "—"}</div>
+                  </div>
+                </div>
+
+                {!isStaffView && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {!a.checkIn ? (
+                        <button onClick={() => handleAdminCheckIn(a.userId, a.date)} style={{ background: "#1B4332", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check In</button>
+                      ) : !a.checkOut ? (
+                        <button onClick={() => handleAdminCheckOut(a.userId, a.date)} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Check Out</button>
+                      ) : (
+                        <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>Completed</span>
+                      )}
+                    </div>
+                    {a.id && !a.id.toString().startsWith("virtual") && (
+                      <div style={{ display: "flex", gap: 16 }}>
+                        <button onClick={() => handleEdit(a)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", padding: 0 }}><Edit3 size={18} /></button>
+                        <button onClick={() => handleDelete(a.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: 0 }}><Trash2 size={18} /></button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

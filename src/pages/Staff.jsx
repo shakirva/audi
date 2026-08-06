@@ -243,14 +243,14 @@ export default function Staff() {
   });
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="p-4 sm:p-6" style={{ maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", paddingBottom: "100px" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Staff & HR</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage employee attendance, roles, and job assignments.</p>
         </div>
-        <button onClick={() => { setEditStaff(null); setModalOpen(true); }} style={{
+        <button onClick={() => { setEditStaff(null); setModalOpen(true); }} className="w-full sm:w-auto justify-center" style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 14
@@ -293,8 +293,8 @@ export default function Staff() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", width: 300 }}>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div style={{ position: "relative" }} className="w-full sm:w-72">
           <Search size={18} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input 
             type="text" 
@@ -305,7 +305,7 @@ export default function Staff() {
           />
         </div>
         
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, maxWidth: "100%" }} className="scrollbar-hide">
           {roles.map(r => (
             <button key={r} onClick={() => setFilterRole(r)} style={{
               padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
