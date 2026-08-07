@@ -16,6 +16,7 @@ export default function Bookings() {
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
@@ -82,11 +83,29 @@ export default function Bookings() {
         else if (paymentFilter === "fully_paid") paymentMatch = balance <= 0 && total > 0;
       }
       
-      return nameMatch && statusMatch && paymentMatch;
+      let dateMatch = true;
+      if (monthFilter && b.date) {
+        dateMatch = b.date.startsWith(monthFilter);
+      }
+      
+      return nameMatch && statusMatch && paymentMatch && dateMatch;
     });
-  }, [bookings, search, statusFilter, paymentFilter, role, user]);
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    const upcoming = result.filter(b => b.date && b.date >= todayStr).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const past = result.filter(b => !b.date || b.date < todayStr).sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    return [...upcoming, ...past];
+  }, [bookings, search, statusFilter, paymentFilter, monthFilter, role, user]);
 
   const uniqueStatuses = [...new Set(bookings.map(b => b.status).filter(Boolean))];
+  const uniqueMonths = [...new Set(bookings.map(b => b.date ? b.date.substring(0, 7) : "").filter(Boolean))].sort((a, b) => b.localeCompare(a));
 
   const eventIcon = (type) => {
     if (!type) return "🎉";
@@ -126,6 +145,17 @@ export default function Bookings() {
             style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
             <option value="">All Status</option>
             {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Month Filter */}
+          <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
+            <option value="">All Months</option>
+            {uniqueMonths.map(m => {
+              const d = new Date(`${m}-01`);
+              const label = d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+              return <option key={m} value={m}>{label}</option>
+            })}
           </select>
 
           {/* Payment Filter */}
