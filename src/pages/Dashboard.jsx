@@ -65,8 +65,8 @@ function ExecutiveCockpit() {
     try {
       const [statsRes, bookingsRes, enqRes] = await Promise.all([
         bookingsAPI.getStats(),
-        bookingsAPI.getAll(),
-        enquiriesAPI.getAll()
+        bookingsAPI.getAll({ limit: 1000 }),
+        enquiriesAPI.getAll({ limit: 1000 })
       ]);
 
       const allBookings = bookingsRes.data?.data || [];
@@ -293,8 +293,8 @@ function ReceptionCockpit() {
   const loadData = async () => {
     try {
       const [bookingsRes, enquiriesRes] = await Promise.all([
-        bookingsAPI.getAll(),
-        enquiriesAPI.getAll()
+        bookingsAPI.getAll({ limit: 1000 }),
+        enquiriesAPI.getAll({ limit: 1000 })
       ]);
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enquiriesRes.data?.data || [];
