@@ -70,10 +70,18 @@ function ExecutiveCockpit() {
       ]);
 
       const allBookings = bookingsRes.data?.data || [];
-      const today = new Date().toISOString().split('T')[0];
+      
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
       
       // Compute upcoming bookings (future dates)
-      const upcomingCount = allBookings.filter(b => b.date && b.date >= today && b.status !== 'Cancelled' && b.status !== 'Enquiry').length;
+      const upcomingCount = allBookings.filter(b => {
+        if (!b.date) return false;
+        if (b.status === 'Cancelled' || b.status === 'Enquiry') return false;
+        return new Date(b.date) >= startOfToday;
+      }).length;
 
       if (statsRes.data?.data) {
         const ts = statsRes.data.data;
@@ -84,7 +92,11 @@ function ExecutiveCockpit() {
       }
 
       // Compute Today's Events
-      const todayEvts = allBookings.filter(b => b.date && b.date.startsWith(today));
+      const todayEvts = allBookings.filter(b => {
+        if (!b.date) return false;
+        const d = new Date(b.date);
+        return d >= startOfToday && d <= endOfToday;
+      });
       setTodaysEvents(todayEvts);
 
       // Compute Event Distribution
@@ -126,12 +138,12 @@ function ExecutiveCockpit() {
       setRevData(revArr);
 
       // Compute This Week's Events
-      const endOfWeek = new Date();
-      endOfWeek.setDate(endOfWeek.getDate() + 7);
-      const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
-      
-      const weekEvts = allBookings.filter(b => b.date && b.date >= today && b.date <= endOfWeekStr && b.status !== 'Cancelled' && b.status !== 'Enquiry')
-                                  .sort((a,b) => new Date(a.date) - new Date(b.date));
+      const weekEvts = allBookings.filter(b => {
+        if (!b.date) return false;
+        if (b.status === 'Cancelled' || b.status === 'Enquiry') return false;
+        const d = new Date(b.date);
+        return d >= startOfToday && d <= endOfWeek;
+      }).sort((a,b) => new Date(a.date) - new Date(b.date));
       
       setThisWeeksEvents(weekEvts);
 
@@ -286,12 +298,18 @@ function ReceptionCockpit() {
       ]);
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enquiriesRes.data?.data || [];
-      const today = new Date().toISOString().split('T')[0];
-      
       const filteredBookings = allBookings.filter(b => b.createdBy === user?.id || b.salesExecutiveId === user?.id || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id);
       const filteredEnquiries = allEnquiries.filter(e => e.createdBy === user?.id || e.salesExecutiveId === user?.id || e.salesExecutiveName === user?.name || e.assignedTo === user?.name || e.userId === user?.id);
 
-      const todaysEvents = filteredBookings.filter(b => b.date && b.date.startsWith(today));
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+      const todaysEvents = filteredBookings.filter(b => {
+        if (!b.date) return false;
+        const d = new Date(b.date);
+        return d >= startOfToday && d <= endOfToday;
+      });
       setEvents(todaysEvents);
       
       setEnquiries(filteredEnquiries);
