@@ -322,9 +322,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     {settings.halls && settings.halls.map((h, i) => (
                       <option key={`hall-${i}`} value={h.name}>{h.name}</option>
                     ))}
-                    {!settings.halls?.some(h => h.name === form.hall) && form.hall && (
+                    {(!settings.halls?.some(h => h.name === form.hall) && form.hall) ? (
                       <option value={form.hall}>{form.hall}</option>
-                    )}
+                    ) : null}
                   </select>
                 </div>
                 <div>
@@ -340,9 +340,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     {settings.sessions && settings.sessions.map((s, i) => (
                       <option key={`sess-${i}`} value={s.name}>{s.name} {s.time ? `(${s.time})` : ""}</option>
                     ))}
-                    {!settings.sessions?.some(s => s.name === form.session) && form.session && (
+                    {(!settings.sessions?.some(s => s.name === form.session) && form.session) ? (
                       <option value={form.session}>{form.session}</option>
-                    )}
+                    ) : null}
                   </select>
                 </div>
                 <div>
@@ -364,9 +364,9 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     {settings.eventTypes && settings.eventTypes.map((e, i) => (
                       <option key={`evt-${i}`} value={e}>{e}</option>
                     ))}
-                    {!settings.eventTypes?.includes(form.eventType) && form.eventType && (
+                    {(!settings.eventTypes?.includes(form.eventType) && form.eventType) ? (
                       <option value={form.eventType}>{form.eventType}</option>
-                    )}
+                    ) : null}
                   </select>
                 </div>
                 <div>
