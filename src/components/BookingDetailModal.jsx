@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2, Loader } from "lucide-react";
-import { paymentsAPI } from "../services/api";
+import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2, Loader, History, Clock } from "lucide-react";
+import { paymentsAPI, auditLogsAPI } from "../services/api";
 
 export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
@@ -199,48 +199,19 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                     <ChevronRight size={24} color="#cbd5e1" />
                   </motion.div>
 
-                  {/* Documents Section Removed */}
-                </div>
-
-                {/* ── ACTIVITY TIMELINE ── */}
-                <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "0 0 32px", textTransform: "uppercase", letterSpacing: 1 }}>Activity Log</h3>
-                  <div style={{ paddingLeft: 16, borderLeft: "2px dashed #cbd5e1", display: "flex", flexDirection: "column", gap: 32 }}>
-                    {(() => {
-                      const acts = [];
-                      // Reverse chronological
-                      if (booking.updatedAt && new Date(booking.updatedAt).getTime() - new Date(booking.createdAt).getTime() > 2000) {
-                        acts.push({
-                          time: new Date(booking.updatedAt).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-                          title: "Booking Updated",
-                          desc: "Details or payment info was modified.",
-                          color: "#f59e0b"
-                        });
-                      }
-                      if (Number(booking.advance) > 0 || Number(booking.depositAmount) > 0) {
-                        acts.push({
-                          time: "After Booking",
-                          title: "Advance Received",
-                          desc: `₹${(Number(booking.advance || 0) + Number(booking.depositAmount || 0)).toLocaleString()} received (${booking.paymentMethod || "Payment"}).`,
-                          color: "#10b981"
-                        });
-                      }
-                      acts.push({
-                        time: booking.createdAt ? new Date(booking.createdAt).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Recently",
-                        title: "Booking Created",
-                        desc: `Confirmed booking for ${booking.customerName}.`,
-                        color: "#3b82f6"
-                      });
-                      return acts;
-                    })().map((evt, i) => (
-                      <motion.div key={i} whileHover={{ x: 10 }} style={{ position: "relative", cursor: "pointer" }}>
-                        <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: evt.color, border: "4px solid #f8fafc", boxShadow: "0 0 0 1px #cbd5e1" }} />
-                        <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{evt.time}</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.title}</div>
-                        <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.desc}</div>
-                      </motion.div>
-                    ))}
-                  </div>
+                  {/* Activity Logs Section */}
+                  <motion.div whileHover={{ background: "#f8fafc" }} onClick={() => setActiveView("activity")} style={{ background: "#fff", padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}><History size={24} /></div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>Activity History</div>
+                        <div style={{ fontSize: 14, color: "#64748b", fontWeight: 600 }}>
+                          View all actions and edits for this booking
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={24} color="#cbd5e1" />
+                  </motion.div>
                 </div>
               </motion.div>
             )}
@@ -315,12 +286,103 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
               </motion.div>
             )}
 
+            {activeView === "activity" && (
+              <BookingActivityLogView booking={booking} />
+            )}
+
           </AnimatePresence>
         </div>
       </motion.div>
     </div>
   );
 }
+
+const BookingActivityLogView = ({ booking }) => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    auditLogsAPI.getAll({ limit: 500 }).then(res => {
+      if (!isMounted) return;
+      const allLogs = res.data?.data || [];
+      const relatedLogs = allLogs.filter(log => {
+        const resMatch = log.resource?.includes(`/bookings/${booking.id}`) || 
+                         (booking._id && log.resource?.includes(`/bookings/${booking._id}`)) ||
+                         (booking.bookingId && log.resource?.includes(`/bookings/${booking.bookingId}`));
+                         
+        const bodyMatch = log.details?.body?.bookingId == booking.id || 
+                          log.details?.body?.bookingId == booking._id ||
+                          log.details?.body?.bookingId == booking.bookingId ||
+                          log.details?.body?.id == booking.id ||
+                          log.details?.body?.id == booking._id;
+                          
+        const customerMatch = log.details?.body?.customerName === booking.customerName && 
+                              (log.action?.includes("Booking") || log.action?.includes("Enquiry"));
+                              
+        return resMatch || bodyMatch || customerMatch;
+      });
+      setLogs(relatedLogs);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      if (isMounted) setLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, [booking]);
+
+  const getFriendlyDetails = (log) => {
+    const body = log.details?.body || {};
+    const action = log.action || "";
+    if (action.includes("Status")) return `Changed to: ${body.status || "Unknown"}`;
+    if (action.includes("Payment") || action.includes("Expense")) return `Amount: ₹${body.amount || 0}`;
+    if (action.includes("Customer") && body.name) return `Customer Name: ${body.name}`;
+    if (action.includes("Booking") && body.customerName) return `For: ${body.customerName}`;
+    const relevantKeys = ["name", "title", "status", "reason", "amount", "customerName", "eventType", "hall"];
+    const foundKeys = Object.keys(body).filter(k => relevantKeys.includes(k));
+    if (foundKeys.length > 0) return foundKeys.map(k => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${body[k]}`).join(" • ");
+    return null;
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Activity History</h3>
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading activities...</div>
+      ) : logs.length === 0 ? (
+        <div style={{ background: "#f8fafc", padding: 32, borderRadius: 12, fontSize: 15, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+          No activity logs found for this booking.
+        </div>
+      ) : (
+        <div style={{ paddingLeft: 16, borderLeft: "2px dashed #cbd5e1", display: "flex", flexDirection: "column", gap: 32, marginTop: 16 }}>
+          {logs.map((log) => {
+            const userName = log.User?.name || "System";
+            const role = log.User?.role ? `(${log.User.role})` : "";
+            const details = getFriendlyDetails(log);
+            const timeStr = new Date(log.createdAt).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' });
+            const dateStr = new Date(log.createdAt).toLocaleDateString("en-IN", { day: 'numeric', month: 'short' });
+            
+            let color = "#3b82f6";
+            if (log.action.includes("Payment")) color = "#10b981";
+            else if (log.action.includes("Update")) color = "#f59e0b";
+            else if (log.action.includes("Delete") || log.action.includes("Remove")) color = "#ef4444";
+
+            return (
+              <motion.div key={log.id} whileHover={{ x: 10 }} style={{ position: "relative" }}>
+                <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: color, border: "4px solid #fff", boxShadow: "0 0 0 1px #cbd5e1" }} />
+                <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{dateStr} • {timeStr}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
+                  {userName} <span style={{ fontWeight: 500, fontSize: 14, color: "#64748b" }}>{role}</span> performed <span style={{ color }}>{log.action}</span>
+                </div>
+                {details && <div style={{ fontSize: 14, color: "#475569", fontWeight: 500, background: "#f8fafc", padding: "6px 12px", borderRadius: 8, display: "inline-block" }}>{details}</div>}
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 const FinancialLedgerView = ({ booking }) => {
   const [payments, setPayments] = useState([]);
