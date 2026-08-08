@@ -414,28 +414,58 @@ const FinancialLedgerView = ({ booking }) => {
         <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment History</h4>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading payments...</div>
-        ) : payments.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {payments.map(p => (
-              <div key={p.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>₹{Number(p.amount).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: 10, marginLeft: 8 }}>{p.paymentMode || "Cash"}</span></div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                    {new Date(p.paymentDate).toLocaleDateString()}
-                    {p.notes && <span style={{ marginLeft: 8 }}>• {p.notes}</span>}
+        ) : (() => {
+          let displayPayments = [...payments];
+          if (displayPayments.length === 0 && (Number(booking.advance) > 0 || Number(booking.depositAmount) > 0)) {
+            if (Number(booking.advance) > 0) {
+              displayPayments.push({
+                id: 'legacy-adv',
+                amount: booking.advance,
+                paymentMode: booking.paymentMethod || 'Cash',
+                paymentDate: booking.createdAt,
+                status: 'Completed',
+                notes: booking.receivedBy ? `Collected By: ${booking.receivedBy} (Advance)` : 'Initial Advance'
+              });
+            }
+            if (Number(booking.depositAmount) > 0) {
+              displayPayments.push({
+                id: 'legacy-dep',
+                amount: booking.depositAmount,
+                paymentMode: booking.paymentMethod || 'Cash',
+                paymentDate: booking.createdAt,
+                status: 'Completed',
+                notes: booking.receivedBy ? `Collected By: ${booking.receivedBy} (Security Deposit)` : 'Security Deposit'
+              });
+            }
+          }
+          
+          if (displayPayments.length > 0) {
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {displayPayments.map(p => (
+                  <div key={p.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>₹{Number(p.amount).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: 10, marginLeft: 8 }}>{p.paymentMode || "Cash"}</span></div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                        {new Date(p.paymentDate).toLocaleDateString()}
+                        {p.notes && <span style={{ marginLeft: 8 }}>• {p.notes}</span>}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: p.status === "Completed" ? "#10b981" : "#f59e0b", background: p.status === "Completed" ? "#d1fae5" : "#fef3c7", padding: "4px 10px", borderRadius: 12 }}>
+                      {p.status}
+                    </div>
                   </div>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: p.status === "Completed" ? "#10b981" : "#f59e0b", background: p.status === "Completed" ? "#d1fae5" : "#fef3c7", padding: "4px 10px", borderRadius: 12 }}>
-                  {p.status}
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
-            No payments recorded yet.
-          </div>
-        )}
+            );
+          } else {
+            return (
+              <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+                No payments recorded yet.
+              </div>
+            );
+          }
+        })()}
         
         {booking.paymentRemarks && (
           <div style={{ marginTop: 16, background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#475569" }}>
