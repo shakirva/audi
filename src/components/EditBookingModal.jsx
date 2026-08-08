@@ -182,6 +182,20 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       addToast("Phone number must be exactly 10 digits", "error");
       return;
     }
+    
+    // Validate new payment
+    const advanceDiff = Number(form.advance || 0) - Number(booking.advance || 0);
+    if (advanceDiff > 0) {
+      if (!form.paymentMethod) {
+        addToast("Please select a Payment Method for the new advance amount.", "error");
+        return;
+      }
+      if (form.paymentMethod !== "UPI" && !form.receivedBy) {
+        addToast("Please select 'Collected By' for the new payment.", "error");
+        return;
+      }
+    }
+    
     setLoading(true);
     try {
       await bookingsAPI.update(booking.id, form);
@@ -508,20 +522,30 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label style={labelSt}>Advance Paid (₹)</label>
+                  <label style={labelSt}>Total Advance Paid (₹)</label>
                   <input type="number" min={0} value={form.advance || ""}
                     onChange={e => handleMoneyChange("advance", e.target.value)}
                     style={{ ...iStyle, fontWeight: 700, color: "#166534" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                  {Number(form.advance || 0) > Number(booking.advance || 0) && (
+                    <div style={{ fontSize: 11, color: "#166534", marginTop: 6, fontWeight: 600 }}>
+                      Adding new payment of ₹{(Number(form.advance) - Number(booking.advance)).toLocaleString()}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label style={labelSt}>Deposit Amount (₹)</label>
+                  <label style={labelSt}>Total Deposit Amount (₹)</label>
                   <input type="number" min={0} value={form.depositAmount || ""}
                     onChange={e => handleMoneyChange("depositAmount", e.target.value)}
                     style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                  {Number(form.depositAmount || 0) > Number(booking.depositAmount || 0) && (
+                    <div style={{ fontSize: 11, color: "#166534", marginTop: 6, fontWeight: 600 }}>
+                      Adding new deposit of ₹{(Number(form.depositAmount) - Number(booking.depositAmount)).toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={{ marginTop: 12, padding: "12px 16px", background: Number(form.balanceAmount) > 0 ? "#fef2f2" : "#f0faf4", borderRadius: 10, border: `1px solid ${Number(form.balanceAmount) > 0 ? "#fecaca" : "#bbf7d0"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -534,7 +558,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
 
             {/* ── PAYMENT ── */}
             <div>
-              <p style={sectionHead}><CreditCard size={14} /> Payment Details</p>
+              <p style={sectionHead}><CreditCard size={14} /> Payment Details {(Number(form.advance || 0) > Number(booking.advance || 0) || Number(form.depositAmount || 0) > Number(booking.depositAmount || 0)) ? "(For New Payment Only)" : ""}</p>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
                 {PAYMENT_METHODS.map(method => {
                   const icons = { Cash: <Banknote size={16} />, UPI: <Smartphone size={16} />, "Bank Transfer": <Building2 size={16} />, Cheque: <CreditCard size={16} /> };
