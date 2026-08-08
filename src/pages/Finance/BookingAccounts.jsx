@@ -115,9 +115,9 @@ export default function BookingAccounts() {
 
                 <Link 
                   to={`/finance/booking-accounts/${b.id}`}
-                  style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "12px", background: "#0ea5e9", color: "#fff", borderRadius: 10, textDecoration: "none", fontSize: 15, fontWeight: 700, width: "100%", boxSizing: "border-box", transition: "background 0.2s", marginTop: "auto" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#0284c7"}
-                  onMouseLeave={e => e.currentTarget.style.background = "#0ea5e9"}
+                  style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "12px", background: "#0D2418", color: "#fff", borderRadius: 10, textDecoration: "none", fontSize: 15, fontWeight: 700, width: "100%", boxSizing: "border-box", transition: "background 0.2s", marginTop: "auto" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#1B4332"}
+                  onMouseLeave={e => e.currentTarget.style.background = "#0D2418"}
                 >
                   <BookOpen size={18} /> Open Financial Dashboard <ExternalLink size={16} />
                 </Link>
