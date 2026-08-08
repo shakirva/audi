@@ -319,10 +319,12 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                   >
                     <option value="">-- Select Hall --</option>
-                    {settings.halls && settings.halls.map((h, i) => (
-                      <option key={`hall-${i}`} value={h.name}>{h.name}</option>
-                    ))}
-                    {(!settings.halls?.some(h => h.name === form.hall) && form.hall) ? (
+                    {settings.halls && Array.isArray(settings.halls) && settings.halls.map((h, i) => {
+                      const hName = typeof h === "string" ? h : h?.name;
+                      if (!hName) return null;
+                      return <option key={`hall-${i}`} value={hName}>{hName}</option>;
+                    })}
+                    {form.hall && (!settings.halls || !Array.isArray(settings.halls) || !settings.halls.some(h => (typeof h === "string" ? h : h?.name) === form.hall)) ? (
                       <option value={form.hall}>{form.hall}</option>
                     ) : null}
                   </select>
@@ -337,10 +339,13 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                   >
                     <option value="">-- Select Session --</option>
-                    {settings.sessions && settings.sessions.map((s, i) => (
-                      <option key={`sess-${i}`} value={s.name}>{s.name} {s.time ? `(${s.time})` : ""}</option>
-                    ))}
-                    {(!settings.sessions?.some(s => s.name === form.session) && form.session) ? (
+                    {settings.sessions && Array.isArray(settings.sessions) && settings.sessions.map((s, i) => {
+                      const sName = typeof s === "string" ? s : s?.name;
+                      const sTime = typeof s === "object" && s?.time ? ` (${s.time})` : "";
+                      if (!sName) return null;
+                      return <option key={`sess-${i}`} value={sName}>{sName}{sTime}</option>;
+                    })}
+                    {form.session && (!settings.sessions || !Array.isArray(settings.sessions) || !settings.sessions.some(s => (typeof s === "string" ? s : s?.name) === form.session)) ? (
                       <option value={form.session}>{form.session}</option>
                     ) : null}
                   </select>
@@ -361,10 +366,12 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                   >
                     <option value="">-- Select Event Type --</option>
-                    {settings.eventTypes && settings.eventTypes.map((e, i) => (
-                      <option key={`evt-${i}`} value={e}>{e}</option>
-                    ))}
-                    {(!settings.eventTypes?.includes(form.eventType) && form.eventType) ? (
+                    {settings.eventTypes && Array.isArray(settings.eventTypes) && settings.eventTypes.map((e, i) => {
+                      const eName = typeof e === "string" ? e : e?.name;
+                      if (!eName) return null;
+                      return <option key={`evt-${i}`} value={eName}>{eName}</option>;
+                    })}
+                    {form.eventType && (!settings.eventTypes || !Array.isArray(settings.eventTypes) || !settings.eventTypes.some(e => (typeof e === "string" ? e : e?.name) === form.eventType)) ? (
                       <option value={form.eventType}>{form.eventType}</option>
                     ) : null}
                   </select>
