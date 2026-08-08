@@ -416,28 +416,31 @@ const FinancialLedgerView = ({ booking }) => {
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading payments...</div>
         ) : (() => {
           let displayPayments = [...payments];
-          if (displayPayments.length === 0 && (Number(booking.advance) > 0 || Number(booking.depositAmount) > 0)) {
+          const totalFromApi = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const expectedAdvance = Number(booking.advance) || 0;
+          const legacyMissingAdvance = expectedAdvance - totalFromApi;
+
+          if (legacyMissingAdvance > 0) {
             const collectorName = booking.receivedBy || booking.bookedBy;
-            if (Number(booking.advance) > 0) {
-              displayPayments.push({
-                id: 'legacy-adv',
-                amount: booking.advance,
-                paymentMode: booking.paymentMethod || 'Cash',
-                paymentDate: booking.createdAt,
-                status: 'Completed',
-                notes: collectorName ? `Collected By: ${collectorName} (Advance)` : 'Initial Advance'
-              });
-            }
-            if (Number(booking.depositAmount) > 0) {
-              displayPayments.push({
-                id: 'legacy-dep',
-                amount: booking.depositAmount,
-                paymentMode: booking.paymentMethod || 'Cash',
-                paymentDate: booking.createdAt,
-                status: 'Completed',
-                notes: collectorName ? `Collected By: ${collectorName} (Security Deposit)` : 'Security Deposit'
-              });
-            }
+            displayPayments.push({
+              id: 'legacy-adv',
+              amount: legacyMissingAdvance,
+              paymentMode: booking.paymentMethod || 'Cash',
+              paymentDate: booking.createdAt,
+              status: 'Completed',
+              notes: collectorName ? `Collected By: ${collectorName} (Advance)` : 'Initial Advance'
+            });
+          }
+          if (payments.length === 0 && (Number(booking.depositAmount) > 0)) {
+            const collectorName = booking.receivedBy || booking.bookedBy;
+            displayPayments.push({
+              id: 'legacy-dep',
+              amount: booking.depositAmount,
+              paymentMode: booking.paymentMethod || 'Cash',
+              paymentDate: booking.createdAt,
+              status: 'Completed',
+              notes: collectorName ? `Collected By: ${collectorName} (Security Deposit)` : 'Security Deposit'
+            });
           }
           
           if (displayPayments.length > 0) {

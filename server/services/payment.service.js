@@ -10,8 +10,20 @@ const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class PaymentService {
   async listPayments({ tenantId, environmentId, bookingId, customerId, query }) {
+    let resolvedBookingId = bookingId;
+    if (bookingId && typeof bookingId === "string" && isNaN(Number(bookingId))) {
+      const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+      if (booking) {
+        resolvedBookingId = booking.id;
+      } else {
+        return { data: [], total: 0, page: Number(query?.page) || 1, limit: Number(query?.limit) || 10 };
+      }
+    } else if (bookingId) {
+      resolvedBookingId = Number(bookingId);
+    }
+
     const result = await paymentRepository.findAllWithDetails({
-      tenantId, environmentId, bookingId, customerId, query,
+      tenantId, environmentId, bookingId: resolvedBookingId, customerId, query,
     });
     return { data: result.rows, total: result.total, page: result.page, limit: result.limit };
   }
