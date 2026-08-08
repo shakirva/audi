@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2 } from "lucide-react";
+import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2, Loader } from "lucide-react";
+import { paymentsAPI } from "../services/api";
 
 export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
@@ -265,36 +266,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
             )}
 
             {activeView === "financial" && (
-              <motion.div key="financial" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Financial & Ledger</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Total Amount</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>₹{(booking.totalAmount || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Advance Paid</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>₹{(booking.advance || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Security Deposit</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>₹{(booking.depositAmount || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#fef2f2" : "#f0faf4", padding: 20, borderRadius: 16, border: "1px solid", borderColor: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#fecaca" : "#bbf7d0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Balance Pending</span>
-                    <span style={{ fontSize: 24, fontWeight: 800, color: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#ef4444" : "#10b981" }}>₹{((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)).toLocaleString()}</span>
-                  </div>
-                </div>
-                
-                <div style={{ marginTop: 32 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment Info</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Payment Method</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.paymentMethod || "—"}</div></div>
-                    <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Received By</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.receivedBy || "—"}</div></div>
-                  </div>
-                  {booking.paymentRemarks && <div style={{ marginTop: 16, background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#475569" }}><strong>Remarks: </strong>{booking.paymentRemarks}</div>}
-                </div>
-              </motion.div>
+              <FinancialLedgerView booking={booking} />
             )}
 
             {activeView === "services" && (
@@ -349,3 +321,127 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
     </div>
   );
 }
+
+const FinancialLedgerView = ({ booking }) => {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    paymentsAPI.getAll({ bookingId: booking.id })
+      .then(res => {
+        if (isMounted) {
+          setPayments(res.data?.data || []);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load payments", err);
+        if (isMounted) setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [booking.id]);
+
+  const quoted = Number(booking.quotedAmount) || 0;
+  const disc = Number(booking.discount) || 0;
+  const baseAmount = Math.max(0, quoted - disc);
+  
+  let facilitiesTotal = 0;
+  let facilitiesTax = 0;
+  if (booking.facilities && booking.facilities.length > 0) {
+    booking.facilities.forEach(f => {
+      const count = Number(f.count) || 1;
+      const fPrice = Number(f.price) || 0;
+      const totalFPrice = fPrice * count;
+      const fGst = Number(f.gst) || 0;
+      facilitiesTotal += totalFPrice;
+      if (fGst > 0) facilitiesTax += (totalFPrice * fGst) / 100;
+    });
+  }
+  
+  const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+  const hallTax = Number(booking.taxPercentage) > 0 ? (hallTotal * Number(booking.taxPercentage)) / 100 : 0;
+  
+  const balance = (booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0);
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Financial & Ledger</h3>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+        <div style={{ background: "#fff", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0" }}>
+          <h4 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 12 }}>Booking Breakdown</h4>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Hall Base Amount</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{hallTotal.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Facilities Amount</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{facilitiesTotal.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Hall GST ({Number(booking.taxPercentage) || 0}%)</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{hallTax.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 12, borderBottom: "1px dashed #e2e8f0", marginBottom: 12 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Facilities GST</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{facilitiesTax.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>Grand Total</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>₹{(booking.totalAmount || 0).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Advance Paid</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{(booking.advance || 0).toLocaleString()}</span>
+          </div>
+          <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Security Deposit</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{(booking.depositAmount || 0).toLocaleString()}</span>
+          </div>
+          <div style={{ background: balance > 0 ? "#fef2f2" : "#f0faf4", padding: "16px 20px", borderRadius: 12, border: "1px solid", borderColor: balance > 0 ? "#fecaca" : "#bbf7d0", display: "flex", justifyContent: "space-between", alignItems: "center", flex: 1 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Balance Pending</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: balance > 0 ? "#ef4444" : "#10b981" }}>₹{balance.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment History</h4>
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading payments...</div>
+        ) : payments.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {payments.map(p => (
+              <div key={p.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>₹{Number(p.amount).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: 10, marginLeft: 8 }}>{p.paymentMode || "Cash"}</span></div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                    {new Date(p.paymentDate).toLocaleDateString()}
+                    {p.notes && <span style={{ marginLeft: 8 }}>• {p.notes}</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: p.status === "Completed" ? "#10b981" : "#f59e0b", background: p.status === "Completed" ? "#d1fae5" : "#fef3c7", padding: "4px 10px", borderRadius: 12 }}>
+                  {p.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+            No payments recorded yet.
+          </div>
+        )}
+        
+        {booking.paymentRemarks && (
+          <div style={{ marginTop: 16, background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#475569" }}>
+            <strong>Legacy Remarks: </strong>{booking.paymentRemarks}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
