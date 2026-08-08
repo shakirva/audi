@@ -342,8 +342,9 @@ const FinancialLedgerView = ({ booking }) => {
     return () => { isMounted = false; };
   }, [booking.id]);
 
-  const quoted = Number(booking.quotedAmount) || 0;
+  const grandTotal = Number(booking.totalAmount) || 0;
   const disc = Number(booking.discount) || 0;
+  const quoted = Number(booking.quotedAmount) || (grandTotal + disc);
   const baseAmount = Math.max(0, quoted - disc);
   
   let facilitiesTotal = 0;
@@ -362,7 +363,7 @@ const FinancialLedgerView = ({ booking }) => {
   const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
   const hallTax = Number(booking.taxPercentage) > 0 ? (hallTotal * Number(booking.taxPercentage)) / 100 : 0;
   
-  const balance = (booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0);
+  const balance = grandTotal - (booking.advance || 0) - (booking.depositAmount || 0);
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
