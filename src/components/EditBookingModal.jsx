@@ -311,11 +311,39 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Hall</label>
-                  {inp("hall", { placeholder: "Hall name" })}
+                  <select
+                    value={form.hall || ""}
+                    onChange={e => setForm({ ...form, hall: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  >
+                    <option value="">-- Select Hall --</option>
+                    {settings.halls && settings.halls.map((h, i) => (
+                      <option key={`hall-${i}`} value={h.name}>{h.name}</option>
+                    ))}
+                    {!settings.halls?.some(h => h.name === form.hall) && form.hall && (
+                      <option value={form.hall}>{form.hall}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Session</label>
-                  {inp("session", { placeholder: "Morning / Evening / Full Day" })}
+                  <select
+                    value={form.session || ""}
+                    onChange={e => setForm({ ...form, session: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  >
+                    <option value="">-- Select Session --</option>
+                    {settings.sessions && settings.sessions.map((s, i) => (
+                      <option key={`sess-${i}`} value={s.name}>{s.name} {s.time ? `(${s.time})` : ""}</option>
+                    ))}
+                    {!settings.sessions?.some(s => s.name === form.session) && form.session && (
+                      <option value={form.session}>{form.session}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}><Calendar size={10} /> Event Date</label>
@@ -325,7 +353,21 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}>Event Type</label>
-                  {inp("eventType", { placeholder: "Wedding, Nikkah..." })}
+                  <select
+                    value={form.eventType || ""}
+                    onChange={e => setForm({ ...form, eventType: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  >
+                    <option value="">-- Select Event Type --</option>
+                    {settings.eventTypes && settings.eventTypes.map((e, i) => (
+                      <option key={`evt-${i}`} value={e}>{e}</option>
+                    ))}
+                    {!settings.eventTypes?.includes(form.eventType) && form.eventType && (
+                      <option value={form.eventType}>{form.eventType}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}><Users size={10} /> No. of Guests</label>
