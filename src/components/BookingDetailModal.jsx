@@ -417,6 +417,7 @@ const FinancialLedgerView = ({ booking }) => {
         ) : (() => {
           let displayPayments = [...payments];
           if (displayPayments.length === 0 && (Number(booking.advance) > 0 || Number(booking.depositAmount) > 0)) {
+            const collectorName = booking.receivedBy || booking.bookedBy;
             if (Number(booking.advance) > 0) {
               displayPayments.push({
                 id: 'legacy-adv',
@@ -424,7 +425,7 @@ const FinancialLedgerView = ({ booking }) => {
                 paymentMode: booking.paymentMethod || 'Cash',
                 paymentDate: booking.createdAt,
                 status: 'Completed',
-                notes: booking.receivedBy ? `Collected By: ${booking.receivedBy} (Advance)` : 'Initial Advance'
+                notes: collectorName ? `Collected By: ${collectorName} (Advance)` : 'Initial Advance'
               });
             }
             if (Number(booking.depositAmount) > 0) {
@@ -434,7 +435,7 @@ const FinancialLedgerView = ({ booking }) => {
                 paymentMode: booking.paymentMethod || 'Cash',
                 paymentDate: booking.createdAt,
                 status: 'Completed',
-                notes: booking.receivedBy ? `Collected By: ${booking.receivedBy} (Security Deposit)` : 'Security Deposit'
+                notes: collectorName ? `Collected By: ${collectorName} (Security Deposit)` : 'Security Deposit'
               });
             }
           }
