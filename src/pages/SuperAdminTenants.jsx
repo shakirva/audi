@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { adminAPI } from "../services/api";
 import { useToast } from "../components/Toast";
-import { Building, Play, Pause, Database, Key, CheckCircle, Clock, Plus, X } from "lucide-react";
+import { Building, Play, Pause, Database, Key, CheckCircle, Clock, Plus, X, ArrowRight } from "lucide-react";
 
 export default function SuperAdminTenants() {
   const [tenants, setTenants] = useState([]);
@@ -46,6 +46,32 @@ export default function SuperAdminTenants() {
       addToast("Failed to update sandbox", "error");
     }
   };
+
+  const handleEnterTenant = async (tenant) => {
+    try {
+      // Temporarily store superadmin token so they don't get completely locked out
+      // (Though a real implementation might have a "Return to Admin" button)
+      const currentToken = localStorage.getItem("hm_token");
+      if (currentToken) localStorage.setItem("hm_superadmin_token", currentToken);
+      
+      const { data } = await adminAPI.impersonate(tenant.id);
+      
+      localStorage.setItem("hm_token", data.token);
+      localStorage.setItem("hm_user", JSON.stringify(data.user));
+      if (data.tenant) {
+        localStorage.setItem("hm_tenant", JSON.stringify(data.tenant));
+      }
+      sessionStorage.setItem("hm_environment", "production");
+      
+      addToast(`Entering ${tenant.name}...`, "success");
+      setTimeout(() => {
+        window.location.href = `/${tenant.slug}/dashboard`;
+      }, 500);
+    } catch (e) {
+      addToast("Failed to enter tenant ERP", "error");
+    }
+  };
+
 
   const handleAddTenant = async (e) => {
     e.preventDefault();
@@ -180,6 +206,17 @@ export default function SuperAdminTenants() {
                       }}
                     >
                       {t.status === "active" ? <><Pause size={14} color="#b91c1c" /> Suspend</> : <><Play size={14} color="#15803d" /> Activate</>}
+                    </button>
+                    <button 
+                      onClick={() => handleEnterTenant(t)}
+                      style={{ 
+                        padding: "6px 14px", borderRadius: 6, border: "none", background: "#059669", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                        display: "inline-flex", alignItems: "center", gap: 6, transition: "background 0.2s"
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#047857"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "#059669"}
+                    >
+                      Enter <ArrowRight size={14} />
                     </button>
                   </div>
                 </td>

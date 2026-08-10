@@ -150,5 +150,40 @@ router.put("/tenants/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update tenant details" });
   }
 });
+// POST /api/admin/tenants/:id/impersonate — SuperAdmin enters a tenant's ERP as their Owner
+router.post("/tenants/:id/impersonate", async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    // Find the Owner user for this tenant
+    const owner = await User.findOne({ 
+      where: { tenantId: tenant.id, role: "Owner" } 
+    });
+    if (!owner) return res.status(404).json({ error: "No owner found for this tenant" });
+
+    // Generate a JWT token for the owner — SuperAdmin is impersonating
+    const jwt = require("jsonwebtoken");
+    const token = jwt.sign(
+      { id: owner.id, role: owner.role, tenantId: owner.tenantId },
+      process.env.JWT_SECRET,
+      { expiresIn: "4h" } // Short expiry for impersonation sessions
+    );
+
+    res.json({
+      token,
+      user: { id: owner.id, name: owner.name, email: owner.email, role: owner.role, phone: owner.phone },
+      tenant: { 
+        name: tenant.name, 
+        slug: tenant.slug, 
+        sandboxEnabled: tenant.sandboxEnabled, 
+        allowEnvironmentSwitch: tenant.allowEnvironmentSwitch 
+      },
+    });
+  } catch (err) {
+    console.error("Impersonation error:", err);
+    res.status(500).json({ error: "Failed to impersonate tenant" });
+  }
+});
 
 module.exports = router;

@@ -211,6 +211,7 @@ export const adminAPI = {
   updateSubscription: (id, data) => api.put(`/admin/tenants/${id}/subscription`, data),
   toggleSandbox: (id) => api.patch(`/admin/tenants/${id}/toggle-sandbox`),
   toggleStatus: (id) => api.patch(`/admin/tenants/${id}/status`),
+  impersonate: (id) => api.post(`/admin/tenants/${id}/impersonate`),
 };
 // ═══════════════════════════════════
 // DELETE PRE-CHECKS (Financial Impact)
