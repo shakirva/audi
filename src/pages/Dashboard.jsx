@@ -70,6 +70,7 @@ function ExecutiveCockpit() {
       ]);
 
       const allBookings = bookingsRes.data?.data || [];
+      const allEnquiries = enqRes.data?.data || [];
       
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -83,12 +84,28 @@ function ExecutiveCockpit() {
         return new Date(b.date) >= startOfToday;
       }).length;
 
+      // Compute Pending Payments (status is Advance Pending or total > advance)
+      const pendingCount = allBookings.filter(b => {
+        if (b.status === 'Cancelled') return false;
+        if (b.status === 'Advance Pending') return true;
+        // If they have an outstanding balance
+        const total = Number(b.totalAmount) || 0;
+        const paid = Number(b.advance) || 0;
+        return total > paid;
+      }).length;
+
+      // Compute Active Enquiries
+      const enquiryCount = allEnquiries.filter(e => e.status !== 'Lost' && e.status !== 'Cancelled').length;
+
       if (statsRes.data?.data) {
         const ts = statsRes.data.data;
         const healthScore = ts.totalBookings > 0 
           ? Math.round((ts.confirmedCount / ts.totalBookings) * 100) 
           : 100;
-        setStats({ ...ts, upcomingCount, healthScore });
+        setStats({ ...ts, upcomingCount, pendingCount, enquiryCount, healthScore });
+      } else {
+        // Fallback if stats API fails or is empty
+        setStats(prev => ({ ...prev, upcomingCount, pendingCount, enquiryCount }));
       }
 
       // Compute Today's Events
