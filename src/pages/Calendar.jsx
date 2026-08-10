@@ -43,7 +43,7 @@ export default function Calendar() {
           .map(e => ({
             id: `enq-${e.id}`,
             date: e.tentativeDate,
-            customerName: e.Customer?.name || "Unknown",
+            customerName: e.Customer?.name || e.customerName || e.enquirerName || "Unknown",
             status: "Enquiry",
             eventType: e.eventType,
             hall: e.hallPreference,
