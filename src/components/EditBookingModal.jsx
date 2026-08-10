@@ -439,7 +439,23 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                           </div>
                         </label>
                         {checked && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginLeft: 26, marginTop: 4 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 8, marginLeft: 26, marginTop: 4 }}>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Price (₹)</label>
+                              <input type="number" min="0" value={facilityItem.price !== undefined ? facilityItem.price : f.price} onChange={(e) => {
+                                const newPrice = Number(e.target.value) || 0;
+                                let newFac = [...(form.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  const oldCount = Number(newFac[idx].count) || 1;
+                                  const oldPrice = Number(newFac[idx].price) || 0;
+                                  newFac[idx].price = newPrice;
+                                  let newQuoted = Number(form.quotedAmount || 0);
+                                  newQuoted = newQuoted - (oldPrice * oldCount) + (newPrice * oldCount);
+                                  handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
                             <div>
                               <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Count/Qty</label>
                               <input type="number" min="1" value={facilityItem.count || 1} onChange={(e) => {
@@ -448,9 +464,10 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                                 const idx = newFac.findIndex(x => x.id === f.id);
                                 if (idx > -1) {
                                   const oldCount = Number(newFac[idx].count) || 1;
+                                  const currentPrice = Number(newFac[idx].price) || 0;
                                   newFac[idx].count = newCount;
                                   let newQuoted = Number(form.quotedAmount || 0);
-                                  newQuoted = newQuoted - (Number(f.price || 0) * oldCount) + (Number(f.price || 0) * newCount);
+                                  newQuoted = newQuoted - (currentPrice * oldCount) + (currentPrice * newCount);
                                   handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
                                 }
                               }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
