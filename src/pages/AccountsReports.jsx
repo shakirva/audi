@@ -17,6 +17,8 @@ export default function AccountsReports() {
   const [loading, setLoading] = useState(true);
 
   const [filterDate, setFilterDate] = useState("All Time");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -65,6 +67,11 @@ export default function AccountsReports() {
         if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
       } else if (filterDate === "This Year") {
         if (bDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Custom Date") {
+        const bTime = bDate.getTime();
+        if (customStartDate && bTime < new Date(customStartDate).getTime()) return false;
+        // add 86400000 (1 day) to include the end date entirely
+        if (customEndDate && bTime > new Date(customEndDate).getTime() + 86400000) return false;
       }
     }
     return true;
@@ -82,6 +89,10 @@ export default function AccountsReports() {
         if (eDate.getMonth() !== lastMonth.getMonth() || eDate.getFullYear() !== lastMonth.getFullYear()) return false;
       } else if (filterDate === "This Year") {
         if (eDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Custom Date") {
+        const eTime = eDate.getTime();
+        if (customStartDate && eTime < new Date(customStartDate).getTime()) return false;
+        if (customEndDate && eTime > new Date(customEndDate).getTime() + 86400000) return false;
       }
     }
     return true;
@@ -231,7 +242,16 @@ export default function AccountsReports() {
           <option value="This Month">Date: This Month</option>
           <option value="Last Month">Date: Last Month</option>
           <option value="This Year">Date: This Year</option>
+          <option value="Custom Date">Date: Custom Date</option>
         </select>
+        
+        {filterDate === "Custom Date" && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
+            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>to</span>
+            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
+          </div>
+        )}
         
         <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
