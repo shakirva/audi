@@ -10,7 +10,7 @@ const RESERVED_ROUTES = [
   "book", "dashboard", "bookings", "calendar", "customers", "finance",
   "reports", "settings", "notifications", "tenants", "subscriptions",
   "crm", "agreements", "jobs", "vendors", "masters", "roadmap", "staff",
-  "profile", "attendance", "leaves", "login"
+  "profile", "attendance", "leaves", "login", "superadmin"
 ];
 
 /** Extract the tenant slug from the current browser URL. Returns null if on root or a reserved route. */
