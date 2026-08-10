@@ -47,7 +47,7 @@ function ExecutiveCockpit() {
     totalRevenue: 0,
     totalBookings: 0,
     confirmedCount: 0,
-    pendingCount: 0,
+    pendingAmount: 0,
     enquiryCount: 0,
     upcomingCount: 0,
   });
@@ -84,15 +84,16 @@ function ExecutiveCockpit() {
         return new Date(b.date) >= startOfToday;
       }).length;
 
-      // Compute Pending Payments (status is Advance Pending or total > advance)
-      const pendingCount = allBookings.filter(b => {
-        if (b.status === 'Cancelled') return false;
-        if (b.status === 'Advance Pending') return true;
-        // If they have an outstanding balance
+      // Compute Pending Payments Amount
+      const pendingAmount = allBookings.reduce((sum, b) => {
+        if (b.status === 'Cancelled') return sum;
         const total = Number(b.totalAmount) || 0;
         const paid = Number(b.advance) || 0;
-        return total > paid;
-      }).length;
+        if (total > paid) {
+          return sum + (total - paid);
+        }
+        return sum;
+      }, 0);
 
       // Compute Active Enquiries
       const enquiryCount = allEnquiries.filter(e => e.status !== 'Lost' && e.status !== 'Cancelled').length;
@@ -102,10 +103,10 @@ function ExecutiveCockpit() {
         const healthScore = ts.totalBookings > 0 
           ? Math.round((ts.confirmedCount / ts.totalBookings) * 100) 
           : 100;
-        setStats({ ...ts, upcomingCount, pendingCount, enquiryCount, healthScore });
+        setStats({ ...ts, upcomingCount, pendingAmount, enquiryCount, healthScore });
       } else {
         // Fallback if stats API fails or is empty
-        setStats(prev => ({ ...prev, upcomingCount, pendingCount, enquiryCount }));
+        setStats(prev => ({ ...prev, upcomingCount, pendingAmount, enquiryCount }));
       }
 
       // Compute Today's Events
@@ -196,10 +197,10 @@ function ExecutiveCockpit() {
       </motion.div>
 
       <div className="hm-dash-stats">
-        <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
+        <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue || 0)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
         <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.3} />
-        <GradientCard title="Pending Pmt" value={stats.pendingCount} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
+        <GradientCard title="Pending Pmt" value={formatLakhs(stats.pendingAmount || 0)} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
         <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
       </div>
 
