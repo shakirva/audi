@@ -32,6 +32,7 @@ export default function Calendar() {
   const [selected, setSelected]   = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [blackoutDates, setBlackoutDates] = useState([]);
+  const [allowPastDates, setAllowPastDates] = useState(false);
 
   const [enquiries, setEnquiries] = useState([]);
 
@@ -58,7 +59,11 @@ export default function Calendar() {
 
   useEffect(() => {
     settingsAPI.get()
-      .then(res => { if (res.data.data?.blackoutDates) setBlackoutDates(res.data.data.blackoutDates); })
+      .then(res => { 
+        const settings = res.data.data || res.data;
+        if (settings?.blackoutDates) setBlackoutDates(settings.blackoutDates);
+        if (settings?.allowPastDateBooking) setAllowPastDates(settings.allowPastDateBooking);
+      })
       .catch(console.error);
       
     fetchEnquiries();
@@ -152,7 +157,7 @@ export default function Calendar() {
             const isWeekend    = [0, 6].includes((firstDay + day - 1) % 7);
             const isBlocked    = blackoutDates.includes(dateStr);
             const isPast       = new Date(dateStr) < new Date(todayStr);
-            const isDisabled   = isBlocked || isPast;
+            const isDisabled   = isBlocked || (isPast && !allowPastDates);
             const avail        = availColor(day);
 
             return (
