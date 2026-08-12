@@ -474,6 +474,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                     value={formData.date} 
                     onChange={e => setFormData({ ...formData, date: e.target.value })} 
                     hallPreference={formData.hall}
+                    allowPastDates={settings.allowPastDateBooking === true}
                     style={{ ...iStyle, padding: "8px 12px", height: 40 }}
                   />
                   {formData.date && formData.hall && (

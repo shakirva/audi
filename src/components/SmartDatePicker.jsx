@@ -8,7 +8,8 @@ export default function SmartDatePicker({
   hallPreference, 
   onFocus, 
   onBlur, 
-  style 
+  style,
+  allowPastDates = false 
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(value ? new Date(value) : new Date());
@@ -176,7 +177,8 @@ export default function SmartDatePicker({
               const dateObj = new Date(year, month - 1, day);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              const isPast = dateObj < today;
+              const isPast = dateObj < today && !allowPastDates;
+              const isPastDate = dateObj < today; // always true for styling
               
               let statusObj = monthAvail[dateStr];
               
@@ -186,6 +188,9 @@ export default function SmartDatePicker({
 
               if (isPast) {
                 textColor = "#d1d5db";
+              } else if (isPastDate && allowPastDates) {
+                textColor = "#9ca3af";
+                bgColor = "#f9fafb";
               } else if (hallPreference && statusObj) {
                 if (statusObj.status === "Fully Booked") {
                   bgColor = "#fee2e2";

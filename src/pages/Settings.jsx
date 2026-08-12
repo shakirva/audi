@@ -263,6 +263,7 @@ export default function Settings() {
         accountName: data.accountName || "",
         accountNumber: data.accountNumber || "",
         ifscCode: data.ifscCode || "",
+        allowPastDateBooking: data.allowPastDateBooking || false,
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -947,6 +948,55 @@ export default function Settings() {
           <Save size={14} /> Save Venue Info
         </button>
       </div>
+      )}
+
+      {/* ── BOOKING PREFERENCES (Owner & Manager) ── */}
+      {isAdminRole && (
+        <div id="booking-prefs" style={cardSt}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Calendar size={18} color="#2563eb" />
+            </div>
+            <div>
+              <p style={sectionTitle}>Booking Preferences</p>
+              <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Control booking rules and date restrictions</p>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 16px", borderRadius: 12, background: "#f8fafc", border: "1.5px solid #e2e8f0"
+          }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: 0 }}>Allow Past Date Bookings</p>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, marginBottom: 0 }}>
+                When enabled, staff can create enquiries and bookings on past dates. Useful for backfilling previous-year accounting data. <span style={{ fontWeight: 700, color: "#d97706" }}>Turn OFF once done.</span>
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                const newVal = !venue.allowPastDateBooking;
+                try {
+                  await settingsAPI.update({ allowPastDateBooking: newVal });
+                  setVenue(prev => ({ ...prev, allowPastDateBooking: newVal }));
+                  addToast(newVal ? "Past date bookings enabled! 📅" : "Past date bookings disabled 🔒", "success");
+                } catch (e) {
+                  addToast("Failed to update setting", "error");
+                }
+              }}
+              style={{
+                background: "none", border: "none", cursor: "pointer", padding: 4,
+                display: "flex", alignItems: "center", flexShrink: 0
+              }}
+            >
+              {venue.allowPastDateBooking ? (
+                <ToggleRight size={36} color="#16a34a" strokeWidth={1.8} />
+              ) : (
+                <ToggleLeft size={36} color="#9ca3af" strokeWidth={1.8} />
+              )}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── HALL MANAGEMENT (Owner & Manager) ── */}

@@ -56,6 +56,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [allowPastDates, setAllowPastDates] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -156,6 +157,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         if (data && data.sessions && data.sessions.length > 0) {
           setSettingsSessions(data.sessions);
         }
+        if (data) setAllowPastDates(data.allowPastDateBooking === true);
       })
       .catch(() => {});
 
@@ -716,6 +718,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     value={form.tentativeDate} 
                     onChange={handleChange} 
                     hallPreference={form.hallPreference}
+                    allowPastDates={allowPastDates}
                     style={{ ...iStyle, padding: "8px 12px", height: 40, fontWeight: 700, borderColor: form.tentativeDate ? "#e2e8f0" : "#e5e7eb" }}
                   />
                   {form.tentativeDate && form.hallPreference && (
