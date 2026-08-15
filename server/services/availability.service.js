@@ -26,7 +26,11 @@ class AvailabilityService {
     };
 
     if (ignoreBookingId) {
-      whereClause.id = { [Op.ne]: ignoreBookingId };
+      if (isNaN(ignoreBookingId)) {
+        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+      } else {
+        whereClause.id = { [Op.ne]: ignoreBookingId };
+      }
     }
 
     const existingBookings = await Booking.findAll({ where: whereClause, attributes: ["session", "bookingId"] });
@@ -63,7 +67,11 @@ class AvailabilityService {
     };
     
     if (ignoreBookingId) {
-        whereClause.id = { [Op.ne]: ignoreBookingId };
+        if (isNaN(ignoreBookingId)) {
+          whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+        } else {
+          whereClause.id = { [Op.ne]: ignoreBookingId };
+        }
     }
 
     const bookings = await Booking.findAll({ where: whereClause, attributes: ["session"] });
@@ -105,7 +113,11 @@ class AvailabilityService {
     };
 
     if (ignoreBookingId) {
-      whereClause.id = { [Op.ne]: ignoreBookingId };
+      if (isNaN(ignoreBookingId)) {
+        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+      } else {
+        whereClause.id = { [Op.ne]: ignoreBookingId };
+      }
     }
 
     const bookings = await Booking.findAll({ where: whereClause, attributes: ["date", "session"] });
