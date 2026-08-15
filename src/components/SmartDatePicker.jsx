@@ -9,7 +9,9 @@ export default function SmartDatePicker({
   onFocus, 
   onBlur, 
   style,
-  allowPastDates = false 
+  allowPastDates = false,
+  ignoreBookingId = null,
+  fieldName = "tentativeDate"
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(value ? new Date(value) : new Date());
@@ -31,7 +33,7 @@ export default function SmartDatePicker({
     let isMounted = true;
     setLoading(true);
     
-    availabilityAPI.getMonth(hallPreference, year, month)
+    availabilityAPI.getMonth(hallPreference, year, month, ignoreBookingId)
       .then(res => {
         if (isMounted) setMonthAvail(res.data.data || {});
       })
@@ -85,7 +87,7 @@ export default function SmartDatePicker({
     // The prompt says "Full Day Booked -> User cannot save enquiry for this hall on that date"
     // Let's allow selection but UI will show the warning below the picker anyway.
     
-    onChange({ target: { name: "tentativeDate", value: dateStr } });
+    onChange({ target: { name: fieldName, value: dateStr } });
     setIsOpen(false);
     if (onBlur) onBlur();
   };

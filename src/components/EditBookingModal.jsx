@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
 import { bookingsAPI, usersAPI } from "../services/api";
 import { useToast } from "./Toast";
+import SmartDatePicker from "./SmartDatePicker";
 
 const iStyle = {
   width: "100%", padding: "10px 12px", borderRadius: 8,
@@ -366,9 +367,15 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><Calendar size={10} /> Event Date</label>
-                  <div style={{ ...iStyle, padding: "8px 12px", height: 38, background: "#f8fafc", display: "flex", alignItems: "center", color: "#475569", fontWeight: 700, cursor: "not-allowed", border: "1.5px solid #e2e8f0" }}>
-                    {form.date ? new Date(form.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date selected'}
-                  </div>
+                  <SmartDatePicker
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    hallPreference={form.hall}
+                    allowPastDates={true}
+                    ignoreBookingId={booking?.id}
+                    fieldName="date"
+                    style={iStyle}
+                  />
                 </div>
                 <div>
                   <label style={labelSt}>Event Type</label>

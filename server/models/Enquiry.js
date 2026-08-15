@@ -35,7 +35,10 @@ const Enquiry = sequelize.define("Enquiry", {
     references: { model: "Users", key: "id" },
   },
   status: {
-    type: DataTypes.ENUM("New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Cancelled", "Lost"),
+    type: DataTypes.ENUM(
+      "New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Cancelled", "Lost",
+      "Call them back", "Not attending", "Wrong number", "Need a demo", "Rejected", "Got another Number", "Not interested", "Brochure Sent (WhatsApp)", "Direct Meet"
+    ),
     defaultValue: "New Enquiry",
   },
   leadScore: {

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Mock XMLHttpRequest for Axios
+      const originalXHR = window.XMLHttpRequest;
+      function MockXHR() {
+        this.onload = null;
+        this.onerror = null;
+        this.open = function(method, url) {
+          this.url = url;
+        };
+        this.send = function() {
+          setTimeout(() => {
+            this.readyState = 4;
+            this.status = 200;
+            if (this.url.includes('/api/masters/services')) {
+              this.responseText = JSON.stringify({ data: [{ id: 1, name: "Catering", price: 500, gst: 18 }] });
+            } else if (this.url.includes('/api/users')) {
+              this.responseText = JSON.stringify({ data: [{ id: 1, name: "Admin" }] });
+            } else if (this.url.includes('/api/settings')) {
+              this.responseText = JSON.stringify({
+                data: {
+                  halls: [{ name: "Main Hall", capacity: 500, gstRate: 18 }],
+                  sessions: [{ name: "Morning", time: "9-2" }],
+                  eventTypes: ["Wedding", "Reception"]
+                }
+              });
+            } else {
+              this.responseText = JSON.stringify({ data: [] });
+            }
+            if (this.onload) this.onload();
+            if (this.onreadystatechange) this.onreadystatechange();
+          }, 100);
+        };
+        this.setRequestHeader = function() {};
+        this.getAllResponseHeaders = function() { return "content-type: application/json\r\n"; };
+      }
+      window.XMLHttpRequest = MockXHR;
+    </script>
+    <script type="module">
+      import React, { useState } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import EditBookingModal from './src/components/EditBookingModal';
+      import { ToastProvider } from './src/components/Toast';
+
+      const App = () => {
+        const [open, setOpen] = useState(false);
+        const mockBooking = {
+          id: "BK001",
+          customerName: "John",
+          eventType: "Wedding",
+          hall: "Main Hall",
+          session: "Morning",
+          phone: "9999999999",
+          date: "2026-08-10T00:00:00.000Z",
+          totalAmount: 10000,
+          facilities: []
+        };
+
+        return (
+          <ToastProvider>
+            <button id="open-btn" onClick={() => setOpen(true)}>Open Modal</button>
+            <EditBookingModal open={open} booking={mockBooking} onClose={() => setOpen(false)} />
+          </ToastProvider>
+        );
+      };
+
+      const root = createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>

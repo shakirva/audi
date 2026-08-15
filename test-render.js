@@ -1,28 +1,38 @@
-import React from 'react';
-import { renderToString } from 'react-dom/server';
-import Reports from './src/pages/Reports.jsx';
-import AccountsReports from './src/pages/AccountsReports.jsx';
-import HallReports from './src/pages/HallReports.jsx';
-import { BookingsProvider } from './src/context/BookingsContext.jsx';
-import { ToastProvider } from './src/components/Toast.jsx';
-import { BrowserRouter } from 'react-router-dom';
+const puppeteer = require('puppeteer');
+(async () => {
+  const browser = await puppeteer.launch({headless: 'new'});
+  const page = await browser.newPage();
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  page.on('pageerror', err => console.log('PAGE ERROR:', err.toString()));
+  await page.goto('http://localhost:5174/ktconvention/bookings', { waitUntil: 'networkidle2' });
+  
+  // Try to login if we are on login page
+  try {
+    const userInput = await page.$('input[type="text"]');
+    if (userInput) {
+      await page.type('input[type="text"]', 'admin');
+      await page.type('input[type="password"]', 'admin'); // guess
+      await page.click('button[type="submit"]');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    }
+  } catch(e) {}
 
-try {
-  console.log("Testing AccountsReports...");
-  renderToString(
-    <BrowserRouter><ToastProvider><BookingsProvider><AccountsReports /></BookingsProvider></ToastProvider></BrowserRouter>
-  );
-  console.log("AccountsReports rendered OK");
-} catch (e) {
-  console.error("AccountsReports ERROR:", e);
-}
-
-try {
-  console.log("Testing Reports...");
-  renderToString(
-    <BrowserRouter><ToastProvider><BookingsProvider><Reports /></BookingsProvider></ToastProvider></BrowserRouter>
-  );
-  console.log("Reports rendered OK");
-} catch (e) {
-  console.error("Reports ERROR:", e);
-}
+  console.log("Logged in, attempting to click edit button");
+  // wait for edit button
+  await new Promise(r => setTimeout(r, 2000));
+  
+  // Find an edit button and click it
+  // Look for a button containing the word "Edit" or pencil icon
+  const buttons = await page.$$('button');
+  for (let btn of buttons) {
+    const text = await page.evaluate(el => el.textContent, btn);
+    if (text.includes('Edit')) {
+      await btn.click();
+      console.log("Clicked Edit button");
+      await new Promise(r => setTimeout(r, 2000));
+      break;
+    }
+  }
+  
+  await browser.close();
+})();

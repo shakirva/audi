@@ -80,8 +80,10 @@ export const availabilityAPI = {
     if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
     return api.get(url);
   },
-  getMonth: (hall, year, month) => {
-    return api.get(`/v1/availability/month?hall=${encodeURIComponent(hall)}&year=${year}&month=${month}`);
+  getMonth: (hall, year, month, ignoreBookingId = null) => {
+    let url = `/v1/availability/month?hall=${encodeURIComponent(hall)}&year=${year}&month=${month}`;
+    if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
+    return api.get(url);
   },
 };
 

@@ -8,7 +8,11 @@ import ConvertToBookingModal from "../components/ConvertToBookingModal";
 import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useRole } from "../context/RoleContext";
 
-const pipelineStages = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Lost"];
+const pipelineStages = [
+  "New Enquiry", "Contacted", "Follow-up", "Need a demo", "Customer Visit", "Direct Meet", 
+  "Interested", "Call them back", "Brochure Sent (WhatsApp)", "Booking Confirmed", 
+  "Not attending", "Wrong number", "Got another Number", "Not interested", "Rejected", "Lost", "Cancelled"
+];
 
 const LEAD_SCORE_STYLE = {
   Hot:  { bg: "#dcfce7", color: "#166534", label: "🟢 Hot" },
