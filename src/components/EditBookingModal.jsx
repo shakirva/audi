@@ -205,7 +205,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       onClose();
 
       if (sendWhatsapp) {
-        const message = `Hello ${form.customerName},\n\nYour booking details at Laural Garden Auditorium have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
+        const venueName = settings?.venueName || "Our Auditorium";
+        const message = `Hello ${form.customerName},\n\nYour booking details at ${venueName} have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
         const waPhone = form.whatsapp ? form.whatsapp : form.phone;
         const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);

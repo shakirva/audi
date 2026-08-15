@@ -35,9 +35,12 @@ export default function SmartDatePicker({
     
     availabilityAPI.getMonth(hallPreference, year, month, ignoreBookingId)
       .then(res => {
-        if (isMounted) setMonthAvail(res.data.data || {});
+        const data = res.data.data || {};
+        if (isMounted) setMonthAvail(data);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error("[SmartDatePicker] API error:", err?.response?.status, err?.response?.data || err.message);
+      })
       .finally(() => {
         if (isMounted) setLoading(false);
       });

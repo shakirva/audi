@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2, Loader, History, Clock } from "lucide-react";
-import { paymentsAPI, auditLogsAPI } from "../services/api";
+import { paymentsAPI, auditLogsAPI, settingsAPI } from "../services/api";
 
 export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
+  const [settings, setSettings] = useState({});
+
+  useEffect(() => {
+    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
+  }, []);
 
   if (!booking) return null;
 
@@ -30,7 +35,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
         </head>
         <body>
           <div class="header">
-            <h1>Laural Garden Auditorium</h1>
+            <h1>${settings?.venueName || "Our Auditorium"}</h1>
             <p>Official Booking Receipt</p>
           </div>
           
@@ -71,7 +76,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
           </table>
           
           <div class="footer">
-            <p>Thank you for choosing Laural Garden Auditorium. This is a computer-generated receipt.</p>
+            <p>Thank you for choosing ${settings?.venueName || "Our Auditorium"}. This is a computer-generated receipt.</p>
           </div>
           <script>
             window.onload = function() { window.print(); }
@@ -87,7 +92,8 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
 
   const sendPaymentReminder = () => {
     const balance = (Number(booking.totalAmount) || 0) - (Number(booking.advance) || 0) - (Number(booking.depositAmount) || 0);
-    const msg = `Hello ${booking.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${booking.eventType}' at Laural Garden Auditorium on ${new Date(booking.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const venueName = settings?.venueName || "Our Auditorium";
+    const msg = `Hello ${booking.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${booking.eventType}' at ${venueName} on ${new Date(booking.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (booking.whatsapp || booking.phone || "").replace(/\D/g, "");
     if (num) {

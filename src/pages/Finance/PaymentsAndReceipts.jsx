@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
-import { bookingsAPI, paymentsAPI, accountsAPI } from "../../services/api";
+import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
@@ -12,6 +12,7 @@ export default function PaymentsAndReceipts() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("card");
   const [dashboardData, setDashboardData] = useState(null);
+  const [settings, setSettings] = useState({});
   
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
@@ -21,12 +22,14 @@ export default function PaymentsAndReceipts() {
     setLoading(true);
     try {
       // Fetching up to 100 recent bookings to show payments pending
-      const [bookingsRes, dashboardRes] = await Promise.all([
+      const [bookingsRes, dashboardRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 100 }),
-        accountsAPI.getDashboard()
+        accountsAPI.getDashboard(),
+        settingsAPI.get().catch(() => ({ data: { data: {} } }))
       ]);
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
+      setSettings(settingsRes.data?.data || {});
     } catch (err) {
       addToast("Failed to load data", "error");
     } finally {
@@ -44,7 +47,8 @@ export default function PaymentsAndReceipts() {
       return;
     }
     
-    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const venueName = settings?.venueName || "Our Auditorium";
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
     if (num) {

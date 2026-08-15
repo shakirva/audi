@@ -7,7 +7,7 @@ import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useBookings } from "../context/BookingsContext";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, settingsAPI } from "../services/api";
 
 export default function Bookings() {
   const { user, role } = useRole();
@@ -21,6 +21,11 @@ export default function Bookings() {
   const [editBooking, setEditBooking] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const { bookings, refetch } = useBookings();
+  const [settings, setSettings] = useState({});
+
+  useEffect(() => {
+    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -44,7 +49,8 @@ export default function Bookings() {
       return;
     }
     
-    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const venueName = settings?.venueName || "Our Auditorium";
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
     if (num) {

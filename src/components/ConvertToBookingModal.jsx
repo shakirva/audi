@@ -295,7 +295,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       onClose();
       
       if (sendWhatsapp) {
-        const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
+        const venueName = settings?.venueName || "Our Auditorium";
+        const message = `Hello ${formData.customerName},\n\nYour booking at ${venueName} has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
         const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
         const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);
