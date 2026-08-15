@@ -187,13 +187,10 @@ export default function SmartDatePicker({
               let bgColor = "transparent";
               let borderColor = "transparent";
               let textColor = "#111";
+              let opacity = 1;
 
-              if (isPast) {
-                textColor = "#d1d5db";
-              } else if (isPastDate && allowPastDates) {
-                textColor = "#9ca3af";
-                bgColor = "#f9fafb";
-              } else if (hallPreference && statusObj) {
+              // Step 1: Apply availability colors for ALL selectable dates
+              if (hallPreference && statusObj && !isPast) {
                 if (statusObj.status === "Fully Booked") {
                   bgColor = "#fee2e2";
                   borderColor = "#ef4444";
@@ -207,6 +204,18 @@ export default function SmartDatePicker({
                   borderColor = "#22c55e";
                   textColor = "#15803d";
                 }
+                // Slightly dim past dates while keeping their availability colors
+                if (isPastDate && allowPastDates) {
+                  opacity = 0.75;
+                }
+              }
+
+              // Step 2: Grey out non-selectable past dates (allowPastDates is false)
+              if (isPast) {
+                textColor = "#d1d5db";
+                bgColor = "transparent";
+                borderColor = "transparent";
+                opacity = 1;
               }
               
               const isToday = new Date().toISOString().split("T")[0] === dateStr;
@@ -227,6 +236,7 @@ export default function SmartDatePicker({
                     fontWeight: isSelected || isToday ? 800 : 600,
                     fontSize: 13,
                     border: isSelected ? "1px solid transparent" : isToday && !isPast ? "1px solid #1B4332" : `1px solid ${borderColor}`,
+                    opacity: isSelected ? 1 : opacity,
                     transition: "all 0.15s"
                   }}
                   onMouseEnter={e => {
