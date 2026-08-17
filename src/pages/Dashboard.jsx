@@ -8,7 +8,8 @@ import {
 import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI } from "../services/api";
+import { CreditCard, FileText } from "lucide-react";
 
 const BRAND = {
   primary: "#1B4332",
@@ -36,7 +37,7 @@ const revenueData = [
 // 1. MANAGER / OWNER MODE (Executive Command Center)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { bookingsAPI, enquiriesAPI } from "../services/api";
+
 
 function ExecutiveCockpit() {
   const [stats, setStats] = useState({
@@ -169,7 +170,7 @@ function ExecutiveCockpit() {
             <FileText size={16} /> New Enquiry
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
@@ -209,8 +210,10 @@ function ExecutiveCockpit() {
                   {evt.status}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
+        </div>
+      </div>
 
       {/* Row 2: Event Distribution (4 cols) + Urgent Enquiries (8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
@@ -240,23 +243,8 @@ function ExecutiveCockpit() {
                 <div style={{ background: enq.status === "Urgent" ? "#fee2e2" : "#f1f5f9", color: enq.status === "Urgent" ? "#b91c1c" : "#475569", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800, textTransform: "uppercase", alignSelf: "flex-start", marginTop: 4 }}>
                   {enq.status}
                 </div>
-                <p className="font-mono font-bold text-green-600">{formatCurrency(205000)}</p>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Highest Revenue Hall</p>
-                  <p className="font-bold text-gray-900 text-sm mt-0.5">Grand Ballroom</p>
-                </div>
-                <p className="font-bold text-gray-700">65% Use</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Avg Booking Value</p>
-                  <p className="font-bold text-gray-900 text-sm mt-0.5">This Month</p>
-                </div>
-                <p className="font-mono font-bold text-gray-900">{formatCurrency(185000)}</p>
-              </div>
-            </div>
+            ))}
           </div>
 
           <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 800, color: "#475569" }}>Needs WhatsApp Follow-up (3+ Days Old)</h4>
@@ -289,7 +277,7 @@ function ExecutiveCockpit() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

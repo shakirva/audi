@@ -111,7 +111,7 @@ export default function AddStaffModal({ open, onClose, onSave, editingUser }) {
             {/* Email */}
             <div>
               <label style={labelSt}><Mail size={10} style={{ display: "inline", marginRight: 4 }} />Email Address *</label>
-              <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="e.g. rajan@laural.com" style={iStyle}
+              <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="e.g. rajan@venue.com" style={iStyle}
                 onFocus={e => e.target.style.borderColor = "#7c3aed"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
             </div>
 

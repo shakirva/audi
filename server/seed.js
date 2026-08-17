@@ -8,10 +8,10 @@ const { Tenant, Environment, Subscription, User, Booking, Expense, Settings } = 
 
 // ── Tenant ──
 const DEFAULT_TENANT = {
-  name: "Laural Garden Auditorium",
-  slug: "laural-garden",
+  name: "Our Venue",
+  slug: "demo-venue",
   ownerName: "Rajan P.K.",
-  email: "owner@lauralgarden.com",
+  email: "owner@venue.com",
   phone: "+91 94470 12345",
   status: "active",
   sandboxEnabled: true,
@@ -20,9 +20,9 @@ const DEFAULT_TENANT = {
 
 // ── Users ──
 const USERS = [
-  { name: "Rajan P.K.", email: "owner@lauralgarden.com", password: "owner123", role: "Owner", phone: "9447012345" },
-  { name: "Suresh Kumar", email: "manager@lauralgarden.com", password: "manager123", role: "Manager", phone: "9447056789" },
-  { name: "Anitha Nair", email: "staff@lauralgarden.com", password: "staff123", role: "Sales", phone: "9447098765" },
+  { name: "Rajan P.K.", email: "owner@venue.com", password: "owner123", role: "Owner", phone: "9447012345" },
+  { name: "Suresh Kumar", email: "manager@venue.com", password: "manager123", role: "Manager", phone: "9447056789" },
+  { name: "Anitha Nair", email: "staff@venue.com", password: "staff123", role: "Sales", phone: "9447098765" },
 ];
 
 const SUPERADMIN = { name: "Platform Admin", email: "admin@venueza.com", password: "admin123", role: "SuperAdmin", phone: "" };
@@ -117,7 +117,7 @@ async function seed() {
     await Settings.create({ tenantId: tenant.id, environmentId: prodEnv.id, halls: HALLS });
     
     console.log("✅ Seed complete! Login credentials:");
-    console.log("   Owner: owner@lauralgarden.com / owner123");
+    console.log("   Owner: owner@venue.com / owner123");
     process.exit(0);
   } catch (err) {
     console.error("❌ Seed error:", err);
