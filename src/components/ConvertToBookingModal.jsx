@@ -34,6 +34,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
   const [sendWhatsapp, setSendWhatsapp] = useState(true);
+  const [settings, setSettings] = useState({});
 
   const [formData, setFormData] = useState({
     // Contact
@@ -130,7 +131,9 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       const fetchSettings = async () => {
         try {
           const res = await settingsAPI.get();
-          const halls = res.data.data.halls || [];
+          const data = res.data.data || {};
+          setSettings(data);
+          const halls = data.halls || [];
           const selectedHall = halls.find(h => h.name === formData.hall);
           if (selectedHall && selectedHall.gstRate !== undefined) {
             // Use functional updater to get latest formData (avoids stale closure)
@@ -228,7 +231,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       onClose();
       
       if (sendWhatsapp) {
-        const message = `Hello ${formData.customerName},\n\nYour booking at Laural Garden Auditorium has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
+        const venueName = settings?.venueName || "Our Auditorium";
+        const message = `Hello ${formData.customerName},\n\nYour booking at ${venueName} has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
         const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
         const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);

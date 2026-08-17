@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, settingsAPI } from "../services/api";
 import { useToast } from "./Toast";
 
 const iStyle = {
@@ -26,12 +26,15 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({});
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [settings, setSettings] = useState({});
 
   useEffect(() => {
     // Fetch facilities from master
     import("../services/api").then(({ mastersAPI }) => {
       mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
     });
+    // Fetch settings for venueName
+    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -124,7 +127,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       onSaved?.();
       onClose();
 
-      const message = `Hello ${form.customerName},\n\nYour booking details at Laural Garden Auditorium have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
+      const venueName = settings?.venueName || "Our Auditorium";
+      const message = `Hello ${form.customerName},\n\nYour booking details at ${venueName} have been updated.\n\nEvent: ${form.eventType}\nHall: ${form.hall}\nDate: ${form.date}\nTotal Amount: ₹${Number(form.totalAmount).toLocaleString()}\nBalance: ₹${Number(form.balanceAmount || 0).toLocaleString()}\n\nThank you!`;
       const waPhone = form.whatsapp ? form.whatsapp : form.phone;
       const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
       const text = encodeURIComponent(message);

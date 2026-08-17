@@ -49,6 +49,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  const [venueName, setVenueName] = useState("Our Auditorium");
 
   const [form, setForm] = useState({
     name: "",
@@ -147,6 +148,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         if (data && data.sessions && data.sessions.length > 0) {
           setSettingsSessions(data.sessions);
         }
+        if (data && data.venueName) setVenueName(data.venueName);
       })
       .catch(() => {});
 
@@ -312,7 +314,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       if (sendWhatsApp) {
         const message = editData 
           ? `Hello ${form.name},\n\nYour enquiry details have been updated for ${form.hallPreference}.`
-          : `Hello ${form.name},\n\nThank you for enquiring at Laural Garden Auditorium.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
+          : `Hello ${form.name},\n\nThank you for enquiring at ${venueName}.\nEvent: ${form.eventType}\nHall: ${form.hallPreference}\nDate: ${form.tentativeDate}\n\nWe will get back to you shortly.`;
         
         const phoneNum = `91${form.phone.replace(/\\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);

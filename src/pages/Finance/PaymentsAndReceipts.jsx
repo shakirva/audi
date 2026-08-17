@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
-import { bookingsAPI, paymentsAPI, accountsAPI } from "../../services/api";
+import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
@@ -16,6 +16,7 @@ export default function PaymentsAndReceipts() {
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
   const [historyBooking, setHistoryBooking] = useState(null);
+  const [venueName, setVenueName] = useState("Our Auditorium");
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -34,6 +35,14 @@ export default function PaymentsAndReceipts() {
     }
   };
 
+  // Fetch venue name for dynamic branding
+  useEffect(() => {
+    settingsAPI.get().then(res => {
+      const name = res.data?.data?.venueName;
+      if (name) setVenueName(name);
+    }).catch(() => {});
+  }, []);
+
   const sendPaymentReminder = (b) => {
     const total = Number(b.totalAmount) || 0;
     const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
@@ -44,7 +53,7 @@ export default function PaymentsAndReceipts() {
       return;
     }
     
-    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
     if (num) {

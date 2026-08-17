@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import { useBookings } from "../context/BookingsContext";
 import { useRole } from "../context/RoleContext";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, settingsAPI } from "../services/api";
 
 export default function Bookings() {
   const { user, role } = useRole();
@@ -15,6 +15,14 @@ export default function Bookings() {
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
   const { bookings, refetch } = useBookings();
+  const [venueName, setVenueName] = useState("Our Auditorium");
+
+  useEffect(() => {
+    settingsAPI.get().then(res => {
+      const name = res.data?.data?.venueName;
+      if (name) setVenueName(name);
+    }).catch(() => {});
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -38,7 +46,7 @@ export default function Bookings() {
       return;
     }
     
-    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at Laural Garden Auditorium on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
     if (num) {
