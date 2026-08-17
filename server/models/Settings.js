@@ -43,6 +43,9 @@ const Settings = sequelize.define("Settings", {
   
   // Role-Based Module Access configuration
   moduleAccess: { type: DataTypes.JSONB, defaultValue: {} },
+  
+  // Allow booking on past dates (for backfilling previous year data)
+  allowPastDateBooking: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   indexes: [
     { unique: true, fields: ["tenantId", "environmentId"], name: "idx_settings_tenant_env" },
