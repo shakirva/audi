@@ -26,7 +26,11 @@ class AvailabilityService {
     };
 
     if (ignoreBookingId) {
-      whereClause.id = { [Op.ne]: ignoreBookingId };
+      if (isNaN(ignoreBookingId)) {
+        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+      } else {
+        whereClause.id = { [Op.ne]: ignoreBookingId };
+      }
     }
 
     const existingBookings = await Booking.findAll({ where: whereClause, attributes: ["session", "bookingId"] });
@@ -63,7 +67,11 @@ class AvailabilityService {
     };
     
     if (ignoreBookingId) {
-        whereClause.id = { [Op.ne]: ignoreBookingId };
+        if (isNaN(ignoreBookingId)) {
+          whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+        } else {
+          whereClause.id = { [Op.ne]: ignoreBookingId };
+        }
     }
 
     const bookings = await Booking.findAll({ where: whereClause, attributes: ["session"] });
@@ -87,7 +95,7 @@ class AvailabilityService {
   /**
    * Get availability for an entire month for a specific hall
    */
-  async getMonthAvailability({ tenantId, environmentId, hall, year, month }) {
+  async getMonthAvailability({ tenantId, environmentId, hall, year, month, ignoreBookingId = null }) {
     if (!hall || !year || !month) return {};
     
     // Create start and end date for the month
@@ -103,6 +111,14 @@ class AvailabilityService {
       date: { [Op.between]: [startDate, endDate] },
       status: { [Op.notIn]: ["Cancelled", "Closed"] }
     };
+
+    if (ignoreBookingId) {
+      if (isNaN(ignoreBookingId)) {
+        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
+      } else {
+        whereClause.id = { [Op.ne]: ignoreBookingId };
+      }
+    }
 
     const bookings = await Booking.findAll({ where: whereClause, attributes: ["date", "session"] });
     

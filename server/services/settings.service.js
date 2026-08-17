@@ -39,7 +39,7 @@ class SettingsService {
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
-      "accountNumber", "ifscCode"
+      "accountNumber", "ifscCode", "allowPastDateBooking"
     ];
     
     const updateData = {};
