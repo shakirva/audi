@@ -9,7 +9,7 @@ router.use(auth, tenantScope);
 // GET /api/v1/attendance
 router.get("/", async (req, res) => {
   try {
-    const { date } = req.query;
+    const { date, month, year } = req.query;
     const where = { tenantId: req.tenantId };
     
     // If not owner/admin, staff can only see their own attendance
@@ -17,6 +17,15 @@ router.get("/", async (req, res) => {
       where.userId = req.user.id;
     } else if (date) {
       where.date = date; // Admin/Owner filter by date
+    } else if (month && year) {
+      const { Op } = require("sequelize");
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      
+      where.date = {
+        [Op.between]: [startDate, endDate]
+      };
     }
 
     const records = await Attendance.findAll({

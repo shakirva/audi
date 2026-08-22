@@ -17,11 +17,20 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
   const [collectedBy, setCollectedBy] = useState("");
   const [upiName, setUpiName] = useState("");
   const [bankName, setBankName] = useState("");
+  const [collectionDate, setCollectionDate] = useState("");
 
   React.useEffect(() => {
     if (open && payment) {
       setAmount(payment.amount || "");
       setMethod(payment.paymentMode || "Cash");
+      
+      let initialDate = new Date().toISOString().split("T")[0];
+      if (payment.paymentDate) {
+        initialDate = payment.paymentDate.includes("T") 
+          ? payment.paymentDate.split("T")[0]
+          : payment.paymentDate;
+      }
+      setCollectionDate(initialDate);
       
       let ref = payment.referenceNumber || "";
       let baseNotes = payment.notes || "";
@@ -87,7 +96,8 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
         amount: Number(amount),
         paymentMode: method,
         referenceNumber: finalRef,
-        notes: finalNotes
+        notes: finalNotes,
+        paymentDate: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
       });
       addToast("Payment updated successfully!", "success");
       onSuccess();
@@ -227,6 +237,16 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
                 />
               </div>
             )}
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Collection Date</label>
+              <input 
+                type="date"
+                value={collectionDate}
+                onChange={e => setCollectionDate(e.target.value)}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff" }}
+              />
+            </div>
 
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Notes (Optional)</label>

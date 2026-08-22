@@ -35,6 +35,7 @@ import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
+import Inventory from "./pages/Inventory";
 import Subscriptions from "./pages/Subscriptions";
 import Feedback from "./pages/Feedback";
 import { BookingsProvider } from "./context/BookingsContext";
@@ -127,6 +128,7 @@ function AdminLayout() {
             <Route path="/agreements" element={<Agreements />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/vendors" element={<Vendors />} />
+            <Route path="/inventory" element={<Inventory />} />
             <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/profile" element={<Profile />} />

@@ -15,7 +15,8 @@ export const BASE_NAVIGATION = [
   { 
     type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
     children: [
-      { path: "/vendors", label: "Vendor Management" }
+      { path: "/vendors", label: "Vendor Management" },
+      { path: "/inventory", label: "Inventory Management" }
     ]
   },
   { 

@@ -156,9 +156,9 @@ export default function AccountsReports() {
     doc.setFontSize(10);
     doc.setTextColor(0);
     doc.text(`Net Revenue: ${formatLakhs(totalRev)}`, 14, 40);
-    doc.text(`Total Expenses: ${formatLakhs(totalExp)}`, 60, 40);
-    doc.text(`Net Profit: ${formatLakhs(netProfit)}`, 110, 40);
-    doc.text(`Margin: ${margin}%`, 160, 40);
+    doc.text(`Total Expenses: ${formatLakhs(totalExp)}`, 105, 40);
+    doc.text(`Net Profit: ${formatLakhs(netProfit)}`, 14, 48);
+    doc.text(`Margin: ${margin}%`, 105, 48);
 
     const tableColumn = ["Date", "Type", "Category/Event", "Details", "Amount"];
     const tableRows = [];
@@ -184,7 +184,7 @@ export default function AccountsReports() {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 45,
+      startY: 55,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [27, 67, 50] }
     });

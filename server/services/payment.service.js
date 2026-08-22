@@ -145,6 +145,9 @@ class PaymentService {
         }, { transaction: t });
       }
 
+      // 6. Post Double-Entry Journal via Accounting Engine
+      await accountingEngine.recordPayment(payment.id, tenantId, environmentId, t);
+
       // 7. Create Job Timeline entry (if linked to booking)
       if (booking) {
         const { Job } = require("../models");

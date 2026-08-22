@@ -13,7 +13,7 @@ class SettingsController {
 
   async get(req, res, next) {
     try {
-      const result = await settingsService.getSettings(req.tenantId, req.environmentId);
+      const result = await settingsService.getSettings(req.tenantId, req.environmentId, req.environmentType);
       return sendSuccess(res, { data: result });
     } catch (err) {
       next(err);

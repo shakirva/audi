@@ -231,14 +231,56 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>WhatsApp</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.whatsapp || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Address</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.address || "—"}</div></div>
                 </div>
-                {/* Bride / Groom summary if applicable */}
-                {(booking.brideName || booking.groomName) && (
-                  <div style={{ marginTop: 32 }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Event Parties</h4>
-                    {booking.brideName && <div style={{ background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 12 }}><strong>Bride:</strong> {booking.brideName} {booking.bridePhone ? `(${booking.bridePhone})` : ""}</div>}
-                    {booking.groomName && <div style={{ background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}><strong>Groom:</strong> {booking.groomName} {booking.groomPhone ? `(${booking.groomPhone})` : ""}</div>}
-                  </div>
-                )}
+                {/* Bride / Groom / Parents summary if applicable */}
+                {(() => {
+                  const evt = (booking.eventType || "").toLowerCase();
+                  const isWedding = evt.includes("wedding") || evt.includes("reception") || evt.includes("nikkah");
+                  const hasData = booking.brideName || booking.groomName || booking.fatherName || booking.motherName;
+                  
+                  if (!isWedding && !hasData) return null;
+
+                  return (
+                    <div style={{ marginTop: 32 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Event Parties Detailed Info</h4>
+                      
+                      {(isWedding || booking.brideName) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#db2777" }}>Bride's Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Phone</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.bridePhone || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideFatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideMotherName || "—"}</div></div>
+                            <div className="col-span-1 md:col-span-2"><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Place / Address</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideAddress || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(isWedding || booking.groomName) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#2563eb" }}>Groom's Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Phone</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomPhone || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomFatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomMotherName || "—"}</div></div>
+                            <div className="col-span-1 md:col-span-2"><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Place / Address</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomAddress || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {(!isWedding && (!booking.brideName && !booking.groomName) && (booking.fatherName || booking.motherName)) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#475569" }}>Parents Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.fatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.motherName || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             )}
 
@@ -429,9 +471,14 @@ const FinancialLedgerView = ({ booking }) => {
   }
   
   const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
-  const hallTax = Number(booking.taxPercentage) > 0 ? (hallTotal * Number(booking.taxPercentage)) / 100 : 0;
+  const hallTax = Math.max(0, (Number(booking.taxes) || 0) - facilitiesTax);
+  const derivedTaxPct = hallTotal > 0 ? Math.round((hallTax / hallTotal) * 100) : 0;
   
-  const balance = grandTotal - (booking.advance || 0) - (booking.depositAmount || 0);
+  const totalFromApi = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const actualPaid = payments.filter(p => p.status === "Completed").reduce((sum, p) => sum + Number(p.amount), 0);
+  const advancePaidDisplay = Math.max(Number(booking.advance) || 0, actualPaid);
+  
+  const balance = grandTotal - advancePaidDisplay - (Number(booking.depositAmount) || 0);
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
@@ -449,7 +496,7 @@ const FinancialLedgerView = ({ booking }) => {
             <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{facilitiesTotal.toLocaleString()}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: "#475569" }}>Hall GST ({Number(booking.taxPercentage) || 0}%)</span>
+            <span style={{ fontSize: 14, color: "#475569" }}>Hall GST ({derivedTaxPct}%)</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{hallTax.toLocaleString()}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 12, borderBottom: "1px dashed #e2e8f0", marginBottom: 12 }}>
@@ -465,7 +512,7 @@ const FinancialLedgerView = ({ booking }) => {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Advance Paid</span>
-            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{(booking.advance || 0).toLocaleString()}</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{advancePaidDisplay.toLocaleString()}</span>
           </div>
           <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Security Deposit</span>

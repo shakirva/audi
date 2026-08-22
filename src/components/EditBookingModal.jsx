@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, CheckCircle2, User, Phone, MapPin, Calendar, Plus, CheckSquare } from "lucide-react";
-import { bookingsAPI, usersAPI } from "../services/api";
+import { bookingsAPI, usersAPI, settingsAPI } from "../services/api";
 import { useToast } from "./Toast";
 import SmartDatePicker from "./SmartDatePicker";
 
@@ -37,6 +37,8 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       usersAPI.getAll().then(res => setUsers(res.data?.data || []));
       settingsAPI.get().then(res => setSettings(res.data?.data || {}));
     });
+    // Fetch settings for venueName
+    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
         upiAmount: booking.upiAmount || "",
         accountName: booking.accountName || "",
         paymentRemarks: booking.paymentRemarks || "",
+        collectionDate: new Date().toISOString().split("T")[0],
         // Notes
         specialInstructions: booking.specialInstructions || booking.notes || "",
       });
@@ -721,6 +724,17 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                     </select>
                   </div>
                 )}
+                <div>
+                  <label style={labelSt}>Collection Date</label>
+                  <input
+                    type="date"
+                    value={form.collectionDate || new Date().toISOString().split("T")[0]}
+                    onChange={e => setForm({ ...form, collectionDate: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
+                </div>
                 <div>
                   <label style={labelSt}>Payment Remarks</label>
                   {inp("paymentRemarks", { placeholder: "e.g. Balance paid by GPay on 22/07/26" })}

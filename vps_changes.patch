@@ -1,0 +1,497 @@
+diff --git a/._dist b/._dist
+new file mode 100755
+index 0000000..613e1ee
+Binary files /dev/null and b/._dist differ
+diff --git a/fix-ledgers.js b/fix-ledgers.js
+new file mode 100644
+index 0000000..8e0fb0c
+--- /dev/null
++++ b/fix-ledgers.js
+@@ -0,0 +1,62 @@
++const { Booking, JournalEntry, ChartOfAccount } = require('./server/models');
++const sequelize = require('./server/db');
++const { Op } = require('sequelize');
++
++async function fix() {
++  await sequelize.sync();
++  
++  const incomeAccount = await ChartOfAccount.findOne({ where: { code: '3001' } });
++  const taxAccount = await ChartOfAccount.findOne({ where: { code: '2004' } });
++  const outstandingAccount = await ChartOfAccount.findOne({ where: { code: '1005' } });
++
++  const bookings = await Booking.findAll({
++    where: { taxes: { [Op.gt]: 0 } }
++  });
++
++  for (const booking of bookings) {
++    const netRevenue = booking.totalAmount - booking.taxes;
++
++    // Fix the existing income journal entry
++    await JournalEntry.update(
++      { amount: netRevenue },
++      { 
++        where: { 
++          sourceModule: 'Booking', 
++          sourceId: booking.id, 
++          creditAccountId: incomeAccount.id 
++        } 
++      }
++    );
++
++    // Check if tax entry exists
++    const existingTax = await JournalEntry.findOne({
++      where: {
++        sourceModule: 'Booking',
++        sourceId: booking.id,
++        creditAccountId: taxAccount.id
++      }
++    });
++
++    // If it doesn't exist, create it
++    if (!existingTax) {
++      console.log(`Creating tax entry for BK${booking.id}`);
++      await JournalEntry.create({
++        tenantId: booking.tenantId,
++        environmentId: booking.environmentId,
++        date: booking.createdAt,
++        description: `GST on Booking #${booking.bookingId} - ${booking.customerName}`,
++        amount: booking.taxes,
++        debitAccountId: outstandingAccount.id,
++        creditAccountId: taxAccount.id,
++        voucherType: 'JV',
++        sourceModule: 'Booking',
++        sourceId: booking.id,
++        bookingId: booking.id,
++        customerId: booking.customerId
++      });
++    }
++  }
++  console.log('Done');
++  process.exit(0);
++}
++fix().catch(console.error);
+diff --git a/server/clear-dummy-data.js b/server/clear-dummy-data.js
+new file mode 100644
+index 0000000..f4e05dc
+--- /dev/null
++++ b/server/clear-dummy-data.js
+@@ -0,0 +1,46 @@
++const { Sequelize } = require('sequelize');
++const sequelize = new Sequelize('postgres://venueza:Venueza@Prod2026@localhost:5432/venueza_prod', {
++  logging: false,
++});
++
++async function clearData() {
++  try {
++    await sequelize.authenticate();
++    console.log('Connected to DB.');
++    
++    const tablesToClear = [
++      '"AuditLogs"',
++      '"JobDocuments"',
++      '"JobChecklists"',
++      '"JobTimelines"',
++      '"JobVendors"',
++      '"JobStaffs"',
++      '"Jobs"',
++      '"Receipts"',
++      '"Payments"',
++      '"Expenses"',
++      '"JournalEntries"',
++      '"Vouchers"',
++      '"AccountStatements"',
++      '"BankBooks"',
++      '"CashBooks"',
++      '"FollowUps"',
++      '"Enquiries"',
++      '"Bookings"',
++      '"Customers"'
++    ];
++
++    for (const table of tablesToClear) {
++      await sequelize.query(`TRUNCATE TABLE ${table} CASCADE;`);
++      console.log(`Cleared ${table}`);
++    }
++
++    console.log('All dummy data cleared successfully!');
++  } catch (err) {
++    console.error('Failed to clear data:', err);
++  } finally {
++    await sequelize.close();
++  }
++}
++
++clearData();
+diff --git a/server/convert-enquiries.js b/server/convert-enquiries.js
+new file mode 100644
+index 0000000..5b5a766
+--- /dev/null
++++ b/server/convert-enquiries.js
+@@ -0,0 +1,87 @@
++require('dotenv').config();
++const db = require('./models');
++const { Enquiry, Booking, Customer } = db;
++const accountingEngine = require('./services/accountingEngine.service');
++
++async function convertInterestedEnquiries() {
++  const tenantId = 2; // ktconvention
++  const environmentId = 2; // production
++
++  try {
++    const enquiries = await Enquiry.findAll({
++      where: {
++        tenantId,
++        environmentId,
++        status: 'Interested',
++      },
++      order: [['createdAt', 'ASC']]
++    });
++
++    console.log(`Found ${enquiries.length} 'Interested' enquiries to convert.`);
++
++    let nextIdNumber = 30; // Start safely above existing
++
++    for (const enq of enquiries) {
++      console.log(`Converting Enquiry ${enq.enquiryNumber} for ${enq.enquirerName}...`);
++
++      let customer = await Customer.findOne({
++        where: { tenantId, environmentId, phone: enq.phone || '0000000000' }
++      });
++      
++      if (!customer) {
++        customer = await Customer.create({
++          tenantId,
++          environmentId,
++          name: enq.enquirerName,
++          phone: enq.phone || '0000000000',
++        });
++      }
++
++      // Generate a clean booking ID manually to avoid the exponential bug
++      const customBookingId = `KT_26-27-${String(nextIdNumber).padStart(3, '0')}`;
++      nextIdNumber++;
++
++      const booking = await Booking.create({
++        tenantId,
++        environmentId,
++        customerId: customer.id,
++        enquiryId: enq.id,
++        bookingId: customBookingId,
++        customerName: enq.enquirerName,
++        phone: enq.phone || '0000000000',
++        eventType: enq.eventType,
++        hall: enq.hall || 'Main Hall',
++        date: enq.tentativeDate || new Date().toISOString().split('T')[0],
++        session: enq.session || 'Full Day',
++        guests: enq.guests || 0,
++        advance: 0,
++        totalAmount: 0,
++        status: 'Confirmed', 
++        notes: `Converted from enquiry ${enq.enquiryNumber}`,
++        createdBy: 20 // Manu
++      });
++
++      await enq.update({ status: 'Booking Confirmed' });
++
++      try {
++        await accountingEngine.onBookingCreated(booking, {
++          tenantId,
++          environmentId,
++          createdBy: 20
++        });
++      } catch (err) {
++        console.error(`Accounting error for ${booking.bookingId}:`, err.message);
++      }
++
++      console.log(`Successfully converted to Booking ${booking.bookingId}`);
++    }
++
++    console.log('Conversion complete!');
++  } catch (err) {
++    console.error('Migration failed:', err);
++  } finally {
++    process.exit();
++  }
++}
++
++convertInterestedEnquiries();
+diff --git a/server/delete_orphaned.cjs b/server/delete_orphaned.cjs
+new file mode 100644
+index 0000000..ecc2689
+--- /dev/null
++++ b/server/delete_orphaned.cjs
+@@ -0,0 +1,14 @@
++require('dotenv').config({ path: '/var/www/venueza/server/.env' });
++const sequelize = require('./db');
++
++async function removeOrphans() {
++  try {
++    await sequelize.query("UPDATE \"Enquiries\" SET \"deletedAt\" = NOW() WHERE \"enquiryNumber\" IN ('ENQ007', 'ENQ008', 'ENQ009')");
++    console.log('Successfully deleted ENQ007, ENQ008, ENQ009.');
++    process.exit(0);
++  } catch (err) {
++    console.error(err);
++    process.exit(1);
++  }
++}
++removeOrphans();
+diff --git a/server/fix-ledgers.js b/server/fix-ledgers.js
+new file mode 100644
+index 0000000..d00c95c
+--- /dev/null
++++ b/server/fix-ledgers.js
+@@ -0,0 +1,63 @@
++require('dotenv').config();
++const { Booking, JournalEntry, ChartOfAccount } = require('./models');
++const sequelize = require('./db');
++const { Op } = require('sequelize');
++
++async function fix() {
++  await sequelize.sync();
++  
++  const incomeAccount = await ChartOfAccount.findOne({ where: { code: '3001' } });
++  const taxAccount = await ChartOfAccount.findOne({ where: { code: '2004' } });
++  const outstandingAccount = await ChartOfAccount.findOne({ where: { code: '1005' } });
++
++  const bookings = await Booking.findAll({
++    where: { taxes: { [Op.gt]: 0 } }
++  });
++
++  for (const booking of bookings) {
++    const netRevenue = booking.totalAmount - booking.taxes;
++
++    // Fix the existing income journal entry
++    await JournalEntry.update(
++      { amount: netRevenue },
++      { 
++        where: { 
++          sourceModule: 'Booking', 
++          sourceId: booking.id, 
++          creditAccountId: incomeAccount.id 
++        } 
++      }
++    );
++
++    // Check if tax entry exists
++    const existingTax = await JournalEntry.findOne({
++      where: {
++        sourceModule: 'Booking',
++        sourceId: booking.id,
++        creditAccountId: taxAccount.id
++      }
++    });
++
++    // If it doesn't exist, create it
++    if (!existingTax) {
++      console.log(`Creating tax entry for BK${booking.id}`);
++      await JournalEntry.create({
++        tenantId: booking.tenantId,
++        environmentId: booking.environmentId,
++        date: booking.createdAt,
++        description: `GST on Booking #${booking.bookingId} - ${booking.customerName}`,
++        amount: booking.taxes,
++        debitAccountId: outstandingAccount.id,
++        creditAccountId: taxAccount.id,
++        voucherType: 'JV',
++        sourceModule: 'Booking',
++        sourceId: booking.id,
++        bookingId: booking.id,
++        customerId: booking.customerId
++      });
++    }
++  }
++  console.log('Done');
++  process.exit(0);
++}
++fix().catch(console.error);
+diff --git a/server/migrate2.cjs b/server/migrate2.cjs
+new file mode 100644
+index 0000000..fcab59d
+--- /dev/null
++++ b/server/migrate2.cjs
+@@ -0,0 +1,14 @@
++require('dotenv').config({ path: './.env' });
++const sequelize = require('./db');
++
++async function migrate() {
++  try {
++    await sequelize.query("UPDATE \"Enquiries\" SET status = 'Interested' WHERE status = 'Quotation Sent'");
++    console.log('Migrated data successfully.');
++    process.exit(0);
++  } catch (err) {
++    console.error(err);
++    process.exit(1);
++  }
++}
++migrate();
+diff --git a/server/models/Settings.js b/server/models/Settings.js
+index 1a21f55..1d12668 100644
+--- a/server/models/Settings.js
++++ b/server/models/Settings.js
+@@ -43,6 +43,9 @@ const Settings = sequelize.define("Settings", {
+   
+   // Role-Based Module Access configuration
+   moduleAccess: { type: DataTypes.JSONB, defaultValue: {} },
++  
++  // Allow booking on past dates (for backfilling previous year data)
++  allowPastDateBooking: { type: DataTypes.BOOLEAN, defaultValue: false },
+ }, {
+   indexes: [
+     { unique: true, fields: ["tenantId", "environmentId"], name: "idx_settings_tenant_env" },
+diff --git a/server/public/uploads/logo-1785383324555-142416652.jpeg b/server/public/uploads/logo-1785383324555-142416652.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785383324555-142416652.jpeg differ
+diff --git a/server/public/uploads/logo-1785404537304-899705496.jpeg b/server/public/uploads/logo-1785404537304-899705496.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785404537304-899705496.jpeg differ
+diff --git a/server/public/uploads/logo-1785405429547-946882677.jpeg b/server/public/uploads/logo-1785405429547-946882677.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785405429547-946882677.jpeg differ
+diff --git a/server/public/uploads/logo-1785405727661-894055374.jpeg b/server/public/uploads/logo-1785405727661-894055374.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785405727661-894055374.jpeg differ
+diff --git a/server/public/uploads/logo-1785409180931-478430538.jpeg b/server/public/uploads/logo-1785409180931-478430538.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785409180931-478430538.jpeg differ
+diff --git a/server/public/uploads/logo-1785495590144-711036810.png b/server/public/uploads/logo-1785495590144-711036810.png
+new file mode 100644
+index 0000000..6db46f9
+Binary files /dev/null and b/server/public/uploads/logo-1785495590144-711036810.png differ
+diff --git a/server/public/uploads/logo-1785783763273-616532657.jpeg b/server/public/uploads/logo-1785783763273-616532657.jpeg
+new file mode 100644
+index 0000000..8d2ecd6
+Binary files /dev/null and b/server/public/uploads/logo-1785783763273-616532657.jpeg differ
+diff --git a/server/restore_user.js b/server/restore_user.js
+new file mode 100644
+index 0000000..1ed0f4b
+--- /dev/null
++++ b/server/restore_user.js
+@@ -0,0 +1,12 @@
++const sq = require("./db.js");
++require("./models/index.js");
++
++sq.query("UPDATE \"Users\" SET \"deletedAt\" = NULL WHERE \"deletedAt\" IS NOT NULL;")
++  .then(() => {
++    console.log("Restored deleted users");
++    process.exit(0);
++  })
++  .catch(err => {
++    console.error(err);
++    process.exit(1);
++  });
+diff --git a/server/routes/settings.js b/server/routes/settings.js
+index 9b65dcc..3c6b53f 100644
+--- a/server/routes/settings.js
++++ b/server/routes/settings.js
+@@ -69,14 +69,14 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
+       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
+       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+-      "accountNumber", "ifscCode"
++      "accountNumber", "ifscCode", "allowPastDateBooking"
+     ];
+     allowed.forEach(key => {
+       if (req.body[key] !== undefined) settings[key] = req.body[key];
+     });
+     // In Sequelize, if you modify a JSONB field you might need to use changed()
+     // but typically direct assignment works if you reassign the whole object.
+-    await settings.save();
++    console.log("SAVING SETTINGS:", req.body); await settings.save();
+     res.json(settings);
+   } catch (err) {
+     res.status(500).json({ error: "Failed to update settings" });
+diff --git a/server/routes/v1/availability.js b/server/routes/v1/availability.js
+index f0a985f..a93a354 100644
+--- a/server/routes/v1/availability.js
++++ b/server/routes/v1/availability.js
+@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
+ 
+ router.get("/month", async (req, res) => {
+   try {
+-    const { hall, year, month } = req.query;
++    const { hall, year, month, ignoreBookingId } = req.query;
+     if (!hall || !year || !month) {
+       return sendError(res, "hall, year, and month are required", 400);
+     }
+@@ -40,7 +40,8 @@ router.get("/month", async (req, res) => {
+       environmentId: req.environmentId,
+       hall,
+       year: parseInt(year),
+-      month: parseInt(month)
++      month: parseInt(month),
++      ignoreBookingId
+     });
+ 
+     return sendSuccess(res, { data: availability });
+diff --git a/server/services/availability.service.js b/server/services/availability.service.js
+index 627b911..c08f2ce 100644
+--- a/server/services/availability.service.js
++++ b/server/services/availability.service.js
+@@ -26,7 +26,11 @@ class AvailabilityService {
+     };
+ 
+     if (ignoreBookingId) {
+-      whereClause.id = { [Op.ne]: ignoreBookingId };
++      if (isNaN(ignoreBookingId)) {
++        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
++      } else {
++        whereClause.id = { [Op.ne]: ignoreBookingId };
++      }
+     }
+ 
+     const existingBookings = await Booking.findAll({ where: whereClause, attributes: ["session", "bookingId"] });
+@@ -63,7 +67,11 @@ class AvailabilityService {
+     };
+     
+     if (ignoreBookingId) {
+-        whereClause.id = { [Op.ne]: ignoreBookingId };
++        if (isNaN(ignoreBookingId)) {
++          whereClause.bookingId = { [Op.ne]: ignoreBookingId };
++        } else {
++          whereClause.id = { [Op.ne]: ignoreBookingId };
++        }
+     }
+ 
+     const bookings = await Booking.findAll({ where: whereClause, attributes: ["session"] });
+@@ -87,7 +95,7 @@ class AvailabilityService {
+   /**
+    * Get availability for an entire month for a specific hall
+    */
+-  async getMonthAvailability({ tenantId, environmentId, hall, year, month }) {
++  async getMonthAvailability({ tenantId, environmentId, hall, year, month, ignoreBookingId = null }) {
+     if (!hall || !year || !month) return {};
+     
+     // Create start and end date for the month
+@@ -104,6 +112,14 @@ class AvailabilityService {
+       status: { [Op.notIn]: ["Cancelled", "Closed"] }
+     };
+ 
++    if (ignoreBookingId) {
++      if (isNaN(ignoreBookingId)) {
++        whereClause.bookingId = { [Op.ne]: ignoreBookingId };
++      } else {
++        whereClause.id = { [Op.ne]: ignoreBookingId };
++      }
++    }
++
+     const bookings = await Booking.findAll({ where: whereClause, attributes: ["date", "session"] });
+     
+     // Group by date
+diff --git a/server/services/settings.service.js b/server/services/settings.service.js
+index 11b26eb..d8a8a2a 100644
+--- a/server/services/settings.service.js
++++ b/server/services/settings.service.js
+@@ -39,7 +39,7 @@ class SettingsService {
+       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
+       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+-      "accountNumber", "ifscCode"
++      "accountNumber", "ifscCode", "allowPastDateBooking"
+     ];
+     
+     const updateData = {};

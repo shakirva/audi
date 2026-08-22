@@ -20,6 +20,7 @@ const Settings = sequelize.define("Settings", {
   email: { type: DataTypes.STRING, defaultValue: "" },
   gstin: { type: DataTypes.STRING, defaultValue: "" },
   bookingPrefix: { type: DataTypes.STRING, defaultValue: "BK" },
+  receiptPrefix: { type: DataTypes.STRING, defaultValue: "PAY" },
   
   // Branding and Bank Details
   logoUrl: { type: DataTypes.STRING, defaultValue: "" },

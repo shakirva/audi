@@ -48,7 +48,7 @@ export default function Customers() {
       }
       setCustomers(data);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to load customers";
+      const msg = err.response?.data?.error || err.response?.data?.message || "Failed to load customers";
       setError(msg);
       addToast(msg, "error");
     } finally {

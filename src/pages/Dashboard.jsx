@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -8,10 +8,8 @@ import {
 import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SHARED COMPONENTS & MOCK DATA
-// ─────────────────────────────────────────────────────────────────────────────
+import { bookingsAPI, enquiriesAPI } from "../services/api";
+import { CreditCard, FileText } from "lucide-react";
 
 const BRAND = {
   primary: "#1B4332",
@@ -23,27 +21,39 @@ const BRAND = {
   danger: "#ef4444"
 };
 
-const revenueData = [ { name: "Jan", uv: 4500 }, { name: "Feb", uv: 5200 }, { name: "Mar", uv: 3800 }, { name: "Apr", uv: 2100 }, { name: "May", uv: 6800 }, { name: "Jun", uv: 8500 } ];
-const eventDistData = [ { name: "Wedding", value: 65, color: BRAND.primary }, { name: "Reception", value: 45, color: BRAND.primaryLight }, { name: "Corporate", value: 20, color: BRAND.accent }, { name: "Birthday", value: 10, color: BRAND.info } ];
-const occupancyData = [ { name: "Hall A", uv: 88, fill: BRAND.success }, { name: "Hall B", uv: 72, fill: BRAND.warning } ];
-const funnelData = [ { name: "Enquiry", value: 100, fill: "#e2e8f0" }, { name: "Booking", value: 25, fill: BRAND.success } ];
+const formatCurrency = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
 
-const GradientCard = ({ title, value, gradient, delay }) => (
-  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4 }} whileHover={{ y: -5, scale: 1.02 }}
-    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, padding: 20, borderRadius: 20, color: "#fff", display: "flex", flexDirection: "column", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8, marginBottom: 4 }}>{title}</div>
-    <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
+const GradientCard = ({ title, value, gradient, delay = 0 }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    transition={{ delay }}
+    className="hm-card" 
+    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, color: "#fff", display: "flex", flexDirection: "column", gap: 8, padding: 24, borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }}
+  >
+    <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>{title}</div>
+    <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
   </motion.div>
 );
 
+// --- CHARTS DATA MOCKS ---
+const revenueData = [
+  { name: "Jan", rev: 450000, exp: 200000 },
+  { name: "Feb", rev: 520000, exp: 210000 },
+  { name: "Mar", rev: 380000, exp: 180000 },
+  { name: "Apr", rev: 850000, exp: 300000 },
+  { name: "May", rev: 680000, exp: 250000 },
+  { name: "Jun", rev: 950000, exp: 280000 }
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. MANAGER / OWNER MODE (Executive Cockpit)
+// 1. MANAGER / OWNER MODE (Executive Command Center)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { bookingsAPI, enquiriesAPI } from "../services/api";
+
 
 function ExecutiveCockpit() {
-  const [stats, setStats] = React.useState({
+  const [stats, setStats] = useState({
     totalRevenue: 0,
     totalBookings: 0,
     confirmedCount: 0,
@@ -196,14 +206,13 @@ function ExecutiveCockpit() {
         </div>
       </motion.div>
 
-      <div className="hm-dash-stats">
+      <div className="hm-dash-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
         <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue || 0)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
         <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.3} />
         <GradientCard title="Pending Pmt" value={formatLakhs(stats.pendingAmount || 0)} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
         <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
       </div>
-
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
         <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", overflow: "hidden" }}>
@@ -288,14 +297,13 @@ function ExecutiveCockpit() {
             })}
           </div>
         </div>
-        
       </div>
     </>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. RECEPTION MODE (Sales & Enquiries)
+// RECEPTION & OPERATIONS FALLBACKS (Kept Minimal for now)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ReceptionCockpit() {
@@ -410,10 +418,6 @@ function ReceptionCockpit() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. OPERATIONS MODE (Jobs & Vendors)
-// ─────────────────────────────────────────────────────────────────────────────
-
 function OperationsCockpit() {
   return (
     <>
@@ -481,16 +485,18 @@ export default function Dashboard() {
   const { role } = useRole();
 
   return (
-    <div className="hm-dash-wrapper">
-      {role === "Owner" || role === "Manager" || role === "Admin" ? (
-        <ExecutiveCockpit />
-      ) : role === "Sales" ? (
-        <ReceptionCockpit />
-      ) : role === "Operations" ? (
-        <OperationsCockpit />
-      ) : (
-        <ExecutiveCockpit />
-      )}
+    <div className="min-h-screen bg-[#F9FAFB] p-4 md:p-8">
+      <div className="max-w-screen-2xl mx-auto">
+        {role === "Owner" || role === "Manager" || role === "Admin" ? (
+          <ExecutiveCockpit />
+        ) : role === "Sales" ? (
+          <ReceptionCockpit />
+        ) : role === "Operations" ? (
+          <OperationsCockpit />
+        ) : (
+          <ExecutiveCockpit />
+        )}
+      </div>
     </div>
   );
 }

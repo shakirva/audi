@@ -17,6 +17,8 @@ export default function Collections() {
   const [filterDate, setFilterDate] = useState("All Time");
   const [filterMode, setFilterMode] = useState("All Modes");
   const [filterCollectedBy, setFilterCollectedBy] = useState("All Staff");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const { confirm } = useConfirm();
 
   useEffect(() => {
@@ -100,6 +102,13 @@ export default function Collections() {
         if (pDate.getMonth() !== lastMonth.getMonth() || pDate.getFullYear() !== lastMonth.getFullYear()) return false;
       } else if (filterDate === "This Year") {
         if (pDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Custom Date") {
+        if (customStartDate && pDate < new Date(customStartDate)) return false;
+        if (customEndDate) {
+          const end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (pDate > end) return false;
+        }
       }
     }
 
@@ -131,12 +140,23 @@ export default function Collections() {
 
       {/* Advanced Filter Bar */}
       <div className="flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-        <select className="w-full sm:w-auto" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
-          <option value="All Time">Date: All Time</option>
-          <option value="This Month">Date: This Month</option>
-          <option value="Last Month">Date: Last Month</option>
-          <option value="This Year">Date: This Year</option>
-        </select>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", flex: 1 }}>
+          <select className="w-full sm:w-auto" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
+            <option value="All Time">Date: All Time</option>
+            <option value="This Month">Date: This Month</option>
+            <option value="Last Month">Date: Last Month</option>
+            <option value="This Year">Date: This Year</option>
+            <option value="Custom Date">Date: Custom Date</option>
+          </select>
+
+          {filterDate === "Custom Date" && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, outline: "none" }} />
+              <span style={{ color: "#64748b", fontSize: 13 }}>to</span>
+              <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, outline: "none" }} />
+            </div>
+          )}
+        </div>
         
         <select className="w-full sm:w-auto" value={filterMode} onChange={(e) => setFilterMode(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, color: "#334155", outline: "none", cursor: "pointer", background: "#f8fafc" }}>
           <option value="All Modes">Mode: All Modes</option>

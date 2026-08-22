@@ -46,7 +46,7 @@ export default function BookingReports() {
 
   const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
   const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
-  const uniqueParties = Array.from(new Set(bookings.map(b => b.bookedBy || b.bookingParty).filter(Boolean)));
+  const standardParties = ["Bride Team", "Groom Team", "Both (Shared Booking)", "Other"];
 
   const filteredBookings = bookings.filter(b => {
     if (filterHall !== "All Halls" && b.hall !== filterHall) return false;
@@ -57,7 +57,7 @@ export default function BookingReports() {
     const placeName = b.Customer?.city || b.place || b.address;
     if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
     
-    const partyName = b.bookedBy || b.bookingParty;
+    const partyName = b.bookingParty;
     if (filterParty !== "All Parties" && partyName !== filterParty) return false;
     
     if (filterDate !== "All Time") {
@@ -231,7 +231,7 @@ export default function BookingReports() {
         
         <select value={filterParty} onChange={(e) => setFilterParty(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Parties">Booked By: All</option>
-          {uniqueParties.map((party, i) => (
+          {standardParties.map((party, i) => (
             <option key={i} value={party}>{party}</option>
           ))}
         </select>

@@ -29,6 +29,7 @@ const deleteCheckRoutes = require("./delete-checks");
 const attendanceRoutes = require("./attendance");
 const leavesRoutes = require("./leaves");
 const auditLogsRoutes = require("./auditLogs");
+const inventoryRoutes = require("./inventory");
 
 // Mount routes
 router.use("/bookings", bookingRoutes);
@@ -49,6 +50,7 @@ router.use("/delete-checks", deleteCheckRoutes);
 router.use("/attendance", attendanceRoutes);
 router.use("/leaves", leavesRoutes);
 router.use("/audit-logs", auditLogsRoutes);
+router.use("/inventory", inventoryRoutes);
 
 // Future v1 routes will be added here:
 // router.use("/enquiries", enquiryRoutes);

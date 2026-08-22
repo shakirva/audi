@@ -70,6 +70,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     depositAmount: "",
     balanceAmount: "",
     paymentRemarks: "",
+    collectionDate: new Date().toISOString().split("T")[0],
     facilities: [],
   });
 
@@ -122,6 +123,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         upiAmount: "",
         accountName: "",
         paymentRemarks: "",
+        collectionDate: new Date().toISOString().split("T")[0],
         facilities: [],
         // Reset personal
         bookedBy: "", bookingParty: "", whatsapp: "",
@@ -135,9 +137,25 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
 
   useEffect(() => {
     if (open) {
-      import("../services/api").then(({ settingsAPI }) => {
-        settingsAPI.get().then(res => setSettings(res.data?.data || {}));
-      }).catch(() => {});
+      const fetchSettings = async () => {
+        try {
+          const res = await settingsAPI.get();
+          const data = res.data.data || {};
+          setSettings(data);
+          const halls = data.halls || [];
+          const selectedHall = halls.find(h => h.name === formData.hall);
+          if (selectedHall && selectedHall.gstRate !== undefined) {
+            // Use functional updater to get latest formData (avoids stale closure)
+            setFormData(prev => {
+              const pct = Number(selectedHall.gstRate) || 0;
+              const total = Number(prev.totalAmount) || 0;
+              const taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+              return { ...prev, taxPercentage: pct, taxes };
+            });
+          }
+        } catch (e) { console.warn("Could not fetch hall GST settings"); }
+      };
+      fetchSettings();
     }
   }, [open]);
 
@@ -801,6 +819,17 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                     </select>
                   </div>
                 )}
+                <div>
+                  <label style={labelSt}>Collection Date</label>
+                  <input
+                    type="date"
+                    value={formData.collectionDate || new Date().toISOString().split("T")[0]}
+                    onChange={e => setFormData({ ...formData, collectionDate: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
+                </div>
                 <div style={{ gridColumn: formData.paymentMethod === "UPI" || formData.paymentMethod === "Bank Transfer" ? "auto" : "1 / -1" }}>
                   <label style={labelSt}>Payment Remarks</label>
                   {inp("paymentRemarks", { placeholder: "e.g. Paid by cash on 11/07/26. 375000 received..." })}

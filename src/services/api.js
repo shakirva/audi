@@ -64,6 +64,12 @@ export const bookingsAPI = {
 // ═══════════════════════════════════
 // EXPENSES
 // ═══════════════════════════════════
+export const inventoryAPI = {
+  getAll: () => api.get("/v1/inventory"),
+  create: (data) => api.post("/v1/inventory", data),
+  update: (id, data) => api.put(`/v1/inventory/${id}`, data),
+  remove: (id) => api.delete(`/v1/inventory/${id}`)
+};
 export const expensesAPI = {
   getAll: (params) => api.get("/v1/expenses", { params }),
   create: (data) => api.post("/v1/expenses", data),
@@ -172,7 +178,7 @@ export const mastersAPI = {
   getAll: (params) => api.get("/v1/masters", { params }), // fallback if needed, but not matching backend route
   getByType: (type) => api.get(`/v1/masters/${type}`),
   create: (data) => api.post(`/v1/masters/${data.type}`, data),
-  update: (id, data) => api.put(`/v1/masters/${data.type}/${id}`, data),
+  update: (type, id, data) => api.put(`/v1/masters/${type}/${id}`, data),
   remove: (type, id) => api.delete(`/v1/masters/${type}/${id}`),
 };
 

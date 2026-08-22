@@ -5,6 +5,7 @@
 const expenseRepository = require("../repositories/expense.repository");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 const accountingEngine = require("./accountingEngine.service");
+const { sequelize } = require("../models");
 
 class ExpenseService {
   /**
@@ -48,8 +49,8 @@ class ExpenseService {
         createdBy: data.createdBy || null,
         paymentMode: data.paymentMode || "Cash",
       });
-    } catch (e) {
-      console.error("[ExpenseService] Failed to create accounting entry:", e);
+    } catch (err) {
+      console.error("[ExpenseService] Accounting engine error:", err);
     }
 
     return expense;

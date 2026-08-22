@@ -3,6 +3,7 @@ import { Clock, Calendar as CalendarIcon, CheckCircle, XCircle, AlertCircle, Ref
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
+import { generateAttendanceReport } from "../utils/documentGenerator";
 
 import { attendanceAPI, usersAPI } from "../services/api";
 export default function Attendance() {
@@ -139,6 +140,31 @@ export default function Attendance() {
     }
   };
 
+  const handleExportMonthly = async () => {
+    try {
+      const dateObj = new Date(selectedDate);
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth() + 1; // 1-12
+      const monthName = dateObj.toLocaleString('default', { month: 'long' });
+
+      addToast("Generating report...", "info");
+
+      const [attRes, userRes] = await Promise.all([
+        attendanceAPI.getAll({ month, year }),
+        usersAPI.getAll()
+      ]);
+
+      const attData = attRes.data?.success ? attRes.data.data : [];
+      const allUsers = userRes.data?.success ? userRes.data.data.filter(u => u.status !== false && u.role !== "SuperAdmin") : [];
+
+      await generateAttendanceReport(monthName, year, attData, allUsers);
+      addToast("Report generated successfully!", "success");
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to generate report", "error");
+    }
+  };
+
   const todayEntry = attendance.find(a => a.userId === user?.id && a.date === new Date().toISOString().split("T")[0]);
 
   const filteredAttendance = attendance.filter(a => a.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -185,14 +211,19 @@ export default function Attendance() {
 
       {!isStaffView && (
         <div className="flex flex-col sm:flex-row gap-4" style={{ marginBottom: 20, alignItems: "flex-start", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
-            <input 
-              type="date" 
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>Select Date:</label>
+              <input 
+                type="date" 
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
+              />
+            </div>
+            <button onClick={handleExportMonthly} style={{ background: "#1B4332", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              Export Monthly Report
+            </button>
           </div>
           <div style={{ position: "relative" }} className="w-full sm:w-72">
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />

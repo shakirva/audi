@@ -17,6 +17,7 @@ export default function PaymentsAndReceipts() {
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
   const [historyBooking, setHistoryBooking] = useState(null);
+  const [venueName, setVenueName] = useState("Our Auditorium");
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -36,6 +37,14 @@ export default function PaymentsAndReceipts() {
       setLoading(false);
     }
   };
+
+  // Fetch venue name for dynamic branding
+  useEffect(() => {
+    settingsAPI.get().then(res => {
+      const name = res.data?.data?.venueName;
+      if (name) setVenueName(name);
+    }).catch(() => {});
+  }, []);
 
   const sendPaymentReminder = (b) => {
     const total = Number(b.totalAmount) || 0;

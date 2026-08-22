@@ -45,21 +45,39 @@ const Payment = sequelize.define("Payment", {
   hooks: {
     beforeValidate: async (payment, options) => {
       if (!payment.paymentNumber) {
-        // Use MAX to find the highest existing payment number (including soft-deleted rows)
-        // to avoid duplicate key collisions from paranoid-deleted records
-        const result = await sequelize.query(
-          `SELECT MAX(CAST(SUBSTRING("paymentNumber" FROM 4) AS INTEGER)) AS max_num
-           FROM "Payments"
-           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
-             AND "paymentNumber" ~ '^PAY[0-9]+$'`,
-          {
-            replacements: { tenantId: payment.tenantId, environmentId: payment.environmentId },
-            type: sequelize.QueryTypes.SELECT,
-            transaction: options.transaction,
+        // Fetch Settings for receipt prefix
+        const Settings = sequelize.models.Settings;
+        let prefix = "PAY";
+        if (Settings) {
+          const settings = await Settings.findOne({ 
+            where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+            transaction: options.transaction
+          });
+          if (settings && settings.receiptPrefix) {
+            prefix = settings.receiptPrefix;
           }
-        );
-        const nextNum = (result[0]?.max_num || 0) + 1;
-        payment.paymentNumber = `PAY${String(nextNum).padStart(5, "0")}`;
+        }
+
+        // Find highest existing paymentNumber (including soft-deleted) to guarantee uniqueness
+        const lastPayment = await sequelize.models.Payment.findOne({
+          where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+          order: [["id", "DESC"]],
+          attributes: ["paymentNumber"],
+          paranoid: false, // include soft-deleted records
+          transaction: options.transaction
+        });
+
+        let nextNum = 1;
+        if (lastPayment && lastPayment.paymentNumber) {
+          let idPart = lastPayment.paymentNumber;
+          if (idPart.startsWith(prefix)) {
+            idPart = idPart.substring(prefix.length);
+          }
+          const match = idPart.match(/\d+$/);
+          if (match) nextNum = parseInt(match[0], 10) + 1;
+        }
+
+        payment.paymentNumber = `${prefix}${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

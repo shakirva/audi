@@ -37,7 +37,7 @@ const textLight = [100, 116, 139]; // Slate 500
 const drawHeader = async (doc, title, booking, settings = {}) => {
   // Header background
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 48, "F");
+  doc.rect(0, 0, 210, 44, "F");
 
   // Logo / Brand
   doc.setTextColor(255, 255, 255);
@@ -46,39 +46,39 @@ const drawHeader = async (doc, title, booking, settings = {}) => {
   if (settings.logoUrl) {
     try {
       const imgData = await fetchImage(settings.logoUrl);
-      doc.addImage(imgData, 'PNG', 14, 9, 30, 30); // 30x30 logo
-      textX = 50;
+      // Logo sized to match heading text height (top of logo = top of heading, bottom = bottom of heading)
+      doc.addImage(imgData, 'PNG', 14, 10, 24, 24);
+      textX = 42;
     } catch (e) {
       console.warn("Failed to load logo", e);
     }
   }
 
-  // Reduce font size to prevent overlapping
-  doc.setFontSize(16);
+  // Left side — Venue info (vertically centered: y=12 to y=36)
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 20);
+  doc.text(settings.venueName || "VENUEZA", textX, 14);
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 26);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 20);
   
   let contactStr = [];
   if (settings.phone) contactStr.push(settings.phone);
   if (settings.email) contactStr.push(settings.email);
   
   if (contactStr.length > 0) {
-    doc.text(contactStr.join(" | "), textX, 32);
+    doc.text(contactStr.join(" | "), textX, 26);
   }
 
   if (settings.gstin) {
-    doc.text(`GSTIN: ${settings.gstin}`, textX, 38);
+    doc.text(`GSTIN: ${settings.gstin}`, textX, 32);
   }
 
-  // Title & Info
-  doc.setFontSize(16);
+  // Right side — Document title (vertically centered)
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
   doc.text(title, 196, 22, { align: "right" });
-  doc.setFontSize(9);
-  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 196, 30, { align: "right" });
 };
 
 const drawFooter = (doc, settings = {}) => {
@@ -117,10 +117,11 @@ export const generateQuotation = async (data) => {
   doc.setFont("helvetica", "bold");
   doc.text("Event Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, 120, 62);
-  doc.text(`Event: ${booking.eventType || "N/A"}`, 120, 68);
-  doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 74);
-  doc.text(`Guests: ${booking.guests || 0}`, 120, 80);
+  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 62);
+  doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, 120, 68);
+  doc.text(`Event: ${booking.eventType || "N/A"}`, 120, 74);
+  doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 80);
+  doc.text(`Guests: ${booking.guests || 0}`, 120, 86);
 
   // Pricing Table
     autoTable(doc, {
@@ -167,6 +168,7 @@ export const generateAgreement = async (data) => {
   
   // Custom Table for Contract fields matching the physical format
   const tableData = [
+    ["Booking Reference", booking.bookingId || booking.id],
     ["Name of the Host", booking.customerName || "N/A"],
     ...(clientGst && clientGst !== "undefined" && clientGst !== "null" ? [["Client GSTIN", clientGst]] : []),
     ["Date & Time of function", `${booking.date ? new Date(booking.date).toLocaleDateString("en-IN") : "TBD"} | ${booking.session || "Full Day"}`],
@@ -190,7 +192,7 @@ export const generateAgreement = async (data) => {
     startY: 65,
     theme: "grid",
     body: tableData,
-    styles: { fontSize: 10, cellPadding: 4 },
+    styles: { fontSize: 9, cellPadding: 2.5 },
     columnStyles: {
       0: { fontStyle: "bold", textColor: primaryColor, fillColor: [248, 250, 252], cellWidth: 70 },
       1: { textColor: textDark }
@@ -201,14 +203,14 @@ export const generateAgreement = async (data) => {
 
   const finalY = doc.lastAutoTable.finalY || 160;
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Both Parties Agree Terms & Conditions", 14, finalY + 15);
+  doc.text("Both Parties Agree Terms & Conditions", 14, finalY + 10);
   
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Name & Signature of Host with Date", 14, finalY + 35);
-  doc.text("Name & Signature of Venue Representative with Date", 100, finalY + 35);
+  doc.text("Name & Signature of Host with Date", 14, finalY + 25);
+  doc.text("Name & Signature of Venue Representative with Date", 100, finalY + 25);
   
   drawFooter(doc);
   doc.save(`Agreement_${booking.bookingNumber || booking.id}.pdf`);
@@ -238,8 +240,9 @@ export const generateInvoice = async (data) => {
   doc.setFont("helvetica", "bold");
   doc.text("Invoice Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 62);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 68);
+  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 62);
+  doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 74);
 
   const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
   
@@ -480,7 +483,7 @@ export const generateReceipt = async (payment, booking) => {
   
   // Header
   doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 48, "F");
+  doc.rect(0, 0, 210, 44, "F");
 
   // Logo / Brand
   doc.setTextColor(255, 255, 255);
@@ -489,38 +492,40 @@ export const generateReceipt = async (payment, booking) => {
   if (settings.logoUrl) {
     try {
       const imgData = await fetchImage(settings.logoUrl);
-      doc.addImage(imgData, 'PNG', 14, 9, 30, 30);
-      textX = 50;
+      doc.addImage(imgData, 'PNG', 14, 10, 24, 24);
+      textX = 42;
     } catch (e) {
       console.warn("Failed to load logo", e);
     }
   }
 
-  doc.setFontSize(18);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(settings.venueName || "VENUEZA", textX, 20);
+  doc.text(settings.venueName || "VENUEZA", textX, 14);
   
-  doc.setFontSize(10);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(settings.location || "Premium Venue & Event Management", textX, 27);
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 20);
   
   let contactStr = [];
   if (settings.phone) contactStr.push(settings.phone);
   if (settings.email) contactStr.push(settings.email);
   
   if (contactStr.length > 0) {
-    doc.text(contactStr.join(" | "), textX, 33);
+    doc.text(contactStr.join(" | "), textX, 26);
   }
 
   if (settings.gstin) {
-    doc.text(`GSTIN: ${settings.gstin}`, textX, 39);
+    doc.text(`GSTIN: ${settings.gstin}`, textX, 32);
   }
 
-  doc.setFontSize(16);
-  doc.text("OFFICIAL RECEIPT", 196, 25, { align: "right" });
-  doc.setFontSize(10);
-  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 32, { align: "right" });
-  doc.text(`Receipt No: ${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}`, 196, 39, { align: "right" });
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("OFFICIAL RECEIPT", 196, 14, { align: "right" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
+  doc.text(`Bill No: ${booking?.bookingId || booking?.id || payment.paymentNumber || payment.id}`, 196, 28, { align: "right" });
 
   // Receipt Body Border
   doc.setDrawColor(200, 200, 200);
@@ -609,4 +614,113 @@ export const generateReceipt = async (payment, booking) => {
 
   drawFooter(doc);
   doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}.pdf`);
+};
+
+export const generateAttendanceReport = async (monthName, year, attendanceData, usersData) => {
+  const doc = new jsPDF();
+  const settings = await getSettings();
+
+  await drawHeader(doc, "MONTHLY ATTENDANCE REPORT", null, settings);
+
+  doc.setTextColor(...textDark);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Report Details", 14, 56);
+  
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...textLight);
+  doc.text(`Month: ${monthName} ${year}`, 14, 62);
+  doc.text(`Generated On: ${new Date().toLocaleDateString()}`, 14, 67);
+
+  // Group attendance by user
+  const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  
+  const tableData = usersData.map(u => {
+    const userRecords = attendanceData.filter(a => a.userId === u.id);
+    let presentDays = 0;
+    userRecords.forEach(a => {
+      if (a.status === "Present" || a.checkIn) presentDays++;
+    });
+    const absentDays = daysInMonth - presentDays;
+    
+    return [
+      u.name,
+      u.role,
+      `${presentDays} Days`,
+      `${absentDays} Days`
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 75,
+    head: [["Staff Name", "Role", "Present", "Absent"]],
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: [241, 245, 249], textColor: textDark, fontStyle: 'bold', fontSize: 9 },
+    bodyStyles: { textColor: [51, 65, 85], fontSize: 9 },
+    alternateRowStyles: { fillColor: [250, 250, 250] },
+    margin: { left: 14, right: 14 },
+    styles: { cellPadding: 5 }
+  });
+
+  drawFooter(doc, settings);
+  doc.save(`Attendance_Report_${monthName}_${year}.pdf`);
+};
+
+export const generateInventoryReport = async (items) => {
+  const doc = new jsPDF();
+  const settings = await getSettings();
+
+  await drawHeader(doc, "INVENTORY REPORT", null, settings);
+
+  doc.setTextColor(...textDark);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generated on: ${new Date().toLocaleDateString("en-IN")}`, 14, 52);
+  doc.text(`Total Items: ${items.length}`, 196, 52, { align: "right" });
+
+  const tableBody = items.map(item => [
+    item.itemName,
+    item.category || "-",
+    item.totalQuantity.toString(),
+    item.availableQuantity.toString(),
+    item.condition,
+    item.unitPrice ? `Rs ${parseFloat(item.unitPrice).toLocaleString("en-IN")}` : "-",
+    item.notes || "-"
+  ]);
+
+  autoTable(doc, {
+    startY: 58,
+    head: [["Item Name", "Category", "Total Qty", "Available Qty", "Condition", "Unit Price", "Notes"]],
+    body: tableBody,
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 4, textColor: textDark },
+    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 35 },
+      1: { cellWidth: 25 },
+      2: { cellWidth: 20, halign: "center" },
+      3: { cellWidth: 25, halign: "center", fontStyle: "bold" },
+      4: { cellWidth: 20 },
+      5: { cellWidth: 25, halign: "right" },
+      6: { cellWidth: "auto" }
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        // Red color if available < 20% of total
+        const total = parseFloat(data.row.raw[2]);
+        const avail = parseFloat(data.row.raw[3]);
+        if (!isNaN(total) && !isNaN(avail) && total > 0 && avail < total * 0.2) {
+          data.cell.styles.textColor = [220, 38, 38]; // Red
+        } else {
+          data.cell.styles.textColor = [5, 150, 105]; // Green
+        }
+      }
+    }
+  });
+
+  drawFooter(doc, settings);
+  doc.save(`Inventory_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
 };

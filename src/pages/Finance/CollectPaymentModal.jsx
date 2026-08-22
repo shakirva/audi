@@ -19,6 +19,7 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
   const [collectedBy, setCollectedBy] = useState("");
   const [upiName, setUpiName] = useState("");
   const [bankName, setBankName] = useState("");
+  const [collectionDate, setCollectionDate] = useState(new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     if (open) {
@@ -60,7 +61,7 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
         paymentMode: method,
         referenceNumber: finalRef,
         notes: finalNotes,
-        paymentDate: new Date().toISOString()
+        paymentDate: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
       });
       addToast("Payment collected successfully!", "success");
       onSuccess();
@@ -213,6 +214,16 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
                 />
               </div>
             )}
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Collection Date</label>
+              <input 
+                type="date"
+                value={collectionDate}
+                onChange={e => setCollectionDate(e.target.value)}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff" }}
+              />
+            </div>
 
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>Notes (Optional)</label>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
@@ -22,9 +22,14 @@ export default function Bookings() {
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const { bookings, refetch } = useBookings();
   const [settings, setSettings] = useState({});
+  const [venueName, setVenueName] = useState("Our Auditorium");
 
   useEffect(() => {
-    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
+    settingsAPI.get().then(res => {
+      setSettings(res.data?.data || {});
+      const name = res.data?.data?.venueName;
+      if (name) setVenueName(name);
+    }).catch(() => {});
   }, []);
 
   const getStatusColor = (status) => {

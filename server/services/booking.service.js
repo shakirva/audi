@@ -10,6 +10,7 @@ const availabilityService = require("./availability.service");
 const { BadRequestError, NotFoundError, ConflictError } = require("../helpers/errors");
 const paymentService = require("./payment.service");
 const accountingEngine = require("./accountingEngine.service");
+const { sequelize } = require("../models");
 
 class BookingService {
   /**
@@ -148,7 +149,6 @@ class BookingService {
     } catch (e) {
       console.error("[BookingService] Accounting engine error:", e);
     }
-    
     if (Number(data.advance) > 0 && data.paymentMethod) {
       try {
         if (data.paymentMethod === "UPI" && data.upiAmount && data.upiAmount.includes(",")) {
@@ -170,7 +170,7 @@ class BookingService {
                  customerId: booking.customerId,
                  amount: amt,
                  paymentMode: data.paymentMethod,
-                 paymentDate: new Date().toISOString(),
+                 paymentDate: data.collectionDate ? new Date(data.collectionDate).toISOString() : new Date().toISOString(),
                  referenceNumber: ids[i] || "",
                  notes: formattedNotes,
                  bankId: null 
@@ -187,7 +187,7 @@ class BookingService {
             customerId: booking.customerId,
             amount: Number(data.advance),
             paymentMode: data.paymentMethod,
-            paymentDate: new Date().toISOString(),
+            paymentDate: data.collectionDate ? new Date(data.collectionDate).toISOString() : new Date().toISOString(),
             referenceNumber: data.upiId || data.accountName || "",
             notes: formattedNotes,
             bankId: null // Optional depending on schema
@@ -281,7 +281,7 @@ class BookingService {
                 customerId: booking.customerId,
                 amount: amt,
                 paymentMode: data.paymentMethod,
-                paymentDate: new Date().toISOString(),
+                paymentDate: data.collectionDate ? new Date(data.collectionDate).toISOString() : new Date().toISOString(),
                 referenceNumber: ids[i] || "",
                 notes: (collectors[i] || "") + (names[i] ? ` - ${names[i]}` : ""),
                 bankId: null
@@ -295,7 +295,7 @@ class BookingService {
             customerId: booking.customerId,
             amount: advanceDiff,
             paymentMode: data.paymentMethod,
-            paymentDate: new Date().toISOString(),
+            paymentDate: data.collectionDate ? new Date(data.collectionDate).toISOString() : new Date().toISOString(),
             referenceNumber: data.upiId || data.accountName || "",
             notes: data.paymentRemarks || data.receivedBy || "Payment recorded via booking edit",
             bankId: null

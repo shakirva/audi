@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit, Edit3, UploadCloud, Loader, Calendar } from "lucide-react";
+import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit, Edit3, UploadCloud, Loader, Calendar, FileText } from "lucide-react";
 import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
@@ -180,6 +180,7 @@ export default function Settings() {
     email:    "",
     gstin:    "",
     bookingPrefix: "",
+    receiptPrefix: "",
     logoUrl: "",
     legalName: "",
     bankName: "",
@@ -257,6 +258,7 @@ export default function Settings() {
         email: data.email || "",
         gstin: data.gstin || "",
         bookingPrefix: data.bookingPrefix || "BK",
+        receiptPrefix: data.receiptPrefix || "PAY",
         logoUrl: data.logoUrl || "",
         legalName: data.legalName || "",
         bankName: data.bankName || "",
@@ -344,7 +346,7 @@ export default function Settings() {
     try {
       await settingsAPI.update({ 
         venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, 
-        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix,
+        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix, receiptPrefix: venue.receiptPrefix,
         logoUrl: venue.logoUrl, legalName: venue.legalName, bankName: venue.bankName, accountName: venue.accountName, accountNumber: venue.accountNumber, ifscCode: venue.ifscCode 
       });
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
@@ -881,6 +883,13 @@ export default function Settings() {
             <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
           </div>
           <div>
+            <label style={labelSt}>🧾 Receipt ID Prefix</label>
+            <input name="receiptPrefix" value={venue.receiptPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. PAY, RCP, etc."
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Receipt IDs (e.g. {venue.receiptPrefix || "PAY"}00046)</p>
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
             <label style={labelSt}><ImagePlus size={11} /> Logo URL</label>
             <div style={{ display: "flex", gap: 8 }}>
               <input name="logoUrl" value={venue.logoUrl} onChange={handleVenueChange} style={{ ...iStyle, flex: 1 }} placeholder="https://..."
@@ -1121,21 +1130,25 @@ export default function Settings() {
               background: "#fafafa"
             }}>
               {editFacilityId === fac.id ? (
-                <div style={{ display: "flex", gap: 12, flex: 1, alignItems: "flex-end", marginRight: 16 }}>
-                  <div style={{ flex: 1 }}>
+                <div className="flex flex-col sm:flex-row gap-3 w-full items-start sm:items-end">
+                  <div className="w-full sm:flex-1">
                     <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Name</label>
                     <input value={editFacilityData.name} onChange={e => setEditFacilityData({ ...editFacilityData, name: e.target.value })} style={iStyle} />
                   </div>
-                  <div style={{ width: 100 }}>
-                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Price (₹)</label>
-                    <input type="number" value={editFacilityData.price} onChange={e => setEditFacilityData({ ...editFacilityData, price: e.target.value })} style={iStyle} />
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <div className="flex-1 sm:w-[100px]">
+                      <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Price (₹)</label>
+                      <input type="number" value={editFacilityData.price} onChange={e => setEditFacilityData({ ...editFacilityData, price: e.target.value })} style={iStyle} />
+                    </div>
+                    <div className="flex-1 sm:w-[80px]">
+                      <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>GST (%)</label>
+                      <input type="number" value={editFacilityData.gst} onChange={e => setEditFacilityData({ ...editFacilityData, gst: e.target.value })} style={iStyle} />
+                    </div>
                   </div>
-                  <div style={{ width: 80 }}>
-                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>GST (%)</label>
-                    <input type="number" value={editFacilityData.gst} onChange={e => setEditFacilityData({ ...editFacilityData, gst: e.target.value })} style={iStyle} />
+                  <div className="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                    <button className="flex-1 sm:flex-none" onClick={handleUpdateFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Save</button>
+                    <button className="flex-1 sm:flex-none" onClick={() => setEditFacilityId(null)} style={{ background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Cancel</button>
                   </div>
-                  <button onClick={handleUpdateFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Save</button>
-                  <button onClick={() => setEditFacilityId(null)} style={{ background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Cancel</button>
                 </div>
               ) : (
                 <>
@@ -1167,23 +1180,24 @@ export default function Settings() {
         </div>
 
         {editFacilityId === null && (
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-            <div style={{ flex: 1 }}>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end w-full">
+            <div className="w-full sm:flex-1">
               <label style={labelSt}>New Facility Name</label>
               <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
             </div>
-            <div style={{ width: 150 }}>
-              <label style={labelSt}>Price (₹)</label>
-              <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+            <div className="flex gap-3 w-full sm:w-auto">
+              <div className="flex-1 sm:w-[150px]">
+                <label style={labelSt}>Price (₹)</label>
+                <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+              </div>
+              <div className="flex-1 sm:w-[100px]">
+                <label style={labelSt}>GST (%)</label>
+                <input type="number" value={newFacility.gst} onChange={e => setNewFacility({ ...newFacility, gst: e.target.value })} style={iStyle} placeholder="e.g. 18" />
+              </div>
             </div>
-            <div style={{ width: 100 }}>
-              <label style={labelSt}>GST (%)</label>
-              <input type="number" value={newFacility.gst} onChange={e => setNewFacility({ ...newFacility, gst: e.target.value })} style={iStyle} placeholder="e.g. 18" />
-            </div>
-            <button onClick={handleAddFacility} style={{
-              padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
-              border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
-            }}>+ Add</button>
+            <button className="w-full sm:w-auto mt-1 sm:mt-0" onClick={handleAddFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "0 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", height: 38, whiteSpace: "nowrap" }}>
+              + Add
+            </button>
           </div>
         )}
       </div>
@@ -1742,6 +1756,8 @@ export default function Settings() {
         )}
       </div>
       )}
+
+
 
       {/* ── APP INFO ── */}
       <div style={{ ...cardSt, background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff" }}>
