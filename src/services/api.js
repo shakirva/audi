@@ -56,6 +56,7 @@ export const bookingsAPI = {
   updateStatus: (id, status) => api.patch(`/v1/bookings/${id}/status`, { status }),
   generateInvoice: (id) => api.post(`/v1/bookings/${id}/invoice`),
   remove: (id) => api.delete(`/v1/bookings/${id}`),
+  safeDelete: (id, options) => api.post(`/v1/bookings/${id}/safe-delete`, options),
   getStats: () => api.get("/v1/bookings/stats/dashboard"),
   getComparisonStats: () => api.get("/v1/bookings/stats/comparison"),
 };
@@ -63,6 +64,12 @@ export const bookingsAPI = {
 // ═══════════════════════════════════
 // EXPENSES
 // ═══════════════════════════════════
+export const inventoryAPI = {
+  getAll: () => api.get("/v1/inventory"),
+  create: (data) => api.post("/v1/inventory", data),
+  update: (id, data) => api.put(`/v1/inventory/${id}`, data),
+  remove: (id) => api.delete(`/v1/inventory/${id}`)
+};
 export const expensesAPI = {
   getAll: (params) => api.get("/v1/expenses", { params }),
   create: (data) => api.post("/v1/expenses", data),
@@ -79,15 +86,25 @@ export const availabilityAPI = {
     if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
     return api.get(url);
   },
-  getMonth: (hall, year, month) => {
-    return api.get(`/v1/availability/month?hall=${encodeURIComponent(hall)}&year=${year}&month=${month}`);
+  getMonth: (hall, year, month, ignoreBookingId = null) => {
+    let url = `/v1/availability/month?hall=${encodeURIComponent(hall)}&year=${year}&month=${month}`;
+    if (ignoreBookingId) url += `&ignoreBookingId=${ignoreBookingId}`;
+    return api.get(url);
   },
+};
+
+export const feedbackAPI = {
+  submit: (data) => api.post("/feedback", data),
+  getAll: () => api.get("/feedback")
 };
 
 export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
   update: (data) => api.put("/v1/settings", data),
+  uploadLogo: (formData) => api.post("/v1/settings/upload-logo", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }),
   getCustomers: () => api.get("/v1/settings/customers"),
   getUsers: () => api.get("/v1/settings/users"),
   resetSandbox: () => api.post("/v1/settings/sandbox/reset"),
@@ -114,6 +131,7 @@ export const customersAPI = {
   getById: (id) => api.get(`/v1/customers/${id}`),
   create: (data) => api.post("/v1/customers", data),
   update: (id, data) => api.put(`/v1/customers/${id}`, data),
+  remove: (id) => api.delete(`/v1/customers/${id}`),
   findOrCreate: (data) => api.post("/v1/customers/find-or-create", data),
 };
 
@@ -135,6 +153,8 @@ export const paymentsAPI = {
   getAll: (params) => api.get("/v1/payments", { params }),
   getById: (id) => api.get(`/v1/payments/${id}`),
   create: (data) => api.post("/v1/payments", data),
+  update: (id, data) => api.put(`/v1/payments/${id}`, data),
+  remove: (id) => api.delete(`/v1/payments/${id}`),
   getReceipt: (id) => api.get(`/v1/payments/${id}/receipt`),
 };
 
@@ -146,19 +166,20 @@ export const jobsAPI = {
   getById: (id) => api.get(`/v1/jobs/${id}`),
   create: (data) => api.post("/v1/jobs", data),
   update: (id, data) => api.put(`/v1/jobs/${id}`, data),
-  updateStatus: (id, status) => api.patch(`/v1/jobs/${id}`, { status }),
+  updateStatus: (id, status) => api.patch(`/v1/jobs/${id}/status`, { status }),
   updateChecklist: (id, data) => api.put(`/v1/jobs/${id}/checklist`, data),
+  assignStaff: (id, data) => api.post(`/v1/jobs/${id}/staff`, data),
 };
 
 // ═══════════════════════════════════
 // MASTERS (Halls, Event Types, etc.)
 // ═══════════════════════════════════
 export const mastersAPI = {
-  getAll: (params) => api.get("/v1/masters", { params }),
-  getByType: (type) => api.get("/v1/masters", { params: { type } }),
-  create: (data) => api.post("/v1/masters", data),
-  update: (id, data) => api.put(`/v1/masters/${id}`, data),
-  remove: (id) => api.delete(`/v1/masters/${id}`),
+  getAll: (params) => api.get("/v1/masters", { params }), // fallback if needed, but not matching backend route
+  getByType: (type) => api.get(`/v1/masters/${type}`),
+  create: (data) => api.post(`/v1/masters/${data.type}`, data),
+  update: (type, id, data) => api.put(`/v1/masters/${type}/${id}`, data),
+  remove: (type, id) => api.delete(`/v1/masters/${type}/${id}`),
 };
 
 // ═══════════════════════════════════
@@ -185,6 +206,7 @@ export const accountsAPI = {
   getBookingLedger: (bookingId) => api.get(`/v1/accounts/booking-ledger/${bookingId}`),
   getProfitLoss: (params) => api.get("/v1/accounts/profit-loss", { params }),
   getOutstanding: () => api.get("/v1/accounts/outstanding"),
+  deleteVoucher: (id) => api.delete(`/v1/accounts/vouchers/${id}`),
 };
 
 // ═══════════════════════════════════
@@ -193,9 +215,36 @@ export const accountsAPI = {
 export const adminAPI = {
   getTenants: () => api.get("/admin/tenants"),
   createTenant: (data) => api.post("/admin/tenants", data),
+  updateTenant: (id, data) => api.put(`/admin/tenants/${id}`, data),
   updateSubscription: (id, data) => api.put(`/admin/tenants/${id}/subscription`, data),
   toggleSandbox: (id) => api.patch(`/admin/tenants/${id}/toggle-sandbox`),
   toggleStatus: (id) => api.patch(`/admin/tenants/${id}/status`),
+  impersonate: (id) => api.post(`/admin/tenants/${id}/impersonate`),
+};
+// ═══════════════════════════════════
+// DELETE PRE-CHECKS (Financial Impact)
+// ═══════════════════════════════════
+export const deleteChecksAPI = {
+  booking: (bookingId) => api.get(`/v1/delete-checks/booking/${bookingId}`),
+  customer: (customerId) => api.get(`/v1/delete-checks/customer/${customerId}`),
+  enquiry: (enquiryId) => api.get(`/v1/delete-checks/enquiry/${enquiryId}`),
+};
+// ═══════════════════════════════════
+// HR & STAFF
+// ═══════════════════════════════════
+export const attendanceAPI = {
+  getAll: (params) => api.get("/v1/attendance", { params }),
+  checkIn: (data) => api.post("/v1/attendance/check-in", data),
+  checkOut: (data) => api.post("/v1/attendance/check-out", data),
+  update: (id, data) => api.put(`/v1/attendance/${id}`, data),
+  remove: (id) => api.delete(`/v1/attendance/${id}`),
+};
+
+export const leavesAPI = {
+  getAll: () => api.get("/v1/leaves"),
+  create: (data) => api.post("/v1/leaves", data),
+  update: (id, data) => api.put(`/v1/leaves/${id}`, data),
+  remove: (id) => api.delete(`/v1/leaves/${id}`),
 };
 
 export default api;
@@ -209,4 +258,12 @@ export const usersAPI = {
   update: (id, data) => api.put(`/v1/settings/users/${id}`, data),
   toggle: (id) => api.patch(`/v1/settings/users/${id}/toggle`),
   remove: (id) => api.delete(`/v1/settings/users/${id}`),
+};
+
+// ═══════════════════════════════════
+// AUDIT LOGS (Activity)
+// ═══════════════════════════════════
+export const auditLogsAPI = {
+  getAll: (params) => api.get("/v1/audit-logs", { params }),
+  clear: () => api.delete("/v1/audit-logs/clear"),
 };

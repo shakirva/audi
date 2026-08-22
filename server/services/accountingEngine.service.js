@@ -4,7 +4,8 @@
  * proper double-entry journal entries, vouchers, and update ledgers.
  */
 
-const { ChartOfAccount, JournalEntry, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt, sequelize } = require("../models");
+const { ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt } = require("../models");
+const sequelize = require("../db");
 const { Op } = require("sequelize");
 
 class AccountingEngine {
@@ -478,7 +479,7 @@ class AccountingEngine {
   // until the new JournalEntryLine architecture is fully wired into the reporting dashboards in Phase 2.
 
   async getDashboard({ tenantId, environmentId }) {
-    const { sequelize, ChartOfAccount, JournalEntry, JournalEntryLine } = require("../models");
+    const { sequelize, ChartOfAccount, JournalEntry, JournalEntryLine, JournalEntryLine } = require("../models");
     const { Op } = require("sequelize");
     
     // Aggregation Query to sum debits and credits by account systemKey and type
@@ -616,6 +617,52 @@ class AccountingEngine {
     });
 
     return { data: rows, total: count, page, limit };
+  }
+
+  async deleteVoucher(id, { tenantId, environmentId }) {
+    const voucher = await Voucher.findOne({ where: { id, tenantId, environmentId } });
+    if (!voucher) throw new Error("Voucher not found");
+    
+    // If voucher was auto-generated from a Payment, delete the Payment to ensure 
+    // all cashbooks, receipts, and booking advances are properly reverted
+    if (voucher.sourceModule === 'Payment' && voucher.sourceId) {
+      const paymentService = require("./payment.service");
+      try {
+        await paymentService.removePayment(voucher.sourceId, { tenantId, environmentId });
+        return { success: true, message: "Associated payment and voucher deleted" };
+      } catch (e) {
+        console.warn("[AccountingEngine] Payment already deleted or error:", e.message);
+      }
+    }
+
+    // If voucher was auto-generated from an Expense, delete the Expense
+    if (voucher.sourceModule === 'Expense' && voucher.sourceId) {
+      const expenseService = require("./expense.service");
+      try {
+        await expenseService.deleteExpense(voucher.sourceId, { tenantId, environmentId });
+      } catch (e) {
+        console.warn("[AccountingEngine] Expense already deleted or error:", e.message);
+      }
+    }
+
+    // Fallback: Delete manually created voucher or orphan voucher
+    const t = await sequelize.transaction();
+    try {
+      // Delete associated journal entries
+      await JournalEntry.destroy({
+        where: { voucherId: voucher.id, tenantId, environmentId },
+        transaction: t
+      });
+      
+      // Delete the voucher itself
+      await voucher.destroy({ transaction: t });
+      
+      await t.commit();
+      return { success: true };
+    } catch (error) {
+      await t.rollback();
+      throw error;
+    }
   }
 
   // ═══════════════════════════════════

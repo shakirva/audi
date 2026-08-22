@@ -67,14 +67,16 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
-      "gallery", "eventTypes", "sessions", "expenseCategories", "places"
+      "gallery", "eventTypes", "sessions", "expenseCategories", "places",
+      "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "accountNumber", "ifscCode", "allowPastDateBooking"
     ];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];
     });
     // In Sequelize, if you modify a JSONB field you might need to use changed()
     // but typically direct assignment works if you reassign the whole object.
-    await settings.save();
+    console.log("SAVING SETTINGS:", req.body); await settings.save();
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: "Failed to update settings" });

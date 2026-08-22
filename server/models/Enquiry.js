@@ -16,9 +16,13 @@ const Enquiry = sequelize.define("Enquiry", {
   enquiryNumber: { type: DataTypes.STRING, allowNull: false },
   customerId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: { model: "Customers", key: "id" },
   },
+  enquirerName: { type: DataTypes.STRING, allowNull: true },
+  enquirerPhone: { type: DataTypes.STRING, allowNull: true },
+  enquirerArea: { type: DataTypes.STRING, allowNull: true },
+  enquirerAddress: { type: DataTypes.TEXT, allowNull: true },
   eventType: { type: DataTypes.STRING, allowNull: false },
   tentativeDate: { type: DataTypes.STRING, allowNull: true },
   session: { type: DataTypes.ENUM("Morning", "Afternoon", "Evening", "Full Day"), allowNull: true },
@@ -31,7 +35,10 @@ const Enquiry = sequelize.define("Enquiry", {
     references: { model: "Users", key: "id" },
   },
   status: {
-    type: DataTypes.ENUM("New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Cancelled", "Lost"),
+    type: DataTypes.ENUM(
+      "New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Cancelled", "Lost",
+      "Call them back", "Not attending", "Wrong number", "Need a demo", "Rejected", "Got another Number", "Not interested", "Brochure Sent (WhatsApp)", "Direct Meet"
+    ),
     defaultValue: "New Enquiry",
   },
   leadScore: {

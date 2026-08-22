@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save } from "lucide-react";
-import { usersAPI } from "../services/api";
+import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save, Trash2 } from "lucide-react";
+import { usersAPI, jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
+import { useConfirm } from "../components/ConfirmProvider";
+import { useRole } from "../context/RoleContext";
 
 function StaffModal({ open, onClose, onSuccess, editData }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "Sales", password: "" });
@@ -82,13 +84,125 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
   );
 }
 
+function AssignJobModal({ open, onClose, staffMember, tSlug }) {
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDate, setJobDate] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    if (open) {
+      setJobTitle("");
+      setJobDate("");
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    if (!jobTitle.trim()) return addToast("Please enter a job title", "error");
+    
+    setLoading(true);
+    
+    setTimeout(() => {
+      
+      const jobId = "LOCAL_" + Date.now();
+      const newJob = {
+        id: jobId,
+        jobNumber: "JOB" + String(Date.now()).slice(-4),
+        customerName: "Internal Task",
+        eventType: jobTitle,
+        status: "Planning",
+        createdAt: new Date().toISOString(),
+        eventDate: jobDate,
+        hall: "N/A",
+        Booking: { 
+          customerName: "Internal Task", 
+          eventType: jobTitle, 
+          hall: "N/A", 
+          date: jobDate,
+          session: "Full Day",
+          totalAmount: 0
+        }
+      };
+
+      // 1. Add Job to localJobs
+      const localJobs = JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]");
+      localJobs.unshift(newJob);
+      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(localJobs));
+
+      // 2. Assign staff to localStaff for this job
+      const localStaff = JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}");
+      const newStaff = { 
+        id: Date.now(), 
+        User: { id: staffMember.id, name: staffMember.name }, 
+        role: staffMember.role || "Staff", 
+        name: staffMember.name, 
+        userId: staffMember.id 
+      };
+      localStaff[jobId] = [newStaff];
+      localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(localStaff));
+
+      setLoading(false);
+      addToast(`Assigned "${jobTitle}" to ${staffMember.name} successfully!`, "success");
+      onClose();
+    }, 600);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 20, overflow: "hidden" }}>
+        <div style={{ background: "linear-gradient(135deg, #0D2418, #1B4332)", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#fff" }}>Assign Job to {staffMember?.name}</h2>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", color: "#fff", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+        </div>
+        <form onSubmit={handleAssign} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Job / Task Description *</label>
+            <input 
+              required 
+              type="text"
+              value={jobTitle} 
+              onChange={e => setJobTitle(e.target.value)} 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} 
+              placeholder="e.g. Manage catering for evening event" 
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Date</label>
+            <input 
+              type="date"
+              value={jobDate} 
+              onChange={e => setJobDate(e.target.value)} 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} 
+            />
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+            <button type="submit" disabled={loading || !jobTitle.trim()} style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: (loading || !jobTitle.trim()) ? "not-allowed" : "pointer", opacity: (loading || !jobTitle.trim()) ? 0.7 : 1 }}>{loading ? "Assigning..." : "Assign Staff"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Staff() {
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
+  const { tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
+
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
   const [staffList, setStaffList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editStaff, setEditStaff] = useState(null);
+
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignStaffData, setAssignStaffData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadStaff();
@@ -96,10 +210,27 @@ export default function Staff() {
 
   const loadStaff = async () => {
     try {
+      setLoading(true);
       const res = await usersAPI.getAll();
       setStaffList(res.data.data || []);
     } catch (e) {
-      console.error("Failed to load staff", e);
+      addToast("Failed to load staff", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (await confirm("Are you sure you want to delete this staff member?")) {
+      // Optimistic update for instant UI feedback
+      setStaffList(prev => prev.filter(s => s.id !== id));
+      try {
+        await usersAPI.remove(id);
+        addToast("Staff member deleted", "success");
+      } catch (err) {
+        loadStaff(); // revert if failed
+        addToast(err.response?.data?.error || err.response?.data?.message || "Failed to delete staff", "error");
+      }
     }
   };
 
@@ -112,14 +243,14 @@ export default function Staff() {
   });
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="p-4 sm:p-6" style={{ maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", paddingBottom: "100px" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8" style={{ marginBottom: 32 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Staff & HR</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Manage employee attendance, roles, and job assignments.</p>
         </div>
-        <button onClick={() => { setEditStaff(null); setModalOpen(true); }} style={{
+        <button onClick={() => { setEditStaff(null); setModalOpen(true); }} className="w-full sm:w-auto justify-center" style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 14
@@ -129,7 +260,7 @@ export default function Staff() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>
             <Users size={24} />
@@ -145,7 +276,7 @@ export default function Staff() {
             <UserCheck size={24} />
           </div>
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Present Today</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Active Staff</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => s.active).length}</div>
           </div>
         </div>
@@ -155,25 +286,15 @@ export default function Staff() {
             <UserX size={24} />
           </div>
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Absent / Inactive</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Inactive Staff</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{staffList.filter(s => !s.active).length}</div>
-          </div>
-        </div>
-
-        <div style={{ background: "#fff", borderRadius: 16, padding: 20, border: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>
-            <Briefcase size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: 13, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>On Active Job</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>4</div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", width: 300 }}>
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 mb-12 items-start lg:items-center">
+        <div style={{ position: "relative" }} className="w-full lg:w-72 shrink-0">
           <Search size={18} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input 
             type="text" 
@@ -184,22 +305,21 @@ export default function Staff() {
           />
         </div>
         
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-          {roles.map(r => (
-            <button key={r} onClick={() => setFilterRole(r)} style={{
-              padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-              background: filterRole === r ? "#1B4332" : "#fff",
-              color: filterRole === r ? "#fff" : "#475569",
-              border: filterRole === r ? "none" : "1px solid #cbd5e1",
-            }}>
-              {r}
-            </button>
-          ))}
+        <div className="w-full lg:w-auto shrink-0">
+          <select 
+            value={filterRole} 
+            onChange={(e) => setFilterRole(e.target.value)}
+            style={{ width: "100%", padding: "10px 16px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, outline: "none", cursor: "pointer", background: "#fff", color: "#475569", fontWeight: 600, fontFamily: "inherit" }}
+          >
+            {roles.map(r => (
+              <option key={r} value={r}>Role: {r}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Staff Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filteredStaff.map(staff => (
           <div key={staff.id} style={{
             background: "#fff", borderRadius: 16, border: "1px solid #eaeaea", padding: 24,
@@ -237,8 +357,13 @@ export default function Staff() {
             </div>
 
             <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
-              <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>View Profile</button>
-              <button onClick={() => navigate("/jobs")} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
+              <button onClick={() => { setEditStaff(staff); setModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                Edit
+              </button>
+              <button onClick={() => { setAssignStaffData(staff); setAssignModalOpen(true); }} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#1B4332", cursor: "pointer" }}>Assign Job</button>
+              <button onClick={() => handleDeleteStaff(staff.id)} style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 0", background: "#fff", border: "1px solid #fecaca", borderRadius: 8, color: "#ef4444", cursor: "pointer" }}>
+                <Trash2 size={16} />
+              </button>
             </div>
           </div>
         ))}
@@ -249,6 +374,12 @@ export default function Staff() {
         onClose={() => setModalOpen(false)} 
         onSuccess={() => { setModalOpen(false); loadStaff(); }} 
         editData={editStaff} 
+      />
+      <AssignJobModal
+        open={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        staffMember={assignStaffData}
+        tSlug={tSlug}
       />
     </div>
   );

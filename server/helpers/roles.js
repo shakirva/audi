@@ -17,6 +17,9 @@ const ROLES = {
   ACCOUNTS: "Accounts",
   OPERATIONS: "Operations",
   COORDINATOR: "Coordinator",
+  SECURITY: "Security",
+  TECHNICIAN: "Technician",
+  CLEANER: "Cleaner",
   STAFF: "Staff",
   TESTER: "Tester",
 };
@@ -41,6 +44,9 @@ const STAFF_ASSIGNMENT_ROLES = [ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER];
 
 // Role hierarchy (higher index = higher privilege)
 const ROLE_HIERARCHY = [
+  ROLES.CLEANER,
+  ROLES.TECHNICIAN,
+  ROLES.SECURITY,
   ROLES.STAFF,
   ROLES.COORDINATOR,
   ROLES.OPERATIONS,

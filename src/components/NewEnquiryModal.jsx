@@ -41,6 +41,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   // Custom confirmation popup state
   const [placeToConfirm, setPlaceToConfirm] = useState(null);
   
+  // Event Type autocomplete
+  const [eventTypeQuery, setEventTypeQuery] = useState("");
+  const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
+  const eventTypeRef = useRef(null);
+  const [eventTypeToConfirm, setEventTypeToConfirm] = useState(null);
+  const [selectedSessions, setSelectedSessions] = useState(["Morning"]);
+  
   // Dynamic settings
   const [settingsHalls, setSettingsHalls] = useState([]);
   const [settingsEventTypes, setSettingsEventTypes] = useState([]);
@@ -48,7 +55,8 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
-  const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [allowPastDates, setAllowPastDates] = useState(false);
   const [venueName, setVenueName] = useState("Our Auditorium");
 
   const [form, setForm] = useState({
@@ -73,11 +81,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   useEffect(() => {
     if (editData && open) {
       setForm({
-        name: editData.Customer?.name || editData.name || "",
-        phone: editData.Customer?.phone || editData.phone || "",
-        gender: editData.Customer?.gender || "",
-        address: editData.Customer?.address || "",
-        place: editData.Customer?.city || "",
+        name: editData.enquirerName || editData.Customer?.name || editData.name || "",
+        phone: editData.enquirerPhone || editData.Customer?.phone || editData.phone || "",
+        gender: editData.gender || editData.Customer?.gender || "",
+        address: editData.enquirerAddress || editData.Customer?.address || "",
+        place: editData.enquirerArea || editData.Customer?.city || "",
         eventType: editData.eventType || "",
         tentativeDate: editData.tentativeDate ? editData.tentativeDate.split("T")[0] : "",
         session: editData.session || "",
@@ -89,12 +97,14 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         source: editData.source || "",
         salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
-      setPlaceQuery(editData.Customer?.city || "");
+      setPlaceQuery(editData.enquirerArea || editData.Customer?.city || "");
+      setEventTypeQuery(editData.eventType || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
       setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "" });
       setPlaceQuery("");
+      setEventTypeQuery("");
       setUserEditedBudget(false);
     }
   }, [editData, open, role, user]);
@@ -148,6 +158,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         if (data && data.sessions && data.sessions.length > 0) {
           setSettingsSessions(data.sessions);
         }
+        if (data) setAllowPastDates(data.allowPastDateBooking === true);
         if (data && data.venueName) setVenueName(data.venueName);
       })
       .catch(() => {});
@@ -216,6 +227,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       if (placeRef.current && !placeRef.current.contains(e.target)) {
         setShowPlaceDropdown(false);
       }
+      if (eventTypeRef.current && !eventTypeRef.current.contains(e.target)) {
+        setShowEventTypeDropdown(false);
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -234,12 +248,32 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     return p.toLowerCase().includes((placeQuery || "").toLowerCase());
   });
 
+  const filteredEventTypes = (settingsEventTypes.length > 0 ? settingsEventTypes.map(t => typeof t === "string" ? t : t.name) : EVENT_TYPES)
+    .filter(t => t.toLowerCase().includes((eventTypeQuery || "").toLowerCase()));
+
+  const isFormValid = Boolean(
+    form.name?.trim() &&
+    form.phone?.trim() &&
+    form.gender &&
+    form.place?.trim() &&
+    form.address?.trim() &&
+    form.eventType?.trim() &&
+    form.tentativeDate &&
+    form.hallPreference &&
+    form.session &&
+    form.guestCount !== "" &&
+    form.budget !== "" &&
+    form.leadScore &&
+    form.salesExecutiveId &&
+    form.source
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!form.name || !form.name.trim() || !form.phone || !form.phone.trim()) {
-      setError("Customer name and phone are required.");
+    if (!isFormValid) {
+      setError("Please fill all mandatory fields marked with (*).");
       return;
     }
     const cleanPhone = (form.phone || "").replace(/\D/g, "");
@@ -247,27 +281,16 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       setError("Please enter a valid 10-digit phone number.");
       return;
     }
-    if (!form.hallPreference) {
-      setError("Please select a Hall.");
-      return;
-    }
-    if (!form.session) {
-      setError("Please select a Session.");
-      return;
-    }
 
     setLoading(true);
     try {
       if (editData) {
-        // ── EDIT MODE ── Update customer info + enquiry fields
-        await customersAPI.findOrCreate({
-          name: form.name.trim(),
-          phone: form.phone.replace(/\D/g, "").slice(-10),
-          gender: form.gender,
-          address: form.address.trim(),
-          place: form.place.trim(),
-        });
+        // ── EDIT MODE ── Update enquiry fields directly
         await enquiriesAPI.update(editData.id, {
+          enquirerName: form.name.trim(),
+          enquirerPhone: form.phone.replace(/\D/g, "").slice(-10),
+          enquirerArea: form.place.trim(),
+          enquirerAddress: form.address.trim(),
           eventType: form.eventType,
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
@@ -281,17 +304,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         });
         addToast("Enquiry updated successfully! ✏️", "success");
       } else {
-        // ── CREATE MODE ── Find or create customer then create enquiry
-        const custRes = await customersAPI.findOrCreate({
-          name: form.name.trim(),
-          phone: form.phone.replace(/\D/g, "").slice(-10),
-          gender: form.gender,
-          address: form.address.trim(),
-          place: form.place.trim(),
-        });
-        const customerId = custRes.data.data.id;
+        // ── CREATE MODE ── Create enquiry directly
         await enquiriesAPI.create({
-          customerId,
+          enquirerName: form.name.trim(),
+          enquirerPhone: form.phone.replace(/\D/g, "").slice(-10),
+          enquirerArea: form.place.trim(),
+          enquirerAddress: form.address.trim(),
           eventType: form.eventType,
           tentativeDate: form.tentativeDate || undefined,
           session: form.session,
@@ -365,14 +383,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         {/* Body */}
         <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
           
-          {error && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
-              <AlertCircle size={16} color="#ef4444" />
-              <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{error}</span>
-            </div>
-          )}
-
-          <form id="new-enquiry-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <form id="new-enquiry-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             
             {/* ── Customer Info ── */}
             <div>
@@ -391,7 +402,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 </div>
                 <div>
                   <label style={labelSt}>Phone Number *</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} type="tel"
+                  <input name="phone" value={form.phone} onChange={handleChange} type="tel" maxLength={10}
                     placeholder="e.g. 9447012345" style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
@@ -426,7 +437,15 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                       setForm(prev => ({ ...prev, place: e.target.value }));
                       setShowPlaceDropdown(true);
                     }}
-                    onFocus={() => setShowPlaceDropdown(true)}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#1B4332";
+                      setShowPlaceDropdown(true);
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e7eb";
+                      // Use timeout to allow click events on dropdown items to fire
+                      setTimeout(() => setShowPlaceDropdown(false), 150);
+                    }}
                     placeholder="e.g. Kannur"
                     style={iStyle}
                     autoComplete="off"
@@ -497,43 +516,6 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                   onFocus={e => e.target.style.borderColor = "#1B4332"}
                   onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                 />
-              </div>
-            </div>
-
-            {/* ── Event Info ── */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <Calendar size={12} /> Event Details
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label style={labelSt}>Event Type *</label>
-                  <select required name="eventType" value={form.eventType} onChange={handleChange} style={{ ...iStyle, cursor: "pointer" }}
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
-                    <option value="" disabled>-- Select --</option>
-                    {settingsEventTypes.length > 0
-                      ? settingsEventTypes.map(t => {
-                          const name = typeof t === "string" ? t : t.name;
-                          return <option key={name} value={name}>{name}</option>;
-                        })
-                      : EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div style={{ position: "relative" }}>
-                  <label style={labelSt}>Event Date *</label>
-                  <SmartDatePicker 
-                    value={form.tentativeDate} 
-                    onChange={handleChange} 
-                    hallPreference={form.hallPreference}
-                    style={{ ...iStyle, padding: "8px 12px", height: 40 }}
-                  />
-                  {form.tentativeDate && form.hallPreference && (
-                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
-                      {fetchingAvailability ? "Checking availability..." : availability.status}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -653,6 +635,103 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               </div>
             </div>
 
+            {/* ── Event Info ── */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <Calendar size={12} /> Event Details
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div ref={eventTypeRef} style={{ position: "relative" }}>
+                  <label style={labelSt}>Event Type *</label>
+                  <input
+                    required
+                    type="text"
+                    name="eventType"
+                    value={eventTypeQuery || form.eventType}
+                    onChange={e => {
+                      setEventTypeQuery(e.target.value);
+                      setForm(prev => ({ ...prev, eventType: e.target.value }));
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#1B4332";
+                      setShowEventTypeDropdown(true);
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e7eb";
+                      setTimeout(() => setShowEventTypeDropdown(false), 150);
+                    }}
+                    placeholder="e.g. Wedding"
+                    style={iStyle}
+                    autoComplete="off"
+                  />
+                  {showEventTypeDropdown && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+                      background: "#fff", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      border: "1.5px solid #e5e7eb", maxHeight: 180, overflowY: "auto", marginTop: 4
+                    }}>
+                      {filteredEventTypes.length > 0 ? (
+                        filteredEventTypes.map(t => (
+                          <div
+                            key={t}
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setForm(prev => ({ ...prev, eventType: t }));
+                              setEventTypeQuery(t);
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#374151", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8,
+                              borderBottom: "1px solid #f3f4f6"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f0faf4"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            {t}
+                          </div>
+                        ))
+                      ) : (
+                        eventTypeQuery.trim() !== "" && (
+                          <div
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setEventTypeToConfirm(eventTypeQuery.trim());
+                              setShowEventTypeDropdown(false);
+                            }}
+                            style={{
+                              padding: "10px 14px", fontSize: 13, color: "#0284c7", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 8, fontWeight: 600
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#e0f2fe"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                          >
+                            <Plus size={14} /> Add "{eventTypeQuery}" as new Event Type
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ position: "relative" }}>
+                  <label style={labelSt}>Event Date *</label>
+                  <SmartDatePicker 
+                    value={form.tentativeDate} 
+                    onChange={handleChange} 
+                    hallPreference={form.hallPreference}
+                    allowPastDates={allowPastDates}
+                    style={{ ...iStyle, padding: "8px 12px", height: 40, fontWeight: 700, borderColor: form.tentativeDate ? "#e2e8f0" : "#e5e7eb" }}
+                  />
+                  {form.tentativeDate && form.hallPreference && (
+                    <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: availability.status === "Fully Booked" ? "#dc2626" : availability.status === "Partially Booked" ? "#d97706" : "#16a34a" }}>
+                      {fetchingAvailability ? "Checking availability..." : availability.status}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* ── Details ── */}
             <div>
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
@@ -739,15 +818,23 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #eaeaea", display: "flex", gap: 12, background: "#f8f9fa" }}>
-          <button type="button" onClick={onClose}
-            style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, cursor: "pointer", color: "#555", fontSize: 14 }}>
-            Cancel
-          </button>
-          <button type="submit" form="new-enquiry-form" disabled={loading}
-            style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
-            {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
-          </button>
+        <div style={{ background: "#f8f9fa", borderTop: "1px solid #eaeaea", display: "flex", flexDirection: "column" }}>
+          {error && (
+            <div style={{ margin: "16px 24px 0 24px", display: "flex", alignItems: "center", gap: 10, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px" }}>
+              <AlertCircle size={16} color="#ef4444" />
+              <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{error}</span>
+            </div>
+          )}
+          <div style={{ padding: "16px 24px", display: "flex", gap: 12 }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, cursor: "pointer", color: "#555", fontSize: 14 }}>
+              Cancel
+            </button>
+            <button type="submit" form="new-enquiry-form" disabled={loading}
+              style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
+              {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
+            </button>
+          </div>
         </div>
       </div>
       </div>
@@ -795,6 +882,75 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                   } catch(e) {}
                 }}
                 style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Yes, Add It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Custom Event Type Confirmation Modal ── */}
+      {eventTypeToConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", backdropFilter: "blur(4px)",
+          zIndex: 99999, display: "flex", justifyContent: "center", alignItems: "center"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 400,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Calendar size={24} color="#15803d" />
+              </div>
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
+              Add New Event Type?
+            </h3>
+            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Permanently add <strong>"{eventTypeToConfirm}"</strong>? Please select available sessions for this event. (You can customize timings later in Settings)
+            </p>
+
+            <div style={{ marginBottom: 24, textAlign: "left" }}>
+               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 10 }}>Available Sessions *</label>
+               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                 {["Morning", "Afternoon", "Evening", "Night", "Full Day"].map(s => (
+                   <label key={s} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: selectedSessions.includes(s) ? "#f0faf4" : "#f9fafb", padding: "6px 12px", borderRadius: 8, border: `1px solid ${selectedSessions.includes(s) ? "#1B4332" : "#e5e7eb"}` }}>
+                     <input type="checkbox" checked={selectedSessions.includes(s)} onChange={(e) => {
+                       if (e.target.checked) setSelectedSessions([...selectedSessions, s]);
+                       else setSelectedSessions(selectedSessions.filter(x => x !== s));
+                     }} style={{ margin: 0, accentColor: "#1B4332" }} />
+                     <span style={{ fontSize: 13, fontWeight: 600, color: selectedSessions.includes(s) ? "#1B4332" : "#4b5563" }}>{s}</span>
+                   </label>
+                 ))}
+               </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setEventTypeToConfirm(null)}
+                style={{ flex: 1, padding: "12px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={selectedSessions.length === 0}
+                onClick={async () => {
+                  const newEvt = eventTypeToConfirm;
+                  const newSessions = selectedSessions.map(s => ({ name: s, time: "" }));
+                  const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: newSessions }];
+                  setSettingsEventTypes(newEventTypes);
+                  setForm(prev => ({ ...prev, eventType: newEvt, session: selectedSessions[0] }));
+                  setEventTypeQuery(newEvt);
+                  setEventTypeToConfirm(null);
+                  try {
+                    await settingsAPI.update({ eventTypes: newEventTypes });
+                    addToast(`"${newEvt}" added to Event Types!`, "success");
+                  } catch(e) {}
+                }}
+                style={{ flex: 1, padding: "12px", background: selectedSessions.length === 0 ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: selectedSessions.length === 0 ? "not-allowed" : "pointer" }}
               >
                 Yes, Add It
               </button>

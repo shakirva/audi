@@ -45,11 +45,39 @@ const Payment = sequelize.define("Payment", {
   hooks: {
     beforeValidate: async (payment, options) => {
       if (!payment.paymentNumber) {
-        const count = await Payment.count({
+        // Fetch Settings for receipt prefix
+        const Settings = sequelize.models.Settings;
+        let prefix = "PAY";
+        if (Settings) {
+          const settings = await Settings.findOne({ 
+            where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+            transaction: options.transaction
+          });
+          if (settings && settings.receiptPrefix) {
+            prefix = settings.receiptPrefix;
+          }
+        }
+
+        // Find highest existing paymentNumber (including soft-deleted) to guarantee uniqueness
+        const lastPayment = await sequelize.models.Payment.findOne({
           where: { tenantId: payment.tenantId, environmentId: payment.environmentId },
+          order: [["id", "DESC"]],
+          attributes: ["paymentNumber"],
+          paranoid: false, // include soft-deleted records
           transaction: options.transaction
         });
-        payment.paymentNumber = `PAY${String(count + 1).padStart(5, "0")}`;
+
+        let nextNum = 1;
+        if (lastPayment && lastPayment.paymentNumber) {
+          let idPart = lastPayment.paymentNumber;
+          if (idPart.startsWith(prefix)) {
+            idPart = idPart.substring(prefix.length);
+          }
+          const match = idPart.match(/\d+$/);
+          if (match) nextNum = parseInt(match[0], 10) + 1;
+        }
+
+        payment.paymentNumber = `${prefix}${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

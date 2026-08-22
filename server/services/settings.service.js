@@ -27,8 +27,43 @@ class SettingsService {
     };
   }
 
-  async getSettings(tenantId, environmentId) {
-    return settingsRepository.findOrCreateSettings(tenantId, environmentId);
+  async getSettings(tenantId, environmentId, environmentType) {
+    const settings = await settingsRepository.findOrCreateSettings(tenantId, environmentId);
+    
+    // If sandbox environment, inherit branding fields from production when not set locally
+    if (environmentType === "sandbox") {
+      const { Environment } = require("../models");
+      const prodEnv = await Environment.findOne({ where: { tenantId, type: "production" } });
+      if (prodEnv && prodEnv.id !== environmentId) {
+        const prodSettings = await settingsRepository.findOrCreateSettings(tenantId, prodEnv.id);
+        
+        // Branding fields to inherit from production if empty in sandbox
+        const brandingFields = [
+          "logoUrl", "venueName", "ownerName", "location", "phone", "email",
+          "gstin", "legalName", "bankName", "accountName", "accountNumber", "ifscCode",
+          "bookingPrefix", "receiptPrefix"
+        ];
+        
+        brandingFields.forEach(field => {
+          if (!settings[field] && prodSettings[field]) {
+            settings.dataValues[field] = prodSettings[field];
+          }
+        });
+        
+        // Also inherit halls and sessions if sandbox has defaults/empty
+        if ((!settings.halls || settings.halls.length === 0) && prodSettings.halls && prodSettings.halls.length > 0) {
+          settings.dataValues.halls = prodSettings.halls;
+        }
+        if ((!settings.sessions || settings.sessions.length <= 3) && prodSettings.sessions && prodSettings.sessions.length > 0) {
+          settings.dataValues.sessions = prodSettings.sessions;
+        }
+        if ((!settings.eventTypes || settings.eventTypes.length <= 8) && prodSettings.eventTypes && prodSettings.eventTypes.length > 0) {
+          settings.dataValues.eventTypes = prodSettings.eventTypes;
+        }
+      }
+    }
+    
+    return settings;
   }
 
   async updateSettings(data, { tenantId, environmentId }) {
@@ -38,7 +73,8 @@ class SettingsService {
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
-      "bookingPrefix"
+      "bookingPrefix", "receiptPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "accountNumber", "ifscCode", "allowPastDateBooking"
     ];
     
     const updateData = {};

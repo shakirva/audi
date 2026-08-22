@@ -32,11 +32,15 @@ const ChartOfAccount = require("./ChartOfAccount");
 const JournalEntry = require("./JournalEntry");
 const JournalEntryLine = require("./JournalEntryLine");
 const Voucher = require("./Voucher");
+const Feedback = require("./Feedback");
+const Attendance = require("./Attendance");
+const LeaveRequest = require("./LeaveRequest");
 const FinancialPeriod = require("./FinancialPeriod");
 const {
   MasterHall, MasterPackage, MasterService, MasterEventType,
   MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory,
 } = require("./Master");
+const Inventory = require("./Inventory");
 
 // ── Tenant has many ──
 Tenant.hasMany(Environment, { foreignKey: "tenantId", onDelete: "CASCADE" });
@@ -66,6 +70,9 @@ Tenant.hasMany(BankBook, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(ChartOfAccount, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(JournalEntry, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Voucher, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Attendance, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(LeaveRequest, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Inventory, { foreignKey: "tenantId", onDelete: "CASCADE" });
 
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -92,6 +99,7 @@ Environment.hasMany(BankBook, { foreignKey: "environmentId", onDelete: "CASCADE"
 Environment.hasMany(ChartOfAccount, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(JournalEntry, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(Voucher, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(Inventory, { foreignKey: "environmentId", onDelete: "CASCADE" });
 
 // ── Customer has many ──
 Customer.hasMany(Booking, { foreignKey: "customerId", onDelete: "SET NULL" });
@@ -127,6 +135,8 @@ User.hasMany(JobStaff, { foreignKey: "userId", onDelete: "CASCADE" });
 User.hasMany(JobTimeline, { foreignKey: "userId", onDelete: "SET NULL" });
 User.hasMany(JobChecklist, { foreignKey: "completedBy", onDelete: "SET NULL" });
 User.hasMany(JobDocument, { foreignKey: "uploadedBy", onDelete: "SET NULL" });
+User.hasMany(Attendance, { foreignKey: "userId", onDelete: "CASCADE" });
+User.hasMany(LeaveRequest, { foreignKey: "userId", onDelete: "CASCADE" });
 
 // ── Job has many ──
 Job.hasMany(JobStaff, { foreignKey: "jobId", onDelete: "CASCADE" });
@@ -163,6 +173,9 @@ BankBook.belongsTo(Tenant, { foreignKey: "tenantId" });
 ChartOfAccount.belongsTo(Tenant, { foreignKey: "tenantId" });
 JournalEntry.belongsTo(Tenant, { foreignKey: "tenantId" });
 Voucher.belongsTo(Tenant, { foreignKey: "tenantId" });
+Attendance.belongsTo(Tenant, { foreignKey: "tenantId" });
+LeaveRequest.belongsTo(Tenant, { foreignKey: "tenantId" });
+Inventory.belongsTo(Tenant, { foreignKey: "tenantId" });
 
 // ── Belongs to Environment ──
 Booking.belongsTo(Environment, { foreignKey: "environmentId" });
@@ -188,6 +201,7 @@ BankBook.belongsTo(Environment, { foreignKey: "environmentId" });
 ChartOfAccount.belongsTo(Environment, { foreignKey: "environmentId" });
 JournalEntry.belongsTo(Environment, { foreignKey: "environmentId" });
 Voucher.belongsTo(Environment, { foreignKey: "environmentId" });
+Inventory.belongsTo(Environment, { foreignKey: "environmentId" });
 
 // ── Journal/Voucher associations ──
 
@@ -243,6 +257,9 @@ JobDocument.belongsTo(User, { as: "UploadedByUser", foreignKey: "uploadedBy" });
 
 AccountStatement.belongsTo(Customer, { foreignKey: "customerId" });
 
+Attendance.belongsTo(User, { as: "User", foreignKey: "userId" });
+LeaveRequest.belongsTo(User, { as: "User", foreignKey: "userId" });
+
 // ── Journal Entry relationships ──
 ChartOfAccount.hasMany(JournalEntryLine, { foreignKey: "accountId", onDelete: "RESTRICT" });
 JournalEntryLine.belongsTo(ChartOfAccount, { as: "account", foreignKey: "accountId" });
@@ -255,8 +272,8 @@ module.exports = {
   Agreement, AgreementTemplate, AgreementVersion, Payment, Receipt,
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
   AccountStatement, CashBook, BankBook,
-  ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, FinancialPeriod,
-  MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory 
+  ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, FinancialPeriod, Attendance, LeaveRequest, Feedback,
+  MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory, Inventory
 };
 
 

@@ -1,25 +1,24 @@
 import React, { useState } from "react";
-import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck } from "lucide-react";
+import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
+import { useConfirm } from "../components/ConfirmProvider";
+import { useRole } from "../context/RoleContext";
 
-const DEMO_VENDORS = [
-  { id: "VND-01", name: "Royal Catering Services", category: "Catering", rating: 4.8, status: "Active", jobs: 42, phone: "+91 9846012345", location: "Kannur", tags: ["Premium", "Veg & Non-Veg"], totalBilled: 450000, totalPaid: 400000 },
-  { id: "VND-02", name: "Aura Decorators & Events", category: "Decoration", rating: 4.9, status: "Active", jobs: 128, phone: "+91 9447098765", location: "Thalassery", tags: ["Floral", "Lighting"], totalBilled: 1250000, totalPaid: 1250000 },
-  { id: "VND-03", name: "Beats Audio & Lighting", category: "Sound & Stage", rating: 4.5, status: "Active", jobs: 85, phone: "+91 9995511223", location: "Kannur", tags: ["Line Array", "DJ"], totalBilled: 320000, totalPaid: 250000 },
-  { id: "VND-04", name: "Golden Memories Studio", category: "Photography", rating: 4.7, status: "Pending", jobs: 14, phone: "+91 9847055443", location: "Iritty", tags: ["Candid", "Drone"], totalBilled: 85000, totalPaid: 50000 },
-  { id: "VND-05", name: "Malabar Event Planners", category: "Event Management", rating: 4.2, status: "Active", jobs: 36, phone: "+91 9446077889", location: "Payyanur", tags: ["Full Package"], totalBilled: 500000, totalPaid: 500000 },
-  { id: "VND-06", name: "Fresh Blooms Florist", category: "Decoration", rating: 4.6, status: "Inactive", jobs: 12, phone: "+91 9846011222", location: "Kannur", tags: ["Wholesale"], totalBilled: 45000, totalPaid: 0 }
-];
+
 
 export default function Vendors() {
+  const { confirm } = useConfirm();
+  const { tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
-  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem("hm_local_vendors") || "[]") || []);
+  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_local_vendors_${tSlug}`) || "[]") || []);
+  const [deletedVendors, setDeletedVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_deleted_vendors_${tSlug}`) || "[]") || []);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [form, setForm] = useState({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
 
-  const allVendors = [...localVendors, ...DEMO_VENDORS];
+  const allVendors = [...localVendors].filter(v => !deletedVendors.includes(v.id));
 
   const categories = ["All", "Catering", "Decoration", "Sound & Stage", "Photography", "Event Management"];
 
@@ -31,25 +30,72 @@ export default function Vendors() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    const newVendor = { 
-      id: "LOCAL_" + Date.now(), 
-      name: form.name,
-      category: form.category,
-      phone: form.phone,
-      location: form.location,
-      email: form.email,
-      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
-      status: "Active",
-      rating: 5.0,
-      jobs: 0,
-      totalBilled: 0,
-      totalPaid: 0
-    };
-    const updated = [newVendor, ...localVendors];
-    setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    if (form.id) {
+      const updated = localVendors.map(v => v.id === form.id ? { 
+        ...v, 
+        name: form.name, 
+        category: form.category, 
+        phone: form.phone, 
+        location: form.location, 
+        email: form.email, 
+        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [] 
+      } : v);
+      setLocalVendors(updated);
+      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
+    } else {
+      const newVendor = { 
+        id: "LOCAL_" + Date.now(), 
+        name: form.name,
+        category: form.category,
+        phone: form.phone,
+        location: form.location,
+        email: form.email,
+        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+        status: "Active",
+        rating: 5.0,
+        jobs: 0,
+        totalBilled: 0,
+        totalPaid: 0
+      };
+      const updated = [newVendor, ...localVendors];
+      setLocalVendors(updated);
+      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
+    }
     setModalOpen(false);
-    setForm({ name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+    setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  };
+
+  const handleDelete = async (id) => {
+    const isConfirmed = await confirm("Are you sure you want to delete this vendor?");
+    if (isConfirmed) {
+      if (id.startsWith("LOCAL_")) {
+        const updated = localVendors.filter(v => v.id !== id);
+        setLocalVendors(updated);
+        localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
+      } else {
+        const updated = [...deletedVendors, id];
+        setDeletedVendors(updated);
+        localStorage.setItem(`hm_deleted_vendors_${tSlug}`, JSON.stringify(updated));
+      }
+    }
+  };
+
+  const openEdit = (v, e) => {
+    e.stopPropagation();
+    if (!v.id.startsWith("LOCAL_")) {
+      alert("Demo vendors cannot be edited.");
+      return;
+    }
+    setForm({
+      id: v.id,
+      name: v.name,
+      category: v.category,
+      phone: v.phone || "",
+      location: v.location || "",
+      email: v.email || "",
+      tags: v.tags ? v.tags.join(", ") : ""
+    });
+    setModalOpen(true);
   };
 
   const handleToggleStatus = (id, currentStatus) => {
@@ -58,17 +104,17 @@ export default function Vendors() {
     const nextStatus = currentStatus === "Active" ? "Inactive" : currentStatus === "Inactive" ? "Pending" : "Active";
     const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     if (selectedVendor && selectedVendor.id === id) {
       setSelectedVendor({ ...selectedVendor, status: nextStatus });
     }
   };
 
-  const handleDeleteVendor = (id) => {
-    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+  const handleDeleteVendor = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this vendor?"))) return;
     const updated = localVendors.filter(v => v.id !== id);
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
     setSelectedVendor(null);
   };
 
@@ -85,14 +131,14 @@ export default function Vendors() {
       return v;
     });
     setLocalVendors(updated);
-    localStorage.setItem("hm_local_vendors", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
   };
 
   return (
-    <div style={{ padding: "30px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ padding: window.innerWidth < 768 ? "16px" : "32px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", borderRadius: 24, boxSizing: "border-box" }}>
       
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20, marginBottom: 40 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #1B4332, #2D6A4F)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
@@ -102,43 +148,41 @@ export default function Vendors() {
           </div>
           <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>Manage external service providers, track their performance, and assign jobs.</p>
         </div>
-        <button onClick={() => setModalOpen(true)} style={{
+        <button onClick={() => { setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" }); setModalOpen(true); }} style={{
           background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 13, transition: "transform 0.2s"
+          boxShadow: "0 4px 12px rgba(27,67,50,0.2)", fontSize: 13, transition: "transform 0.2s", whiteSpace: "nowrap"
         }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={e => e.currentTarget.style.transform = "none"}>
           <Plus size={16} /> Onboard Vendor
         </button>
       </div>
 
       {/* KPI ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 40 }}>
         {[
-          { label: "Total Vendors", val: allVendors.length, color: "#1B4332", bg: "#eefcf4" },
-          { label: "Active Partners", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9", bg: "#f0f9ff" },
-          { label: "Pending Approval", val: allVendors.filter(v=>v.status==="Pending").length, color: "#d97706", bg: "#fffbeb" },
-          { label: "Avg Rating", val: "4.6", color: "#10b981", bg: "#ecfdf5", suffix: "⭐" },
+          { label: "Total Vendors", val: allVendors.length, color: "#1B4332" },
+          { label: "Active Vendors", val: allVendors.filter(v=>v.status==="Active").length, color: "#0ea5e9" },
+          { label: "Non-Active Vendors", val: allVendors.filter(v=>v.status!=="Active").length, color: "#ef4444" }
         ].map((kpi, i) => (
           <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{kpi.label}</p>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
               <h3 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: kpi.color }}>{kpi.val}</h3>
-              {kpi.suffix && <span style={{ fontSize: 14 }}>{kpi.suffix}</span>}
             </div>
           </div>
         ))}
       </div>
 
       {/* FILTERS */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, alignItems: "center", background: "#fff", padding: 12, borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-        <div style={{ position: "relative", width: 320 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, background: "#fff", padding: 16, borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 2px 10px rgba(0,0,0,0.02)", marginBottom: 40 }}>
+        <div style={{ position: "relative", width: "100%" }}>
           <Search size={16} style={{ position: "absolute", left: 14, top: 12, color: "#94a3b8" }} />
           <input 
             type="text" placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", background: "#f8fafc" }}
+            style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", background: "#f8fafc", boxSizing: "border-box" }}
           />
         </div>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", paddingBottom: 4, WebkitOverflowScrolling: "touch", whiteSpace: "nowrap" }}>
           {categories.map(c => (
             <button key={c} onClick={() => setFilterCat(c)} style={{
               padding: "8px 16px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
@@ -151,7 +195,7 @@ export default function Vendors() {
       </div>
 
       {/* VENDOR GRID */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
         {filtered.map(vendor => (
           <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 
@@ -183,7 +227,7 @@ export default function Vendors() {
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475569" }}>
                 <Phone size={14} color="#94a3b8" /> {vendor.phone}
               </div>
@@ -207,9 +251,18 @@ export default function Vendors() {
 
             {/* Footer action */}
             <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#1B4332" }}>View Full Profile</span>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#1B4332" }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>View Profile</span>
                 <ChevronRight size={14} />
+              </div>
+              
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={(e) => openEdit(vendor, e)} style={{ border: "none", background: "none", cursor: "pointer", color: "#475569" }} title="Edit Vendor">
+                  <Edit size={16} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleDelete(vendor.id); }} style={{ border: "none", background: "none", cursor: "pointer", color: "#ef4444" }} title="Delete Vendor">
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           </div>

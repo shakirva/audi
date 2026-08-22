@@ -7,7 +7,7 @@ class EnquiryRepository extends BaseRepository {
     super(Enquiry);
   }
 
-  async findAllFiltered({ tenantId, environmentId, search, status, salesExecutiveId, query = {} }) {
+  async findAllFiltered({ tenantId, environmentId, userRole, userId, search, status, salesExecutiveId, query = {} }) {
     const where = {};
 
     if (status) where.status = status;

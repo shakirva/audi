@@ -10,12 +10,7 @@ const { ROLES } = require("../../helpers/roles");
 
 const router = express.Router();
 
-router.use((req, res, next) => {
-  req.user = { id: 1, role: 'Owner' };
-  req.tenantId = 2;
-  req.environmentId = 3;
-  next();
-});
+router.use(auth, tenantScope, subscriptionGuard);
 
 router.get("/", enquiryController.list);
 router.get("/:id", enquiryController.getOne);

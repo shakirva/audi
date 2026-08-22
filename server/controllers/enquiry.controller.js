@@ -8,6 +8,8 @@ class EnquiryController {
       const result = await enquiryService.listEnquiries({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
         search,
         status,
         salesExecutiveId,

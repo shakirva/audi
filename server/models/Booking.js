@@ -45,11 +45,12 @@ const Booking = sequelize.define("Booking", {
   whatsapp: { type: DataTypes.STRING, allowNull: true },
   address: { type: DataTypes.TEXT, allowNull: true },
   pincode: { type: DataTypes.STRING, allowNull: true },
+  clientGstNumber: { type: DataTypes.STRING, allowNull: true },
   phone: { type: DataTypes.STRING, allowNull: false },
   eventType: { type: DataTypes.STRING, allowNull: true },
   hall: { type: DataTypes.STRING, allowNull: true },
   date: { type: DataTypes.STRING, allowNull: true },
-  session: { type: DataTypes.ENUM("Morning", "Evening", "Full Day"), defaultValue: "Full Day" },
+  session: { type: DataTypes.ENUM("Morning", "Afternoon", "Evening", "Full Day"), defaultValue: "Full Day" },
   guests: { type: DataTypes.INTEGER, defaultValue: 0 },
   decoration: { type: DataTypes.STRING, allowNull: true },
   catering: { type: DataTypes.STRING, allowNull: true },
@@ -71,6 +72,7 @@ const Booking = sequelize.define("Booking", {
   status: { type: DataTypes.ENUM("Draft", "Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed", "Cancelled"), defaultValue: "Draft" },
   invoiceStatus: { type: DataTypes.ENUM("Pending", "Generated"), defaultValue: "Pending" },
   notes: { type: DataTypes.TEXT, defaultValue: "" },
+  cancellationReason: { type: DataTypes.TEXT, allowNull: true },
   // ── Audit fields ──
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },
@@ -99,7 +101,11 @@ const Booking = sequelize.define("Booking", {
 
         let nextNum = 1;
         if (lastBooking && lastBooking.bookingId) {
-          const match = lastBooking.bookingId.match(/\d+$/);
+          let idPart = lastBooking.bookingId;
+          if (idPart.startsWith(prefix)) {
+            idPart = idPart.substring(prefix.length);
+          }
+          const match = idPart.match(/\d+$/);
           if (match) nextNum = parseInt(match[0], 10) + 1;
         }
 

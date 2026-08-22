@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit } from "lucide-react";
+import { Save, Building2, User, MapPin, IndianRupee, Users, CheckCircle, X, Copy, Link, ShieldCheck, ImagePlus, Trash2, Play, Film, ToggleLeft, ToggleRight, Eye, EyeOff, Database, Edit, Edit3, UploadCloud, Loader, Calendar, FileText } from "lucide-react";
 import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
 import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
+import { useConfirm } from "../components/ConfirmProvider";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
+import { BASE_NAVIGATION } from "../constants/navigation";
 
 const INIT_HALLS = [
   { name: "Main Hall",  icon: "🏛️", price: 15000, capacity: 600, description: "Grand ballroom with full AV setup", gstRate: 18 },
@@ -34,9 +36,135 @@ const sectionTitle = {
   fontWeight: 700, color: "#111827", marginBottom: 10, margin: 0,
 };
 
-export default function Settings() {
+const RoleAccessEditor = ({ moduleAccess, setModuleAccess }) => {
+  const [activeRole, setActiveRole] = useState("Manager");
   const { addToast } = useToast();
-  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo } = useRole();
+
+  const handleToggle = (path) => {
+    const current = moduleAccess[activeRole] || BASE_NAVIGATION.flatMap(item => [item.path, ...(item.children?.map(c => c.path) || [])]).filter(Boolean);
+    let updated;
+    if (current.includes(path)) {
+      updated = current.filter(p => p !== path);
+    } else {
+      updated = [...current, path];
+    }
+    const newAccess = { ...moduleAccess, [activeRole]: updated };
+    setModuleAccess(newAccess);
+  };
+
+  const saveAccess = async () => {
+    try {
+      await settingsAPI.update({ moduleAccess });
+      addToast("Role access configured! 🔒", "success");
+    } catch (e) {
+      addToast("Failed to save role access", "error");
+    }
+  };
+
+  // Default permissions if not set in DB
+  const defaultPaths = BASE_NAVIGATION.flatMap(item => {
+    if (item.roles.includes(activeRole)) {
+      return [item.path, ...(item.children?.map(c => c.path) || [])];
+    }
+    return [];
+  }).filter(Boolean);
+
+  const activePaths = moduleAccess[activeRole] || defaultPaths;
+
+  // Filter BASE_NAVIGATION to only show modules this role COULD theoretically access, or just show all non-SuperAdmin modules?
+  // It's better to show all modules (except SaaS Platform) so the Owner can grant access to anything.
+  const configurableNav = BASE_NAVIGATION.filter(item => item.label !== "SaaS Platform");
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: 16, border: "1px solid #e5e7eb" }}>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f1f5f9" }}>
+        {["Manager", "Sales", "Reception", "Accounts", "Operations", "Coordinator", "Staff", "Security", "Technician", "Cleaner"].map(r => {
+          const isActive = activeRole === r;
+          return (
+            <button
+              key={r}
+              onClick={() => setActiveRole(r)}
+              style={{
+                padding: "8px 16px", borderRadius: 20, fontSize: 13, fontWeight: isActive ? 700 : 600,
+                border: isActive ? "1px solid #1B4332" : "1px solid #e2e8f0",
+                background: isActive ? "#f0faf4" : "#fff", 
+                color: isActive ? "#0D2418" : "#64748b", 
+                cursor: "pointer", whiteSpace: "nowrap",
+                transition: "all 0.2s"
+              }}
+            >
+              {r}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
+        {configurableNav.map(group => {
+          const isGroupLink = group.type === "link";
+          const hasAccessToMain = activePaths.includes(group.path);
+          
+          return (
+            <div key={group.label} style={{ background: "#f9fafb", padding: 12, borderRadius: 10, border: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <input 
+                  type="checkbox" 
+                  checked={hasAccessToMain || (group.children && group.children.some(c => activePaths.includes(c.path)))}
+                  onChange={() => {
+                    if (isGroupLink) {
+                      handleToggle(group.path);
+                    } else {
+                      // Toggle all children
+                      const allChildrenPaths = group.children.map(c => c.path);
+                      const allChecked = allChildrenPaths.every(p => activePaths.includes(p));
+                      
+                      let newPaths = [...activePaths];
+                      if (allChecked) {
+                        newPaths = newPaths.filter(p => !allChildrenPaths.includes(p));
+                      } else {
+                        newPaths = [...new Set([...newPaths, ...allChildrenPaths])];
+                      }
+                      setModuleAccess({ ...moduleAccess, [activeRole]: newPaths });
+                    }
+                  }}
+                  style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#1B4332" }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{group.label}</span>
+              </div>
+              
+              {group.children && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 24 }}>
+                  {group.children.map(child => (
+                    <label key={child.path} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={activePaths.includes(child.path)}
+                        onChange={() => handleToggle(child.path)}
+                        style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#1B4332" }}
+                      />
+                      <span style={{ fontSize: 12, color: "#4b5563" }}>{child.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+        <button onClick={saveAccess} style={{ padding: "8px 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>
+          Save Access for {activeRole}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default function Settings() {
+  const { confirm } = useConfirm();
+  const { addToast } = useToast();
+  const { role, managerRevenueEnabled, setManagerRevenueEnabled, tenant, activeEnvironment, setVenueInfo, moduleAccess, setModuleAccess } = useRole();
   const { bookings, deleteBooking } = useBookings();
   const isOwner = role === "Owner";
   const isAdminRole = role === "Owner" || role === "Manager"; // both see full settings
@@ -52,12 +180,20 @@ export default function Settings() {
     email:    "",
     gstin:    "",
     bookingPrefix: "",
+    receiptPrefix: "",
+    logoUrl: "",
+    legalName: "",
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+    ifscCode: "",
   });
   const [showCreateHallModal, setShowCreateHallModal] = useState(false);
   const [editHallIndex, setEditHallIndex] = useState(null);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [dbUsers, setDbUsers] = useState([]);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // ── Hall Pricing ──
   const [halls, setHalls] = useState(INIT_HALLS);
@@ -83,7 +219,7 @@ export default function Settings() {
   const [reminderDays, setReminderDays]       = useState([3, 7]);  // default: 3 & 7 days before event
 
   const [facilities, setFacilities] = useState([]);
-  const [newFacility, setNewFacility] = useState({ name: "", price: "" });
+  const [newFacility, setNewFacility] = useState({ name: "", price: "", gst: "" });
 
   useEffect(() => {
     loadSettings();
@@ -122,6 +258,14 @@ export default function Settings() {
         email: data.email || "",
         gstin: data.gstin || "",
         bookingPrefix: data.bookingPrefix || "BK",
+        receiptPrefix: data.receiptPrefix || "PAY",
+        logoUrl: data.logoUrl || "",
+        legalName: data.legalName || "",
+        bankName: data.bankName || "",
+        accountName: data.accountName || "",
+        accountNumber: data.accountNumber || "",
+        ifscCode: data.ifscCode || "",
+        allowPastDateBooking: data.allowPastDateBooking || false,
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -133,6 +277,7 @@ export default function Settings() {
       if (data.places && data.places.length > 0) setPlaces(data.places);
       if (data.reminderDays && data.reminderDays.length > 0) setReminderDays(data.reminderDays);
       if (data.staff) setStaff(data.staff);
+      if (data.moduleAccess) setModuleAccess(data.moduleAccess);
       setManagerRevenueEnabled(data.managerRevenueEnabled !== false);
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -142,6 +287,33 @@ export default function Settings() {
   const handleVenueChange = (e) => {
     const { name, value } = e.target;
     setVenue(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast("Image size must be less than 5MB", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    setIsUploadingLogo(true);
+    try {
+      const res = await settingsAPI.uploadLogo(formData);
+      if (res.data && res.data.url) {
+        setVenue(prev => ({ ...prev, logoUrl: res.data.url }));
+        addToast("Logo uploaded successfully", "success");
+      }
+    } catch (err) {
+      addToast("Failed to upload logo", "error");
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleHallChange = (idx, field, value) => {
@@ -172,9 +344,13 @@ export default function Settings() {
 
   const handleSaveVenue = async () => {
     try {
-      await settingsAPI.update({ venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, gstin: venue.gstin, bookingPrefix: venue.bookingPrefix });
+      await settingsAPI.update({ 
+        venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, 
+        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix, receiptPrefix: venue.receiptPrefix,
+        logoUrl: venue.logoUrl, legalName: venue.legalName, bankName: venue.bankName, accountName: venue.accountName, accountNumber: venue.accountNumber, ifscCode: venue.ifscCode 
+      });
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
-      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner });
+      setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner, logoUrl: venue.logoUrl });
       addToast("Venue settings saved! 🏛️", "success");
     } catch (e) { addToast("Failed to save", "error"); }
   };
@@ -246,12 +422,14 @@ export default function Settings() {
     } catch (e) { addToast("Failed to save staff", "error"); }
   };
 
-  // ── Facilities & Add-ons ──
+  const [editFacilityId, setEditFacilityId] = useState(null);
+  const [editFacilityData, setEditFacilityData] = useState({ name: "", price: "", gst: "" });
+
   const handleAddFacility = async () => {
     if (!newFacility.name.trim()) return;
     try {
-      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services" });
-      setNewFacility({ name: "", price: "" });
+      await mastersAPI.create({ name: newFacility.name, price: Number(newFacility.price) || 0, type: "services", gst: Number(newFacility.gst) || 0 });
+      setNewFacility({ name: "", price: "", gst: "" });
       loadFacilities();
       addToast("Facility added! 🛠️", "success");
     } catch (e) {
@@ -259,10 +437,23 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteFacility = async (id) => {
-    if (!window.confirm("Delete this facility?")) return;
+  const handleUpdateFacility = async () => {
+    if (!editFacilityData.name.trim()) return;
     try {
-      await mastersAPI.remove(id);
+      await mastersAPI.update("services", editFacilityId, { name: editFacilityData.name, price: Number(editFacilityData.price) || 0, gst: Number(editFacilityData.gst) || 0 });
+      setEditFacilityId(null);
+      setEditFacilityData({ name: "", price: "", gst: "" });
+      loadFacilities();
+      addToast("Facility updated!", "success");
+    } catch (e) {
+      addToast("Failed to update facility", "error");
+    }
+  };
+
+  const handleDeleteFacility = async (id) => {
+    if (!(await confirm("Delete this facility?"))) return;
+    try {
+      await mastersAPI.remove("services", id);
       loadFacilities();
       addToast("Facility deleted", "info");
     } catch (e) {
@@ -404,7 +595,14 @@ export default function Settings() {
                   )}
                   
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                    <input id={`sess_name_${item.name}`} placeholder="New Session Name (e.g. Morning)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} />
+                    <select id={`sess_name_${item.name}`} style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb", background: "#f9fafb" }}>
+                      <option value="">-- Select Session --</option>
+                      <option value="Morning">Morning</option>
+                      <option value="Afternoon">Afternoon</option>
+                      <option value="Evening">Evening</option>
+                      <option value="Night">Night</option>
+                      <option value="Full Day">Full Day</option>
+                    </select>
                     <input id={`sess_time_${item.name}`} placeholder="Time (e.g. 9am - 2pm)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} onKeyDown={e => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -489,75 +687,38 @@ export default function Settings() {
     <div className="hm-settings-container" style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ── Page Header ── */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
-          Settings
-        </h1>
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="hm-page-heading">Settings</h1>
         <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
           Manage your auditorium profile, hall pricing and preferences
         </p>
       </div>
 
-      {/* ── MANAGER ACCESS CONTROL (Owner only) ── */}
+
+
+
+      {/* ── ROLE-BASED MODULE ACCESS (Owner only) ── */}
       {isOwner && (
-        <div style={{ ...cardSt, border: "1.5px solid #fde68a", background: "linear-gradient(135deg, #fffbeb, #fefce8)" }}>
+        <div id="roles" style={{ ...cardSt, border: "1.5px solid #e2e8f0", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ShieldCheck size={18} color="#92400e" />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Users size={18} color="#0D2418" />
             </div>
             <div>
-              <p style={{ ...sectionTitle, color: "#92400e" }}>Manager Access Control</p>
-              <p style={{ fontSize: 12, color: "#a16207", margin: 0 }}>Control what Managers can see on their dashboard</p>
+              <p style={{ ...sectionTitle, color: "#0D2418" }}>Role-Based Module Access</p>
+              <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>Configure which modules are visible to each staff role</p>
             </div>
           </div>
 
-          {/* Revenue toggle */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderRadius: 12, background: "#fff", border: "1.5px solid #fde68a", marginBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: managerRevenueEnabled ? "#d1fae5" : "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {managerRevenueEnabled ? <Eye size={16} color="#15803d" /> : <EyeOff size={16} color="#C0392B" />}
-              </div>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: 0 }}>Revenue &amp; Financial Reports</p>
-                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                  {managerRevenueEnabled
-                    ? "Managers can see revenue stats, payments & reports"
-                    : "Managers cannot see revenue stats, payments or reports"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                const newVal = !managerRevenueEnabled;
-                setManagerRevenueEnabled(newVal);
-                try {
-                  await settingsAPI.update({ managerRevenueEnabled: newVal });
-                  addToast(
-                    newVal ? "Manager revenue access enabled ✅" : "Manager revenue access disabled 🔒",
-                    newVal ? "success" : "error"
-                  );
-                } catch (e) { addToast("Update failed", "error"); }
-              }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
-            >
-              {managerRevenueEnabled
-                ? <ToggleRight size={38} color="#1B4332" />
-                : <ToggleLeft size={38} color="#9ca3af" />}
-            </button>
-          </div>
 
-          <div style={{ background: "#fef3c7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14 }}>💡</span>
-            <p style={{ fontSize: 11, color: "#92400e", margin: 0, lineHeight: 1.5 }}>
-              Changes take effect immediately. Manager will see or lose access to <strong>Revenue stats, Payments & Reports</strong> on their next page load.
-            </p>
-          </div>
+
+          <RoleAccessEditor moduleAccess={moduleAccess || {}} setModuleAccess={setModuleAccess} />
         </div>
       )}
 
       {/* ── SANDBOX MANAGEMENT (Owner only) ── */}
       {isOwner && activeEnvironment === "sandbox" && (
-        <div style={{ ...cardSt, border: "1.5px solid #fecaca", background: "linear-gradient(135deg, #fef2f2, #fff1f2)" }}>
+        <div id="sandbox" style={{ ...cardSt, border: "1.5px solid #fecaca", background: "linear-gradient(135deg, #fef2f2, #fff1f2)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fecaca", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Database size={18} color="#991b1b" />
@@ -576,7 +737,7 @@ export default function Settings() {
             </div>
             <button
               onClick={async () => {
-                if (window.confirm("Are you sure you want to reset the Sandbox? All current training data will be lost. (Production is safe).")) {
+                if (await confirm("Are you sure you want to reset the Sandbox? All current training data will be lost. (Production is safe).")) {
                   try {
                     await settingsAPI.resetSandbox();
                     addToast("Sandbox reset successfully!", "success");
@@ -666,7 +827,7 @@ export default function Settings() {
 
       {/* ── VENUE INFO CARD (Owner & Manager) ── */}
       {isAdminRole && (
-        <div style={cardSt}>
+        <div id="venue" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Building2 size={18} color="#1B4332" />
@@ -721,6 +882,68 @@ export default function Settings() {
               onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
             <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
           </div>
+          <div>
+            <label style={labelSt}>🧾 Receipt ID Prefix</label>
+            <input name="receiptPrefix" value={venue.receiptPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. PAY, RCP, etc."
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Receipt IDs (e.g. {venue.receiptPrefix || "PAY"}00046)</p>
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={labelSt}><ImagePlus size={11} /> Logo URL</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input name="logoUrl" value={venue.logoUrl} onChange={handleVenueChange} style={{ ...iStyle, flex: 1 }} placeholder="https://..."
+                onFocus={e => e.target.style.borderColor = "#1B4332"}
+                onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+              <label style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "0 16px", background: "#f1f5f9", border: "1px solid #e2e8f0", 
+                borderRadius: 12, cursor: isUploadingLogo ? "not-allowed" : "pointer", 
+                color: "#475569", fontWeight: 600, fontSize: 13,
+                opacity: isUploadingLogo ? 0.7 : 1
+              }}>
+                {isUploadingLogo ? <Loader size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                Upload
+                <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} disabled={isUploadingLogo} />
+              </label>
+            </div>
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Used in PDF Receipts and Invoices</p>
+          </div>
+
+          <div style={{ gridColumn: "1 / -1", marginTop: 12, marginBottom: 4 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>Billing & Bank Details</p>
+          </div>
+
+          <div>
+            <label style={labelSt}>🏛️ Legal Entity Name</label>
+            <input name="legalName" value={venue.legalName} onChange={handleVenueChange} style={iStyle} placeholder="Legal name if different"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🏦 Bank Name</label>
+            <input name="bankName" value={venue.bankName} onChange={handleVenueChange} style={iStyle} placeholder="e.g. HDFC Bank"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>👤 Account Name</label>
+            <input name="accountName" value={venue.accountName} onChange={handleVenueChange} style={iStyle} placeholder="e.g. Venueza Event Management"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>💳 Account Number</label>
+            <input name="accountNumber" value={venue.accountNumber} onChange={handleVenueChange} style={iStyle} placeholder="0000 0000 0000"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <label style={labelSt}>🔢 IFSC Code</label>
+            <input name="ifscCode" value={venue.ifscCode} onChange={handleVenueChange} style={iStyle} placeholder="e.g. HDFC0001234"
+              onFocus={e => e.target.style.borderColor = "#1B4332"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
         </div>
 
         <button onClick={handleSaveVenue} style={{
@@ -736,9 +959,58 @@ export default function Settings() {
       </div>
       )}
 
+      {/* ── BOOKING PREFERENCES (Owner & Manager) ── */}
+      {isAdminRole && (
+        <div id="booking-prefs" style={cardSt}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Calendar size={18} color="#2563eb" />
+            </div>
+            <div>
+              <p style={sectionTitle}>Booking Preferences</p>
+              <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Control booking rules and date restrictions</p>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 16px", borderRadius: 12, background: "#f8fafc", border: "1.5px solid #e2e8f0"
+          }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: 0 }}>Allow Past Date Bookings</p>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, marginBottom: 0 }}>
+                When enabled, staff can create enquiries and bookings on past dates. Useful for backfilling previous-year accounting data. <span style={{ fontWeight: 700, color: "#d97706" }}>Turn OFF once done.</span>
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                const newVal = !venue.allowPastDateBooking;
+                try {
+                  await settingsAPI.update({ allowPastDateBooking: newVal });
+                  setVenue(prev => ({ ...prev, allowPastDateBooking: newVal }));
+                  addToast(newVal ? "Past date bookings enabled! 📅" : "Past date bookings disabled 🔒", "success");
+                } catch (e) {
+                  addToast("Failed to update setting", "error");
+                }
+              }}
+              style={{
+                background: "none", border: "none", cursor: "pointer", padding: 4,
+                display: "flex", alignItems: "center", flexShrink: 0
+              }}
+            >
+              {venue.allowPastDateBooking ? (
+                <ToggleRight size={36} color="#16a34a" strokeWidth={1.8} />
+              ) : (
+                <ToggleLeft size={36} color="#9ca3af" strokeWidth={1.8} />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── HALL MANAGEMENT (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="halls" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Building2 size={18} color="#4b5563" />
@@ -857,13 +1129,46 @@ export default function Settings() {
               border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
               background: "#fafafa"
             }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
-                {fac.price > 0 && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
-              </div>
-              <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
-                <Trash2 size={14} color="#ef4444" />
-              </button>
+              {editFacilityId === fac.id ? (
+                <div className="flex flex-col sm:flex-row gap-3 w-full items-start sm:items-end">
+                  <div className="w-full sm:flex-1">
+                    <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Name</label>
+                    <input value={editFacilityData.name} onChange={e => setEditFacilityData({ ...editFacilityData, name: e.target.value })} style={iStyle} />
+                  </div>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <div className="flex-1 sm:w-[100px]">
+                      <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>Price (₹)</label>
+                      <input type="number" value={editFacilityData.price} onChange={e => setEditFacilityData({ ...editFacilityData, price: e.target.value })} style={iStyle} />
+                    </div>
+                    <div className="flex-1 sm:w-[80px]">
+                      <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 4, display: "block" }}>GST (%)</label>
+                      <input type="number" value={editFacilityData.gst} onChange={e => setEditFacilityData({ ...editFacilityData, gst: e.target.value })} style={iStyle} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                    <button className="flex-1 sm:flex-none" onClick={handleUpdateFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Save</button>
+                    <button className="flex-1 sm:flex-none" onClick={() => setEditFacilityId(null)} style={{ background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", height: 35 }}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>{fac.name}</p>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "4px 0 0" }}>
+                      {fac.price > 0 && <p style={{ margin: 0, fontSize: 13, color: "#166534", fontWeight: 600 }}>₹{fac.price.toLocaleString()}</p>}
+                      {fac.gst > 0 && <span style={{ fontSize: 11, background: "#e0e7ff", color: "#3730a3", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{fac.gst}% GST</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setEditFacilityId(fac.id); setEditFacilityData({ name: fac.name, price: fac.price, gst: fac.gst || "" }); }} style={{ background: "#e0f2fe", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                      <Edit3 size={14} color="#0284c7" />
+                    </button>
+                    <button onClick={() => handleDeleteFacility(fac.id)} style={{ background: "#fee2e2", border: "none", borderRadius: 6, cursor: "pointer", padding: 6, display: "flex" }}>
+                      <Trash2 size={14} color="#ef4444" />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
           
@@ -874,26 +1179,33 @@ export default function Settings() {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-          <div style={{ flex: 1 }}>
-            <label style={labelSt}>New Facility Name</label>
-            <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+        {editFacilityId === null && (
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end w-full">
+            <div className="w-full sm:flex-1">
+              <label style={labelSt}>New Facility Name</label>
+              <input value={newFacility.name} onChange={e => setNewFacility({ ...newFacility, name: e.target.value })} style={iStyle} placeholder="e.g. LED Wall, Stage Decor" />
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <div className="flex-1 sm:w-[150px]">
+                <label style={labelSt}>Price (₹)</label>
+                <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
+              </div>
+              <div className="flex-1 sm:w-[100px]">
+                <label style={labelSt}>GST (%)</label>
+                <input type="number" value={newFacility.gst} onChange={e => setNewFacility({ ...newFacility, gst: e.target.value })} style={iStyle} placeholder="e.g. 18" />
+              </div>
+            </div>
+            <button className="w-full sm:w-auto mt-1 sm:mt-0" onClick={handleAddFacility} style={{ background: "#1B4332", color: "#fff", border: "none", borderRadius: 6, padding: "0 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", height: 38, whiteSpace: "nowrap" }}>
+              + Add
+            </button>
           </div>
-          <div style={{ width: 150 }}>
-            <label style={labelSt}>Price (₹)</label>
-            <input type="number" value={newFacility.price} onChange={e => setNewFacility({ ...newFacility, price: e.target.value })} style={iStyle} placeholder="0" />
-          </div>
-          <button onClick={handleAddFacility} style={{
-            padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff",
-            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", height: 35
-          }}>+ Add</button>
-        </div>
+        )}
       </div>
       )}
 
       {/* ── HALL PRICING CONFIGURATION (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="pricing" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <IndianRupee size={18} color="#D4A017" />
@@ -1019,7 +1331,7 @@ export default function Settings() {
       )}
 
       {/* ── WHATSAPP REMINDER SCHEDULE ── */}
-      <div style={cardSt}>
+      <div id="reminders" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 18 }}>📲</span>
@@ -1129,7 +1441,7 @@ export default function Settings() {
       </div>
 
       {/* ── STAFF & ROLES ── */}
-      <div style={cardSt}>
+      <div id="staff" style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1191,7 +1503,7 @@ export default function Settings() {
                       addToast("Cannot delete Owner account", "error");
                       return;
                     }
-                    if (window.confirm("Are you sure you want to delete this user?")) {
+                    if (await confirm("Are you sure you want to delete this user?")) {
                       try {
                         await usersAPI.remove(s.id);
                         loadUsers();
@@ -1299,7 +1611,7 @@ export default function Settings() {
 
       {/* ── GALLERY MANAGEMENT (Owner & Manager) ── */}
       {isAdminRole && (
-      <div style={cardSt}>
+      <div id="gallery" style={cardSt}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f0faf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1445,36 +1757,7 @@ export default function Settings() {
       </div>
       )}
 
-      {/* ── ADDITIONAL PR-1 PLACEHOLDERS ── */}
-      {isAdminRole && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 28 }}>
-          
-          <div style={cardSt}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center" }}><IndianRupee size={16} color="#166534" /></div>
-              <p style={{ ...sectionTitle, marginBottom: 0 }}>Payment Methods</p>
-            </div>
-            <p style={{ fontSize: 12, color: "#6b7280" }}>Configure UPI, Bank Transfer details, and Razorpay integration. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
-          </div>
 
-          <div style={cardSt}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={16} color="#1d4ed8" /></div>
-              <p style={{ ...sectionTitle, marginBottom: 0 }}>Receipt & Invoice Templates</p>
-            </div>
-            <p style={{ fontSize: 12, color: "#6b7280" }}>Customize PDF headers, footers, and default Terms & Conditions. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
-          </div>
-
-          <div style={cardSt}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={16} color="#be123c" /></div>
-              <p style={{ ...sectionTitle, marginBottom: 0 }}>Tax & GST Settings</p>
-            </div>
-            <p style={{ fontSize: 12, color: "#6b7280" }}>Set default GST brackets (18%, 12%) for Hall and Food services. <br/><span style={{ color: "#D4A017", fontWeight: 700 }}>Available in Production</span></p>
-          </div>
-
-        </div>
-      )}
 
       {/* ── APP INFO ── */}
       <div style={{ ...cardSt, background: "linear-gradient(135deg, #0D2418, #1B4332)", color: "#fff" }}>

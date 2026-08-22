@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2 } from "lucide-react";
-import { settingsAPI } from "../services/api";
+import { X, ChevronRight, FileText, IndianRupee, Users, ArrowRight, Settings, CheckCircle2, Pencil, Trash2, Loader, History, Clock } from "lucide-react";
+import { paymentsAPI, auditLogsAPI, settingsAPI } from "../services/api";
 
 export default function BookingDetailModal({ booking, onClose, onEdit, onDelete }) {
   const [activeView, setActiveView] = useState("overview");
-  const [venueName, setVenueName] = useState("Our Auditorium");
+  const [settings, setSettings] = useState({});
 
   useEffect(() => {
-    settingsAPI.get().then(res => {
-      const name = res.data?.data?.venueName;
-      if (name) setVenueName(name);
-    }).catch(() => {});
+    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
   }, []);
 
   if (!booking) return null;
@@ -38,7 +35,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
         </head>
         <body>
           <div class="header">
-            <h1>${venueName}</h1>
+            <h1>${settings?.venueName || "Our Auditorium"}</h1>
             <p>Official Booking Receipt</p>
           </div>
           
@@ -79,7 +76,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
           </table>
           
           <div class="footer">
-            <p>Thank you for choosing ${venueName}. This is a computer-generated receipt.</p>
+            <p>Thank you for choosing ${settings?.venueName || "Our Auditorium"}. This is a computer-generated receipt.</p>
           </div>
           <script>
             window.onload = function() { window.print(); }
@@ -95,6 +92,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
 
   const sendPaymentReminder = () => {
     const balance = (Number(booking.totalAmount) || 0) - (Number(booking.advance) || 0) - (Number(booking.depositAmount) || 0);
+    const venueName = settings?.venueName || "Our Auditorium";
     const msg = `Hello ${booking.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${booking.eventType}' at ${venueName} on ${new Date(booking.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (booking.whatsapp || booking.phone || "").replace(/\D/g, "");
@@ -207,60 +205,19 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                     <ChevronRight size={24} color="#cbd5e1" />
                   </motion.div>
 
-                  {/* Documents Section */}
-                  <motion.div whileHover={{ background: "#f8fafc" }} onClick={() => setActiveView("documents")} style={{ background: "#fff", padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                  {/* Activity Logs Section */}
+                  <motion.div whileHover={{ background: "#f8fafc" }} onClick={() => setActiveView("activity")} style={{ background: "#fff", padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f1f5f9", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={24} /></div>
+                      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}><History size={24} /></div>
                       <div>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>Documents & Contracts</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>Activity History</div>
                         <div style={{ fontSize: 14, color: "#64748b", fontWeight: 600 }}>
-                          {booking.agreements?.length ? `${booking.agreements.length} Uploaded` : "0 Uploaded"}
+                          View all actions and edits for this booking
                         </div>
                       </div>
                     </div>
                     <ChevronRight size={24} color="#cbd5e1" />
                   </motion.div>
-                </div>
-
-                {/* ── ACTIVITY TIMELINE ── */}
-                <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "0 0 32px", textTransform: "uppercase", letterSpacing: 1 }}>Activity Log</h3>
-                  <div style={{ paddingLeft: 16, borderLeft: "2px dashed #cbd5e1", display: "flex", flexDirection: "column", gap: 32 }}>
-                    {(() => {
-                      const acts = [];
-                      // Reverse chronological
-                      if (booking.updatedAt && new Date(booking.updatedAt).getTime() - new Date(booking.createdAt).getTime() > 2000) {
-                        acts.push({
-                          time: new Date(booking.updatedAt).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-                          title: "Booking Updated",
-                          desc: "Details or payment info was modified.",
-                          color: "#f59e0b"
-                        });
-                      }
-                      if (Number(booking.advance) > 0 || Number(booking.depositAmount) > 0) {
-                        acts.push({
-                          time: "After Booking",
-                          title: "Advance Received",
-                          desc: `₹${(Number(booking.advance || 0) + Number(booking.depositAmount || 0)).toLocaleString()} received (${booking.paymentMethod || "Payment"}).`,
-                          color: "#10b981"
-                        });
-                      }
-                      acts.push({
-                        time: booking.createdAt ? new Date(booking.createdAt).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Recently",
-                        title: "Booking Created",
-                        desc: `Confirmed booking for ${booking.customerName}.`,
-                        color: "#3b82f6"
-                      });
-                      return acts;
-                    })().map((evt, i) => (
-                      <motion.div key={i} whileHover={{ x: 10 }} style={{ position: "relative", cursor: "pointer" }}>
-                        <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: evt.color, border: "4px solid #f8fafc", boxShadow: "0 0 0 1px #cbd5e1" }} />
-                        <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{evt.time}</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{evt.title}</div>
-                        <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{evt.desc}</div>
-                      </motion.div>
-                    ))}
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -274,48 +231,61 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>WhatsApp</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.whatsapp || "—"}</div></div>
                   <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Address</div><div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{booking.address || "—"}</div></div>
                 </div>
-                {/* Bride / Groom summary if applicable */}
-                {(booking.brideName || booking.groomName) && (
-                  <div style={{ marginTop: 32 }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Event Parties</h4>
-                    {booking.brideName && <div style={{ background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 12 }}><strong>Bride:</strong> {booking.brideName} {booking.bridePhone ? `(${booking.bridePhone})` : ""}</div>}
-                    {booking.groomName && <div style={{ background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}><strong>Groom:</strong> {booking.groomName} {booking.groomPhone ? `(${booking.groomPhone})` : ""}</div>}
-                  </div>
-                )}
+                {/* Bride / Groom / Parents summary if applicable */}
+                {(() => {
+                  const evt = (booking.eventType || "").toLowerCase();
+                  const isWedding = evt.includes("wedding") || evt.includes("reception") || evt.includes("nikkah");
+                  const hasData = booking.brideName || booking.groomName || booking.fatherName || booking.motherName;
+                  
+                  if (!isWedding && !hasData) return null;
+
+                  return (
+                    <div style={{ marginTop: 32 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Event Parties Detailed Info</h4>
+                      
+                      {(isWedding || booking.brideName) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#db2777" }}>Bride's Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Phone</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.bridePhone || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideFatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideMotherName || "—"}</div></div>
+                            <div className="col-span-1 md:col-span-2"><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Place / Address</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.brideAddress || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(isWedding || booking.groomName) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#2563eb" }}>Groom's Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Phone</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomPhone || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomFatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomMotherName || "—"}</div></div>
+                            <div className="col-span-1 md:col-span-2"><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Place / Address</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.groomAddress || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {(!isWedding && (!booking.brideName && !booking.groomName) && (booking.fatherName || booking.motherName)) && (
+                        <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                          <h5 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#475569" }}>Parents Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Father's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.fatherName || "—"}</div></div>
+                            <div><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Mother's Name</div><div style={{ fontSize: 14, fontWeight: 600, color: "#334155" }}>{booking.motherName || "—"}</div></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             )}
 
             {activeView === "financial" && (
-              <motion.div key="financial" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Financial & Ledger</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Total Amount</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>₹{(booking.totalAmount || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Advance Paid</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>₹{(booking.advance || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: "#fff", padding: 20, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#64748b" }}>Security Deposit</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>₹{(booking.depositAmount || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ background: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#fef2f2" : "#f0faf4", padding: 20, borderRadius: 16, border: "1px solid", borderColor: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#fecaca" : "#bbf7d0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Balance Pending</span>
-                    <span style={{ fontSize: 24, fontWeight: 800, color: ((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)) > 0 ? "#ef4444" : "#10b981" }}>₹{((booking.totalAmount || 0) - (booking.advance || 0) - (booking.depositAmount || 0)).toLocaleString()}</span>
-                  </div>
-                </div>
-                
-                <div style={{ marginTop: 32 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment Info</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Payment Method</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.paymentMethod || "—"}</div></div>
-                    <div><div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Received By</div><div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{booking.receivedBy || "—"}</div></div>
-                  </div>
-                  {booking.paymentRemarks && <div style={{ marginTop: 16, background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#475569" }}><strong>Remarks: </strong>{booking.paymentRemarks}</div>}
-                </div>
-              </motion.div>
+              <FinancialLedgerView booking={booking} />
             )}
 
             {activeView === "services" && (
@@ -334,8 +304,12 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       {booking.facilities.map((fac, idx) => (
                         <div key={idx} style={{ background: "#f0faf4", border: "1px solid #bbf7d0", padding: "12px 16px", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>{fac.name}</span>
-                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{Number(fac.price).toLocaleString()}</span>}
+                          <span style={{ fontWeight: 600, color: "#166534", fontSize: 14 }}>
+                            {fac.name}
+                            {fac.count > 1 ? ` (x${fac.count})` : ''}
+                            {fac.time ? ` [${fac.time}]` : ''}
+                          </span>
+                          {fac.price > 0 && <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 13 }}>₹{(Number(fac.price) * Number(fac.count || 1)).toLocaleString()}</span>}
                         </div>
                       ))}
                     </div>
@@ -360,33 +334,264 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
               </motion.div>
             )}
 
-            {activeView === "documents" && (
-              <motion.div key="documents" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Documents & Contracts</h3>
-                {booking.agreements && booking.agreements.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    {booking.agreements.map((doc, idx) => (
-                      <div key={idx} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: 16, borderRadius: 12, display: "flex", alignItems: "center", gap: 16 }}>
-                        <div style={{ width: 40, height: 40, background: "#f1f5f9", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}><FileText size={20} /></div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{doc.name || "Agreement Document"}</div>
-                          <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>Uploaded {doc.date || ""}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ textAlign: "center", padding: "60px 0", background: "#f8fafc", borderRadius: 16, border: "2px dashed #e2e8f0" }}>
-                    <FileText size={40} color="#cbd5e1" style={{ marginBottom: 16 }} />
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#64748b" }}>No Documents Uploaded</div>
-                    <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 4 }}>Agreements or contracts will appear here.</div>
-                  </div>
-                )}
-              </motion.div>
+            {activeView === "activity" && (
+              <BookingActivityLogView booking={booking} />
             )}
+
           </AnimatePresence>
         </div>
       </motion.div>
     </div>
   );
 }
+
+const BookingActivityLogView = ({ booking }) => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    auditLogsAPI.getAll({ limit: 500 }).then(res => {
+      if (!isMounted) return;
+      const allLogs = res.data?.data || [];
+      const relatedLogs = allLogs.filter(log => {
+        const resMatch = log.resource?.includes(`/bookings/${booking.id}`) || 
+                         (booking._id && log.resource?.includes(`/bookings/${booking._id}`)) ||
+                         (booking.bookingId && log.resource?.includes(`/bookings/${booking.bookingId}`));
+                         
+        const bodyMatch = log.details?.body?.bookingId == booking.id || 
+                          log.details?.body?.bookingId == booking._id ||
+                          log.details?.body?.bookingId == booking.bookingId ||
+                          log.details?.body?.id == booking.id ||
+                          log.details?.body?.id == booking._id;
+                          
+        const customerMatch = log.details?.body?.customerName === booking.customerName && 
+                              (log.action?.includes("Booking") || log.action?.includes("Enquiry"));
+                              
+        return resMatch || bodyMatch || customerMatch;
+      });
+      setLogs(relatedLogs);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      if (isMounted) setLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, [booking]);
+
+  const getFriendlyDetails = (log) => {
+    const body = log.details?.body || {};
+    const action = log.action || "";
+    if (action.includes("Status")) return `Changed to: ${body.status || "Unknown"}`;
+    if (action.includes("Payment") || action.includes("Expense")) return `Amount: ₹${body.amount || 0}`;
+    if (action.includes("Customer") && body.name) return `Customer Name: ${body.name}`;
+    if (action.includes("Booking") && body.customerName) return `For: ${body.customerName}`;
+    const relevantKeys = ["name", "title", "status", "reason", "amount", "customerName", "eventType", "hall"];
+    const foundKeys = Object.keys(body).filter(k => relevantKeys.includes(k));
+    if (foundKeys.length > 0) return foundKeys.map(k => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${body[k]}`).join(" • ");
+    return null;
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Activity History</h3>
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading activities...</div>
+      ) : logs.length === 0 ? (
+        <div style={{ background: "#f8fafc", padding: 32, borderRadius: 12, fontSize: 15, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+          No activity logs found for this booking.
+        </div>
+      ) : (
+        <div style={{ paddingLeft: 16, borderLeft: "2px dashed #cbd5e1", display: "flex", flexDirection: "column", gap: 32, marginTop: 16 }}>
+          {logs.map((log) => {
+            const userName = log.User?.name || "System";
+            const role = log.User?.role ? `(${log.User.role})` : "";
+            const details = getFriendlyDetails(log);
+            const timeStr = new Date(log.createdAt).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' });
+            const dateStr = new Date(log.createdAt).toLocaleDateString("en-IN", { day: 'numeric', month: 'short' });
+            
+            let color = "#3b82f6";
+            if (log.action.includes("Payment")) color = "#10b981";
+            else if (log.action.includes("Update")) color = "#f59e0b";
+            else if (log.action.includes("Delete") || log.action.includes("Remove")) color = "#ef4444";
+
+            return (
+              <motion.div key={log.id} whileHover={{ x: 10 }} style={{ position: "relative" }}>
+                <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: color, border: "4px solid #fff", boxShadow: "0 0 0 1px #cbd5e1" }} />
+                <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{dateStr} • {timeStr}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
+                  {userName} <span style={{ fontWeight: 500, fontSize: 14, color: "#64748b" }}>{role}</span> performed <span style={{ color }}>{log.action}</span>
+                </div>
+                {details && <div style={{ fontSize: 14, color: "#475569", fontWeight: 500, background: "#f8fafc", padding: "6px 12px", borderRadius: 8, display: "inline-block" }}>{details}</div>}
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+const FinancialLedgerView = ({ booking }) => {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    paymentsAPI.getAll({ bookingId: booking.id })
+      .then(res => {
+        if (isMounted) {
+          setPayments(res.data?.data || []);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load payments", err);
+        if (isMounted) setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [booking.id]);
+
+  const grandTotal = Number(booking.totalAmount) || 0;
+  const disc = Number(booking.discount) || 0;
+  const quoted = Number(booking.quotedAmount) || (grandTotal + disc);
+  const baseAmount = Math.max(0, quoted - disc);
+  
+  let facilitiesTotal = 0;
+  let facilitiesTax = 0;
+  if (booking.facilities && booking.facilities.length > 0) {
+    booking.facilities.forEach(f => {
+      const count = Number(f.count) || 1;
+      const fPrice = Number(f.price) || 0;
+      const totalFPrice = fPrice * count;
+      const fGst = Number(f.gst) || 0;
+      facilitiesTotal += totalFPrice;
+      if (fGst > 0) facilitiesTax += (totalFPrice * fGst) / 100;
+    });
+  }
+  
+  const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+  const hallTax = Math.max(0, (Number(booking.taxes) || 0) - facilitiesTax);
+  const derivedTaxPct = hallTotal > 0 ? Math.round((hallTax / hallTotal) * 100) : 0;
+  
+  const totalFromApi = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const actualPaid = payments.filter(p => p.status === "Completed").reduce((sum, p) => sum + Number(p.amount), 0);
+  const advancePaidDisplay = Math.max(Number(booking.advance) || 0, actualPaid);
+  
+  const balance = grandTotal - advancePaidDisplay - (Number(booking.depositAmount) || 0);
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 24, borderBottom: "2px solid #e2e8f0", paddingBottom: 16 }}>Financial & Ledger</h3>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+        <div style={{ background: "#fff", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0" }}>
+          <h4 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 12 }}>Booking Breakdown</h4>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Hall Base Amount</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{hallTotal.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Facilities Amount</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{facilitiesTotal.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Hall GST ({derivedTaxPct}%)</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{hallTax.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 12, borderBottom: "1px dashed #e2e8f0", marginBottom: 12 }}>
+            <span style={{ fontSize: 14, color: "#475569" }}>Facilities GST</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>₹{facilitiesTax.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>Grand Total</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>₹{(booking.totalAmount || 0).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Advance Paid</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{advancePaidDisplay.toLocaleString()}</span>
+          </div>
+          <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 12, border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>Security Deposit</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#10b981" }}>₹{(booking.depositAmount || 0).toLocaleString()}</span>
+          </div>
+          <div style={{ background: balance > 0 ? "#fef2f2" : "#f0faf4", padding: "16px 20px", borderRadius: 12, border: "1px solid", borderColor: balance > 0 ? "#fecaca" : "#bbf7d0", display: "flex", justifyContent: "space-between", alignItems: "center", flex: 1 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Balance Pending</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: balance > 0 ? "#ef4444" : "#10b981" }}>₹{balance.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <h4 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Payment History</h4>
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}><Loader size={16} className="animate-spin" /> Loading payments...</div>
+        ) : (() => {
+          let displayPayments = [...payments];
+          const totalFromApi = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const expectedAdvance = Number(booking.advance) || 0;
+          const legacyMissingAdvance = expectedAdvance - totalFromApi;
+
+          if (legacyMissingAdvance > 0) {
+            const collectorName = booking.receivedBy || booking.bookedBy;
+            displayPayments.push({
+              id: 'legacy-adv',
+              amount: legacyMissingAdvance,
+              paymentMode: booking.paymentMethod || 'Cash',
+              paymentDate: booking.createdAt,
+              status: 'Completed',
+              notes: collectorName ? `Collected By: ${collectorName} (Advance)` : 'Initial Advance'
+            });
+          }
+          if (payments.length === 0 && (Number(booking.depositAmount) > 0)) {
+            const collectorName = booking.receivedBy || booking.bookedBy;
+            displayPayments.push({
+              id: 'legacy-dep',
+              amount: booking.depositAmount,
+              paymentMode: booking.paymentMethod || 'Cash',
+              paymentDate: booking.createdAt,
+              status: 'Completed',
+              notes: collectorName ? `Collected By: ${collectorName} (Security Deposit)` : 'Security Deposit'
+            });
+          }
+          
+          if (displayPayments.length > 0) {
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {displayPayments.map(p => (
+                  <div key={p.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>₹{Number(p.amount).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: 10, marginLeft: 8 }}>{p.paymentMode || "Cash"}</span></div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                        {new Date(p.paymentDate).toLocaleDateString()}
+                        {p.notes && <span style={{ marginLeft: 8 }}>• {p.notes}</span>}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: p.status === "Completed" ? "#10b981" : "#f59e0b", background: p.status === "Completed" ? "#d1fae5" : "#fef3c7", padding: "4px 10px", borderRadius: 12 }}>
+                      {p.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          } else {
+            return (
+              <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#64748b", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+                No payments recorded yet.
+              </div>
+            );
+          }
+        })()}
+        
+        {booking.paymentRemarks && (
+          <div style={{ marginTop: 16, background: "#f8fafc", padding: 16, borderRadius: 12, fontSize: 14, color: "#475569" }}>
+            <strong>Legacy Remarks: </strong>{booking.paymentRemarks}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};

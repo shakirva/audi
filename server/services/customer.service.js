@@ -3,10 +3,12 @@ const bookingRepository = require("../repositories/booking.repository");
 const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class CustomerService {
-  async listCustomers({ tenantId, environmentId, search, type, query }) {
+  async listCustomers({ tenantId, environmentId, userRole, userId, search, type, query }) {
     const { rows, total, page, limit } = await customerRepository.findAllFiltered({
       tenantId,
       environmentId,
+      userRole,
+      userId,
       search,
       type,
       query,

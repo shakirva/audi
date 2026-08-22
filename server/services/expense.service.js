@@ -48,13 +48,10 @@ class ExpenseService {
         tenantId, environmentId,
         createdBy: data.createdBy || null,
         paymentMode: data.paymentMode || "Cash",
-      }, { transaction: t });
-
-      // Hook into accounting engine
-      await accountingEngine.recordExpense(exp.id, tenantId, environmentId, t);
-
-      return exp;
-    });
+      });
+    } catch (err) {
+      console.error("[ExpenseService] Accounting engine error:", err);
+    }
 
     return expense;
   }

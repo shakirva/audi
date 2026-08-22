@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const availabilityService = require("../../services/availability.service");
 const { sendSuccess, sendError } = require("../../helpers/response");
+const { auth } = require("../../middleware/auth");
+const { tenantScope } = require("../../middleware/tenantScope");
+
+router.use(auth, tenantScope);
 
 router.get("/", async (req, res) => {
   try {
@@ -26,7 +30,7 @@ router.get("/", async (req, res) => {
 
 router.get("/month", async (req, res) => {
   try {
-    const { hall, year, month } = req.query;
+    const { hall, year, month, ignoreBookingId } = req.query;
     if (!hall || !year || !month) {
       return sendError(res, "hall, year, and month are required", 400);
     }
@@ -36,7 +40,8 @@ router.get("/month", async (req, res) => {
       environmentId: req.environmentId,
       hall,
       year: parseInt(year),
-      month: parseInt(month)
+      month: parseInt(month),
+      ignoreBookingId
     });
 
     return sendSuccess(res, { data: availability });

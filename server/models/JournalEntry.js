@@ -48,12 +48,19 @@ const JournalEntry = sequelize.define("JournalEntry", {
   hooks: {
     beforeValidate: async (entry, options) => {
       if (!entry.journalNumber) {
-        const year = new Date().getFullYear();
-        const count = await JournalEntry.count({
-          where: { tenantId: entry.tenantId, environmentId: entry.environmentId },
-          transaction: options.transaction
-        });
-        entry.journalNumber = `JV-${year}-${String(count + 1).padStart(6, "0")}`;
+        const result = await sequelize.query(
+          `SELECT MAX(CAST(SUBSTRING("journalNumber" FROM 4) AS INTEGER)) AS max_num
+           FROM "JournalEntries"
+           WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId
+             AND "journalNumber" ~ '^JRN[0-9]+$'`,
+          {
+            replacements: { tenantId: entry.tenantId, environmentId: entry.environmentId },
+            type: sequelize.QueryTypes.SELECT,
+            transaction: options.transaction,
+          }
+        );
+        const nextNum = (result[0]?.max_num || 0) + 1;
+        entry.journalNumber = `JRN${String(nextNum).padStart(5, "0")}`;
       }
     }
   },

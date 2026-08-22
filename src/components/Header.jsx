@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut } from "lucide-react";
+import { Menu, ChevronDown, Monitor, Database, AlertTriangle, MessageSquarePlus, X, User as UserIcon, LogOut, Loader2, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
+import { feedbackAPI } from "../services/api";
 const notifications = [];
 
 const notifIcons = { warning: "⚠️", info: "ℹ️", reminder: "🔔" };
@@ -17,6 +18,9 @@ export default function Header({ title, onMenuClick }) {
   const [showEnvDropdown, setShowEnvDropdown] = useState(false);
   const [showSandboxConfirm, setShowSandboxConfirm] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
 
@@ -36,18 +40,36 @@ export default function Header({ title, onMenuClick }) {
     switchEnvironment("sandbox");
   };
 
+  const handleSubmitFeedback = async () => {
+    if (!feedbackContent.trim()) return;
+    setIsSubmittingFeedback(true);
+    try {
+      await feedbackAPI.submit({ content: feedbackContent });
+      setFeedbackSuccess(true);
+      setTimeout(() => {
+        setShowFeedbackModal(false);
+        setFeedbackSuccess(false);
+        setFeedbackContent("");
+      }, 2000);
+    } catch (err) {
+      alert("Failed to submit feedback. Please try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   return (
     <>
       {isSandbox && role !== "Tester" && (
-        <div style={{ background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "8px 24px", fontSize: 13, zIndex: 40, position: "relative", boxShadow: "0 2px 10px rgba(239,68,68,0.3)" }}>
+        <div className="hm-sandbox-banner" style={{ background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "8px 24px", fontSize: 13, zIndex: 40, position: "relative", boxShadow: "0 2px 10px rgba(239,68,68,0.3)" }}>
           <AlertTriangle size={16} />
           <div>
             <strong style={{ fontWeight: 800 }}>SANDBOX MODE — Training Environment.</strong>
-            <span style={{ marginLeft: 6, opacity: 0.9 }}>Changes here never affect Production.</span>
+            <span className="hm-sandbox-detail" style={{ marginLeft: 6, opacity: 0.9 }}>Changes here never affect Production.</span>
           </div>
         </div>
       )}
-      <header style={{
+      <header className="hm-header-bar" style={{
       background: "#fff",
       borderBottom: "1px solid #e5e7eb",
       boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
@@ -85,7 +107,7 @@ export default function Header({ title, onMenuClick }) {
         }}
       >
         <MessageSquarePlus size={16} />
-        Feedback
+        <span className="hm-feedback-text">Feedback</span>
       </button>
 
       {/* Environment Switcher */}
@@ -98,7 +120,7 @@ export default function Header({ title, onMenuClick }) {
               background: "#fff", color: "#111827", boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
             }}
           >
-            {isSandbox ? <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> Sandbox</> : <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> Production</>}
+            {isSandbox ? <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> <span className="hm-env-text">Sandbox</span></> : <><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> <span className="hm-env-text">Production</span></>}
             <ChevronDown size={14} style={{ color: "#6b7280" }} />
           </button>
           
@@ -203,11 +225,23 @@ export default function Header({ title, onMenuClick }) {
             <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 16 }}>Your feedback helps us shape the next phase of Venueza ERP.</p>
             <textarea
               placeholder="Describe your ideas, workflows, or requested features here..."
+              value={feedbackContent}
+              onChange={(e) => setFeedbackContent(e.target.value)}
               style={{ width: "100%", height: 120, padding: 16, borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 14, resize: "none", marginBottom: 16, fontFamily: "inherit" }}
             />
-            <button onClick={() => setShowFeedbackModal(false)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}>
-              Submit Feedback
-            </button>
+            {feedbackSuccess ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#10b981", fontWeight: 700, padding: 12 }}>
+                <CheckCircle size={20} /> Feedback Submitted!
+              </div>
+            ) : (
+              <button 
+                onClick={handleSubmitFeedback} 
+                disabled={isSubmittingFeedback || !feedbackContent.trim()}
+                style={{ width: "100%", padding: "12px", borderRadius: 10, background: (!feedbackContent.trim() || isSubmittingFeedback) ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", fontWeight: 700, cursor: (!feedbackContent.trim() || isSubmittingFeedback) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(27,67,50,0.2)" }}
+              >
+                {isSubmittingFeedback ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : "Submit Feedback"}
+              </button>
+            )}
           </div>
         </div>
       )}

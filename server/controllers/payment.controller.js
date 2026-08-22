@@ -48,6 +48,31 @@ class PaymentController {
     }
   }
 
+  async remove(req, res, next) {
+    try {
+      const result = await paymentService.removePayment(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+      });
+      return sendSuccess(res, { message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async update(req, res, next) {
+    try {
+      const result = await paymentService.updatePayment(req.params.id, req.body, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+        updatedBy: req.user.id,
+      });
+      return sendSuccess(res, { data: result, message: "Payment updated successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getReceipt(req, res, next) {
     try {
       const result = await paymentService.getReceipt(req.params.paymentId, {

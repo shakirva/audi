@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line } from "recharts";
 import { Download, CalendarCheck, Ban, CalendarDays, CheckCircle2, Filter } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
 import { bookingsAPI, settingsAPI } from "../services/api";
 
@@ -15,10 +17,11 @@ export default function BookingReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterDate, setFilterDate] = useState("All Time");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
+  const [filterParty, setFilterParty] = useState("All Parties");
 
   useEffect(() => {
     loadData();
@@ -43,6 +46,7 @@ export default function BookingReports() {
 
   const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
   const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
+  const standardParties = ["Bride Team", "Groom Team", "Both (Shared Booking)", "Other"];
 
   const filteredBookings = bookings.filter(b => {
     if (filterHall !== "All Halls" && b.hall !== filterHall) return false;
@@ -52,6 +56,9 @@ export default function BookingReports() {
     
     const placeName = b.Customer?.city || b.place || b.address;
     if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    
+    const partyName = b.bookingParty;
+    if (filterParty !== "All Parties" && partyName !== filterParty) return false;
     
     if (filterDate !== "All Time") {
       const bDate = new Date(b.date || b.createdAt);
@@ -106,9 +113,47 @@ export default function BookingReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Booking Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Total Bookings: ${totalBookings}`, 14, 40);
+    doc.text(`Completed: ${completed}`, 60, 40);
+    doc.text(`Upcoming: ${upcoming}`, 100, 40);
+    doc.text(`Cancelled: ${cancelled} (${cancelRate}%)`, 140, 40);
+
+    const tableColumn = ["Date", "ID", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
+    const tableRows = [];
+
+    filteredBookings.forEach(b => {
+      const date = new Date(b.date || b.createdAt).toLocaleDateString();
+      const id = b.bookingId || "N/A";
+      const name = b.Customer?.name || b.customerName || "N/A";
+      const event = b.eventType || "N/A";
+      const hall = b.hall || "N/A";
+      const status = b.status || "N/A";
+      const adv = b.advance ? `Rs ${b.advance}` : "0";
+      const total = b.totalAmount ? `Rs ${b.totalAmount}` : "0";
+      
+      tableRows.push([date, id, name, event, hall, status, adv, total]);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [27, 67, 50] }
+    });
+
+    doc.save(`Booking_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
@@ -137,8 +182,8 @@ export default function BookingReports() {
           </h1>
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Analyze booking volumes, event types, and cancellations</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button 
+        <div className="w-full sm:w-auto" style={{ display: "flex", gap: 10 }}>
+          <button className="w-full sm:w-auto justify-center" 
             onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
@@ -148,36 +193,46 @@ export default function BookingReports() {
       </div>
 
       {/* Advanced Filter Bar */}
-      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+      <div className="print-hide flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div className="hidden sm:flex" style={{ alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+          <Filter size={16} /> Filters
+        </div>
+        <div className="flex sm:hidden items-center gap-2 mb-2 text-[#1B4332] font-bold text-sm w-full border-b border-gray-100 pb-2">
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Time">Date: All Time</option>
           <option value="This Month">Date: This Month</option>
           <option value="Last Month">Date: Last Month</option>
           <option value="This Year">Date: This Year</option>
         </select>
         
-        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
             <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
         
-        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Staff">Executive: All Staff</option>
           {uniqueExecutives.map((exec, i) => (
             <option key={i} value={exec}>{exec}</option>
           ))}
         </select>
         
-        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Locations">Place: All Locations</option>
           {uniquePlaces.map((place, i) => (
             <option key={i} value={place}>{place}</option>
+          ))}
+        </select>
+        
+        <select value={filterParty} onChange={(e) => setFilterParty(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+          <option value="All Parties">Booked By: All</option>
+          {standardParties.map((party, i) => (
+            <option key={i} value={party}>{party}</option>
           ))}
         </select>
       </div>

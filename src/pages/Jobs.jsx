@@ -3,6 +3,7 @@ import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileTe
 import { jobsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
+import { useConfirm } from "../components/ConfirmProvider";
 
 function JobSkeleton() {
   return (
@@ -24,106 +25,44 @@ function JobSkeleton() {
   );
 }
 
-function printAgreement(agr) {
-  const customerName = agr.Booking?.Customer?.name || agr.customerName || "";
-  const phone = agr.Booking?.Customer?.phone || "";
-  const address = agr.Booking?.Customer?.address || "";
-  const eventType = agr.Booking?.eventType || "";
-  const dateStr = agr.Booking?.date ? new Date(agr.Booking.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
-  const session = agr.Booking?.session || "";
-  const total = agr.totalAmount || agr.Booking?.totalAmount || 0;
-  const advance = agr.advanceAmount || agr.Booking?.advance || 0;
-  const balance = agr.balanceAmount || (total - advance) || 0;
-  const guests = agr.Booking?.guestCount || "";
-  const agNum = agr.agreementNumber || `AGR-${String(agr.id || "").padStart(3,"0")}`;
-  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
-
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
-    .page-border { border: 4px solid #d32f2f; padding: 4px; }
-    .inner-border { border: 2px solid #d32f2f; padding: 20px; }
-    .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; }
-    .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
-    .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
-    .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px 0; font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
-    .label { font-weight: bold; }
-    .value { border-bottom: 1px dashed #000; font-family: 'Caveat', cursive; font-size: 18px; padding-left: 10px; }
-    .footer-note { text-align: center; color: #d32f2f; font-weight: bold; font-style: italic; margin-bottom: 40px; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; text-align: center; }
-    .sig-line { border-top: 1px dashed #000; padding-top: 5px; width: 300px; }
-    @media print { body { padding: 0; margin: 10px; } .page-border { border: 2px solid #d32f2f; } }
-  </style></head><body>
-  <div class="page-border"><div class="inner-border">
-    <div class="header">
-      <h1>LAUREL GARDEN</h1>
-      <div class="sub-header">GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN</div>
-    </div>
-    <div class="title">CONTRACT AGREEMENT</div>
-    <div class="meta">
-      <div>REF NO: <span>${agNum}</span></div>
-      <div>Date: <span style="border-bottom: 1px dashed #000; padding: 0 20px;">${today}</span></div>
-    </div>
-    
-    <div class="form-grid">
-      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${customerName}</div>
-      <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
-      <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
-      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phone}</div>
-      <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
-      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}</div>
-      
-      <div style="grid-column: 1 / -1; height: 15px;"></div>
-      
-      <div class="label">Bride Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Groom Name & Address</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Total Amount (Estimated)</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
-      <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
-      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
-      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; </div>
-      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; </div>
-    </div>
-
-    <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
-
-    <div class="signatures">
-      <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of Laurel Garden<br>Representative with Date</div>
-    </div>
-  </div></div>
-  <script>window.onload=()=>{window.print();}</script>
-  </body></html>`);
-  w.document.close();
-}
+import { generateAgreement } from "../utils/documentGenerator";
 
 export default function Jobs() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
-  const { user, role } = useRole();
+  const { user, role, venueInfo, tenant } = useRole();
+  const tSlug = tenant?.slug || 'default';
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem("hm_local_checklists") || "{}") || {});
-  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem("hm_local_tasks") || "{}") || {});
-  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem("hm_local_staff") || "{}") || {});
-  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem("hm_local_jobs") || "[]") || []);
+  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem(`hm_local_checklists_${tSlug}`) || "{}") || {});
+  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem(`hm_local_tasks_${tSlug}`) || "{}") || {});
+  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}") || {});
+  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]") || []);
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
-  const [staffModal, setStaffModal] = useState({ open: false, staffName: "", role: "Sales" });
+  const [staffModal, setStaffModal] = useState({ open: false, staffId: "", staffName: "", role: "Sales" });
   const [jobModal, setJobModal] = useState({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
+
+  useEffect(() => {
+    import("../services/api").then(({ settingsAPI }) => {
+      if (settingsAPI.getUsers) {
+        settingsAPI.getUsers().then(res => {
+          if (res.data.data) setUsersList(res.data.data.filter(u => u.active !== false));
+        }).catch(() => {});
+      }
+    });
+  }, []);
 
   const toggleChecklistLocal = (jobId, checklistId) => {
     const key = `${jobId}_${checklistId}`;
     const newState = !localChecklists[key];
     const updated = { ...localChecklists, [key]: newState };
     setLocalChecklists(updated);
-    localStorage.setItem("hm_local_checklists", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_checklists_${tSlug}`, JSON.stringify(updated));
   };
 
   const fetchJobs = useCallback(async () => {
@@ -179,17 +118,17 @@ export default function Jobs() {
     };
     const updated = [newJob, ...localJobs];
     setLocalJobs(updated);
-    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     setJobs(prev => [newJob, ...prev]);
     setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
     addToast("Job created successfully", "success");
   };
 
-  const handleDeleteJob = (id) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
+  const handleDeleteJob = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this job?"))) return;
     const updated = localJobs.filter(j => j.id !== id);
     setLocalJobs(updated);
-    localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     setJobs(prev => prev.filter(j => j.id !== id));
     setSelectedJob(null);
     addToast("Job deleted successfully", "success");
@@ -200,7 +139,7 @@ export default function Jobs() {
     if (isLocal) {
       const updated = localJobs.map(j => j.id === id ? { ...j, status: newStatus } : j);
       setLocalJobs(updated);
-      localStorage.setItem("hm_local_jobs", JSON.stringify(updated));
+      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
     }
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
     if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
@@ -213,18 +152,36 @@ export default function Jobs() {
     const newTask = { id: Date.now(), taskName: taskModal.taskName, isCompleted: false };
     const updated = { ...localTasks, [jId]: [...(localTasks?.[jId] || []), newTask] };
     setLocalTasks(updated);
-    localStorage.setItem("hm_local_tasks", JSON.stringify(updated));
+    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
     setTaskModal({ open: false, taskName: "" });
   };
 
   const handleAddStaff = (e) => {
     e.preventDefault();
     const jId = selectedJob.id;
-    const newStaff = { User: { name: staffModal.staffName }, role: staffModal.role, name: staffModal.staffName };
+    const u = usersList.find(x => x.id === staffModal.staffId);
+    const sName = u ? u.name : staffModal.staffName;
+    const newStaff = { id: Date.now(), User: { id: staffModal.staffId, name: sName }, role: staffModal.role, name: sName, userId: staffModal.staffId };
     const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
     setLocalStaff(updated);
-    localStorage.setItem("hm_local_staff", JSON.stringify(updated));
-    setStaffModal({ open: false, staffName: "", role: "Sales" });
+    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
+    setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" });
+  };
+
+  const handleRemoveTask = (taskId) => {
+    const jId = selectedJob.id;
+    const current = localTasks[jId] || [];
+    const updated = { ...localTasks, [jId]: current.filter(t => t.id !== taskId) };
+    setLocalTasks(updated);
+    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
+  };
+
+  const handleRemoveStaff = (staffLocalId) => {
+    const jId = selectedJob.id;
+    const current = localStaff[jId] || [];
+    const updated = { ...localStaff, [jId]: current.filter(s => s.id !== staffLocalId) };
+    setLocalStaff(updated);
+    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
   };
 
   const getCustomerName = (job) => {
@@ -296,7 +253,7 @@ export default function Jobs() {
             <div style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>Total Value</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#1B4332", marginBottom: 8 }}>{amount}</div>
             <button
-              onClick={() => printAgreement(selectedJob)}
+              onClick={() => generateAgreement({ booking: selectedJob.Booking || selectedJob })}
               style={{ padding: "6px 12px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, display: "inline-flex", justifyContent: "center", alignItems: "center", cursor: "pointer", fontSize: 12, fontWeight: 600, gap: 6 }}
             >
               <Printer size={14} /> Print Agreement
@@ -320,9 +277,14 @@ export default function Jobs() {
                 {totalTasks === 0 ? (
                   <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
                 ) : checklists.map((task, i) => (
-                  <div key={i} onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
-                    <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
-                    <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none", flex: 1 }}>{task.taskName}</span>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
+                    <div onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                      <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
+                      <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
+                    </div>
+                    {task.id && !String(task.id).includes("-") && localTasks[selectedJob.id]?.some(t => t.id === task.id) && (
+                      <button onClick={(e) => { e.stopPropagation(); handleRemoveTask(task.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -342,12 +304,15 @@ export default function Jobs() {
                 ) : staff.map((s, i) => (
                   <div key={i} style={{ border: "1px solid #eaeaea", padding: 12, borderRadius: 8, display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 200 }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#1B4332", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
-                      {s.User?.name?.charAt(0) || "?"}
+                      {s.User?.name?.charAt(0) || s.name?.charAt(0) || "?"}
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || "Unknown"}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || s.name || "Unknown"}</div>
                       <div style={{ fontSize: 12, color: "#666" }}>{s.role}</div>
                     </div>
+                    {s.id && localStaff[selectedJob.id]?.some(ls => ls.id === s.id) && (
+                      <button onClick={() => handleRemoveStaff(s.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><X size={14} /></button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -396,9 +361,31 @@ export default function Jobs() {
             <form onSubmit={handleAddStaff} style={{ background: "#fff", width: 400, borderRadius: 16, padding: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Assign Staff</h2>
-                <button type="button" onClick={() => setStaffModal({ open: false, staffName: "", role: "Sales" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
+                <button type="button" onClick={() => setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" })} style={{ background: "none", border: "none", cursor: "pointer", color: "#666" }}><X size={18} /></button>
               </div>
-              <input required type="text" value={staffModal.staffName} onChange={e => setStaffModal({ ...staffModal, staffName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12 }} placeholder="Staff Name" />
+              <select 
+                required 
+                value={staffModal.staffId} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === "custom") {
+                    setStaffModal({ ...staffModal, staffId: "custom", staffName: "" });
+                  } else {
+                    const u = usersList.find(x => x.id === val);
+                    setStaffModal({ ...staffModal, staffId: val, staffName: u ? u.name : "", role: u ? u.role : "Sales" });
+                  }
+                }} 
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12, outline: "none" }}
+              >
+                <option value="" disabled>-- Select Staff --</option>
+                {usersList.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                ))}
+                <option value="custom">Custom (Type Name)</option>
+              </select>
+              {staffModal.staffId === "custom" && (
+                <input required type="text" value={staffModal.staffName} onChange={e => setStaffModal({ ...staffModal, staffName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 12 }} placeholder="Staff Name" />
+              )}
               <select required value={staffModal.role} onChange={e => setStaffModal({ ...staffModal, role: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", marginBottom: 16 }}>
                 <option value="Operations">Operations</option>
                 <option value="Technician">Technician</option>
@@ -428,12 +415,6 @@ export default function Jobs() {
             padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
           }}>
             <Plus size={16} /> Create Job
-          </button>
-          <button onClick={fetchJobs} style={{
-            background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8,
-            padding: "10px 16px", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer", fontSize: 14
-          }}>
-            <RefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>

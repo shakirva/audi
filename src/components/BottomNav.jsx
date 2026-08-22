@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BookOpen, CalendarDays, CreditCard, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CreditCard, BarChart3 } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 
 const allItems = [
   { to: "/",          icon: LayoutDashboard, label: "Home",     permission: null },
-  { to: "/bookings",  icon: BookOpen,         label: "Bookings", permission: null },
-  { to: "/calendar",  icon: CalendarDays,     label: "Calendar", permission: null },
-  { to: "/payments",  icon: CreditCard,       label: "Payments", permission: "canViewPayments" },
-  { to: "/reports",   icon: BarChart3,        label: "Reports",  permission: "canViewReports" },
+  { to: "/crm",       icon: Users,           label: "CRM",      permission: null },
+  { to: "/calendar",  icon: CalendarDays,    label: "Calendar", permission: null },
+  { to: "/finance/payments",  icon: CreditCard, label: "Finance", permission: "canViewPayments" },
+  { to: "/reports",   icon: BarChart3,       label: "Reports",  permission: "canViewReports" },
 ];
 
 export default function BottomNav() {
@@ -20,7 +20,7 @@ export default function BottomNav() {
       background: "#fff", borderTop: "1px solid #e5e7eb",
       display: "flex",
       fontFamily: "'DM Sans', sans-serif",
-    }} className="hallmaster-bottomnav">
+    }} className="hallmaster-bottomnav hm-bottom-nav">
       {items.map((item) => {
         const NavIcon = item.icon;
         return (

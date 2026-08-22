@@ -8,8 +8,11 @@ class CustomerRepository extends BaseRepository {
     super(Customer);
   }
 
-  async findAllFiltered({ tenantId, environmentId, search, type, query = {} }) {
+  async findAllFiltered({ tenantId, environmentId, userRole, userId, search, type, query = {} }) {
     const where = {};
+    if (userRole === "Sales") {
+      where.createdBy = userId;
+    }
 
     if (type) where.customerType = type;
     if (search) {

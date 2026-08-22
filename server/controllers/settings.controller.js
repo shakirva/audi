@@ -13,7 +13,7 @@ class SettingsController {
 
   async get(req, res, next) {
     try {
-      const result = await settingsService.getSettings(req.tenantId, req.environmentId);
+      const result = await settingsService.getSettings(req.tenantId, req.environmentId, req.environmentType);
       return sendSuccess(res, { data: result });
     } catch (err) {
       next(err);
@@ -77,6 +77,22 @@ class SettingsController {
 
   async updateUser(req, res, next) {
     try {
+      const { ROLES } = require("../helpers/roles");
+      const { ForbiddenError } = require("../helpers/errors");
+      
+      const targetUserId = req.params.id;
+      const actingUserId = req.user.id;
+      const actingUserRole = req.user.role;
+      
+      if (actingUserRole !== ROLES.OWNER && actingUserRole !== ROLES.MANAGER) {
+        if (String(targetUserId) !== String(actingUserId)) {
+          throw new ForbiddenError("You are not authorized to update this user's profile");
+        }
+        // Prevent privilege escalation: non-admins cannot change their own roles or active status
+        delete req.body.role;
+        delete req.body.active;
+      }
+
       const result = await settingsService.updateUser(req.params.id, req.body, req.tenantId);
       return sendSuccess(res, { data: result, message: "User updated successfully" });
     } catch (err) {

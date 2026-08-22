@@ -7,7 +7,11 @@ const ROLES_INFO = [
   { value: "Reception", label: "Reception", desc: "View and create bookings only", color: "#7c3aed", bg: "#f5f3ff" },
   { value: "Accounts", label: "Accounts", desc: "Access to finance and payment records", color: "#15803d", bg: "#f0faf4" },
   { value: "Operations", label: "Operations", desc: "Manage operations and job schedules", color: "#ea580c", bg: "#fff7ed" },
+  { value: "Coordinator", label: "Coordinator", desc: "Coordinate events and staff", color: "#0ea5e9", bg: "#f0f9ff" },
   { value: "Staff", label: "Staff", desc: "Basic access — view only", color: "#6b7280", bg: "#f9fafb" },
+  { value: "Security", label: "Security", desc: "Manage venue security & parking", color: "#3f3f46", bg: "#f4f4f5" },
+  { value: "Technician", label: "Technician", desc: "Audio, video, and lighting", color: "#0d9488", bg: "#f0fdfa" },
+  { value: "Cleaner", label: "Cleaner", desc: "Housekeeping and maintenance", color: "#b45309", bg: "#fffbeb" },
 ];
 
 const iStyle = {
@@ -92,7 +96,7 @@ export default function AddStaffModal({ open, onClose, onSave, editingUser }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxHeight: "65vh", overflowY: "auto" }}>
 
             {/* Name & Phone row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

@@ -26,19 +26,11 @@ export default function FinanceReports() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Finance Reports</h1>
           <p style={{ color: "#666", margin: 0, fontSize: 15 }}>Real-time Profit & Loss statement based on double-entry ledgers.</p>
         </div>
-        
-        <button 
-          onClick={fetchReport}
-          disabled={loading}
-          style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "10px 16px", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: loading ? "not-allowed" : "pointer" }}
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
       </div>
 
       {loading && !report ? (
@@ -104,7 +96,7 @@ export default function FinanceReports() {
                 {(report.netProfit || 0) >= 0 ? "+" : "-"} ₹{Math.abs(report.netProfit || 0).toLocaleString()}
               </h1>
             </div>
-            <div style={{ background: "rgba(255,255,255,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="hidden md:block" style={{ background: "rgba(255,255,255,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
               <BarChart3 size={48} color="#fff" style={{ opacity: 0.8 }} />
             </div>
           </div>

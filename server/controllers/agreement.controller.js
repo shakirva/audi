@@ -7,6 +7,8 @@ class AgreementController {
       const result = await agreementService.getAll(req.query, {
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
       });
       return sendSuccess(res, { data: result.rows, meta: { total: result.total } });
     } catch (err) {

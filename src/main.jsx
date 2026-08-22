@@ -19,13 +19,17 @@ if (pathParts.length > 0 && !reservedWords.includes(pathParts[0])) {
   basename = `/${pathParts[0]}`;
 }
 
+const queryClient = new QueryClient();
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter basename={basename}>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename={basename}>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   </StrictMode>
 );
 

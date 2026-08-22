@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { FileSignature, Filter, Search, Printer, Share2, AlertCircle, RefreshCw, Plus, Edit3, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { bookingsAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
+import EditBookingModal from "../components/EditBookingModal";
+import { useConfirm } from "../components/ConfirmProvider";
+import { generateAgreement } from "../utils/documentGenerator";
 
 function AgreementSkeleton() {
   return (
@@ -22,105 +26,16 @@ const STATUS_STYLE = {
   Sent:    { bg: "#dbeafe", text: "#1d4ed8" },
 };
 
-function printAgreement(agr) {
-  const customerName = agr.customerName || "";
-  const phone = agr.phone || "";
-  const address = agr.address || "";
-  const eventType = agr.eventType || "";
-  const dateStr = agr.date ? new Date(agr.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "";
-  const session = agr.session || "";
-  const hall = agr.hall ? ` - ${agr.hall}` : "";
-  const total = Number(agr.totalAmount) || 0;
-  const discount = Number(agr.discount) || 0;
-  const quoted = total + discount;
-  const advance = Number(agr.advance) || 0;
-  const deposit = Number(agr.depositAmount) || 0;
-  const balance = total - advance - deposit;
-  const guests = agr.guests || "";
-  const agNum = agr.bookingId || `AGR-${String(agr._id || agr.id).padStart(3,"0")}`;
-
-  const hostFull = `${customerName}${agr.bookedBy && agr.bookedBy !== customerName ? ` (Booked by: ${agr.bookedBy})` : ""}${agr.bookingParty ? ` [${agr.bookingParty}]` : ""}`;
-  const phoneFull = `${phone}${agr.whatsapp ? ` / WA: ${agr.whatsapp}` : ""}`;
-  
-  const brideParents = (agr.brideFatherName || agr.brideMotherName) ? ` (D/o ${[agr.brideFatherName, agr.brideMotherName].filter(Boolean).join(" & ")})` : "";
-  const brideFull = agr.brideName ? `${agr.brideName}${brideParents}${agr.bridePhone ? ` — Ph: ${agr.bridePhone}` : ""}${agr.brideAddress ? `, ${agr.brideAddress}` : ""}` : "";
-  
-  const groomParents = (agr.groomFatherName || agr.groomMotherName) ? ` (S/o ${[agr.groomFatherName, agr.groomMotherName].filter(Boolean).join(" & ")})` : "";
-  const groomFull = agr.groomName ? `${agr.groomName}${groomParents}${agr.groomPhone ? ` — Ph: ${agr.groomPhone}` : ""}${agr.groomAddress ? `, ${agr.groomAddress}` : ""}` : "";
-
-  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "numeric", year: "2-digit" });
-
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>Agreement - ${agNum}</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
-    .page-border { border: 4px solid #d32f2f; padding: 4px; }
-    .inner-border { border: 2px solid #d32f2f; padding: 20px; }
-    .header { text-align: center; color: #d32f2f; }
-    .header h1 { margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 2px; }
-    .header .sub-header { background: #d32f2f; color: #fff; padding: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
-    .title { text-align: center; font-size: 24px; font-weight: bold; color: #2e7d32; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
-    .meta { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px 0; font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
-    .label { font-weight: bold; }
-    .value { border-bottom: 1px dashed #000; font-family: 'Caveat', cursive; font-size: 18px; padding-left: 10px; }
-    .footer-note { text-align: center; color: #d32f2f; font-weight: bold; font-style: italic; margin-bottom: 40px; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 60px; font-weight: bold; text-align: center; }
-    .sig-line { border-top: 1px dashed #000; padding-top: 5px; width: 300px; }
-    @media print { body { padding: 0; margin: 10px; } .page-border { border: 2px solid #d32f2f; } }
-  </style></head><body>
-  <div class="page-border"><div class="inner-border">
-    <div class="header">
-      <h1>LAUREL GARDEN</h1>
-      <div class="sub-header">GARDENING SERVICES, MULTI PURPOSE PARTY HALL & KITCHEN</div>
-    </div>
-    <div class="title">CONTRACT AGREEMENT</div>
-    <div class="meta">
-      <div>REF NO: <span>${agNum}</span></div>
-      <div>Date: <span style="border-bottom: 1px dashed #000; padding: 0 20px;">${today}</span></div>
-    </div>
-    
-    <div class="form-grid">
-      <div class="label">Name of the Host</div><div class="value">:&nbsp;&nbsp; ${hostFull}</div>
-      <div class="label">Date & Time of function</div><div class="value">:&nbsp;&nbsp; ${dateStr} (${session})</div>
-      <div class="label">Address</div><div class="value">:&nbsp;&nbsp; ${address}</div>
-      <div class="label">Email & Mobile No</div><div class="value">:&nbsp;&nbsp; ${phoneFull}</div>
-      <div class="label">No. of Guests Expected</div><div class="value">:&nbsp;&nbsp; ${guests} pax</div>
-      <div class="label">Nature of Function</div><div class="value">:&nbsp;&nbsp; ${eventType}${hall}</div>
-      
-      <div style="grid-column: 1 / -1; height: 15px;"></div>
-      
-      <div class="label">Bride Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${brideFull}</div>
-      <div class="label">Groom Name & Address</div><div class="value" style="font-size: 16px;">:&nbsp;&nbsp; ${groomFull}</div>
-      <div class="label">Quoted Amount</div><div class="value">:&nbsp;&nbsp; ₹${quoted.toLocaleString()}</div>
-      <div class="label">Discount</div><div class="value">:&nbsp;&nbsp; ₹${discount.toLocaleString()}</div>
-      <div class="label">Final Total Amount</div><div class="value">:&nbsp;&nbsp; ₹${total.toLocaleString()}</div>
-      <div class="label">Advance Paid</div><div class="value">:&nbsp;&nbsp; ₹${advance.toLocaleString()}</div>
-      <div class="label">Deposit Amount Paid</div><div class="value">:&nbsp;&nbsp; ₹${deposit.toLocaleString()}</div>
-      <div class="label">Balance Amount Payable</div><div class="value">:&nbsp;&nbsp; ₹${balance.toLocaleString()}</div>
-      <div class="label">Extra arrangements If any</div><div class="value">:&nbsp;&nbsp; ${agr.extraArrangements || ""}</div>
-      <div class="label">Any Remarks</div><div class="value">:&nbsp;&nbsp; ${agr.notes || agr.specialInstructions || ""}</div>
-    </div>
-
-    <div class="footer-note">Both Parties Agree Terms & Conditions - Refer Back Side of this Page</div>
-
-    <div class="signatures">
-      <div class="sig-line">Name & Signature of Host with Date</div>
-      <div class="sig-line">Name & Signature of Laurel Garden<br>Representative with Date</div>
-    </div>
-  </div></div>
-  <script>window.onload=()=>{window.print();}</script>
-  </body></html>`);
-  w.document.close();
-}
 
 export default function Agreements() {
+  const { confirm } = useConfirm();
   const { addToast } = useToast();
+  const { user, role, venueInfo } = useRole();
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [editingAgreement, setEditingAgreement] = useState(null);
 
   const fetchAgreements = useCallback(async () => {
     setLoading(true);
@@ -131,7 +46,10 @@ export default function Agreements() {
       const res = await bookingsAPI.getAll(params);
       
       // Filter out enquiries if we only want confirmed/actual bookings
-      const fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
+      let fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
+      if (role === "Sales") {
+        fetched = fetched.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
+      }
       setAgreements(fetched);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load agreements";
@@ -146,6 +64,17 @@ export default function Agreements() {
     const timer = setTimeout(() => fetchAgreements(), 300);
     return () => clearTimeout(timer);
   }, [fetchAgreements]);
+
+  const handleDelete = async (id) => {
+    if (!(await confirm("Are you sure you want to delete this agreement? This will also delete the associated booking."))) return;
+    try {
+      await bookingsAPI.remove(id);
+      addToast("Agreement deleted successfully", "success");
+      fetchAgreements();
+    } catch (err) {
+      addToast("Failed to delete agreement", "error");
+    }
+  };
 
   const formatValue = (val) => {
     if (!val) return "—";
@@ -170,7 +99,7 @@ export default function Agreements() {
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
       
       <PageHeader 
         title="Agreements & Contracts" 
@@ -179,18 +108,15 @@ export default function Agreements() {
         color="#1B4332"
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 260 }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <Search size={18} style={{ position: "absolute", left: 16, top: 14, color: "#94a3b8" }} />
             <input type="text" placeholder="Search agreements..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
+              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: "100%", outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
-          <button onClick={fetchAgreements} style={{ padding: "12px 16px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#475569" }}>
-            <RefreshCw size={16} />
-          </button>
         </div>
-        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500, whiteSpace: "nowrap" }}>
           {!loading && `${agreements.length} agreement${agreements.length !== 1 ? "s" : ""}`}
         </div>
       </div>
@@ -231,8 +157,12 @@ export default function Agreements() {
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fdf2f8", color: "#ec4899", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <FileSignature size={20} />
                   </div>
-                  <div style={{ background: st.bg, color: st.text, fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 10, letterSpacing: 1, textTransform: "uppercase" }}>
-                    {a.status || "Draft"}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ background: st.bg, color: st.text, fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 10, letterSpacing: 1, textTransform: "uppercase" }}>
+                      {a.status || "Draft"}
+                    </div>
+                    <button onClick={() => setEditingAgreement(a)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}><Edit3 size={16} /></button>
+                    <button onClick={() => handleDelete(a.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
                   </div>
                 </div>
                 
@@ -249,13 +179,13 @@ export default function Agreements() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
-                    onClick={() => printAgreement(a)}
+                    onClick={() => generateAgreement({ booking: a })}
                     style={{ flex: 1, padding: "10px", background: "#0f172a", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", border: "none", fontWeight: 700, fontSize: 14, gap: 8, cursor: "pointer" }}
                   >
                     Preview
                   </button>
                   <button
-                    onClick={() => printAgreement(a)}
+                    onClick={() => generateAgreement({ booking: a })}
                     style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}
                   >
                     <Printer size={16} />
@@ -279,6 +209,15 @@ export default function Agreements() {
           })
         )}
       </div>
+
+      {editingAgreement && (
+        <EditBookingModal 
+          open={!!editingAgreement} 
+          booking={editingAgreement} 
+          onClose={() => setEditingAgreement(null)} 
+          onSaved={fetchAgreements} 
+        />
+      )}
     </div>
   );
 }

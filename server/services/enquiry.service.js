@@ -4,10 +4,12 @@ const availabilityService = require("./availability.service");
 const { NotFoundError, BadRequestError, ConflictError } = require("../helpers/errors");
 
 class EnquiryService {
-  async listEnquiries({ tenantId, environmentId, search, status, salesExecutiveId, query }) {
+  async listEnquiries({ tenantId, environmentId, userRole, userId, search, status, salesExecutiveId, query }) {
     const result = await enquiryRepository.findAllFiltered({
       tenantId,
       environmentId,
+      userRole,
+      userId,
       search,
       status,
       salesExecutiveId,
@@ -23,9 +25,10 @@ class EnquiryService {
   }
 
   async createEnquiry(data, { tenantId, environmentId, createdBy }) {
-    // Verify customer exists
-    const customer = await customerRepository.findById(data.customerId, { tenantId, environmentId });
-    if (!customer) throw new NotFoundError("Customer not found");
+    if (data.customerId) {
+      const customer = await customerRepository.findById(data.customerId, { tenantId, environmentId });
+      if (!customer) throw new NotFoundError("Customer not found");
+    }
 
     if (data.hallPreference && data.tentativeDate && data.session) {
       const avail = await availabilityService.checkAvailability({

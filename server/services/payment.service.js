@@ -10,8 +10,20 @@ const { NotFoundError, BadRequestError } = require("../helpers/errors");
 
 class PaymentService {
   async listPayments({ tenantId, environmentId, bookingId, customerId, query }) {
+    let resolvedBookingId = bookingId;
+    if (bookingId && typeof bookingId === "string" && isNaN(Number(bookingId))) {
+      const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+      if (booking) {
+        resolvedBookingId = booking.id;
+      } else {
+        return { data: [], total: 0, page: Number(query?.page) || 1, limit: Number(query?.limit) || 10 };
+      }
+    } else if (bookingId) {
+      resolvedBookingId = Number(bookingId);
+    }
+
     const result = await paymentRepository.findAllWithDetails({
-      tenantId, environmentId, bookingId, customerId, query,
+      tenantId, environmentId, bookingId: resolvedBookingId, customerId, query,
     });
     return { data: result.rows, total: result.total, page: result.page, limit: result.limit };
   }
@@ -27,7 +39,11 @@ class PaymentService {
     let booking = null;
     
     if (data.bookingId) {
-      booking = await bookingRepository.findById(data.bookingId, { tenantId, environmentId });
+      if (typeof data.bookingId === "string" && isNaN(Number(data.bookingId))) {
+        booking = await bookingRepository.findByBookingId(data.bookingId, { tenantId, environmentId });
+      } else {
+        booking = await bookingRepository.findById(Number(data.bookingId), { tenantId, environmentId });
+      }
       if (!booking) throw new NotFoundError("Booking");
       if (!customerId) customerId = booking.customerId;
     }
@@ -43,7 +59,7 @@ class PaymentService {
         customerId = customer.id;
         
         // Optionally update booking as well
-        booking.customerId = cust.id;
+        booking.customerId = customer.id;
         await booking.save({ hooks: false });
       } catch (err) {
         console.error("Failed to auto-heal customerId for payment:", err);
@@ -162,6 +178,181 @@ class PaymentService {
     const receipt = await Receipt.findOne({ where: { paymentId, tenantId, environmentId } });
     if (!receipt) throw new NotFoundError("Receipt");
     return receipt;
+  }
+
+  async updatePayment(id, updateData, { tenantId, environmentId, updatedBy }) {
+    return sequelize.transaction(async (t) => {
+      const payment = await paymentRepository.findByIdWithDetails(id, { tenantId, environmentId }, { transaction: t });
+      if (!payment) throw new NotFoundError("Payment");
+
+      const oldAmount = Number(payment.amount);
+      const newAmount = updateData.amount ? Number(updateData.amount) : oldAmount;
+      const amountDiff = newAmount - oldAmount; // if new > old, diff is positive
+      const newMode = updateData.paymentMode || payment.paymentMode;
+      const newNotes = updateData.notes || payment.notes;
+      const newDate = updateData.paymentDate || payment.paymentDate;
+
+      // 1. Update Payment Record
+      payment.amount = newAmount;
+      payment.paymentMode = newMode;
+      payment.notes = newNotes;
+      payment.paymentDate = newDate;
+      if (updateData.referenceNumber !== undefined) payment.referenceNumber = updateData.referenceNumber;
+      payment.updatedBy = updatedBy;
+      await payment.save({ transaction: t });
+
+      // 2. Update Booking Advance
+      if (payment.bookingId) {
+        const booking = await bookingRepository.findById(payment.bookingId, { tenantId, environmentId }, { transaction: t });
+        if (booking) {
+          booking.advance = Math.max(0, (Number(booking.advance) || 0) + amountDiff);
+          await booking.save({ transaction: t, hooks: false });
+        }
+      }
+
+      // 3. Update Receipt
+      const receipt = await Receipt.findOne({ where: { paymentId: payment.id, tenantId, environmentId }, transaction: t });
+      if (receipt && amountDiff !== 0) {
+        receipt.amount = newAmount;
+        await receipt.save({ transaction: t });
+      }
+
+      // 4. Handle AccountStatement & Cash/Bank Book Differentials
+      if (amountDiff !== 0) {
+        // Adjust Account Statement
+        const stmt = await accountStatementRepo.model.findOne({
+          where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId },
+          transaction: t
+        });
+        if (stmt) {
+          stmt.credit = newAmount;
+          stmt.balance = Number(stmt.balance) - amountDiff; // Payment credit reduces balance owed
+          await stmt.save({ transaction: t });
+          // Update subsequent rows
+          await sequelize.query(
+            `UPDATE "AccountStatements" SET balance = balance - :diff WHERE "tenantId" = :tenantId AND "customerId" = :customerId AND "createdAt" > :createdAt`,
+            { replacements: { diff: amountDiff, tenantId, customerId: payment.customerId, createdAt: stmt.createdAt }, transaction: t }
+          );
+        }
+
+        // Adjust Cash / Bank Book
+        const { CashBook, BankBook } = require("../models");
+        if (payment.paymentMode === "Cash") {
+          const cashEntry = await CashBook.findOne({ where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId }, transaction: t });
+          if (cashEntry) {
+            cashEntry.cashIn = newAmount;
+            cashEntry.balance = Number(cashEntry.balance) + amountDiff;
+            await cashEntry.save({ transaction: t });
+            await sequelize.query(
+              `UPDATE "CashBooks" SET balance = balance + :diff WHERE "tenantId" = :tenantId AND "createdAt" > :createdAt`,
+              { replacements: { diff: amountDiff, tenantId, createdAt: cashEntry.createdAt }, transaction: t }
+            );
+          }
+        } else {
+          const bankEntry = await BankBook.findOne({ where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId }, transaction: t });
+          if (bankEntry) {
+            bankEntry.bankIn = newAmount;
+            bankEntry.balance = Number(bankEntry.balance) + amountDiff;
+            await bankEntry.save({ transaction: t });
+            await sequelize.query(
+              `UPDATE "BankBooks" SET balance = balance + :diff WHERE "tenantId" = :tenantId AND "masterBankId" = :bankId AND "createdAt" > :createdAt`,
+              { replacements: { diff: amountDiff, tenantId, bankId: bankEntry.masterBankId, createdAt: bankEntry.createdAt }, transaction: t }
+            );
+          }
+        }
+      }
+
+      // 5. Adjust Accounting Engine Journals
+      // We will delete the old voucher and recreate it to be safe
+      try {
+        const { Voucher, JournalEntry } = require("../models");
+        const voucher = await Voucher.findOne({ where: { sourceId: payment.id, sourceModule: "Payment", tenantId, environmentId }, transaction: t });
+        if (voucher) {
+          await JournalEntry.destroy({ where: { voucherId: voucher.id, tenantId, environmentId }, transaction: t });
+          await voucher.destroy({ transaction: t });
+        }
+        await accountingEngine.onPaymentReceived(payment, { tenantId, environmentId, createdBy: updatedBy, transaction: t });
+      } catch (err) {
+        console.error("Failed to update accounting journals", err);
+      }
+
+      return payment;
+    });
+  }
+
+  async removePayment(id, { tenantId, environmentId }) {
+    return sequelize.transaction(async (t) => {
+      const payment = await paymentRepository.findByIdWithDetails(id, { tenantId, environmentId }, { transaction: t });
+      if (!payment) throw new NotFoundError("Payment");
+
+      // 1. Revert Booking advance
+      if (payment.bookingId) {
+        const booking = await bookingRepository.findById(payment.bookingId, { tenantId, environmentId }, { transaction: t });
+        if (booking) {
+          booking.advance = Math.max(0, (Number(booking.advance) || 0) - Number(payment.amount));
+          await booking.save({ transaction: t, hooks: false });
+        }
+      }
+
+      // 2. Remove Receipt
+      const receipt = await Receipt.findOne({ where: { paymentId: payment.id, tenantId, environmentId }, transaction: t });
+      if (receipt) await receipt.destroy({ transaction: t });
+
+      // 3. Remove AccountStatement & update subsequent
+      const stmt = await accountStatementRepo.model.findOne({
+        where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId },
+        transaction: t
+      });
+      if (stmt) {
+        const diff = Number(payment.amount);
+        await stmt.destroy({ transaction: t });
+        // Since payment reduced balance by `diff`, removing it increases balance by `diff`
+        await sequelize.query(
+          `UPDATE "AccountStatements" SET balance = balance + :diff WHERE "tenantId" = :tenantId AND "customerId" = :customerId AND "createdAt" > :createdAt`,
+          { replacements: { diff, tenantId, customerId: payment.customerId, createdAt: stmt.createdAt }, transaction: t }
+        );
+      }
+
+      // 4. Remove CashBook / BankBook & update subsequent
+      const { CashBook, BankBook } = require("../models");
+      if (payment.paymentMode === "Cash") {
+        const cashEntry = await CashBook.findOne({ where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId }, transaction: t });
+        if (cashEntry) {
+          const diff = Number(payment.amount);
+          await cashEntry.destroy({ transaction: t });
+          // Reverting cashIn reduces balance by `diff`
+          await sequelize.query(
+            `UPDATE "CashBooks" SET balance = balance - :diff WHERE "tenantId" = :tenantId AND "createdAt" > :createdAt`,
+            { replacements: { diff, tenantId, createdAt: cashEntry.createdAt }, transaction: t }
+          );
+        }
+      } else {
+        const bankEntry = await BankBook.findOne({ where: { referenceId: payment.id, referenceType: "Payment", tenantId, environmentId }, transaction: t });
+        if (bankEntry) {
+          const diff = Number(payment.amount);
+          await bankEntry.destroy({ transaction: t });
+          await sequelize.query(
+            `UPDATE "BankBooks" SET balance = balance - :diff WHERE "tenantId" = :tenantId AND "masterBankId" = :bankId AND "createdAt" > :createdAt`,
+            { replacements: { diff, tenantId, bankId: bankEntry.masterBankId, createdAt: bankEntry.createdAt }, transaction: t }
+          );
+        }
+      }
+
+      // 5. Remove Accounting Engine Journals
+      try {
+        const { Voucher, JournalEntry } = require("../models");
+        const voucher = await Voucher.findOne({ where: { sourceId: payment.id, sourceModule: "Payment", tenantId, environmentId }, transaction: t });
+        if (voucher) {
+          await JournalEntry.destroy({ where: { voucherId: voucher.id, tenantId, environmentId }, transaction: t });
+          await voucher.destroy({ transaction: t });
+        }
+      } catch (err) {
+        console.error("Failed to remove accounting journals", err);
+      }
+
+      await payment.destroy({ transaction: t });
+      return { message: "Payment removed successfully" };
+    });
   }
 
   async generateReceiptPdf(receiptId, { tenantId, environmentId }) {

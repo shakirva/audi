@@ -1,10 +1,14 @@
 const { z } = require("zod");
 
-const ENQUIRY_STATUSES = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Quotation Sent", "Interested", "Booking Confirmed", "Cancelled", "Lost"];
+const ENQUIRY_STATUSES = ["New Enquiry", "Contacted", "Follow-up", "Customer Visit", "Interested", "Booking Confirmed", "Cancelled", "Lost"];
 
 const createEnquirySchema = z.object({
   body: z.object({
-    customerId: z.number().int().positive("Customer ID must be a positive integer"),
+    customerId: z.number().int().positive().nullable().optional(),
+    enquirerName: z.string().min(1, "Name is required"),
+    enquirerPhone: z.string().min(1, "Phone is required"),
+    enquirerArea: z.string().optional(),
+    enquirerAddress: z.string().optional(),
     eventType: z.string().optional(),
     tentativeDate: z.string().optional(),
     session: z.string().optional(),
@@ -22,6 +26,11 @@ const createEnquirySchema = z.object({
 
 const updateEnquirySchema = z.object({
   body: z.object({
+    customerId: z.number().int().positive().nullable().optional(),
+    enquirerName: z.string().optional(),
+    enquirerPhone: z.string().optional(),
+    enquirerArea: z.string().optional(),
+    enquirerAddress: z.string().optional(),
     eventType: z.string().optional(),
     tentativeDate: z.string().optional(),
     session: z.string().optional(),

@@ -3,7 +3,6 @@ import {
   ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
 import { settingsAPI } from "../services/api";
@@ -13,142 +12,6 @@ const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeig
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PEAK_DAYS = ["Sat", "Sun", "Fri"];
-
-// ── PDF generators ──
-function printHTML(title, bodyHTML) {
-  const name = "Venueza Auditorium";
-  const location = "Kerala, India";
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
-  <style>
-    body{font-family:'Segoe UI',sans-serif;margin:0;padding:24px;color:#111;font-size:13px}
-    h1{font-size:22px;margin:0 0 4px;color:#1B4332}
-    .sub{font-size:12px;color:#6b7280;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th{background:#1B4332;color:#fff;padding:9px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-    td{padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:12px}
-    tr:nth-child(even) td{background:#f9fafb}
-    .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700}
-    .confirmed{background:#dcfce7;color:#15803d}
-    .pending{background:#fef9c3;color:#a16207}
-    .completed{background:#f3f4f6;color:#374151}
-    .enquiry{background:#dbeafe;color:#1d4ed8}
-    .footer{margin-top:24px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px}
-    @media print{body{padding:12px}}
-  </style></head><body>
-  <h1>${name}</h1>
-  <div class="sub">📍 ${location} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</div>
-  ${bodyHTML}
-  <div class="footer">Venueza — ${name} | Confidential Report</div>
-  <script>window.onload=()=>{window.print();}<` + `/script>
-  </body></html>`);
-  w.document.close();
-}
-
-function downloadBookingReport(bookings) {
-  const rows = bookings.map(b => `
-    <tr>
-      <td>${b.id}</td>
-      <td><strong>${b.customerName}</strong><br><span style="color:#9ca3af;font-size:11px">${b.phone}</span></td>
-      <td>${b.eventType}</td>
-      <td>${b.hall}</td>
-      <td>${new Date(b.date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</td>
-      <td>${b.session}</td>
-      <td style="font-weight:700">₹${b.totalAmount.toLocaleString()}</td>
-      <td>₹${(b.advance??b.advancePaid??0).toLocaleString()}</td>
-      <td><span class="badge ${b.status.toLowerCase().replace(" ","-")}">${b.status}</span></td>
-    </tr>`).join("");
-  const total = bookings.reduce((s,b)=>s+b.totalAmount,0);
-  printHTML("Booking Report", `
-    <h2 style="font-size:16px;margin:0 0 12px">📋 Booking Report — All ${bookings.length} Bookings</h2>
-    <table>
-      <thead><tr><th>ID</th><th>Customer</th><th>Event</th><th>Hall</th><th>Date</th><th>Session</th><th>Total</th><th>Advance</th><th>Status</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="6" style="font-weight:700;padding:10px 12px">TOTAL</td><td colspan="3" style="font-weight:800;color:#1B4332;padding:10px 12px">₹${total.toLocaleString()}</td></tr></tfoot>
-    </table>`);
-}
-
-function downloadRevenueReport(bookings) {
-  // Compute monthly revenue dynamically
-  const revenueMap = {};
-  bookings.forEach(b => {
-    if (b.status === "Confirmed" || b.status === "Completed") {
-      if (b.date) {
-        const d = new Date(b.date);
-        if (!isNaN(d)) {
-          const m = d.toLocaleString('default', { month: 'short', year: '2-digit' });
-          revenueMap[m] = (revenueMap[m] || 0) + (b.totalAmount || 0);
-        }
-      }
-    }
-  });
-  const monthlyRevenue = Object.keys(revenueMap).map(m => ({ month: m, revenue: revenueMap[m] }));
-  
-  const rows = monthlyRevenue.map(m => `
-    <tr>
-      <td>${m.month}</td>
-      <td style="font-weight:700">₹${m.revenue.toLocaleString()}</td>
-      <td>₹${Math.round(m.revenue*0.09).toLocaleString()}</td>
-      <td>₹${Math.round(m.revenue*0.09).toLocaleString()}</td>
-      <td style="font-weight:700;color:#1B4332">₹${Math.round(m.revenue*0.82).toLocaleString()}</td>
-    </tr>`).join("");
-  const grandTotal = monthlyRevenue.reduce((s,m)=>s+m.revenue,0);
-  printHTML("Revenue Report", `
-    <h2 style="font-size:16px;margin:0 0 12px">💰 Revenue Report — Monthly Breakdown</h2>
-    <table>
-      <thead><tr><th>Month</th><th>Gross Revenue</th><th>CGST (9%)</th><th>SGST (9%)</th><th>Net Revenue</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td style="font-weight:700;padding:10px 12px">TOTAL</td><td style="font-weight:800;padding:10px 12px">₹${grandTotal.toLocaleString()}</td><td style="padding:10px 12px">₹${Math.round(grandTotal*0.09).toLocaleString()}</td><td style="padding:10px 12px">₹${Math.round(grandTotal*0.09).toLocaleString()}</td><td style="font-weight:800;color:#1B4332;padding:10px 12px">₹${Math.round(grandTotal*0.82).toLocaleString()}</td></tr></tfoot>
-    </table>`);
-}
-
-function downloadCustomerReport(bookings) {
-  const customerMap = {};
-  bookings.forEach(b => {
-    if (!customerMap[b.phone]) customerMap[b.phone] = { name: b.customerName, phone: b.phone, bookings: [], total: 0 };
-    customerMap[b.phone].bookings.push(b);
-    customerMap[b.phone].total += b.totalAmount;
-  });
-  const rows = Object.values(customerMap).sort((a,b)=>b.total-a.total).map(c=>`
-    <tr>
-      <td><strong>${c.name}</strong></td>
-      <td>${c.phone}</td>
-      <td style="text-align:center">${c.bookings.length}</td>
-      <td>${c.bookings.map(b=>b.eventType).join(", ")}</td>
-      <td style="font-weight:700;color:#1B4332">₹${c.total.toLocaleString()}</td>
-      <td>${new Date(c.bookings[c.bookings.length-1].date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</td>
-    </tr>`).join("");
-  printHTML("Customer Report", `
-    <h2 style="font-size:16px;margin:0 0 12px">👥 Customer Report — ${Object.keys(customerMap).length} Unique Customers</h2>
-    <table>
-      <thead><tr><th>Name</th><th>Phone</th><th>Bookings</th><th>Event Types</th><th>Total Spent</th><th>Last Booking</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`);
-}
-
-function downloadHallReport(bookings) {
-  const hallMap = {};
-  bookings.forEach(b => {
-    if (!hallMap[b.hall]) hallMap[b.hall] = { name: b.hall, bookings: 0, revenue: 0 };
-    hallMap[b.hall].bookings++;
-    hallMap[b.hall].revenue += b.totalAmount;
-  });
-  const rows = Object.values(hallMap).map(h=>`
-    <tr>
-      <td><strong>${h.name}</strong></td>
-      <td style="text-align:center">${h.bookings}</td>
-      <td style="font-weight:700;color:#1B4332">₹${h.revenue.toLocaleString()}</td>
-      <td>₹${Math.round(h.revenue/h.bookings).toLocaleString()}</td>
-      <td>${Math.round((h.bookings / bookings.length) * 100) || 0}%</td>
-    </tr>`).join("");
-  printHTML("Hall Usage Report", `
-    <h2 style="font-size:16px;margin:0 0 12px">🏛️ Hall Usage Report</h2>
-    <table>
-      <thead><tr><th>Hall</th><th>Total Bookings</th><th>Revenue</th><th>Avg per Booking</th><th>Share of Bookings</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`);
-}
 
 
 export default function Reports() {
@@ -216,53 +79,42 @@ export default function Reports() {
     monthlyRevenue.push({ month: m, revenue: revenueMap[m] || 0 });
   }
 
-  const reportCards = [
-    { title: "Booking Report",   desc: "All bookings with details, status & revenue", icon: "📋", color: "#1B4332", onDownload: () => downloadBookingReport(bookings) },
-    { title: "Revenue Report",   desc: "Monthly revenue breakdown & GST summary",     icon: "💰", color: "#D4A017", onDownload: () => downloadRevenueReport(bookings) },
-    { title: "Customer Report",  desc: "Customer list with booking history",           icon: "👥", color: "#2563eb", onDownload: () => downloadCustomerReport(bookings) },
-    { title: "Hall Usage Report",desc: "Hall-wise utilization & peak time analysis",  icon: "🏛️", color: "#7c3aed", onDownload: () => downloadHallReport(bookings) },
-  ];
+
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ── DATE RANGE FILTER ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap", background: "#fff", borderRadius: 10, padding: "10px 12px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>📅</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 200, overflowX: "auto", flexWrap: "wrap", paddingBottom: 4 }}>
-          <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>From</label>
-          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-            style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
-          <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>To</label>
-          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-            style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none" }} />
+      <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "flex", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 14 }}>📅</span> Date Range Filter
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#1B4332", background: "#f0faf4", padding: "4px 10px", borderRadius: 20 }}>
+            {bookings.length} found
+          </span>
+        </div>
+        
+        <div className="flex flex-wrap sm:flex-nowrap gap-3 items-end">
+          <div className="flex-1 min-w-[120px]">
+            <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>From</label>
+            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <label style={{ display: "block", fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>To</label>
+            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#374151", outline: "none", background: "#f9fafb" }} />
+          </div>
           <button onClick={() => { setFromDate(defaultFrom); setToDate(defaultTo); }}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", fontSize: 10, color: "#6b7280", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>
-            Reset
+            className="w-full sm:w-auto flex-none"
+            style={{ padding: "0 16px", height: "35px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 11, fontWeight: 700, color: "#64748b", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            Reset Filter
           </button>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#1B4332", background: "#F0F4EF", padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>
-          {bookings.length} found
-        </span>
       </div>
 
-      {/* ── SUMMARY STATS ── */}
-      <div className="hm-stat-grid">
-        {[
-          { label: "Total Bookings",  value: bookings.length,     color: "#1B4332", bg: "#f0faf4", icon: "📅" },
-          { label: "Confirmed",       value: confirmed - 1,        color: "#15803d", bg: "#dcfce7", icon: "✅" },
-          { label: "Total Revenue",   value: `₹${(totalRevenue/100000).toFixed(1)}L`, color: "#D4A017", bg: "#fffbeb", icon: "💰" },
-          { label: "Avg. Booking",    value: `₹${Math.round(totalRevenue/confirmed/1000).toFixed(0)}k`, color: "#2563eb", bg: "#eff6ff", icon: "📊" },
-        ].map(s => (
-          <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 20 }}>{s.icon}</span>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 8, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{s.label}</p>
-              <p style={{ fontSize: 13, fontWeight: 800, color: s.color, marginTop: 1, margin: 0 }}>{s.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+
 
       {/* ── CHARTS ROW ── */}
       <div className="hm-2col-grid" style={{ marginBottom: 12 }}>
@@ -349,24 +201,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* ── DOWNLOAD CARDS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-        {reportCards.map(r => (
-          <div key={r.title} style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 12, border: `1px solid ${r.color}15` }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{r.icon}</div>
-            <p style={{ fontWeight: 700, fontSize: 12, color: "#111827", marginBottom: 4, margin: 0 }}>{r.title}</p>
-            <p style={{ fontSize: 10, color: "#9ca3af", marginBottom: 10, lineHeight: 1.4, margin: "4px 0 10px 0" }}>{r.desc}</p>
-            <button
-              onClick={() => { r.onDownload(); addToast(`${r.title} ready — printing…`, "success"); }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "7px 12px", borderRadius: 7, background: r.color, color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, width: "100%" }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-            >
-              <Download size={11} /> PDF
-            </button>
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 }

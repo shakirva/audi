@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -20,6 +20,7 @@ import HallReports from "./pages/HallReports";
 import AccountsReports from "./pages/AccountsReports";
 import SalesReports from "./pages/SalesReports";
 import BookingReports from "./pages/BookingReports";
+import CustomerReports from "./pages/CustomerReports";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
 import PublicBooking from "./pages/PublicBooking";
@@ -29,15 +30,17 @@ import CRM from "./pages/CRM";
 import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
 import Masters from "./pages/Masters";
-import Roadmap from "./pages/Roadmap";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
+import Inventory from "./pages/Inventory";
 import Subscriptions from "./pages/Subscriptions";
+import Feedback from "./pages/Feedback";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
+import { ConfirmProvider } from "./components/ConfirmProvider";
 import { usePWA } from "./hooks/usePWA";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
@@ -48,7 +51,7 @@ const pageTitles = {
   "/bookings": "Bookings",
   "/calendar": "Calendar",
   "/customers": "Customers",
-  "/finance/payments": "Payments & Receipts",
+  "/finance/payments": "Payments",
   "/finance/booking-accounts": "Booking Accounts",
   "/finance/collections": "Collections",
   "/finance/expenses": "Purchases & Expenses",
@@ -56,9 +59,24 @@ const pageTitles = {
   "/finance/advanced": "Advanced Accounting",
 };
 
+import ActivityLogs from "./pages/ActivityLogs";
+
 // Guard: redirects to dashboard if current role lacks permission
 function ProtectedRoute({ permission, children }) {
-  const { can } = useRole();
+  const { can, role, moduleAccess } = useRole();
+  const location = useLocation();
+
+  if (role === "SuperAdmin" || role === "Owner") {
+    return can(permission) ? children : <Navigate to="/" replace />;
+  }
+
+  const customAccess = moduleAccess?.[role];
+  if (customAccess) {
+    const hasAccess = customAccess.some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+    if (hasAccess) return children;
+    return <Navigate to="/" replace />;
+  }
+
   return can(permission) ? children : <Navigate to="/" replace />;
 }
 
@@ -67,12 +85,18 @@ function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const title = pageTitles[location.pathname] || "Venueza";
 
+  React.useEffect(() => {
+    const handleToggle = () => setSidebarOpen(true);
+    window.addEventListener('toggleSidebar', handleToggle);
+    return () => window.removeEventListener('toggleSidebar', handleToggle);
+  }, []);
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
-        <main className="hm-main-content" style={{ flex: 1, overflowY: "auto" }}>
+        <main className="hm-main-content" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxWidth: "100vw" }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -93,16 +117,19 @@ function AdminLayout() {
             <Route path="/reports/booking" element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
             <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
             <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
+            <Route path="/reports/customer" element={<ProtectedRoute permission="canViewReports"><CustomerReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
+            <Route path="/system/activity-logs" element={<ProtectedRoute permission="canViewSettings"><ActivityLogs /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tenants" element={<SuperAdminTenants />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/feedback" element={<Feedback />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/agreements" element={<Agreements />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/vendors" element={<Vendors />} />
+            <Route path="/inventory" element={<Inventory />} />
             <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
-            <Route path="/roadmap" element={<Roadmap />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
@@ -130,22 +157,24 @@ function AppGate() {
 
 
 export default function App() {
-  const { isOnline, isInstallable, hasUpdate, installApp, applyUpdate, dismissUpdate } = usePWA();
+  const { isOnline, isInstallable, hasUpdate, installApp, applyUpdate, dismissUpdate, dismissInstall } = usePWA();
 
   return (
     <>
       {!isOnline && <OfflineBanner />}
-      {isInstallable && <PWAInstallPrompt onInstall={installApp} onDismiss={() => {}} />}
+      {isInstallable && <PWAInstallPrompt onInstall={installApp} onDismiss={dismissInstall} />}
       {hasUpdate && <PWAUpdatePrompt onUpdate={applyUpdate} onDismiss={dismissUpdate} />}
       
       <RoleProvider>
         <BookingsProvider>
-          <CommandPalette />
-          <Routes>
-            <Route path="/book/:slug" element={<PublicBooking />} />
-            {/* Main app */}
-            <Route path="/*" element={<AppGate />} />
-          </Routes>
+          <ConfirmProvider>
+            <CommandPalette />
+            <Routes>
+              <Route path="/book/:slug" element={<PublicBooking />} />
+              {/* Main app */}
+              <Route path="/*" element={<AppGate />} />
+            </Routes>
+          </ConfirmProvider>
         </BookingsProvider>
       </RoleProvider>
     </>

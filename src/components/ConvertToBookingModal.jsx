@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Heart, Calendar, Building2, Users, IndianRupee, CreditCard, Smartphone, Banknote, User, MapPin, Phone, CheckCircle2, Plus, CheckSquare } from "lucide-react";
-import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, availabilityAPI, settingsAPI, usersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
 import SmartDatePicker from "./SmartDatePicker";
@@ -33,14 +33,14 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const { addToast } = useToast();
   const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
-  const [sendWhatsapp, setSendWhatsapp] = useState(true);
-  const [settings, setSettings] = useState({});
+  const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
   const [formData, setFormData] = useState({
     // Contact
     customerName: "",
     phone: "",
     address: "",
+    clientGstNumber: "",
     place: "",
     bookedBy: "",
     bookingParty: "",
@@ -64,21 +64,25 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     paymentMethod: "",
     receivedBy: "",
     upiId: "",
+    upiName: "",
+    upiAmount: "",
     accountName: "",
     depositAmount: "",
     balanceAmount: "",
-    extraArrangements: "",
     paymentRemarks: "",
+    collectionDate: new Date().toISOString().split("T")[0],
     facilities: [],
   });
 
   const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    import("../services/api").then(({ mastersAPI }) => {
+    import("../services/api").then(({ mastersAPI, usersAPI }) => {
       mastersAPI.getByType("services").then(res => setFacilitiesList(res.data?.data || []));
+      usersAPI.getAll().then(res => setUsers(res.data?.data || []));
     });
   }, []);
 
@@ -87,10 +91,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       const budget = enquiry.budget || 0;
       setFormData(prev => ({
         ...prev,
-        customerName: enquiry.Customer?.name || enquiry.customerName || "",
-        phone: enquiry.Customer?.phone || enquiry.phone || "",
-        address: enquiry.Customer?.address || "",
-        place: enquiry.Customer?.city || enquiry.place || "",
+        enquiryId: enquiry.id,
+        customerName: enquiry.Customer?.name || enquiry.enquirerName || enquiry.customerName || "",
+        phone: enquiry.Customer?.phone || enquiry.enquirerPhone || enquiry.phone || "",
+        address: enquiry.Customer?.address || enquiry.enquirerAddress || "",
+        clientGstNumber: enquiry.Customer?.gstNumber || "",
+        place: enquiry.Customer?.city || enquiry.enquirerArea || enquiry.place || "",
         // Event info from enquiry
         eventType: enquiry.eventType || "",
         hall: enquiry.hallPreference || "",
@@ -113,9 +119,11 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         paymentMethod: "",
         receivedBy: "",
         upiId: "",
+        upiName: "",
+        upiAmount: "",
         accountName: "",
-        extraArrangements: "",
         paymentRemarks: "",
+        collectionDate: new Date().toISOString().split("T")[0],
         facilities: [],
         // Reset personal
         bookedBy: "", bookingParty: "", whatsapp: "",
@@ -125,9 +133,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [open, enquiry]);
 
-  // Fetch settings to auto-fill GST rate
+  const [settings, setSettings] = useState({});
+
   useEffect(() => {
-    if (open && formData.hall) {
+    if (open) {
       const fetchSettings = async () => {
         try {
           const res = await settingsAPI.get();
@@ -148,7 +157,47 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       };
       fetchSettings();
     }
-  }, [formData.hall, open]);
+  }, [open]);
+
+  // Auto-fill GST rate when hall changes
+  useEffect(() => {
+    if (formData.hall && settings.halls) {
+      const selectedHall = settings.halls.find(h => h.name === formData.hall);
+      if (selectedHall) {
+        setFormData(prev => {
+          const gstRate = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+          if (prev.taxPercentage === gstRate) return prev;
+          
+          const pct = Number(gstRate) || 0;
+              
+              const quoted = Number(prev.quotedAmount) || 0;
+              const disc = Number(prev.discount) || 0;
+              const baseAmount = Math.max(0, quoted - disc);
+              
+              let facilitiesTotal = 0;
+              let facilitiesTax = 0;
+              if (prev.facilities && prev.facilities.length > 0) {
+                prev.facilities.forEach(f => {
+                  const count = Number(f.count) || 1;
+                  const fPrice = Number(f.price) || 0;
+                  const totalFPrice = fPrice * count;
+                  const fGst = Number(f.gst) || 0;
+                  facilitiesTotal += totalFPrice;
+                  if (fGst > 0) {
+                    facilitiesTax += (totalFPrice * fGst) / 100;
+                  }
+                });
+              }
+              
+              const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+              const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+              const totalTaxes = Math.round(hallTax + facilitiesTax);
+              
+              return { ...prev, taxPercentage: pct, taxes: totalTaxes };
+        });
+      }
+    }
+  }, [formData.hall, settings]);
 
   // Fetch real-time availability
   useEffect(() => {
@@ -173,21 +222,36 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
+    const baseAmount = Math.max(0, quoted - disc);
+
+    // Auto-calculate GST (Exclusive): GST = Base × Rate / 100
+    const pct = Number(updated.taxPercentage) || 0;
     
-    // Total Amount = Quoted - Discount (this is what client pays, GST included)
-    if (field === "quotedAmount" || field === "discount") {
-      updated.totalAmount = Math.max(0, quoted - disc);
+    let facilitiesTotal = 0;
+    let facilitiesTax = 0;
+    if (updated.facilities && updated.facilities.length > 0) {
+      updated.facilities.forEach(f => {
+        const count = Number(f.count) || 1;
+        const fPrice = Number(f.price) || 0;
+        const totalFPrice = fPrice * count;
+        const fGst = Number(f.gst) || 0;
+        facilitiesTotal += totalFPrice;
+        if (fGst > 0) {
+          facilitiesTax += (totalFPrice * fGst) / 100;
+        }
+      });
     }
 
-    // Auto-calculate GST (inclusive): GST = Total × Rate / (100 + Rate)
-    const total = Number(updated.totalAmount) || 0;
-    const pct = Number(updated.taxPercentage) || 0;
-    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage" || field === "totalAmount") {
-      updated.taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
+      updated.totalAmount = baseAmount; // Total remains Quoted - Discount
+      const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+      const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+      updated.taxes = Math.round(hallTax + facilitiesTax);
     }
     
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
+    const total = Number(updated.totalAmount) || 0;
     updated.balanceAmount = Math.max(0, total - adv - dep);
     setFormData(updated);
   };
@@ -200,9 +264,27 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       addToast("Enquired By, Booked By and Phone are required", "error");
       return;
     }
-    if (!formData.paymentMethod) {
-      addToast("Please select a Payment Method", "error");
+    
+    // Phone validation
+    const cleanPhone = formData.phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      addToast("Phone number must be exactly 10 digits", "error");
       return;
+    }
+
+    if (Number(formData.advance) > 0 && !formData.paymentMethod) {
+      addToast("Please select a Payment Method for the advance payment", "error");
+      return;
+    }
+    
+    // Validate UPI amounts sum up to Advance amount
+    if (formData.paymentMethod === "UPI" && Number(formData.advance) > 0) {
+      const upiAmounts = (formData.upiAmount || "").split(",").map(v => Number(v) || 0);
+      const totalUpi = upiAmounts.reduce((a, b) => a + b, 0);
+      if (totalUpi !== Number(formData.advance)) {
+        addToast(`Sum of UPI amounts (₹${totalUpi}) does not match Advance Paid (₹${formData.advance})`, "error");
+        return;
+      }
     }
     
     // Check local state availability before sending
@@ -234,7 +316,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         const venueName = settings?.venueName || "Our Auditorium";
         const message = `Hello ${formData.customerName},\n\nYour booking at ${venueName} has been confirmed! 🎉\n\nEvent: ${formData.eventType}\nHall: ${formData.hall}\nDate: ${formData.date}\nTotal Amount: ₹${Number(formData.totalAmount).toLocaleString()}\nAdvance Paid: ₹${Number(formData.advance || 0).toLocaleString()}\nBalance: ₹${Number(formData.balanceAmount || 0).toLocaleString()}\n\nThank you for choosing us!`;
         const waPhone = formData.whatsapp ? formData.whatsapp : formData.phone;
-        const phoneNum = `91${waPhone.replace(/\\D/g, "").slice(-10)}`;
+        const phoneNum = `91${waPhone.replace(/\D/g, "").slice(-10)}`;
         const text = encodeURIComponent(message);
         const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
         window.open(waUrl, "_blank");
@@ -276,7 +358,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
 
         {/* Body */}
         <div style={{ padding: "24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
-          <form id="convert-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <form id="convert-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
             {/* ── ENQUIRY SUMMARY (read-only) ── */}
             <div>
@@ -323,11 +405,11 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
                 <div>
                   <label style={labelSt}><Phone size={10} /> Phone Number *</label>
-                  {inp("phone", { required: true, type: "tel", placeholder: "e.g. 9447012345" })}
+                  {inp("phone", { required: true, type: "tel", placeholder: "e.g. 9447012345", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>WhatsApp Number</label>
-                  {inp("whatsapp", { type: "tel", placeholder: "If different from phone" })}
+                  {inp("whatsapp", { type: "tel", placeholder: "If different from phone", maxLength: 10 })}
                 </div>
                 <div>
                   <label style={labelSt}>Booking Party</label>
@@ -343,6 +425,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}><MapPin size={10} /> Address</label>
                   {inp("address", { placeholder: "House / Building, Street, Town..." })}
                 </div>
+                <div>
+                  <label style={labelSt}>🔖 Client GST Number (Optional)</label>
+                  {inp("clientGstNumber", { placeholder: "e.g. 32AABCU9603R1ZJ" })}
+                </div>
               </div>
             </div>
 
@@ -355,7 +441,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("brideMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("bridePhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("brideAddress")}</div>
               </div>
             </div>
@@ -369,7 +455,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div><label style={labelSt}>Mother Name</label>{inp("groomMotherName")}</div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6 mb-6">
-                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel" })}</div>
+                <div><label style={labelSt}>Phone</label>{inp("groomPhone", { type: "tel", maxLength: 10 })}</div>
                 <div><label style={labelSt}>Address</label>{inp("groomAddress")}</div>
               </div>
             </div>
@@ -407,6 +493,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                     value={formData.date} 
                     onChange={e => setFormData({ ...formData, date: e.target.value })} 
                     hallPreference={formData.hall}
+                    allowPastDates={settings.allowPastDateBooking === true}
                     style={{ ...iStyle, padding: "8px 12px", height: 40 }}
                   />
                   {formData.date && formData.hall && (
@@ -420,12 +507,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   {inp("eventType", { placeholder: "Wedding, Engagement..." })}
                 </div>
                 <div>
-                  <label style={labelSt}><Users size={10} /> No. of Guests</label>
+                  <label style={labelSt}>No. of Guests</label>
                   {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
-                </div>
-                <div>
-                  <label style={labelSt}>Extra Arrangements</label>
-                  {inp("extraArrangements", { placeholder: "Decoration, DJ, etc." })}
                 </div>
               </div>
             </div>
@@ -436,26 +519,78 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <p style={sectionHead}><CheckSquare size={14} /> Facilities & Add-ons</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   {facilitiesList.map(f => {
-                    const checked = formData.facilities?.some(x => x.id === f.id);
+                    const facilityItem = formData.facilities?.find(x => x.id === f.id);
+                    const checked = !!facilityItem;
                     return (
-                      <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
-                        <input type="checkbox" checked={checked} onChange={(e) => {
-                          let newFac = [...(formData.facilities || [])];
-                          let newQuoted = Number(formData.quotedAmount || 0);
-                          if (e.target.checked) {
-                            newFac.push({ id: f.id, name: f.name, price: f.price });
-                            newQuoted += Number(f.price || 0);
-                          } else {
-                            newFac = newFac.filter(x => x.id !== f.id);
-                            newQuoted -= Number(f.price || 0);
-                          }
-                          handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
-                        }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
-                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
-                          {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()}</div>}
-                        </div>
-                      </label>
+                      <div key={f.id} style={{ display: "flex", flexDirection: "column", gap: 8, background: checked ? "#f0faf4" : "#f8fafc", padding: "12px", borderRadius: 10, border: `1.5px solid ${checked ? "#1B4332" : "#e5e7eb"}`, transition: "all 0.15s" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                          <input type="checkbox" checked={checked} onChange={(e) => {
+                            let newFac = [...(formData.facilities || [])];
+                            let newQuoted = Number(formData.quotedAmount || 0);
+                            if (e.target.checked) {
+                              newFac.push({ id: f.id, name: f.name, price: f.price, gst: f.gst || 0, count: 1, time: "" });
+                              newQuoted += Number(f.price || 0);
+                            } else {
+                              if (facilityItem) {
+                                newQuoted -= (Number(facilityItem.price || 0) * Number(facilityItem.count || 1));
+                              }
+                              newFac = newFac.filter(x => x.id !== f.id);
+                            }
+                            handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                          }} style={{ width: 16, height: 16, accentColor: "#1B4332", cursor: "pointer" }} />
+                          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: checked ? "#1B4332" : "#374151" }}>{f.name}</div>
+                            {f.price > 0 && <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 2 }}>₹{Number(f.price).toLocaleString()} {f.gst > 0 ? ` (+ ${f.gst}% GST)` : ""}</div>}
+                          </div>
+                        </label>
+                        {checked && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 8, marginLeft: 26, marginTop: 4 }}>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Price (₹)</label>
+                              <input type="number" min="0" value={facilityItem.price !== undefined ? facilityItem.price : f.price} onChange={(e) => {
+                                const newPrice = Number(e.target.value) || 0;
+                                let newFac = [...(formData.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  const oldCount = Number(newFac[idx].count) || 1;
+                                  const oldPrice = Number(newFac[idx].price) || 0;
+                                  newFac[idx].price = newPrice;
+                                  let newQuoted = Number(formData.quotedAmount || 0);
+                                  newQuoted = newQuoted - (oldPrice * oldCount) + (newPrice * oldCount);
+                                  handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Count/Qty</label>
+                              <input type="number" min="1" value={facilityItem.count || 1} onChange={(e) => {
+                                const newCount = Number(e.target.value) || 1;
+                                let newFac = [...(formData.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  const oldCount = Number(newFac[idx].count) || 1;
+                                  const currentPrice = Number(newFac[idx].price) || 0;
+                                  newFac[idx].count = newCount;
+                                  let newQuoted = Number(formData.quotedAmount || 0);
+                                  newQuoted = newQuoted - (currentPrice * oldCount) + (currentPrice * newCount);
+                                  handleMoneyChange("quotedAmount", newQuoted, { facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4, display: "block" }}>Time/Duration</label>
+                              <input type="text" placeholder="e.g. 9 AM - 12 PM" value={facilityItem.time || ""} onChange={(e) => {
+                                let newFac = [...(formData.facilities || [])];
+                                const idx = newFac.findIndex(x => x.id === f.id);
+                                if (idx > -1) {
+                                  newFac[idx].time = e.target.value;
+                                  setFormData({ ...formData, facilities: newFac });
+                                }
+                              }} style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -478,7 +613,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Discount (₹)</label>
                   <input type="number" min={0} value={formData.discount}
                     onChange={e => handleMoneyChange("discount", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 700, color: "#d97706" }}
+                    style={{ ...iStyle, fontWeight: 700, fontSize: 14, color: "#d97706" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
@@ -486,7 +621,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Final Total Amount (₹)</label>
                   <input type="number" min={0} value={formData.totalAmount}
                     onChange={e => handleMoneyChange("totalAmount", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 800, fontSize: 15, background: "#f8fafc" }}
+                    style={{ ...iStyle, fontWeight: 700, fontSize: 14, background: "#f8fafc" }}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
@@ -495,11 +630,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 <div>
                   <label style={labelSt}>Tax / GST Rate (%)</label>
                   <input type="number" min={0} value={formData.taxPercentage}
-                    onChange={e => handleMoneyChange("taxPercentage", e.target.value)}
-                    style={{ ...iStyle, fontWeight: 700 }}
-                    placeholder="e.g. 18"
-                    onFocus={e => e.target.style.borderColor = "#1B4332"}
-                    onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                    readOnly
+                    style={{ ...iStyle, fontWeight: 700, backgroundColor: "#f3f4f6", cursor: "not-allowed" }} />
                 </div>
                 <div>
                   <label style={labelSt}>Tax Amount (₹)</label>
@@ -572,16 +704,18 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {formData.paymentMethod === "UPI" && (
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelSt}>UPI Payments (ID, Name & Collector)</label>
+                    <label style={labelSt}>UPI Payments (ID, Name, Amount & Collector)</label>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {(formData.upiId || "").split(",").map((id, index, arr) => {
                         const upiNames = (formData.upiName || "").split(",");
                         const upiName = upiNames[index] || "";
                         const collectors = (formData.receivedBy || "").split(",");
                         const collector = collectors[index] || "";
+                        const upiAmounts = (formData.upiAmount || "").split(",");
+                        const upiAmt = upiAmounts[index] || "";
                         
                         return (
-                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10 }}>
+                          <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10 }}>
                             <input 
                               value={id.trim()} 
                               onChange={(e) => {
@@ -607,7 +741,22 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             />
                             <input 
-                              required={index === 0}
+                              required={Number(formData.advance) > 0}
+                              type="number"
+                              min={0}
+                              value={upiAmt.trim()} 
+                              onChange={(e) => {
+                                const newArr = [...upiAmounts];
+                                newArr[index] = e.target.value.replace(/,/g, "");
+                                setFormData({ ...formData, upiAmount: newArr.join(",") });
+                              }} 
+                              style={iStyle}
+                              placeholder="Amount (₹)" 
+                              onFocus={e => e.target.style.borderColor = "#1B4332"}
+                              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                            />
+                            <select
+                              required={index === 0 && Number(formData.advance) > 0}
                               value={collector.trim()} 
                               onChange={(e) => {
                                 const newArr = [...collectors];
@@ -615,17 +764,20 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                                 setFormData({ ...formData, receivedBy: newArr.join(",") });
                               }} 
                               style={iStyle}
-                              placeholder="Collected By" 
                               onFocus={e => e.target.style.borderColor = "#1B4332"}
                               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-                            />
+                            >
+                              <option value="">-- Collected By --</option>
+                              {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                            </select>
                             <div style={{ display: "flex", alignItems: "center" }}>
                               {index === arr.length - 1 ? (
                                 <button type="button" onClick={() => setFormData({ 
                                   ...formData, 
                                   upiId: formData.upiId ? formData.upiId + "," : ",",
                                   upiName: formData.upiName ? formData.upiName + "," : ",",
-                                  receivedBy: formData.receivedBy ? formData.receivedBy + "," : ","
+                                  receivedBy: formData.receivedBy ? formData.receivedBy + "," : ",",
+                                  upiAmount: formData.upiAmount ? formData.upiAmount + "," : ","
                                 })} style={{ height: 37, padding: "0 12px", background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Add another UPI entry">
                                   <Plus size={16} color="#374151" />
                                 </button>
@@ -634,7 +786,8 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                                   ...formData, 
                                   upiId: arr.filter((_, i) => i !== index).join(","),
                                   upiName: upiNames.filter((_, i) => i !== index).join(","),
-                                  receivedBy: collectors.filter((_, i) => i !== index).join(",")
+                                  receivedBy: collectors.filter((_, i) => i !== index).join(","),
+                                  upiAmount: upiAmounts.filter((_, i) => i !== index).join(",")
                                 })} style={{ height: 37, padding: "0 12px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Remove">
                                   <X size={16} color="#dc2626" />
                                 </button>
@@ -654,10 +807,29 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 )}
                 {formData.paymentMethod !== "UPI" && (
                   <div>
-                    <label style={labelSt}>Collected By *</label>
-                    {inp("receivedBy", { required: true, placeholder: "Collected By" })}
+                    <label style={labelSt}>Collected By {Number(formData.advance) > 0 ? "*" : ""}</label>
+                    <select
+                      required={Number(formData.advance) > 0}
+                      value={formData.receivedBy}
+                      onChange={e => setFormData({ ...formData, receivedBy: e.target.value })}
+                      style={iStyle}
+                    >
+                      <option value="">-- Select Staff --</option>
+                      {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                    </select>
                   </div>
                 )}
+                <div>
+                  <label style={labelSt}>Collection Date</label>
+                  <input
+                    type="date"
+                    value={formData.collectionDate || new Date().toISOString().split("T")[0]}
+                    onChange={e => setFormData({ ...formData, collectionDate: e.target.value })}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
+                </div>
                 <div style={{ gridColumn: formData.paymentMethod === "UPI" || formData.paymentMethod === "Bank Transfer" ? "auto" : "1 / -1" }}>
                   <label style={labelSt}>Payment Remarks</label>
                   {inp("paymentRemarks", { placeholder: "e.g. Paid by cash on 11/07/26. 375000 received..." })}

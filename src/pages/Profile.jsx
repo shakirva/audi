@@ -21,7 +21,7 @@ const cardSt = {
 };
 
 export default function Profile() {
-  const { user, login } = useRole();
+  const { user, login, setUser } = useRole();
   const { addToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
@@ -65,8 +65,9 @@ export default function Profile() {
       // Update local storage / context user by re-fetching or manually updating
       const updatedUser = { ...user, ...dataToUpdate };
       localStorage.setItem("hm_user", JSON.stringify(updatedUser));
-      // Reload page to reflect new name across all components (sidebar, header)
-      window.location.reload();
+      
+      // Update global context state (no page reload needed)
+      setUser(updatedUser);
 
     } catch (err) {
       console.error(err);

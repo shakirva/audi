@@ -147,7 +147,7 @@ export default function Payments() {
   const formatMoney = (val) => `₹${Number(val || 0).toLocaleString("en-IN")}`;
 
   return (
-    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
       
       <PageHeader 
         title="Payments & Receipts" 
@@ -175,9 +175,6 @@ export default function Payments() {
             <Filter size={16} /> Filter
           </button>
         </div>
-        <button onClick={fetchData} style={{ padding: "12px 16px", borderRadius: 16, border: "none", background: "#f1f5f9", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#475569" }}>
-          <RefreshCw size={16} />
-        </button>
       </div>
 
       {/* Booking Payment Cards */}
@@ -202,7 +199,7 @@ export default function Payments() {
                 onClick={() => setSelectedBooking(b)}
                 style={{ background: "#fff", borderRadius: 20, padding: "24px 32px", border: "1px solid #f1f5f9", cursor: "pointer", transition: "all 0.2s" }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: isFullyPaid ? "#dcfce7" : "#fffbeb", color: isFullyPaid ? "#16a34a" : "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isFullyPaid ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
@@ -220,10 +217,11 @@ export default function Payments() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <button style={{ padding: "8px 16px", borderRadius: 10, background: "#f1f5f9", color: "#0f172a", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>View History</button>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <button className="flex-1 sm:flex-none" style={{ padding: "8px 16px", borderRadius: 10, background: "#f1f5f9", color: "#0f172a", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>View History</button>
                     {!isFullyPaid && (
                       <button 
+                        className="flex-1 sm:flex-none"
                         onClick={(e) => { e.stopPropagation(); setSelectedBooking(b); setIsCollectPaymentOpen(true); }}
                         style={{ padding: "8px 16px", borderRadius: 10, background: "#1B4332", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                         Collect Payment
@@ -232,7 +230,7 @@ export default function Payments() {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, padding: "16px 20px", background: "#f8fafc", borderRadius: 16 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 24, padding: "16px 20px", background: "#f8fafc", borderRadius: 16, justifyContent: "space-between" }}>
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>Booking Amount</p>
                     <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{formatMoney(b.totalAmount)}</p>

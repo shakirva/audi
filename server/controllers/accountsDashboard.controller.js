@@ -53,6 +53,18 @@ class AccountsDashboardController {
     }
   }
 
+  async deleteVoucher(req, res, next) {
+    try {
+      await accountingEngine.deleteVoucher(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+      });
+      return sendSuccess(res, { message: "Voucher deleted successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getCustomerLedger(req, res, next) {
     try {
       const data = await accountingEngine.getCustomerLedger(req.params.customerId, {

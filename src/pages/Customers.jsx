@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, RefreshCw, Loader } from "lucide-react";
+import { Search, MessageCircle, Mail, MapPin, Users, Filter, AlertCircle, RefreshCw, Loader, Edit3, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { customersAPI } from "../services/api";
 import { useToast } from "../components/Toast";
+import { useRole } from "../context/RoleContext";
 import PageHeader from "../components/ui/PageHeader";
+import EditCustomerModal from "../components/EditCustomerModal";
+import SafeDeleteModal from "../components/SafeDeleteModal";
 
 function CustomerSkeleton() {
   return (
@@ -24,10 +27,13 @@ function CustomerSkeleton() {
 
 export default function Customers() {
   const { addToast } = useToast();
+  const { user, role } = useRole();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -36,9 +42,13 @@ export default function Customers() {
       const params = {};
       if (search) params.search = search;
       const res = await customersAPI.getAll(params);
-      setCustomers(res.data.data || []);
+      let data = res.data.data || [];
+      if (role === "Sales") {
+        data = data.filter(c => c.createdBy === user?.name || c.userId === user?.id || c.salesExecutiveId === user?.id || c.salesExecutiveName === user?.name);
+      }
+      setCustomers(data);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to load customers";
+      const msg = err.response?.data?.error || err.response?.data?.message || "Failed to load customers";
       setError(msg);
       addToast(msg, "error");
     } finally {
@@ -51,8 +61,13 @@ export default function Customers() {
     return () => clearTimeout(timer);
   }, [fetchCustomers]);
 
+  const handleDelete = (c) => {
+    const name = c.name || c.customerName || "Unknown";
+    setDeleteTarget({ id: c.id, name });
+  };
+
   return (
-    <div style={{ padding: "40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
       
       <PageHeader 
         title="Customer Directory" 
@@ -61,21 +76,15 @@ export default function Customers() {
         color="#1B4332"
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 260 }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <Search size={18} style={{ position: "absolute", left: 16, top: 14, color: "#94a3b8" }} />
             <input type="text" placeholder="Search by name or phone..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: 320, outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
+              style={{ padding: "12px 20px 12px 44px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", width: "100%", outline: "none", fontSize: 15, fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} />
           </div>
-          <button
-            onClick={fetchCustomers}
-            style={{ padding: "12px 16px", borderRadius: 16, border: "1px solid #e2e8f0", background: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, color: "#475569", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}
-          >
-            <RefreshCw size={16} />
-          </button>
         </div>
-        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500, whiteSpace: "nowrap" }}>
           {!loading && `${customers.length} customer${customers.length !== 1 ? "s" : ""}`}
         </div>
       </div>
@@ -118,7 +127,11 @@ export default function Customers() {
                   <div style={{ width: 48, height: 48, borderRadius: 16, background: isVIP ? "linear-gradient(135deg, #f97316, #ea580c)" : "#f1f5f9", color: isVIP ? "#fff" : "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>
                     {initials}
                   </div>
-                  {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isVIP && <div style={{ background: "#fef08a", color: "#a16207", fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 10, letterSpacing: 1 }}>VIP</div>}
+                    <button onClick={() => setEditingCustomer(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}><Edit3 size={16} /></button>
+                    <button onClick={() => handleDelete(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: 4 }}><Trash2 size={16} /></button>
+                  </div>
                 </div>
                 
                 <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{name}</h3>
@@ -166,6 +179,22 @@ export default function Customers() {
           })
         )}
       </div>
+
+      <EditCustomerModal
+        open={!!editingCustomer}
+        customer={editingCustomer}
+        onClose={() => setEditingCustomer(null)}
+        onSaved={fetchCustomers}
+      />
+      <SafeDeleteModal
+        type="customer"
+        id={deleteTarget?.id}
+        name={deleteTarget?.name}
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setDeleteTarget(null); fetchCustomers(); }}
+        addToast={addToast}
+      />
     </div>
   );
 }

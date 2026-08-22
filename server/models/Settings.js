@@ -20,7 +20,16 @@ const Settings = sequelize.define("Settings", {
   email: { type: DataTypes.STRING, defaultValue: "" },
   gstin: { type: DataTypes.STRING, defaultValue: "" },
   bookingPrefix: { type: DataTypes.STRING, defaultValue: "BK" },
+  receiptPrefix: { type: DataTypes.STRING, defaultValue: "PAY" },
   
+  // Branding and Bank Details
+  logoUrl: { type: DataTypes.STRING, defaultValue: "" },
+  legalName: { type: DataTypes.STRING, defaultValue: "" },
+  bankName: { type: DataTypes.STRING, defaultValue: "" },
+  accountName: { type: DataTypes.STRING, defaultValue: "" },
+  accountNumber: { type: DataTypes.STRING, defaultValue: "" },
+  ifscCode: { type: DataTypes.STRING, defaultValue: "" },
+
   // JSONB fields for nested data in PostgreSQL
   halls: { type: DataTypes.JSONB, defaultValue: [] },
   blackoutDates: { type: DataTypes.JSONB, defaultValue: [] },
@@ -32,6 +41,12 @@ const Settings = sequelize.define("Settings", {
   places: { type: DataTypes.JSONB, defaultValue: ["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"] },
   
   managerRevenueEnabled: { type: DataTypes.BOOLEAN, defaultValue: true },
+  
+  // Role-Based Module Access configuration
+  moduleAccess: { type: DataTypes.JSONB, defaultValue: {} },
+  
+  // Allow booking on past dates (for backfilling previous year data)
+  allowPastDateBooking: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   indexes: [
     { unique: true, fields: ["tenantId", "environmentId"], name: "idx_settings_tenant_env" },

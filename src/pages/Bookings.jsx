@@ -3,22 +3,30 @@ import { motion } from "framer-motion";
 import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users, IndianRupee, Eye, Trash2, MessageCircle } from "lucide-react";
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
+import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useBookings } from "../context/BookingsContext";
 import { useRole } from "../context/RoleContext";
+import { useToast } from "../components/Toast";
 import { bookingsAPI, settingsAPI } from "../services/api";
 
 export default function Bookings() {
   const { user, role } = useRole();
+  const { addToast } = useToast();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const { bookings, refetch } = useBookings();
+  const [settings, setSettings] = useState({});
   const [venueName, setVenueName] = useState("Our Auditorium");
 
   useEffect(() => {
     settingsAPI.get().then(res => {
+      setSettings(res.data?.data || {});
       const name = res.data?.data?.venueName;
       if (name) setVenueName(name);
     }).catch(() => {});
@@ -46,6 +54,7 @@ export default function Bookings() {
       return;
     }
     
+    const venueName = settings?.venueName || "Our Auditorium";
     const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
@@ -62,18 +71,52 @@ export default function Bookings() {
   const filtered = useMemo(() => {
     let baseBookings = bookings;
     if (role === "Sales") {
-      baseBookings = baseBookings.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name);
+      baseBookings = baseBookings.filter(b => 
+        b.createdBy === user?.id ||
+        b.salesExecutiveId === user?.id ||
+        b.bookedBy === user?.name || 
+        b.salesExecutiveName === user?.name ||
+        b.userId === user?.id
+      );
     }
     return baseBookings.filter(b => {
       const nameMatch = !search || (b.customerName || "").toLowerCase().includes(search.toLowerCase())
         || (b.eventType || "").toLowerCase().includes(search.toLowerCase())
         || (b.hall || "").toLowerCase().includes(search.toLowerCase());
       const statusMatch = !statusFilter || b.status === statusFilter;
-      return nameMatch && statusMatch;
+      
+      let paymentMatch = true;
+      if (paymentFilter) {
+        const total = Number(b.totalAmount) || 0;
+        const paid = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+        const balance = total - paid;
+        if (paymentFilter === "balance_due") paymentMatch = balance > 0;
+        else if (paymentFilter === "fully_paid") paymentMatch = balance <= 0 && total > 0;
+      }
+      
+      let dateMatch = true;
+      if (monthFilter && b.date) {
+        dateMatch = b.date.startsWith(monthFilter);
+      }
+      
+      return nameMatch && statusMatch && paymentMatch && dateMatch;
     });
-  }, [bookings, search, statusFilter, role, user]);
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    const upcoming = result.filter(b => b.date && b.date >= todayStr).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const past = result.filter(b => !b.date || b.date < todayStr).sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    return [...upcoming, ...past];
+  }, [bookings, search, statusFilter, paymentFilter, monthFilter, role, user]);
 
   const uniqueStatuses = [...new Set(bookings.map(b => b.status).filter(Boolean))];
+  const uniqueMonths = [...new Set(bookings.map(b => b.date ? b.date.substring(0, 7) : "").filter(Boolean))].sort((a, b) => b.localeCompare(a));
 
   const eventIcon = (type) => {
     if (!type) return "🎉";
@@ -86,12 +129,12 @@ export default function Bookings() {
   };
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1600, margin: "0 auto", fontFamily: "'DM Sans', 'Inter', sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="hm-bookings-wrapper">
 
       {/* ── HEADER ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 4px", color: "#0f172a", letterSpacing: "-1px" }}>Bookings</h1>
+          <h1 className="hm-page-heading">Bookings</h1>
           <p style={{ margin: 0, fontSize: 14, color: "#64748b", fontWeight: 500 }}>
             {filtered.length} booking{filtered.length !== 1 ? "s" : ""} found
           </p>
@@ -99,20 +142,39 @@ export default function Bookings() {
       </div>
 
       {/* ── TOOLBAR ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+      <div className="hm-bookings-toolbar">
         {/* Search */}
-        <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 340 }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 200, width: "100%" }}>
           <Search size={16} style={{ position: "absolute", left: 14, top: 11, color: "#94a3b8" }} />
           <input type="text" placeholder="Search bookings..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none", fontSize: 13, fontWeight: 500, boxSizing: "border-box" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {/* Status Filter */}
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
             <option value="">All Status</option>
             {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Month Filter */}
+          <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
+            <option value="">All Months</option>
+            {uniqueMonths.map(m => {
+              const d = new Date(`${m}-01`);
+              const label = d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+              return <option key={m} value={m}>{label}</option>
+            })}
+          </select>
+
+          {/* Payment Filter */}
+          <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}>
+            <option value="">All Payments</option>
+            <option value="balance_due">Balance Due</option>
+            <option value="fully_paid">Fully Paid</option>
           </select>
 
           {/* View Toggle */}
@@ -151,7 +213,7 @@ export default function Bookings() {
 
       {/* ── GRID VIEW ── */}
       {viewMode === "grid" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
+        <div className="hm-booking-cards">
           {filtered.map((b, i) => {
             const st = getStatusColor(b.status);
             const balance = (b.totalAmount || 0) - (b.advance || 0) - (b.depositAmount || 0);
@@ -162,7 +224,7 @@ export default function Bookings() {
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                 whileHover={{ y: -6, boxShadow: "0 20px 48px rgba(0,0,0,0.08)" }}
                 onClick={() => setDetail(b)}
-                style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: 0 }}
+                style={{ background: "#fff", borderRadius: 20, padding: 20, border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: 0, overflow: "hidden", wordBreak: "break-word" }}
               >
                 {/* Card top */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
@@ -249,16 +311,9 @@ export default function Bookings() {
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Pencil size={13} /> Edit
                   </button>
-                  <button onClick={async (e) => {
+                  <button onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-                      try {
-                        await bookingsAPI.remove(b.bookingId || b.id);
-                        refetch?.();
-                      } catch (err) {
-                        alert(err.response?.data?.message || "Failed to delete booking");
-                      }
-                    }
+                    setDeleteTarget({ id: b.bookingId || b.id, name: `${b.eventType} — ${b.customerName}` });
                   }}
                     style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                     <Trash2 size={13} /> Delete
@@ -278,14 +333,13 @@ export default function Bookings() {
         </div>
       )}
 
-      {/* ── LIST / TABLE VIEW ── */}
       {viewMode === "list" && (
-        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", overflowX: "auto", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
             <thead>
               <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e5e7eb" }}>
                 {["#", "Customer", "Event Type", "Hall", "Session", "Date", "Guests", "Total (₹)", "Balance (₹)", "Status", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "12px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} className={["Hall", "Session", "Guests"].includes(h) ? "hm-desktop-only" : ""} style={{ padding: "12px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -312,12 +366,12 @@ export default function Bookings() {
                         {eventIcon(b.eventType)} {b.eventType || "—"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 14px", color: "#374151", fontWeight: 600 }}>{b.hall || "—"}</td>
-                    <td style={{ padding: "12px 14px", color: "#374151" }}>{b.session || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151", fontWeight: 600 }}>{b.hall || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151" }}>{b.session || "—"}</td>
                     <td style={{ padding: "12px 14px", color: "#374151", whiteSpace: "nowrap" }}>
                       {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                     </td>
-                    <td style={{ padding: "12px 14px", color: "#374151" }}>{b.guests || "—"}</td>
+                    <td className="hm-desktop-only" style={{ padding: "12px 14px", color: "#374151" }}>{b.guests || "—"}</td>
                     <td style={{ padding: "12px 14px", fontWeight: 700, color: "#374151" }}>
                       {b.totalAmount ? `₹${Number(b.totalAmount).toLocaleString()}` : "—"}
                     </td>
@@ -346,16 +400,9 @@ export default function Bookings() {
                           style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Pencil size={11} /> Edit
                         </button>
-                        <button onClick={async (e) => {
+                        <button onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-                            try {
-                              await bookingsAPI.remove(b.bookingId || b.id);
-                              refetch?.();
-                            } catch (err) {
-                              alert(err.response?.data?.message || "Failed to delete booking");
-                            }
-                          }
+                          setDeleteTarget({ id: b.bookingId || b.id, name: `${b.eventType} — ${b.customerName}` });
                         }}
                           style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                           <Trash2 size={11} /> Delete
@@ -383,16 +430,9 @@ export default function Bookings() {
           booking={detail} 
           onClose={() => setDetail(null)} 
           onEdit={(b) => { setDetail(null); setEditBooking(b); }} 
-          onDelete={async (id) => {
-            if (window.confirm("Are you sure you want to delete this booking? This will also remove related financial records.")) {
-              try {
-                await bookingsAPI.remove(id);
-                setDetail(null);
-                refetch?.();
-              } catch (err) {
-                alert(err.response?.data?.message || "Failed to delete booking");
-              }
-            }
+          onDelete={(id) => {
+            setDetail(null);
+            setDeleteTarget({ id, name: `${detail.eventType} — ${detail.customerName}` });
           }}
         />
       )}
@@ -401,6 +441,15 @@ export default function Bookings() {
         booking={editBooking}
         onClose={() => setEditBooking(null)}
         onSaved={() => { setEditBooking(null); refetch?.(); }}
+      />
+      <SafeDeleteModal
+        type="booking"
+        id={deleteTarget?.id}
+        name={deleteTarget?.name}
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setDeleteTarget(null); refetch?.(); }}
+        addToast={addToast}
       />
     </div>
   );

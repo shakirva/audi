@@ -12,6 +12,7 @@ export default function PaymentsAndReceipts() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("card");
   const [dashboardData, setDashboardData] = useState(null);
+  const [settings, setSettings] = useState({});
   
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
@@ -22,12 +23,14 @@ export default function PaymentsAndReceipts() {
     setLoading(true);
     try {
       // Fetching up to 100 recent bookings to show payments pending
-      const [bookingsRes, dashboardRes] = await Promise.all([
+      const [bookingsRes, dashboardRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 100 }),
-        accountsAPI.getDashboard()
+        accountsAPI.getDashboard(),
+        settingsAPI.get().catch(() => ({ data: { data: {} } }))
       ]);
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
+      setSettings(settingsRes.data?.data || {});
     } catch (err) {
       addToast("Failed to load data", "error");
     } finally {
@@ -53,6 +56,7 @@ export default function PaymentsAndReceipts() {
       return;
     }
     
+    const venueName = settings?.venueName || "Our Auditorium";
     const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
@@ -94,7 +98,7 @@ export default function PaymentsAndReceipts() {
   const formatMoney = (val) => `₹${Number(val).toLocaleString()}`;
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div className="hm-bookings-wrapper">
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -108,13 +112,14 @@ export default function PaymentsAndReceipts() {
             </p>
           </div>
         </div>
-        <button onClick={fetchBookings} style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontWeight: 600 }}>
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Top Section */}
+      <div className="hm-payments-top-section" style={{ display: "flex", flexDirection: "column" }}>
+        
+        {/* KPI Cards */}
+        <div className="hm-payments-balances" style={{ order: window.innerWidth < 768 ? 2 : 1 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
           <div style={{ width: 36, height: 36, background: "#f0fdf4", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <ArrowUpRight size={18} color="#16a34a" />
@@ -149,8 +154,11 @@ export default function PaymentsAndReceipts() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between" }}>
+        </div>
+
+        {/* Toolbar */}
+        <div className="hm-payments-toolbar" style={{ order: window.innerWidth < 768 ? 1 : 2 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
           <button onClick={() => setViewMode("card")} style={{
             background: viewMode === "card" ? "#fff" : "transparent", border: "none", borderRadius: 6,
@@ -183,6 +191,8 @@ export default function PaymentsAndReceipts() {
             <Filter size={16} /> Filter
           </button>
         </div>
+          </div>
+        </div>
       </div>
 
       {/* Bookings List */}
@@ -192,8 +202,8 @@ export default function PaymentsAndReceipts() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No bookings found.</div>
         ) : viewMode === "table" ? (
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflowX: "auto", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                   <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Booking</th>
@@ -252,18 +262,18 @@ export default function PaymentsAndReceipts() {
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               
               return (
-                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)", overflow: "hidden", wordBreak: "break-word" }}>
+                  <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                     <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706", flexShrink: 0 }}>
                         <Calendar size={20} />
                       </div>
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{b.customerName || "Unknown Customer"}</span>
                           <span style={{ background: "#f1f5f9", color: "#475569", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 600 }}>{b.bookingNumber || b.id}</span>
                         </div>
-                        <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           <Clock size={13} />
                           {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD"}
                           <span>•</span>
@@ -272,31 +282,31 @@ export default function PaymentsAndReceipts() {
                       </div>
                     </div>
                     
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
                       {outstanding > 0 && (
                         <button 
                           onClick={() => sendPaymentReminder(b)}
-                          style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                          style={{ flex: "1 1 auto", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                         >
                           <MessageCircle size={16} /> Alert
                         </button>
                       )}
                       <button 
                         onClick={() => setHistoryBooking(b)}
-                        style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                        style={{ flex: "1 1 auto", background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
                       >
-                        View History
+                        History
                       </button>
                       <button 
                         onClick={() => setCollectPaymentBooking(b)}
-                        style={{ background: "#0f172a", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
+                        style={{ flex: "1 1 auto", background: "#0f172a", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
                       >
-                        Collect Payment
+                        Collect
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 40, marginBottom: 20 }}>
+                  <div className="grid grid-cols-2 md:flex md:gap-10 gap-4 mb-5">
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Booking Amount</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: "#334155" }}>{formatMoney(total)}</div>
@@ -305,7 +315,7 @@ export default function PaymentsAndReceipts() {
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Collected</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</div>
                     </div>
-                    <div>
+                    <div className="col-span-2 md:col-span-1">
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Outstanding</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: "#dc2626" }}>{formatMoney(outstanding)}</div>
                     </div>

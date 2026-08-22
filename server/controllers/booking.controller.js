@@ -17,6 +17,8 @@ class BookingController {
       const result = await bookingService.listBookings({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
         status,
         month,
         hall,
@@ -42,6 +44,8 @@ class BookingController {
       const stats = await bookingService.getDashboardStats({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
+        userRole: req.user.role,
+        userId: req.user.id,
       });
 
       return sendSuccess(res, {
@@ -77,6 +81,10 @@ class BookingController {
    */
   async create(req, res, next) {
     try {
+      if (!req.body.createdBy && req.user && req.user.id) {
+        req.body.createdBy = req.user.id;
+      }
+      
       const booking = await bookingService.createBooking(req.body, {
         tenantId: req.tenantId,
         environmentId: req.environmentId,
@@ -162,6 +170,34 @@ class BookingController {
       return sendSuccess(res, {
         data: result,
         message: "Booking deleted successfully",
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /api/v1/bookings/:id/safe-delete
+   * Accepts body: { reason, refundAction, refundAccount, expenseAction }
+   */
+  async safeRemove(req, res, next) {
+    try {
+      const result = await bookingService.safeDeleteBooking(req.params.id, {
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+        reason: req.body.reason,
+        refundAction: req.body.refundAction,
+        refundAccount: req.body.refundAccount,
+        expenseAction: req.body.expenseAction,
+        enquiryAction: req.body.enquiryAction,
+        customerAction: req.body.customerAction,
+        collectionAction: req.body.collectionAction,
+        deletedBy: req.user?.id,
+      });
+
+      return sendSuccess(res, {
+        data: result,
+        message: "Booking deleted successfully with all financial records handled",
       });
     } catch (err) {
       next(err);

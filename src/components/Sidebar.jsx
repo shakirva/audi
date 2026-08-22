@@ -4,11 +4,11 @@ import { useRole } from "../context/RoleContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { settingsAPI } from "../services/api";
-import Logo from "./Logo";
+import { BASE_NAVIGATION } from "../constants/navigation";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout, venueInfo, setVenueInfo } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment, moduleAccess } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
 
@@ -22,6 +22,7 @@ export default function Sidebar({ open, onClose }) {
             name: d.venueName || "",
             subtitle: d.venueSubtitle || "Auditorium",
             owner: d.ownerName || "",
+            logoUrl: d.logoUrl || null,
           });
         }
       }).catch(() => {});
@@ -31,78 +32,46 @@ export default function Sidebar({ open, onClose }) {
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
 
-  const BASE_NAVIGATION = [
-    { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"] },
-    { 
-      type: "group", label: "CRM", icon: Users, id: "crm", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales"],
-      children: [
-        { path: "/calendar", label: "Calendar" },
-        { path: "/crm", label: "Enquiries" },
-        { path: "/customers", label: "Customers" },
-        { path: "/bookings", label: "Bookings" },
-        { path: "/agreements", label: "Agreements" }
-      ]
-    },
-    { 
-      type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
-      children: [
-        { path: "/jobs", label: "Job Management" },
-        { path: "/vendors", label: "Vendor Management" }
-      ]
-    },
-    { 
-      type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/finance/payments", label: "Payments & Receipts" },
-        { path: "/finance/booking-accounts", label: "Booking Accounts" },
-        { path: "/finance/collections", label: "Collections" },
-        { path: "/finance/expenses", label: "Purchases & Expenses" },
-        { path: "/finance/reports", label: "Financial Statements" },
-        { path: "/finance/advanced", label: "Advanced Accounting" }
-      ]
-    },
-    { 
-      type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/staff", label: "Staff Management" },
-        { path: "/attendance", label: "Attendance" },
-        { path: "/leaves", label: "Leave Requests" }
-      ]
-    },
-    { 
-      type: "group", label: "Attendance & Leaves", icon: CheckSquare, id: "staff-actions", roles: ["Sales", "Operations"],
-      children: [
-        { path: "/attendance", label: "My Attendance" },
-        { path: "/leaves", label: "Leave Requests" }
-      ]
-    },
-    { 
-      type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/reports", label: "Report Dashboard" },
-        { path: "/reports/sales", label: "Sales Reports 🔒" },
-        { path: "/reports/booking", label: "Booking Reports 🔒" },
-        { path: "/reports/accounts", label: "Accounts Reports 🔒" },
-        { path: "/reports/hall", label: "Hall Reports 🔒" }
-      ]
-    },
-    { 
-      type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
-      children: [
-        { path: "/masters", label: "Masters" },
-        { path: "/roadmap", label: "ERP Roadmap" }
-      ]
-    },
-    { 
-      type: "group", label: "SaaS Platform", icon: Database, id: "saas", roles: ["SuperAdmin"],
-      children: [
-        { path: "/tenants", label: "Tenant Manager" },
-        { path: "/subscriptions", label: "Subscriptions" }
-      ]
-    }
-  ];
+  const getFilteredNavigation = () => {
+    const roleAccess = moduleAccess && moduleAccess[role] ? moduleAccess[role] : null;
 
-  const NAVIGATION = BASE_NAVIGATION.filter(item => item.roles.includes(role));
+    return BASE_NAVIGATION.map(item => {
+      // Environment specific hides
+      if (activeEnvironment === "sandbox" && (item.label === "Staff & HR" || item.label === "Attendance & Leaves")) return null;
+      // SaaS Platform is ALWAYS restricted to SuperAdmin, regardless of custom access config
+      if (item.label === "SaaS Platform" && role !== "SuperAdmin") return null;
+
+      let currentItem = { ...item };
+      
+      if (currentItem.type === "group" && activeEnvironment === "sandbox") {
+        currentItem.children = currentItem.children.filter(child => child.label !== "Activity Logs");
+      }
+
+      // 1. Custom Role-Based Module Access override
+      if (roleAccess) {
+        // Deduplicate attendance menus based on role type
+        const isAdminRole = ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"].includes(role);
+        if (currentItem.label === "Staff & HR" && !isAdminRole) return null;
+        if (currentItem.label === "Attendance & Leaves" && isAdminRole) return null;
+
+        if (currentItem.type === "link") {
+          if (!roleAccess.includes(currentItem.path)) return null;
+          return currentItem;
+        } else if (currentItem.type === "group") {
+          const allowedChildren = currentItem.children.filter(child => roleAccess.includes(child.path));
+          if (allowedChildren.length === 0) return null;
+          return { ...currentItem, children: allowedChildren };
+        }
+      }
+
+      // 2. Default Fallback (if no custom RBAC saved in DB for this role)
+      if (!currentItem.roles.includes(role)) return null;
+      
+      return currentItem;
+    }).filter(Boolean);
+  };
+
+  const NAVIGATION = getFilteredNavigation();
 
   return (
     <>
@@ -122,8 +91,7 @@ export default function Sidebar({ open, onClose }) {
       <motion.div 
         initial={false}
         animate={{ 
-          width: collapsed ? 80 : 280,
-          x: 0 // handled by CSS transform on mobile
+          width: collapsed ? 80 : 280
         }}
         className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:top-0 h-screen flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ 
@@ -135,8 +103,16 @@ export default function Sidebar({ open, onClose }) {
         
         {/* Brand */}
         <div style={{ padding: "24px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setCollapsed(!collapsed)}>
-        <div style={{ width: 40, height: 40, background: ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR }}>
-          <Tent size={24} />
+        <div style={{ width: 40, height: 40, background: venueInfo?.logoUrl ? "transparent" : ACCENT_COLOR, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: PRIMARY_COLOR, overflow: "hidden" }}>
+          {venueInfo?.logoUrl ? (
+            <img 
+              src={venueInfo.logoUrl.startsWith('http') || venueInfo.logoUrl.startsWith('/') ? venueInfo.logoUrl : `https://venueza.cloud/uploads/${venueInfo.logoUrl}`} 
+              alt="Logo" 
+              style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+            />
+          ) : (
+            <Tent size={24} />
+          )}
         </div>
         <AnimatePresence>
           {!collapsed && (
@@ -244,7 +220,6 @@ export default function Sidebar({ open, onClose }) {
           {!collapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || "Venueza User"}</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{role}</div>
             </div>
           )}
         </div>

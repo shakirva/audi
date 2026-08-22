@@ -8,7 +8,10 @@ export default function SmartDatePicker({
   hallPreference, 
   onFocus, 
   onBlur, 
-  style 
+  style,
+  allowPastDates = false,
+  ignoreBookingId = null,
+  fieldName = "tentativeDate"
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(value ? new Date(value) : new Date());
@@ -30,11 +33,14 @@ export default function SmartDatePicker({
     let isMounted = true;
     setLoading(true);
     
-    availabilityAPI.getMonth(hallPreference, year, month)
+    availabilityAPI.getMonth(hallPreference, year, month, ignoreBookingId)
       .then(res => {
-        if (isMounted) setMonthAvail(res.data.data || {});
+        const data = res.data.data || {};
+        if (isMounted) setMonthAvail(data);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error("[SmartDatePicker] API error:", err?.response?.status, err?.response?.data || err.message);
+      })
       .finally(() => {
         if (isMounted) setLoading(false);
       });
@@ -84,7 +90,7 @@ export default function SmartDatePicker({
     // The prompt says "Full Day Booked -> User cannot save enquiry for this hall on that date"
     // Let's allow selection but UI will show the warning below the picker anyway.
     
-    onChange({ target: { name: "tentativeDate", value: dateStr } });
+    onChange({ target: { name: fieldName, value: dateStr } });
     setIsOpen(false);
     if (onBlur) onBlur();
   };
@@ -173,13 +179,21 @@ export default function SmartDatePicker({
               const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const isSelected = value === dateStr;
               
+              const dateObj = new Date(year, month - 1, day);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const isPast = dateObj < today && !allowPastDates;
+              const isPastDate = dateObj < today; // always true for styling
+              
               let statusObj = monthAvail[dateStr];
               
               let bgColor = "transparent";
               let borderColor = "transparent";
               let textColor = "#111";
+              let opacity = 1;
 
-              if (hallPreference && statusObj) {
+              // Step 1: Apply availability colors for ALL selectable dates
+              if (hallPreference && statusObj && !isPast) {
                 if (statusObj.status === "Fully Booked") {
                   bgColor = "#fee2e2";
                   borderColor = "#ef4444";
@@ -193,6 +207,18 @@ export default function SmartDatePicker({
                   borderColor = "#22c55e";
                   textColor = "#15803d";
                 }
+                // Slightly dim past dates while keeping their availability colors
+                if (isPastDate && allowPastDates) {
+                  opacity = 0.75;
+                }
+              }
+
+              // Step 2: Grey out non-selectable past dates (allowPastDates is false)
+              if (isPast) {
+                textColor = "#d1d5db";
+                bgColor = "transparent";
+                borderColor = "transparent";
+                opacity = 1;
               }
               
               const isToday = new Date().toISOString().split("T")[0] === dateStr;
@@ -200,26 +226,27 @@ export default function SmartDatePicker({
               return (
                 <div 
                   key={day}
-                  onClick={() => handleSelectDate(day)}
+                  onClick={() => { if (!isPast) handleSelectDate(day); }}
                   style={{
                     height: 36,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 6,
-                    cursor: "pointer",
+                    cursor: isPast ? "not-allowed" : "pointer",
                     background: isSelected ? "#1B4332" : bgColor,
                     color: isSelected ? "#fff" : textColor,
                     fontWeight: isSelected || isToday ? 800 : 600,
                     fontSize: 13,
-                    border: isSelected ? "1px solid transparent" : isToday ? "1px solid #1B4332" : `1px solid ${borderColor}`,
+                    border: isSelected ? "1px solid transparent" : isToday && !isPast ? "1px solid #1B4332" : `1px solid ${borderColor}`,
+                    opacity: isSelected ? 1 : opacity,
                     transition: "all 0.15s"
                   }}
                   onMouseEnter={e => {
-                    if (!isSelected) e.currentTarget.style.opacity = "0.7";
+                    if (!isSelected && !isPast) e.currentTarget.style.opacity = "0.7";
                   }}
                   onMouseLeave={e => {
-                    if (!isSelected) e.currentTarget.style.opacity = "1";
+                    if (!isSelected && !isPast) e.currentTarget.style.opacity = "1";
                   }}
                 >
                   {day}

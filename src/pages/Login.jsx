@@ -21,7 +21,7 @@ export default function Login() {
     
     const parts = window.location.pathname.split("/").filter(Boolean);
     let tenantSlug = parts.length > 0 ? parts[0] : null;
-    if (["login", "dashboard"].includes(tenantSlug)) tenantSlug = null;
+    if (["login", "dashboard", "superadmin"].includes(tenantSlug)) tenantSlug = null;
 
     const result = await login(email.trim(), password, tenantSlug);
     if (!result.ok) {

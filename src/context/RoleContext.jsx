@@ -10,7 +10,7 @@ const RESERVED_ROUTES = [
   "book", "dashboard", "bookings", "calendar", "customers", "finance",
   "reports", "settings", "notifications", "tenants", "subscriptions",
   "crm", "agreements", "jobs", "vendors", "masters", "roadmap", "staff",
-  "profile", "attendance", "leaves", "login"
+  "profile", "attendance", "leaves", "login", "superadmin"
 ];
 
 /** Extract the tenant slug from the current browser URL. Returns null if on root or a reserved route. */
@@ -60,10 +60,16 @@ export function RoleProvider({ children }) {
 
   const role = user?.role || "Owner";
 
-  // Owner-controlled toggle: can Manager see revenue/payments/reports?
   const [managerRevenueEnabled, setManagerRevenueEnabledState] = useState(
     () => localStorage.getItem("hm_mgr_revenue") !== "false"
   );
+  
+  const [moduleAccess, setModuleAccessState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("hm_module_access");
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
 
   // ─── Token verification on mount ─────────────────────────
   useEffect(() => {
@@ -199,6 +205,11 @@ export function RoleProvider({ children }) {
     return PERMISSIONS[role]?.[permission] ?? false;
   };
 
+  const setModuleAccess = (val) => {
+    localStorage.setItem("hm_module_access", JSON.stringify(val));
+    setModuleAccessState(val);
+  };
+
   return (
     <RoleContext.Provider value={{
       role,
@@ -214,6 +225,9 @@ export function RoleProvider({ children }) {
       can,
       managerRevenueEnabled,
       setManagerRevenueEnabled,
+      moduleAccess,
+      setModuleAccess,
+      setUser,
     }}>
       {children}
     </RoleContext.Provider>

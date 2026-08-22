@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Area } from "recharts";
 import { Download, Wallet, CreditCard, Banknote, PiggyBank, Filter } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
 import api, { bookingsAPI, settingsAPI } from "../services/api";
 
@@ -14,7 +16,9 @@ export default function AccountsReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("This Month");
+  const [filterDate, setFilterDate] = useState("All Time");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -63,6 +67,11 @@ export default function AccountsReports() {
         if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
       } else if (filterDate === "This Year") {
         if (bDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Custom Date") {
+        const bTime = bDate.getTime();
+        if (customStartDate && bTime < new Date(customStartDate).getTime()) return false;
+        // add 86400000 (1 day) to include the end date entirely
+        if (customEndDate && bTime > new Date(customEndDate).getTime() + 86400000) return false;
       }
     }
     return true;
@@ -80,6 +89,10 @@ export default function AccountsReports() {
         if (eDate.getMonth() !== lastMonth.getMonth() || eDate.getFullYear() !== lastMonth.getFullYear()) return false;
       } else if (filterDate === "This Year") {
         if (eDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterDate === "Custom Date") {
+        const eTime = eDate.getTime();
+        if (customStartDate && eTime < new Date(customStartDate).getTime()) return false;
+        if (customEndDate && eTime > new Date(customEndDate).getTime() + 86400000) return false;
       }
     }
     return true;
@@ -131,9 +144,52 @@ export default function AccountsReports() {
 
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Accounts & Finance Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Net Revenue: ${formatLakhs(totalRev)}`, 14, 40);
+    doc.text(`Total Expenses: ${formatLakhs(totalExp)}`, 105, 40);
+    doc.text(`Net Profit: ${formatLakhs(netProfit)}`, 14, 48);
+    doc.text(`Margin: ${margin}%`, 105, 48);
+
+    const tableColumn = ["Date", "Type", "Category/Event", "Details", "Amount"];
+    const tableRows = [];
+
+    filteredBookings.forEach(b => {
+      const date = new Date(b.date || b.createdAt).toLocaleDateString();
+      const name = b.Customer?.name || b.customerName || "N/A";
+      const event = b.eventType || "N/A";
+      const total = b.totalAmount ? `+ Rs ${b.totalAmount}` : "0";
+      tableRows.push([date, "Income", event, name, total]);
+    });
+
+    filteredExpenses.forEach(e => {
+      const date = new Date(e.date || e.createdAt).toLocaleDateString();
+      const category = e.category || "N/A";
+      const desc = e.description || "N/A";
+      const amount = e.amount ? `- Rs ${e.amount}` : "0";
+      tableRows.push([date, "Expense", category, desc, amount]);
+    });
+
+    tableRows.sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 55,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [27, 67, 50] }
+    });
+
+    doc.save(`Accounts_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
@@ -162,8 +218,8 @@ export default function AccountsReports() {
           </h1>
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Comprehensive financial overview, cash flow, and profitability</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button 
+        <div className="w-full sm:w-auto" style={{ display: "flex", gap: 10 }}>
+          <button className="w-full sm:w-auto justify-center" 
             onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
@@ -173,33 +229,45 @@ export default function AccountsReports() {
       </div>
 
       {/* Advanced Filter Bar */}
-      <div className="print-hide" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+      <div className="print-hide flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div className="hidden sm:flex" style={{ alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
+          <Filter size={16} /> Filters
+        </div>
+        <div className="flex sm:hidden items-center gap-2 mb-2 text-[#1B4332] font-bold text-sm w-full border-b border-gray-100 pb-2">
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Time">Date: All Time</option>
           <option value="This Month">Date: This Month</option>
           <option value="Last Month">Date: Last Month</option>
           <option value="This Year">Date: This Year</option>
+          <option value="Custom Date">Date: Custom Date</option>
         </select>
         
-        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        {filterDate === "Custom Date" && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
+            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>to</span>
+            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
+          </div>
+        )}
+        
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
             <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
         
-        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Staff">Executive: All Staff</option>
           {uniqueExecutives.map((exec, i) => (
             <option key={i} value={exec}>{exec}</option>
           ))}
         </select>
         
-        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Locations">Place: All Locations</option>
           {uniquePlaces.map((place, i) => (
             <option key={i} value={place}>{place}</option>
