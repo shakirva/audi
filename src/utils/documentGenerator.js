@@ -242,7 +242,7 @@ export const generateInvoice = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`Tax Invoice No: ${booking.bookingId || booking.id}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 74);
+  doc.text(`Date: ${data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 120, 74);
 
   const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
   
