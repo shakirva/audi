@@ -222,7 +222,7 @@ export const generateInvoice = async (data) => {
   const { booking, payments, totalPaid, outstanding, isRevised } = data;
   const settings = await getSettings();
   
-  await drawHeader(doc, isRevised ? "REVISED TAX INVOICE" : "FINAL TAX INVOICE", booking, settings);
+  await drawHeader(doc, isRevised ? "REVISED TAX INVOICE" : "TAX INVOICE", booking, settings);
   
   // Invoice Info
   doc.setTextColor(...textDark);
@@ -238,9 +238,9 @@ export const generateInvoice = async (data) => {
   }
   
   doc.setFont("helvetica", "bold");
-  doc.text("Invoice Details:", 120, 55);
+  doc.text("Tax Invoice Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 62);
+  doc.text(`Tax Invoice No: ${booking.bookingId || booking.id}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 74);
 
@@ -375,7 +375,7 @@ export const generateInvoice = async (data) => {
   }
 
   drawFooter(doc, settings);
-  doc.save(`Final_Invoice_${booking.bookingNumber || booking.id || "001"}.pdf`);
+  doc.save(`Tax_Invoice_${booking.bookingId || booking.id || "001"}.pdf`);
   } catch (err) {
     console.error(err);
     alert("PDF Error: " + err.message);
