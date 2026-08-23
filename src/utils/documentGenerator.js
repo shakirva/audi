@@ -524,7 +524,7 @@ export const generateReceipt = async (payment, booking) => {
   doc.text("OFFICIAL RECEIPT", 196, 14, { align: "right" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
+  doc.text(`Date: ${new Date(payment.paymentDate || payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
   doc.text(`Bill No: ${booking?.bookingId || booking?.id || payment.paymentNumber || payment.id}`, 196, 28, { align: "right" });
 
   // Receipt Body Border
@@ -613,7 +613,8 @@ export const generateReceipt = async (payment, booking) => {
   doc.text("Subject to realization of cheque/draft.", 20, 175);
 
   drawFooter(doc);
-  doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}.pdf`);
+  const receiptNum = payment.Receipts?.[0]?.receiptNumber || payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id;
+  doc.save(`Receipt_${receiptNum}.pdf`);
 };
 
 export const generateAttendanceReport = async (monthName, year, attendanceData, usersData) => {
