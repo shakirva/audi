@@ -10,7 +10,6 @@ export default function PaymentsAndReceipts() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState("card");
   const [dashboardData, setDashboardData] = useState(null);
   const [settings, setSettings] = useState({});
   
@@ -159,23 +158,6 @@ export default function PaymentsAndReceipts() {
         {/* Toolbar */}
         <div className="hm-payments-toolbar" style={{ order: window.innerWidth < 768 ? 1 : 2 }}>
           <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
-          <button onClick={() => setViewMode("card")} style={{
-            background: viewMode === "card" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "card" ? "#0f172a" : "#64748b", boxShadow: viewMode === "card" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <LayoutGrid size={16} /> Cards
-          </button>
-          <button onClick={() => setViewMode("table")} style={{
-            background: viewMode === "table" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "table" ? "#0f172a" : "#64748b", boxShadow: viewMode === "table" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <List size={16} /> Table
-          </button>
-        </div>
-
         <div style={{ display: "flex", gap: 12, flex: 1, justifyContent: "flex-end" }}>
           <div style={{ position: "relative", width: "100%", maxWidth: 350 }}>
             <Search size={18} style={{ position: "absolute", left: 16, top: 12, color: "#94a3b8" }} />
@@ -201,7 +183,7 @@ export default function PaymentsAndReceipts() {
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Loading bookings...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No bookings found.</div>
-        ) : viewMode === "table" ? (
+        ) : (
           <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflowX: "auto", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
               <thead>
@@ -252,87 +234,6 @@ export default function PaymentsAndReceipts() {
                 })}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {filtered.map(b => {
-              const total = Number(b.totalAmount) || 0;
-              const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
-              const outstanding = Math.max(0, total - collected);
-              const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
-              
-              return (
-                <div key={b.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)", overflow: "hidden", wordBreak: "break-word" }}>
-                  <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fffbeb", border: "1px solid #fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706", flexShrink: 0 }}>
-                        <Calendar size={20} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{b.customerName || "Unknown Customer"}</span>
-                          <span style={{ background: "#f1f5f9", color: "#475569", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 600 }}>{b.bookingNumber || b.id}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <Clock size={13} />
-                          {b.date ? new Date(b.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD"}
-                          <span>•</span>
-                          {b.eventType || "Event"}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
-                      {outstanding > 0 && (
-                        <button 
-                          onClick={() => sendPaymentReminder(b)}
-                          style={{ flex: "1 1 auto", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                        >
-                          <MessageCircle size={16} /> Alert
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => setHistoryBooking(b)}
-                        style={{ flex: "1 1 auto", background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-                      >
-                        History
-                      </button>
-                      <button 
-                        onClick={() => setCollectPaymentBooking(b)}
-                        style={{ flex: "1 1 auto", background: "#0f172a", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
-                      >
-                        Collect
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:flex md:gap-10 gap-4 mb-5">
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Booking Amount</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#334155" }}>{formatMoney(total)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Collected</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</div>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Outstanding</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#dc2626" }}>{formatMoney(outstanding)}</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>Payment Progress</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#334155" }}>{progress}%</span>
-                    </div>
-                    <div style={{ height: 6, background: "#f1f5f9", borderRadius: 6, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${progress}%`, background: progress === 100 ? "#16a34a" : "#3b82f6", borderRadius: 6 }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
       </div>
