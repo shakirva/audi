@@ -1,14 +1,14 @@
-name: Venueza CI
+name: Build & Test
 
 on:
   push:
-    branches: [ "main", "feature/*" ]
+    branches: [ "main", "staging", "feature/*" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-frontend:
-    name: Build Frontend
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

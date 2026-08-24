@@ -1,0 +1,86 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    name: Deploy to Staging Server
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install & Build Frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://dev.venueza.cloud/api
+          CI: true
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync Frontend to Staging
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./dist/ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/dist/
+
+      - name: Sync Source Files to Staging
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --include='src/***' \
+            --include='public/***' \
+            --include='package.json' \
+            --include='package-lock.json' \
+            --include='vite.config.js' \
+            --include='index.html' \
+            --exclude='*' \
+            ./ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      - name: Sync Backend to Staging
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            ./server/ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/server/
+
+      - name: Install Backend Dependencies & Reload
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "cd ${{ secrets.DEPLOY_PATH }}/server && npm ci --production && sudo pm2 reload venueza-staging"
+
+      - name: Health Check
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dev.venueza.cloud/api/health || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Staging health check PASSED (HTTP $STATUS)"
+          else
+            echo "⚠️ Staging health check returned HTTP $STATUS (non-critical for staging)"
+          fi
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
