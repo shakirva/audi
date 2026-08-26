@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: 'npm'
 
       - name: Install & Build Frontend
@@ -43,72 +43,56 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      # ============================================
-      # STEP 1: BACKUP BEFORE ANYTHING
-      # ============================================
       - name: "🔒 Step 1: Create Pre-Deploy Backup"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           echo "Creating backup before deployment..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "sudo -u postgres pg_dump venueza_prod > /tmp/pre_deploy_backup_$(date +%Y%m%d_%H%M%S).dump && echo 'BACKUP_OK'" | tail -1
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "sudo -u postgres pg_dump venueza_prod > /tmp/pre_deploy_backup_$(date +%Y%m%d_%H%M%S).dump && echo 'BACKUP_OK'" | tail -1
           echo "✅ Pre-deploy backup created"
 
-      # ============================================
-      # STEP 2: SNAPSHOT CURRENT STATE FOR ROLLBACK
-      # ============================================
       - name: "📸 Step 2: Snapshot Current Build"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "cp -r ${{ secrets.DEPLOY_PATH }}/dist ${{ secrets.DEPLOY_PATH }}/dist_rollback 2>/dev/null || true"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "cp -r ${DEPLOY_PATH}/dist ${DEPLOY_PATH}/dist_rollback 2>/dev/null || true"
           echo "✅ Rollback snapshot saved"
 
-      # ============================================
-      # STEP 3: DEPLOY CODE
-      # ============================================
-      - name: "🚀 Step 3: Sync Frontend"
+      - name: "🚀 Step 3a: Sync Frontend"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            ./dist/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/dist/
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" ./dist/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/dist/"
 
       - name: "🚀 Step 3b: Sync Source Files"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --include='src/***' \
-            --include='public/***' \
-            --include='package.json' \
-            --include='package-lock.json' \
-            --include='vite.config.js' \
-            --include='index.html' \
-            --exclude='*' \
-            ./ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --include='src/***' --include='public/***' --include='package.json' --include='package-lock.json' --include='vite.config.js' --include='index.html' --exclude='*' ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
 
       - name: "🚀 Step 3c: Sync Backend"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --exclude='node_modules' \
-            --exclude='.env' \
-            ./server/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/server/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --exclude='node_modules' --exclude='.env' ./server/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/server/"
 
-      # ============================================
-      # STEP 4: INSTALL & RELOAD (ZERO DOWNTIME)
-      # ============================================
       - name: "⚡ Step 4: Install Dependencies & Reload"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "cd ${{ secrets.DEPLOY_PATH }}/server && npm ci --production && sudo pm2 reload venueza-backend"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "cd ${DEPLOY_PATH}/server && npm ci --production && sudo pm2 reload venueza-backend"
 
-      # ============================================
-      # STEP 5: HEALTH CHECK
-      # ============================================
       - name: "🏥 Step 5: Health Check"
         id: healthcheck
         run: |
@@ -122,25 +106,26 @@ jobs:
             echo "healthy=false" >> $GITHUB_OUTPUT
           fi
 
-      # ============================================
-      # STEP 6: ROLLBACK IF HEALTH CHECK FAILS
-      # ============================================
       - name: "🔄 ROLLBACK (if health check failed)"
         if: steps.healthcheck.outputs.healthy == 'false'
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           echo "⚠️ ROLLING BACK PRODUCTION..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "rm -rf ${{ secrets.DEPLOY_PATH }}/dist && mv ${{ secrets.DEPLOY_PATH }}/dist_rollback ${{ secrets.DEPLOY_PATH }}/dist && sudo pm2 reload venueza-backend"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "rm -rf ${DEPLOY_PATH}/dist && mv ${DEPLOY_PATH}/dist_rollback ${DEPLOY_PATH}/dist && sudo pm2 reload venueza-backend"
           echo "✅ Rollback complete. Production restored to previous version."
           exit 1
 
       - name: "🧹 Cleanup Rollback Snapshot"
         if: steps.healthcheck.outputs.healthy == 'true'
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "rm -rf ${{ secrets.DEPLOY_PATH }}/dist_rollback 2>/dev/null || true"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "rm -rf ${DEPLOY_PATH}/dist_rollback 2>/dev/null || true"
 
       - name: Cleanup SSH Key
         if: always()

@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: 'npm'
 
       - name: Install & Build Frontend
@@ -36,40 +36,36 @@ jobs:
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Sync Frontend to Staging
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            ./dist/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/dist/
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" ./dist/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/dist/"
 
       - name: Sync Source Files to Staging
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --include='src/***' \
-            --include='public/***' \
-            --include='package.json' \
-            --include='package-lock.json' \
-            --include='vite.config.js' \
-            --include='index.html' \
-            --exclude='*' \
-            ./ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --include='src/***' --include='public/***' --include='package.json' --include='package-lock.json' --include='vite.config.js' --include='index.html' --exclude='*' ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
 
       - name: Sync Backend to Staging
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --exclude='node_modules' \
-            --exclude='.env' \
-            ./server/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.DEPLOY_PATH }}/server/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --exclude='node_modules' --exclude='.env' ./server/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/server/"
 
       - name: Install Backend Dependencies & Reload
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "cd ${{ secrets.DEPLOY_PATH }}/server && npm ci --production && sudo pm2 reload venueza-staging"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "cd ${DEPLOY_PATH}/server && npm ci --production && sudo pm2 reload venueza-staging"
 
       - name: Health Check
         run: |
