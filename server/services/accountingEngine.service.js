@@ -568,17 +568,40 @@ class AccountingEngine {
   // GENERAL LEDGER
   // ═══════════════════════════════════
   async getLedger({ tenantId, environmentId, accountCode, startDate, endDate, page = 1, limit = 50 }) {
-    const where = { tenantId, environmentId };
-
-    if (accountCode) {
-      const account = await ChartOfAccount.findOne({ where: { code: accountCode, tenantId, environmentId } });
-      if (account) {
-        where[Op.or] = [{ debitAccountId: account.id }, { creditAccountId: account.id }];
-      }
-    }
+    const { sequelize } = require("../models");
+    const where = { tenantId, environmentId, status: "Posted" };
 
     if (startDate && endDate) {
       where.date = { [Op.between]: [startDate, endDate] };
+    }
+
+    const includeConfig = [
+      { 
+        model: JournalEntryLine, as: "lines", 
+        include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }],
+        ...(accountCode ? { where: { '$lines.account.code$': accountCode }, required: true } : {})
+      },
+      { model: Customer, attributes: ["id", "name"], required: false },
+      { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false },
+    ];
+
+    // If filtering by account code, find matching journal entries through lines
+    if (accountCode) {
+      const account = await ChartOfAccount.findOne({ where: { code: accountCode, tenantId, environmentId } });
+      if (account) {
+        // Find journal entry IDs that have lines with this account
+        const journalIds = await JournalEntryLine.findAll({
+          where: { accountId: account.id },
+          attributes: ['journalEntryId'],
+          raw: true
+        });
+        const ids = journalIds.map(j => j.journalEntryId);
+        if (ids.length > 0) {
+          where.id = { [Op.in]: ids };
+        } else {
+          return { data: [], total: 0, page, limit };
+        }
+      }
     }
 
     const { count, rows } = await JournalEntry.findAndCountAll({
@@ -773,35 +796,62 @@ class AccountingEngine {
   // PROFIT & LOSS
   // ═══════════════════════════════════
   async getProfitLoss({ tenantId, environmentId, startDate, endDate }) {
-    const scope = { tenantId, environmentId };
-    const dateFilter = startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {};
+    const { sequelize } = require("../models");
+    
+    let dateClause = '';
+    const replacements = { tenantId, environmentId };
+    
+    if (startDate && endDate) {
+      dateClause = 'AND j."createdAt" BETWEEN :startDate AND :endDate';
+      replacements.startDate = startDate;
+      replacements.endDate = endDate;
+    }
 
-    const incomeAccounts = await ChartOfAccount.findAll({ where: { ...scope, type: "Income" } });
-    const expenseAccounts = await ChartOfAccount.findAll({ where: { ...scope, type: "Expense" } });
+    const query = `
+      SELECT 
+        c.code, c.name, c."type",
+        COALESCE(SUM(l.debit), 0) as "totalDebit",
+        COALESCE(SUM(l.credit), 0) as "totalCredit"
+      FROM "JournalEntryLines" l
+      JOIN "ChartOfAccounts" c ON l."accountId" = c.id
+      JOIN "JournalEntries" j ON l."journalEntryId" = j.id
+      WHERE j."tenantId" = :tenantId 
+        AND j."environmentId" = :environmentId
+        AND j.status = 'Posted'
+        AND c."type" IN ('Income', 'Expense')
+        ${dateClause}
+      GROUP BY c.code, c.name, c."type"
+      ORDER BY c.code
+    `;
+
+    const results = await sequelize.query(query, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT
+    });
 
     const incomeItems = [];
     let totalIncome = 0;
-    for (const acct of incomeAccounts) {
-      const credits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, creditAccountId: acct.id } }) || 0;
-      const debits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, debitAccountId: acct.id } }) || 0;
-      const balance = credits - debits;
-      if (balance !== 0) {
-        incomeItems.push({ code: acct.code, name: acct.name, amount: balance });
-        totalIncome += balance;
-      }
-    }
-
     const expenseItems = [];
     let totalExpenses = 0;
-    for (const acct of expenseAccounts) {
-      const debits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, debitAccountId: acct.id } }) || 0;
-      const credits = await JournalEntry.sum("amount", { where: { ...scope, ...dateFilter, creditAccountId: acct.id } }) || 0;
-      const balance = debits - credits;
-      if (balance !== 0) {
-        expenseItems.push({ code: acct.code, name: acct.name, amount: balance });
-        totalExpenses += balance;
+
+    results.forEach(row => {
+      const debit = parseFloat(row.totalDebit);
+      const credit = parseFloat(row.totalCredit);
+      
+      if (row.type === 'Income') {
+        const balance = credit - debit;
+        if (balance !== 0) {
+          incomeItems.push({ code: row.code, name: row.name, amount: balance });
+          totalIncome += balance;
+        }
+      } else if (row.type === 'Expense') {
+        const balance = debit - credit;
+        if (balance !== 0) {
+          expenseItems.push({ code: row.code, name: row.name, amount: balance });
+          totalExpenses += balance;
+        }
       }
-    }
+    });
 
     return {
       income: incomeItems,
@@ -851,11 +901,6 @@ class AccountingEngine {
 
     return results;
   }
-
-  async getLedger() { return { data: [], total: 0, page: 1, limit: 50 }; }
-  async getVouchers() { return { data: [], total: 0, page: 1, limit: 50 }; }
-  async getCustomerLedger() { return {}; }
-  async getProfitLoss() { return { income: [], totalIncome: 0, expenses: [], totalExpenses: 0, netProfit: 0 }; }
 }
 
 module.exports = new AccountingEngine();
