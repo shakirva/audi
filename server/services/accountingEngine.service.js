@@ -584,8 +584,7 @@ class AccountingEngine {
     const { count, rows } = await JournalEntry.findAndCountAll({
       where,
       include: [
-        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name", "type"] },
-        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name", "type"] },
+        { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
         { model: Customer, attributes: ["id", "name"], required: false },
         { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false },
       ],
@@ -689,8 +688,8 @@ class AccountingEngine {
     const journals = await JournalEntry.findAll({
       where: { customerId, tenantId, environmentId },
       include: [
-        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
-        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
+        { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
+        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false }
       ],
       order: [["date", "DESC"]],
     });
@@ -743,9 +742,8 @@ class AccountingEngine {
     const journals = await JournalEntry.findAll({
       where: { bookingId: realBookingId, tenantId, environmentId },
       include: [
-        { model: ChartOfAccount, as: "DebitAccount", attributes: ["code", "name"] },
-        { model: ChartOfAccount, as: "CreditAccount", attributes: ["code", "name"] },
-        { model: Voucher, attributes: ["voucherNumber", "voucherType"] }
+        { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
+        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false }
       ],
       order: [["date", "DESC"], ["createdAt", "DESC"]],
     });

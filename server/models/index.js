@@ -2,6 +2,7 @@
  * Model associations — defines all relationships between models.
  * Import this file once in index.js after all models are loaded.
  */
+const sequelize = require("../db");
 const Tenant = require("./Tenant");
 const Environment = require("./Environment");
 const Subscription = require("./Subscription");
@@ -268,6 +269,7 @@ JournalEntry.hasMany(JournalEntryLine, { foreignKey: "journalEntryId", onDelete:
 JournalEntryLine.belongsTo(JournalEntry, { foreignKey: "journalEntryId" });
 
 module.exports = { 
+  sequelize,
   Tenant, Environment, Subscription, User, Booking, Expense, Vendor, Settings, AuditLog, Customer, Enquiry, FollowUp,
   Agreement, AgreementTemplate, AgreementVersion, Payment, Receipt,
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
