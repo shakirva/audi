@@ -57,7 +57,7 @@ class BookingRepository extends BaseRepository {
     const where = {};
     const allBookings = await this.findAllUnpaginated({ tenantId, environmentId, where });
 
-    const confirmed = allBookings.filter((b) => b.status === "Confirmed" || b.status === "Completed");
+    const confirmed = allBookings.filter((b) => b.status === "Confirmed" || b.status === "Completed" || b.status === "Closed");
     const pending = allBookings.filter((b) => b.status === "Pending Payment");
     const enquiries = allBookings.filter((b) => b.status === "Enquiry");
     const totalRevenue = confirmed.reduce((s, b) => s + b.totalAmount, 0);

@@ -179,13 +179,13 @@ export default function Agreements() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
-                    onClick={() => generateAgreement({ booking: a })}
+                    onClick={() => generateAgreement({ booking: a }, "preview")}
                     style={{ flex: 1, padding: "10px", background: "#0f172a", color: "#fff", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", border: "none", fontWeight: 700, fontSize: 14, gap: 8, cursor: "pointer" }}
                   >
                     Preview
                   </button>
                   <button
-                    onClick={() => generateAgreement({ booking: a })}
+                    onClick={() => generateAgreement({ booking: a }, "download")}
                     style={{ padding: "10px", background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}
                   >
                     <Printer size={16} />

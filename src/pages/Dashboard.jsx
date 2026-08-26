@@ -152,7 +152,7 @@ function ExecutiveCockpit() {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const revMap = {};
       allBookings.forEach(b => {
-        if (b.status === "Confirmed" || b.status === "Completed") {
+        if (b.status === "Confirmed" || b.status === "Completed" || b.status === "Closed") {
           if (b.date) {
             const m = new Date(b.date).getMonth();
             revMap[m] = (revMap[m] || 0) + (Number(b.totalAmount) || 0);

@@ -152,12 +152,13 @@ export const generateQuotation = async (data) => {
   doc.save(`Quotation_${booking.bookingNumber || booking.id}.pdf`);
 };
 
-export const generateAgreement = async (data) => {
-  const doc = new jsPDF();
-  const { booking } = data;
-  const settings = await getSettings();
-  
-  await drawHeader(doc, "CONTRACT AGREEMENT", booking, settings);
+export const generateAgreement = async (data, action = "download") => {
+  try {
+    const doc = new jsPDF();
+    const { booking } = data;
+    const settings = await getSettings();
+    
+    await drawHeader(doc, "CONTRACT AGREEMENT", booking, settings);
   
   doc.setTextColor(...textDark);
   doc.setFontSize(14);
@@ -201,7 +202,7 @@ export const generateAgreement = async (data) => {
     margin: { bottom: 30 } // Leave space for signatures
   });
 
-  const finalY = doc.lastAutoTable.finalY || 160;
+  const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : 160;
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
@@ -212,8 +213,17 @@ export const generateAgreement = async (data) => {
   doc.text("Name & Signature of Host with Date", 14, finalY + 25);
   doc.text("Name & Signature of Venue Representative with Date", 100, finalY + 25);
   
-  drawFooter(doc);
-  doc.save(`Agreement_${booking.bookingNumber || booking.id}.pdf`);
+  drawFooter(doc, settings);
+  
+  if (action === "preview") {
+    window.open(doc.output('bloburl'), '_blank');
+  } else {
+    doc.save(`Agreement_${booking.bookingId || booking.id}.pdf`);
+  }
+  } catch (err) {
+    console.error("PDF Generation Error:", err);
+    alert("Failed to generate PDF: " + err.message);
+  }
 };
 
 export const generateInvoice = async (data) => {
