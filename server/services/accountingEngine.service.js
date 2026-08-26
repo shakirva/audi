@@ -479,7 +479,7 @@ class AccountingEngine {
   // until the new JournalEntryLine architecture is fully wired into the reporting dashboards in Phase 2.
 
   async getDashboard({ tenantId, environmentId }) {
-    const { sequelize, ChartOfAccount, JournalEntry, JournalEntryLine, JournalEntryLine } = require("../models");
+    const { sequelize, ChartOfAccount, JournalEntry, JournalEntryLine } = require("../models");
     const { Op } = require("sequelize");
     
     // Aggregation Query to sum debits and credits by account systemKey and type
