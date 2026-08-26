@@ -1,0 +1,142 @@
+name: Deploy to Production
+
+# MANUAL TRIGGER ONLY — Never auto-deploys to production
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm production deployment'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy to Production (with Backup & Rollback)
+    runs-on: ubuntu-latest
+    environment: production
+
+    # Safety: Only deploy if user typed "deploy"
+    if: github.event.inputs.confirm == 'deploy'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install & Build Frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://venueza.cloud/api
+          CI: true
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: "🔒 Step 1: Create Pre-Deploy Backup"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          echo "Creating backup before deployment..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "sudo -u postgres pg_dump venueza_prod > /tmp/pre_deploy_backup_$(date +%Y%m%d_%H%M%S).dump && echo 'BACKUP_OK'" | tail -1
+          echo "✅ Pre-deploy backup created"
+
+      - name: "📸 Step 2: Snapshot Current Build"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "cp -r ${DEPLOY_PATH}/dist ${DEPLOY_PATH}/dist_rollback 2>/dev/null || true"
+          echo "✅ Rollback snapshot saved"
+
+      - name: "🚀 Step 3a: Sync Frontend"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" ./dist/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/dist/"
+
+      - name: "🚀 Step 3b: Sync Source Files"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --include='src/***' --include='public/***' --include='package.json' --include='package-lock.json' --include='vite.config.js' --include='index.html' --exclude='*' ./ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/"
+
+      - name: "🚀 Step 3c: Sync Backend"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" --exclude='node_modules' --exclude='.env' ./server/ "${VPS_USER}@${VPS_HOST}:${DEPLOY_PATH}/server/"
+
+      - name: "⚡ Step 4: Install Dependencies & Reload"
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "cd ${DEPLOY_PATH}/server && npm ci --production && sudo pm2 reload venueza-backend"
+
+      - name: "🏥 Step 5: Health Check"
+        id: healthcheck
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://venueza.cloud/api/health || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Production health check PASSED (HTTP $STATUS)"
+            echo "healthy=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Production health check FAILED (HTTP $STATUS)"
+            echo "healthy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "🔄 ROLLBACK (if health check failed)"
+        if: steps.healthcheck.outputs.healthy == 'false'
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "⚠️ ROLLING BACK PRODUCTION..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "rm -rf ${DEPLOY_PATH}/dist && mv ${DEPLOY_PATH}/dist_rollback ${DEPLOY_PATH}/dist && sudo pm2 reload venueza-backend"
+          echo "✅ Rollback complete. Production restored to previous version."
+          exit 1
+
+      - name: "🧹 Cleanup Rollback Snapshot"
+        if: steps.healthcheck.outputs.healthy == 'true'
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" "rm -rf ${DEPLOY_PATH}/dist_rollback 2>/dev/null || true"
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: "✅ Deployment Summary"
+        if: steps.healthcheck.outputs.healthy == 'true'
+        run: |
+          echo "================================================"
+          echo "  🎉 PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "  📅 $(date)"
+          echo "  🔗 https://venueza.cloud"
+          echo "  📦 Commit: ${{ github.sha }}"
+          echo "================================================"

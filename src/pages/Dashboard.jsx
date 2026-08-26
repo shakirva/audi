@@ -46,6 +46,10 @@ const revenueData = [
   { name: "Jun", rev: 950000, exp: 280000 }
 ];
 
+const eventDistData = [
+  { name: "Loading", value: 1, color: "#e2e8f0" }
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. MANAGER / OWNER MODE (Executive Command Center)
 // ─────────────────────────────────────────────────────────────────────────────

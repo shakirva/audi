@@ -222,7 +222,7 @@ export const generateInvoice = async (data) => {
   const { booking, payments, totalPaid, outstanding, isRevised } = data;
   const settings = await getSettings();
   
-  await drawHeader(doc, isRevised ? "REVISED TAX INVOICE" : "FINAL TAX INVOICE", booking, settings);
+  await drawHeader(doc, isRevised ? "REVISED TAX INVOICE" : "TAX INVOICE", booking, settings);
   
   // Invoice Info
   doc.setTextColor(...textDark);
@@ -238,11 +238,11 @@ export const generateInvoice = async (data) => {
   }
   
   doc.setFont("helvetica", "bold");
-  doc.text("Invoice Details:", 120, 55);
+  doc.text("Tax Invoice Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 62);
+  doc.text(`Tax Invoice No: ${booking.bookingId || booking.id}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 120, 74);
+  doc.text(`Date: ${data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 120, 74);
 
   const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
   
@@ -375,7 +375,7 @@ export const generateInvoice = async (data) => {
   }
 
   drawFooter(doc, settings);
-  doc.save(`Final_Invoice_${booking.bookingNumber || booking.id || "001"}.pdf`);
+  doc.save(`Tax_Invoice_${booking.bookingId || booking.id || "001"}.pdf`);
   } catch (err) {
     console.error(err);
     alert("PDF Error: " + err.message);
@@ -524,7 +524,7 @@ export const generateReceipt = async (payment, booking) => {
   doc.text("OFFICIAL RECEIPT", 196, 14, { align: "right" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Date: ${new Date(payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
+  doc.text(`Date: ${new Date(payment.paymentDate || payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
   doc.text(`Bill No: ${booking?.bookingId || booking?.id || payment.paymentNumber || payment.id}`, 196, 28, { align: "right" });
 
   // Receipt Body Border
@@ -613,7 +613,8 @@ export const generateReceipt = async (payment, booking) => {
   doc.text("Subject to realization of cheque/draft.", 20, 175);
 
   drawFooter(doc);
-  doc.save(`Receipt_${payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id}.pdf`);
+  const receiptNum = payment.Receipts?.[0]?.receiptNumber || payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id;
+  doc.save(`Receipt_${receiptNum}.pdf`);
 };
 
 export const generateAttendanceReport = async (monthName, year, attendanceData, usersData) => {

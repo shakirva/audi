@@ -10,7 +10,6 @@ export default function PaymentsAndReceipts() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState("card");
   const [dashboardData, setDashboardData] = useState(null);
   const [settings, setSettings] = useState({});
   
@@ -159,23 +158,6 @@ export default function PaymentsAndReceipts() {
         {/* Toolbar */}
         <div className="hm-payments-toolbar" style={{ order: window.innerWidth < 768 ? 1 : 2 }}>
           <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
-          <button onClick={() => setViewMode("card")} style={{
-            background: viewMode === "card" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "card" ? "#0f172a" : "#64748b", boxShadow: viewMode === "card" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <LayoutGrid size={16} /> Cards
-          </button>
-          <button onClick={() => setViewMode("table")} style={{
-            background: viewMode === "table" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "table" ? "#0f172a" : "#64748b", boxShadow: viewMode === "table" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <List size={16} /> Table
-          </button>
-        </div>
-
         <div style={{ display: "flex", gap: 12, flex: 1, justifyContent: "flex-end" }}>
           <div style={{ position: "relative", width: "100%", maxWidth: 350 }}>
             <Search size={18} style={{ position: "absolute", left: 16, top: 12, color: "#94a3b8" }} />
@@ -201,8 +183,10 @@ export default function PaymentsAndReceipts() {
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Loading bookings...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No bookings found.</div>
-        ) : viewMode === "table" ? (
-          <div className="hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflowX: "auto", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        ) : (
+          <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block hm-hide-scrollbar" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflowX: "auto", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
@@ -253,8 +237,9 @@ export default function PaymentsAndReceipts() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden flex flex-col gap-4">
             {filtered.map(b => {
               const total = Number(b.totalAmount) || 0;
               const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
@@ -334,6 +319,7 @@ export default function PaymentsAndReceipts() {
               );
             })}
           </div>
+          </>
         )}
       </div>
 
