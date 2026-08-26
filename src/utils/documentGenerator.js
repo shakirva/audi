@@ -11,6 +11,21 @@ const getSettings = async () => {
   }
 };
 
+const downloadPDF = (doc, filename) => {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
+};
+
 const fetchImage = (url) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -149,7 +164,7 @@ export const generateQuotation = async (data) => {
   });
 
   drawFooter(doc);
-  doc.save(`Quotation_${booking.bookingNumber || booking.id}.pdf`);
+  downloadPDF(doc, `Quotation_${booking.bookingId || booking.id}.pdf`);
 };
 
 export const generateAgreement = async (data, action = "download") => {
@@ -218,7 +233,7 @@ export const generateAgreement = async (data, action = "download") => {
   if (action === "preview") {
     window.open(doc.output('bloburl'), '_blank');
   } else {
-    doc.save(`Agreement_${booking.bookingId || booking.id}.pdf`);
+    downloadPDF(doc, `Agreement_${booking.bookingId || booking.id}.pdf`);
   }
   } catch (err) {
     console.error("PDF Generation Error:", err);
@@ -385,7 +400,7 @@ export const generateInvoice = async (data) => {
   }
 
   drawFooter(doc, settings);
-  doc.save(`Tax_Invoice_${booking.bookingId || booking.id || "001"}.pdf`);
+  downloadPDF(doc, `Tax_Invoice_${booking.bookingId || booking.id || "001"}.pdf`);
   } catch (err) {
     console.error(err);
     alert("PDF Error: " + err.message);
@@ -429,7 +444,7 @@ export const generateReceiptSummary = async (data) => {
   }
   
   drawFooter(doc, settings);
-  doc.save(`Receipt_Summary_${booking.bookingNumber || booking.id}.pdf`);
+  downloadPDF(doc, `Receipt_Summary_${booking.bookingId || booking.id}.pdf`);
 };
 
 export const generateStatement = (data) => {
@@ -624,7 +639,7 @@ export const generateReceipt = async (payment, booking) => {
 
   drawFooter(doc);
   const receiptNum = payment.Receipts?.[0]?.receiptNumber || payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id;
-  doc.save(`Receipt_${receiptNum}.pdf`);
+  downloadPDF(doc, `Receipt_${receiptNum}.pdf`);
 };
 
 export const generateAttendanceReport = async (monthName, year, attendanceData, usersData) => {
@@ -677,7 +692,7 @@ export const generateAttendanceReport = async (monthName, year, attendanceData, 
   });
 
   drawFooter(doc, settings);
-  doc.save(`Attendance_Report_${monthName}_${year}.pdf`);
+  downloadPDF(doc, `Attendance_Report_${monthName}_${year}.pdf`);
 };
 
 export const generateInventoryReport = async (items) => {
@@ -733,5 +748,5 @@ export const generateInventoryReport = async (items) => {
   });
 
   drawFooter(doc, settings);
-  doc.save(`Inventory_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  downloadPDF(doc, `Inventory_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
 };

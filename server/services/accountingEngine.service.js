@@ -193,21 +193,60 @@ class AccountingEngine {
       { accountId: revenueAcct.id, debit: 0, credit: booking.totalAmount }
     ];
 
-    // 2. Create Journal Entry
-    const journal = await JournalEntry.create({
-      tenantId, environmentId,
-      date,
-      description,
-      debitAccountId: debitAccount.id,
-      creditAccountId: creditAccount.id,
-      amount,
-      sourceModule, sourceId,
-      voucherId: voucher.id,
-      customerId, bookingId,
-      notes, createdBy,
-    }, { transaction });
+    return await this.postJournal({
+      tenantId,
+      environmentId,
+      date: new Date(),
+      description: `Booking #${booking.bookingId} - ${booking.customerName}`,
+      lines,
+      sourceModule: "Booking",
+      sourceId: bookingId,
+      bookingId,
+      customerId: booking.customerId,
+      createdBy: booking.createdBy
+    }, transaction);
+  }
 
-    return { voucher, journal };
+  /**
+   * Helper: createEntry — bridges debitCode/creditCode shorthand to postJournal.
+   * Used by onPaymentReceived, onExpenseCreated, onBookingCreated.
+   */
+  async createEntry({
+    tenantId, environmentId, date, description,
+    debitCode, creditCode, amount,
+    voucherType, sourceModule, sourceId,
+    customerId, bookingId, paymentMode, referenceNumber,
+    createdBy, transaction
+  }) {
+    const debitAcct = await ChartOfAccount.findOne({
+      where: { code: debitCode, tenantId, environmentId },
+      transaction
+    });
+    const creditAcct = await ChartOfAccount.findOne({
+      where: { code: creditCode, tenantId, environmentId },
+      transaction
+    });
+
+    if (!debitAcct) throw new Error(`Chart of Account not found for code '${debitCode}'`);
+    if (!creditAcct) throw new Error(`Chart of Account not found for code '${creditCode}'`);
+
+    const lines = [
+      { accountId: debitAcct.id, debit: amount, credit: 0 },
+      { accountId: creditAcct.id, debit: 0, credit: amount }
+    ];
+
+    return await this.postJournal({
+      tenantId,
+      environmentId,
+      date: date || new Date(),
+      description,
+      lines,
+      sourceModule,
+      sourceId,
+      bookingId,
+      customerId,
+      createdBy
+    }, transaction);
   }
 
   // ═══════════════════════════════════
