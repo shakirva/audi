@@ -26,6 +26,19 @@ const downloadPDF = (doc, filename) => {
   }, 200);
 };
 
+const formatDate = (dateInput) => {
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (e) {
+    return "-";
+  }
+};
+
 const fetchImage = (url) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -133,7 +146,7 @@ export const generateQuotation = async (data) => {
   doc.text("Event Details:", 120, 55);
   doc.setFont("helvetica", "normal");
   doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 62);
-  doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, 120, 68);
+  doc.text(`Date: ${formatDate(booking.date)}`, 120, 68);
   doc.text(`Event: ${booking.eventType || "N/A"}`, 120, 74);
   doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 80);
   doc.text(`Guests: ${booking.guests || 0}`, 120, 86);
@@ -187,7 +200,7 @@ export const generateAgreement = async (data, action = "download") => {
     ["Booking Reference", booking.bookingId || booking.id],
     ["Name of the Host", booking.customerName || "N/A"],
     ...(clientGst && clientGst !== "undefined" && clientGst !== "null" ? [["Client GSTIN", clientGst]] : []),
-    ["Date & Time of function", `${booking.date ? new Date(booking.date).toLocaleDateString("en-IN") : "TBD"} | ${booking.session || "Full Day"}`],
+    ["Date & Time of function", `${booking.date ? formatDate(booking.date) : "TBD"} | ${booking.session || "Full Day"}`],
     ["Address", booking.address || "N/A"],
     ["Email & Mobile No", `${booking.email || ""} | ${booking.phone || ""}`],
     ["No. of Guests Expected", `${booking.guests || 0} pax`],
@@ -267,7 +280,7 @@ export const generateInvoice = async (data) => {
   doc.setFont("helvetica", "normal");
   doc.text(`Tax Invoice No: ${booking.bookingId || booking.id}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
-  doc.text(`Date: ${data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 120, 74);
+  doc.text(`Date: ${data.invoiceDate ? formatDate(data.invoiceDate) : formatDate(new Date())}`, 120, 74);
 
   const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
   
@@ -367,7 +380,7 @@ export const generateInvoice = async (data) => {
     doc.text("Payment History", 14, startY);
     const payBody = payments.map(p => {
       let dateStr = "";
-      try { dateStr = new Date(p.paymentDate || p.createdAt || Date.now()).toLocaleDateString(); } catch(e) { dateStr = "-"; }
+      try { dateStr = formatDate(p.paymentDate || p.createdAt || Date.now()); } catch(e) { dateStr = "-"; }
       return [
         dateStr,
         p.Receipt?.receiptNumber || p.referenceNumber || "-",
@@ -428,7 +441,7 @@ export const generateReceiptSummary = async (data) => {
     doc.text("No payments recorded yet.", 14, 90);
   } else {
     const payBody = payments.map(p => [
-      new Date(p.createdAt).toLocaleDateString(),
+      formatDate(p.createdAt),
       p.Receipt?.receiptNumber || "-",
       p.paymentMode,
       `Rs. ${Number(p.amount || 0).toLocaleString()}`
@@ -461,11 +474,11 @@ export const generateStatement = (data) => {
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.text(`Customer: ${booking.Customer?.name || booking.customerName}`, 14, 65);
-  doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 72);
+  doc.text(`Date Generated: ${formatDate(new Date())}`, 14, 72);
 
   const statementBody = [
     [
-      new Date(booking.date).toLocaleDateString(),
+      formatDate(booking.date),
       "Booking Finalized (Gross Amount)",
       `Rs. ${booking.totalAmount?.toLocaleString() || 0}`,
       "-",
@@ -480,7 +493,7 @@ export const generateStatement = (data) => {
     sortedPayments.forEach(p => {
       runningBalance -= p.amount;
       statementBody.push([
-        new Date(p.createdAt).toLocaleDateString(),
+        formatDate(p.createdAt),
         `Receipt #${p.Receipt?.receiptNumber || "-"} (${p.paymentMode})`,
         "-",
         `Rs. ${Number(p.amount || 0).toLocaleString()}`,
@@ -549,7 +562,7 @@ export const generateReceipt = async (payment, booking) => {
   doc.text("OFFICIAL RECEIPT", 196, 14, { align: "right" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Date: ${new Date(payment.paymentDate || payment.createdAt).toLocaleDateString()}`, 196, 22, { align: "right" });
+  doc.text(`Date: ${formatDate(payment.paymentDate || payment.createdAt)}`, 196, 22, { align: "right" });
   doc.text(`Bill No: ${booking?.bookingId || booking?.id || payment.paymentNumber || payment.id}`, 196, 28, { align: "right" });
 
   // Receipt Body Border
@@ -657,7 +670,7 @@ export const generateAttendanceReport = async (monthName, year, attendanceData, 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...textLight);
   doc.text(`Month: ${monthName} ${year}`, 14, 62);
-  doc.text(`Generated On: ${new Date().toLocaleDateString()}`, 14, 67);
+  doc.text(`Generated On: ${formatDate(new Date())}`, 14, 67);
 
   // Group attendance by user
   const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
@@ -704,7 +717,7 @@ export const generateInventoryReport = async (items) => {
   doc.setTextColor(...textDark);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Generated on: ${new Date().toLocaleDateString("en-IN")}`, 14, 52);
+  doc.text(`Generated on: ${formatDate(new Date())}`, 14, 52);
   doc.text(`Total Items: ${items.length}`, 196, 52, { align: "right" });
 
   const tableBody = items.map(item => [
