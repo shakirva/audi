@@ -547,7 +547,7 @@ class AccountingEngine {
     // Aggregation Query to sum debits and credits by account systemKey and type
     const query = `
       SELECT 
-        c."systemKey", 
+        c."code", 
         c."type",
         COALESCE(SUM(l.debit), 0) as "totalDebit",
         COALESCE(SUM(l.credit), 0) as "totalCredit"
@@ -557,7 +557,7 @@ class AccountingEngine {
       WHERE j."tenantId" = :tenantId 
         AND j."environmentId" = :environmentId
         AND j.status = 'Posted'
-      GROUP BY c."systemKey", c."type"
+      GROUP BY c."code", c."type"
     `;
 
     const balances = await sequelize.query(query, {
@@ -575,9 +575,9 @@ class AccountingEngine {
       const debit = parseFloat(b.totalDebit);
       const credit = parseFloat(b.totalCredit);
       
-      if (b.systemKey === "CASH_IN_HAND") cashBalance = debit - credit;
-      if (b.systemKey === "BANK_ACCOUNT") bankBalance = debit - credit;
-      if (b.systemKey === "ACCOUNTS_RECEIVABLE") outstandingReceivables = debit - credit;
+      if (b.code === "1001") cashBalance = debit - credit;
+      if (b.code === "1002") bankBalance = debit - credit;
+      if (b.code === "1005") outstandingReceivables = debit - credit;
       
       if (b.type === "Income") totalRevenue += (credit - debit);
       if (b.type === "Expense") totalExpenses += (debit - credit);
@@ -598,7 +598,7 @@ class AccountingEngine {
         AND j."sourceModule" = 'Payment'
         AND j."date" >= :startOfDay
         AND c."type" = 'Asset'
-        AND c."systemKey" IN ('CASH_IN_HAND', 'BANK_ACCOUNT')
+        AND c."code" IN ('1001', '1002')
     `;
 
     const [{ todayCollection }] = await sequelize.query(todayQuery, {
@@ -840,6 +840,18 @@ class AccountingEngine {
     const netRevenue = (booking.totalAmount || 0) - gstAmount; // What owner actually earns
     const netProfit = netRevenue - totalExpenses;
 
+    const mappedJournals = journals.map(j => {
+      const json = j.toJSON();
+      const debitLine = json.lines?.find(l => l.debit > 0);
+      const creditLine = json.lines?.find(l => l.credit > 0);
+      return {
+        ...json,
+        DebitAccount: debitLine ? debitLine.account : null,
+        CreditAccount: creditLine ? creditLine.account : null,
+        amount: debitLine ? debitLine.debit : (creditLine ? creditLine.credit : 0)
+      };
+    });
+
     return {
       booking: booking.toJSON(),
       totalPaid,
@@ -850,7 +862,7 @@ class AccountingEngine {
       netProfit,
       payments,
       expenses,
-      journals,
+      journals: mappedJournals,
     };
   }
 

@@ -30,6 +30,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("hm_token");
       localStorage.removeItem("hm_user");
+      // Prevent redirect loop if already on login page
+      if (window.location.pathname.indexOf("/login") === -1) {
+        window.location.href = window.location.pathname.split("/").slice(0, 2).join("/") + "/login";
+      }
     }
     return Promise.reject(error);
   }
