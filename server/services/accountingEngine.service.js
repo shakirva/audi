@@ -4,7 +4,7 @@
  * proper double-entry journal entries, vouchers, and update ledgers.
  */
 
-const { ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt } = require("../models");
+const { ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, CashBook, BankBook, AccountStatement, Booking, Payment, Expense, Customer, Receipt, FinancialPeriod } = require("../models");
 const sequelize = require("../db");
 const { Op } = require("sequelize");
 
@@ -40,7 +40,8 @@ class AccountingEngine {
       transaction
     });
     if (existingEntry) {
-      console.warn(`Idempotency check: Journal already exists for ${sourceModule} ID ${sourceId}`);
+      console.warn(`Idempotency check: Journal already exists for ${sourceModule} ID ${sourceId}, skipping.`);
+      return existingEntry;
     }
 
     // 1.5 Period Lock Check
@@ -359,7 +360,7 @@ class AccountingEngine {
   /**
    * Records a Payment Collection.
    * Debit: Cash/Bank
-   * Credit: Accounts Receivable
+   * Credit: Customer Outstanding
    */
   async recordPayment(paymentId, tenantId, environmentId, transaction) {
     const payment = await Payment.findByPk(paymentId, { transaction });
@@ -367,14 +368,20 @@ class AccountingEngine {
     if (payment.amount <= 0) return;
 
     const isCash = payment.paymentMode === "Cash";
-    const assetKey = isCash ? "CASH_IN_HAND" : "BANK_ACCOUNT";
-    
-    const assetAcct = await this.getAccountByKey(tenantId, environmentId, assetKey, transaction);
-    const receivableAcct = await this.getAccountByKey(tenantId, environmentId, "ACCOUNTS_RECEIVABLE", transaction);
+    const debitCode = isCash ? "1001" : "1002"; // Cash or Bank
+    const creditCode = "1005"; // Customer Outstanding
+
+    const debitAcct = await ChartOfAccount.findOne({ where: { code: debitCode, tenantId, environmentId }, transaction });
+    const creditAcct = await ChartOfAccount.findOne({ where: { code: creditCode, tenantId, environmentId }, transaction });
+
+    if (!debitAcct || !creditAcct) {
+      console.warn(`[AccountingEngine] Missing COA for payment: debit=${debitCode}, credit=${creditCode}`);
+      return;
+    }
 
     const lines = [
-      { accountId: assetAcct.id, debit: payment.amount, credit: 0 },
-      { accountId: receivableAcct.id, debit: 0, credit: payment.amount }
+      { accountId: debitAcct.id, debit: payment.amount, credit: 0 },
+      { accountId: creditAcct.id, debit: 0, credit: payment.amount }
     ];
 
     await this.postJournal({
@@ -400,22 +407,38 @@ class AccountingEngine {
     if (!expense) throw new Error("Expense not found");
     if (expense.amount <= 0) return;
 
-    const isCash = expense.paymentMode === "Cash";
-    const assetKey = isCash ? "CASH_IN_HAND" : "BANK_ACCOUNT";
+    const isCash = !expense.paymentMode || expense.paymentMode === "Cash";
+    const creditCode = isCash ? "1001" : "1002";
+    
+    // Map expense category to account code
+    const categoryMap = {
+      "Electricity": "4001",
+      "Staff Salary": "4002", "Salary": "4002",
+      "Cleaning": "4003",
+      "Maintenance": "4004",
+      "Marketing": "4005",
+      "Fuel": "4006",
+      "Office Expense": "4007", "Office": "4007",
+    };
+    const debitCode = categoryMap[expense.category] || "4008";
 
-    // Assuming a general expense account if specific isn't set
-    const expenseAcct = await this.getAccountByKey(tenantId, environmentId, "GENERAL_EXPENSE", transaction); 
-    const assetAcct = await this.getAccountByKey(tenantId, environmentId, assetKey, transaction);
+    const debitAcct = await ChartOfAccount.findOne({ where: { code: debitCode, tenantId, environmentId }, transaction });
+    const creditAcct = await ChartOfAccount.findOne({ where: { code: creditCode, tenantId, environmentId }, transaction });
+
+    if (!debitAcct || !creditAcct) {
+      console.warn(`[AccountingEngine] Missing COA for expense: debit=${debitCode}, credit=${creditCode}`);
+      return;
+    }
 
     const lines = [
-      { accountId: expenseAcct.id, debit: expense.amount, credit: 0 },
-      { accountId: assetAcct.id, debit: 0, credit: expense.amount }
+      { accountId: debitAcct.id, debit: expense.amount, credit: 0 },
+      { accountId: creditAcct.id, debit: 0, credit: expense.amount }
     ];
 
     await this.postJournal({
       tenantId,
       environmentId,
-      description: `Expense: ${expense.title}`,
+      description: `Expense: ${expense.title || expense.description}`,
       lines,
       sourceModule: "Expense",
       sourceId: expense.id,
