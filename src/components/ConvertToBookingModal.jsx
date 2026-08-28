@@ -149,7 +149,13 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
             setFormData(prev => {
               const pct = Number(selectedHall.gstRate) || 0;
               const total = Number(prev.totalAmount) || 0;
-              const taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+              const gstMode = data.gstMode || "inclusive";
+              let taxes;
+              if (gstMode === "inclusive") {
+                taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
+              } else {
+                taxes = pct > 0 ? Math.round(total * pct / 100) : 0;
+              }
               return { ...prev, taxPercentage: pct, taxes };
             });
           }
@@ -169,6 +175,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
           if (prev.taxPercentage === gstRate) return prev;
           
           const pct = Number(gstRate) || 0;
+          const gstMode = settings.gstMode || "inclusive";
               
               const quoted = Number(prev.quotedAmount) || 0;
               const disc = Number(prev.discount) || 0;
@@ -190,7 +197,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               }
               
               const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
-              const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+              let hallTax;
+              if (gstMode === "inclusive") {
+                hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+              } else {
+                hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+              }
               const totalTaxes = Math.round(hallTax + facilitiesTax);
               
               return { ...prev, taxPercentage: pct, taxes: totalTaxes };
@@ -216,15 +228,15 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
   }, [formData.date, formData.hall]);
 
-  // Auto-calculate balance (GST is INCLUSIVE — extracted from total, not added on top)
+  // Auto-calculate balance — respects GST mode from settings
   const handleMoneyChange = (field, value, extraState = {}) => {
     let updated = { ...formData, [field]: value, ...extraState };
     
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
     const baseAmount = Math.max(0, quoted - disc);
+    const gstMode = settings.gstMode || "inclusive";
 
-    // Auto-calculate GST (Exclusive): GST = Base × Rate / 100
     const pct = Number(updated.taxPercentage) || 0;
     
     let facilitiesTotal = 0;
@@ -243,9 +255,17 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
     }
 
     if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
-      updated.totalAmount = baseAmount; // Total remains Quoted - Discount
       const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
-      const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+      let hallTax;
+      if (gstMode === "inclusive") {
+        // GST Inclusive: Tax = Amount × Rate / (100 + Rate)
+        hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+        updated.totalAmount = baseAmount; // Total stays as quoted - discount
+      } else {
+        // GST Exclusive: Tax = Amount × Rate / 100, then add on top
+        hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+        updated.totalAmount = baseAmount + Math.round(hallTax + facilitiesTax); // Total = base + all taxes
+      }
       updated.taxes = Math.round(hallTax + facilitiesTax);
     }
     

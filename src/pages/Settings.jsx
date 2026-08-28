@@ -266,6 +266,7 @@ export default function Settings() {
         accountNumber: data.accountNumber || "",
         ifscCode: data.ifscCode || "",
         allowPastDateBooking: data.allowPastDateBooking || false,
+        gstMode: data.gstMode || "inclusive",
       });
       if (data.halls && data.halls.length > 0) setHalls(data.halls);
       if (data.gallery && data.gallery.length > 0) setGalleryItems(data.gallery);
@@ -1004,6 +1005,47 @@ export default function Settings() {
                 <ToggleLeft size={36} color="#9ca3af" strokeWidth={1.8} />
               )}
             </button>
+          </div>
+
+          {/* GST Mode Toggle */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 16px", borderRadius: 12, background: "#f8fafc", border: "1.5px solid #e2e8f0",
+            marginTop: 12
+          }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: 0 }}>GST Calculation Mode</p>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, marginBottom: 0 }}>
+                <strong>Inclusive:</strong> GST is part of the quoted amount (e.g. ₹1,00,000 includes ₹15,254 GST). <br/>
+                <strong>Exclusive:</strong> GST is added on top (e.g. ₹1,00,000 + ₹18,000 GST = ₹1,18,000 total).
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              {["inclusive", "exclusive"].map(mode => (
+                <button
+                  key={mode}
+                  onClick={async () => {
+                    try {
+                      await settingsAPI.update({ gstMode: mode });
+                      setVenue(prev => ({ ...prev, gstMode: mode }));
+                      addToast(`GST mode set to ${mode === "inclusive" ? "Inclusive (GST inside amount)" : "Exclusive (GST added on top)"}`, "success");
+                    } catch (e) {
+                      addToast("Failed to update GST mode", "error");
+                    }
+                  }}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    border: venue.gstMode === mode ? "2px solid #1B4332" : "1.5px solid #d1d5db",
+                    background: venue.gstMode === mode ? "#1B4332" : "#fff",
+                    color: venue.gstMode === mode ? "#fff" : "#6b7280",
+                    textTransform: "capitalize",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {mode === "inclusive" ? "Inclusive" : "Exclusive"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

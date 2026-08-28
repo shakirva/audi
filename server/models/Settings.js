@@ -45,6 +45,9 @@ const Settings = sequelize.define("Settings", {
   // Role-Based Module Access configuration
   moduleAccess: { type: DataTypes.JSONB, defaultValue: {} },
   
+  // GST calculation mode: 'inclusive' = GST is part of quoted amount, 'exclusive' = GST added on top
+  gstMode: { type: DataTypes.STRING, defaultValue: "inclusive" },
+  
   // Allow booking on past dates (for backfilling previous year data)
   allowPastDateBooking: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
