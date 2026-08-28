@@ -145,18 +145,46 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
           const halls = data.halls || [];
           const selectedHall = halls.find(h => h.name === formData.hall);
           if (selectedHall && selectedHall.gstRate !== undefined) {
-            // Use functional updater to get latest formData (avoids stale closure)
             setFormData(prev => {
               const pct = Number(selectedHall.gstRate) || 0;
-              const total = Number(prev.totalAmount) || 0;
               const gstMode = data.gstMode || "inclusive";
-              let taxes;
-              if (gstMode === "inclusive") {
-                taxes = pct > 0 ? Math.round(total * pct / (100 + pct)) : 0;
-              } else {
-                taxes = pct > 0 ? Math.round(total * pct / 100) : 0;
+              
+              const quoted = Number(prev.quotedAmount) || 0;
+              const disc = Number(prev.discount) || 0;
+              const baseAmount = Math.max(0, quoted - disc);
+              
+              let facilitiesTotal = 0;
+              let facilitiesTax = 0;
+              if (prev.facilities && prev.facilities.length > 0) {
+                prev.facilities.forEach(f => {
+                  const count = Number(f.count) || 1;
+                  const fPrice = Number(f.price) || 0;
+                  const totalFPrice = fPrice * count;
+                  const fGst = Number(f.gst) || 0;
+                  facilitiesTotal += totalFPrice;
+                  if (fGst > 0) {
+                    facilitiesTax += (totalFPrice * fGst) / 100;
+                  }
+                });
               }
-              return { ...prev, taxPercentage: pct, taxes };
+
+              const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+              let hallTax;
+              let newTotalAmount = baseAmount;
+
+              if (gstMode === "inclusive") {
+                hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+              } else {
+                hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+                newTotalAmount = baseAmount + Math.round(hallTax + facilitiesTax);
+              }
+              const totalTaxes = Math.round(hallTax + facilitiesTax);
+
+              const adv = Number(prev.advance) || 0;
+              const dep = Number(prev.depositAmount) || 0;
+              const balanceAmount = Math.max(0, newTotalAmount - adv - dep);
+
+              return { ...prev, taxPercentage: pct, taxes: totalTaxes, totalAmount: newTotalAmount, balanceAmount };
             });
           }
         } catch (e) { console.warn("Could not fetch hall GST settings"); }
@@ -172,7 +200,6 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       if (selectedHall) {
         setFormData(prev => {
           const gstRate = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
-          if (prev.taxPercentage === gstRate) return prev;
           
           const pct = Number(gstRate) || 0;
           const gstMode = settings.gstMode || "inclusive";
@@ -198,14 +225,21 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               
               const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
               let hallTax;
+              let newTotalAmount = baseAmount;
+
               if (gstMode === "inclusive") {
                 hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
               } else {
                 hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+                newTotalAmount = baseAmount + Math.round(hallTax + facilitiesTax);
               }
               const totalTaxes = Math.round(hallTax + facilitiesTax);
-              
-              return { ...prev, taxPercentage: pct, taxes: totalTaxes };
+
+              const adv = Number(prev.advance) || 0;
+              const dep = Number(prev.depositAmount) || 0;
+              const balanceAmount = Math.max(0, newTotalAmount - adv - dep);
+
+              return { ...prev, taxPercentage: pct, taxes: totalTaxes, totalAmount: newTotalAmount, balanceAmount };
         });
       }
     }
