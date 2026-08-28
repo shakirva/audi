@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
   ArrowLeft, CreditCard, Receipt as ReceiptIcon, FileText, 
-  TrendingUp, Clock, History, LayoutDashboard, Wallet 
+  TrendingUp, Clock, History, LayoutDashboard, Wallet, Download, Eye 
 } from "lucide-react";
 import { accountsAPI, bookingsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
@@ -559,28 +559,72 @@ export default function BookingFinancialDashboard() {
         {activeTab === "documents" && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 24px", color: "#0f172a" }}>Documents & Attachments</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div onClick={() => generateQuotation(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                <FileText size={24} color="#0f172a" />
-                <div style={{ fontWeight: 600, color: "#334155" }}>Download Quotation</div>
-              </div>
-              <div onClick={() => generateAgreement(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                <FileText size={24} color="#0f172a" />
-                <div style={{ fontWeight: 600, color: "#334155" }}>Download Booking Agreement</div>
-              </div>
-              <div onClick={() => generateReceiptSummary(data)} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                <ReceiptIcon size={24} color="#0f172a" />
-                <div style={{ fontWeight: 600, color: "#334155" }}>Download Receipts Summary</div>
-              </div>
-              <div onClick={() => data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? generateInvoice({...data, invoiceDate}) : addToast("Final invoice not generated yet.", "warning")} style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "pointer" : "not-allowed", background: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#fff" : "#f8fafc", opacity: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? 1 : 0.7, transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => (data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised") && (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)")} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                <FileText size={24} color={data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#0f172a" : "#94a3b8"} />
-                <div style={{ fontWeight: 600, color: data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised" ? "#334155" : "#94a3b8" }}>Download Final Invoice</div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
               
+              {/* Quotation */}
+              <div style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 14, background: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 36, height: 36, background: "#f0fdf4", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={18} color="#166534" /></div>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>Quotation</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => generateQuotation(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                  <button onClick={() => generateQuotation(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                </div>
+              </div>
+
+              {/* Agreement */}
+              <div style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 14, background: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 36, height: 36, background: "#eff6ff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={18} color="#1d4ed8" /></div>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>Booking Agreement</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => generateAgreement(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                  <button onClick={() => generateAgreement(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                </div>
+              </div>
+
+              {/* Receipts Summary */}
+              <div style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 14, background: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 36, height: 36, background: "#faf5ff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ReceiptIcon size={18} color="#7c3aed" /></div>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>Receipts Summary</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => generateReceiptSummary(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                  <button onClick={() => generateReceiptSummary(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                </div>
+              </div>
+
+              {/* Final Invoice */}
+              {(() => {
+                const invoiceReady = data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised";
+                return (
+                  <div style={{ padding: 20, border: "1px solid #e2e8f0", borderRadius: 14, background: invoiceReady ? "#fff" : "#f8fafc", opacity: invoiceReady ? 1 : 0.6, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                      <div style={{ width: 36, height: 36, background: "#fef2f2", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={18} color={invoiceReady ? "#dc2626" : "#94a3b8"} /></div>
+                      <div style={{ fontWeight: 700, color: invoiceReady ? "#0f172a" : "#94a3b8", fontSize: 14 }}>Final Invoice</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => invoiceReady ? generateInvoice({...data, invoiceDate}, "preview") : addToast("Final invoice not generated yet.", "warning")} disabled={!invoiceReady} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: invoiceReady ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                      <button onClick={() => invoiceReady ? generateInvoice({...data, invoiceDate}, "download") : addToast("Final invoice not generated yet.", "warning")} disabled={!invoiceReady} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: invoiceReady ? "#1B4332" : "#94a3b8", border: "none", borderRadius: 8, cursor: invoiceReady ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Revised Invoice */}
               {(data.booking.invoiceStatus === "Generated" || data.booking.invoiceStatus === "Revised") && (
-                <div onClick={() => generateInvoice({ ...data, isRevised: true })} style={{ padding: 20, border: "1px solid #fef3c7", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "#fff", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"}>
-                  <FileText size={24} color="#b45309" />
-                  <div style={{ fontWeight: 600, color: "#b45309" }}>Download Revised Invoice</div>
+                <div style={{ padding: 20, border: "1px solid #fef3c7", borderRadius: 14, background: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div style={{ width: 36, height: 36, background: "#fefce8", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={18} color="#b45309" /></div>
+                    <div style={{ fontWeight: 700, color: "#b45309", fontSize: 14 }}>Revised Invoice</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => generateInvoice({ ...data, isRevised: true }, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                    <button onClick={() => generateInvoice({ ...data, isRevised: true }, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                  </div>
                 </div>
               )}
             </div>
