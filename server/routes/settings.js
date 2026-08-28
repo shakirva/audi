@@ -69,7 +69,7 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
-      "accountNumber", "ifscCode", "allowPastDateBooking"
+      "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode"
     ];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];
