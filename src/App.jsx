@@ -26,6 +26,7 @@ import Notifications from "./pages/Notifications";
 import PublicBooking from "./pages/PublicBooking";
 import Login from "./pages/Login";
 import SuperAdminTenants from "./pages/SuperAdminTenants";
+import SuperAdminLeads from "./pages/SuperAdminLeads";
 import CRM from "./pages/CRM";
 import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
@@ -122,6 +123,7 @@ function AdminLayout() {
             <Route path="/system/activity-logs" element={<ProtectedRoute permission="canViewSettings"><ActivityLogs /></ProtectedRoute>} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tenants" element={<SuperAdminTenants />} />
+            <Route path="/leads" element={<SuperAdminLeads />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/crm" element={<CRM />} />

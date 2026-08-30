@@ -67,6 +67,7 @@ export const BASE_NAVIGATION = [
     type: "group", label: "SaaS Platform", icon: Database, id: "saas", roles: ["SuperAdmin"],
     children: [
       { path: "/tenants", label: "Tenant Manager" },
+      { path: "/leads", label: "Demo Requests" },
       { path: "/subscriptions", label: "Subscriptions" },
       { path: "/feedback", label: "User Feedback" }
     ]

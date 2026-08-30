@@ -268,6 +268,8 @@ JournalEntryLine.belongsTo(ChartOfAccount, { as: "account", foreignKey: "account
 JournalEntry.hasMany(JournalEntryLine, { foreignKey: "journalEntryId", onDelete: "CASCADE", as: "lines" });
 JournalEntryLine.belongsTo(JournalEntry, { foreignKey: "journalEntryId" });
 
+const DemoRequest = require("./DemoRequest");
+
 module.exports = { 
   sequelize,
   Tenant, Environment, Subscription, User, Booking, Expense, Vendor, Settings, AuditLog, Customer, Enquiry, FollowUp,
@@ -275,7 +277,8 @@ module.exports = {
   Job, JobStaff, JobVendor, JobTimeline, JobChecklist, JobDocument,
   AccountStatement, CashBook, BankBook,
   ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, FinancialPeriod, Attendance, LeaveRequest, Feedback,
-  MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory, Inventory
+  MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory, Inventory,
+  DemoRequest
 };
 
 

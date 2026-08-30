@@ -58,6 +58,8 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
+const publicRoutes = require("./routes/public");
+
 // ── Legacy API Routes (kept for backward compatibility) ──
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -65,6 +67,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/public", publicRoutes);
 
 // ── V1 API Routes (new architecture — use these going forward) ──
 app.use("/api/v1", v1Routes);

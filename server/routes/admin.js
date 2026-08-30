@@ -186,4 +186,31 @@ router.post("/tenants/:id/impersonate", async (req, res) => {
   }
 });
 
+// GET /api/admin/leads — Fetch all demo requests from the landing page
+router.get("/leads", async (req, res) => {
+  try {
+    const { DemoRequest } = require("../models");
+    const leads = await DemoRequest.findAll({ order: [["createdAt", "DESC"]] });
+    res.json(leads);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch leads" });
+  }
+});
+
+// PATCH /api/admin/leads/:id/status — Update lead status
+router.patch("/leads/:id/status", async (req, res) => {
+  try {
+    const { DemoRequest } = require("../models");
+    const lead = await DemoRequest.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    if (req.body.status) lead.status = req.body.status;
+    await lead.save();
+
+    res.json(lead);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update lead status" });
+  }
+});
+
 module.exports = router;
