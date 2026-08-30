@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Receipt, Search, Plus, Edit, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Receipt, Search, Plus, Edit, Trash2, IndianRupee } from "lucide-react";
 import { expensesAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmProvider";
@@ -180,6 +180,42 @@ export default function PurchasesAndExpenses() {
           ))
         )}
       </div>
+
+      {/* Total Expenses Summary */}
+      {!loading && filtered.length > 0 && (
+        <div style={{
+          marginTop: 16, padding: "16px 24px", borderRadius: 12,
+          background: "linear-gradient(135deg, #fef2f2, #fff1f2)",
+          border: "1.5px solid #fecaca",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          flexWrap: "wrap", gap: 12
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <Receipt size={18} color="#dc2626" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                {searchTerm ? "Filtered" : "Total"} Expenses
+              </p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#1e293b" }}>
+                {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+              </p>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Total Amount
+            </p>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#dc2626" }}>
+              ₹{filtered.reduce((sum, e) => sum + (Number(e.amount) || 0), 0).toLocaleString("en-IN")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <AddExpenseModal 
