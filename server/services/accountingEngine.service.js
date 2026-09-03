@@ -870,7 +870,8 @@ class AccountingEngine {
   // PROFIT & LOSS
   // ═══════════════════════════════════
   async getProfitLoss({ tenantId, environmentId, startDate, endDate }) {
-    const { sequelize } = require("../models");
+    const { sequelize, Payment, Booking } = require("../models");
+    const { Op } = require("sequelize");
     
     let dateClause = '';
     const replacements = { tenantId, environmentId };
@@ -881,6 +882,7 @@ class AccountingEngine {
       replacements.endDate = endDate;
     }
 
+    // ── ACCRUAL BASIS (from journal entries — full booking amounts) ──
     const query = `
       SELECT 
         c.code, c.name, c."type",
@@ -927,12 +929,54 @@ class AccountingEngine {
       }
     });
 
+    // ── CASH BASIS (from actual completed payments — real money received) ──
+    let paymentWhere = { tenantId, environmentId, status: "Completed" };
+    if (startDate && endDate) {
+      paymentWhere.paymentDate = { [Op.between]: [startDate, endDate] };
+    }
+
+    const totalReceived = await Payment.sum("amount", { where: paymentWhere }) || 0;
+
+    // Get breakdown by payment mode
+    const paymentsByMode = await Payment.findAll({
+      where: paymentWhere,
+      attributes: [
+        "paymentMode",
+        [sequelize.fn("SUM", sequelize.col("amount")), "total"],
+        [sequelize.fn("COUNT", sequelize.col("id")), "count"]
+      ],
+      group: ["paymentMode"],
+      raw: true
+    });
+
+    // Get total booked amount (what customers owe)
+    let bookingWhere = { tenantId, environmentId, status: { [Op.notIn]: ["Draft", "Cancelled"] } };
+    if (startDate && endDate) {
+      bookingWhere.date = { [Op.between]: [startDate, endDate] };
+    }
+    const totalBooked = await Booking.sum("totalAmount", { where: bookingWhere }) || 0;
+
+    const totalOutstanding = totalBooked - totalReceived;
+
     return {
+      // Accrual basis (journal ledgers)
       income: incomeItems,
       totalIncome,
       expenses: expenseItems,
       totalExpenses,
       netProfit: totalIncome - totalExpenses,
+      // Cash basis (actual payments)
+      cashBasis: {
+        totalReceived,
+        totalBooked,
+        totalOutstanding,
+        paymentsByMode: paymentsByMode.map(p => ({
+          mode: p.paymentMode,
+          total: parseInt(p.total) || 0,
+          count: parseInt(p.count) || 0
+        })),
+        netCashProfit: totalReceived - totalExpenses,
+      }
     };
   }
 
