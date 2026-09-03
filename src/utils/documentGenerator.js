@@ -632,35 +632,45 @@ export const generateReceipt = async (payment, booking) => {
   doc.setDrawColor(200, 200, 200);
   doc.line(65, 98, 185, 98);
 
-  // By Mode
+  // Function Date
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text("By Payment Mode:", 20, 110);
+  doc.text("Function Date:", 20, 110);
   doc.setFont("helvetica", "bold");
-  doc.text(`${payment.paymentMode || "Cash"} ${payment.referenceNumber ? `(Ref: ${payment.referenceNumber})` : ""}`, 65, 110);
+  const fnDate = booking.date ? new Date(booking.date).toLocaleDateString("en-GB") : "N/A";
+  doc.text(fnDate, 65, 110);
   doc.setDrawColor(200, 200, 200);
   doc.line(65, 112, 185, 112);
 
+  // By Mode
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("By Payment Mode:", 20, 124);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${payment.paymentMode || "Cash"} ${payment.referenceNumber ? `(Ref: ${payment.referenceNumber})` : ""}`, 65, 124);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 126, 185, 126);
+
   // Amount Box
   doc.setFillColor(241, 245, 249);
-  doc.roundedRect(20, 135, 60, 20, 2, 2, "F");
+  doc.roundedRect(20, 149, 60, 20, 2, 2, "F");
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...textDark);
-  doc.text(`₹ ${Number(payment.amount || 0).toLocaleString()}/-`, 50, 148, { align: "center" });
+  doc.text(`₹ ${Number(payment.amount || 0).toLocaleString()}/-`, 50, 162, { align: "center" });
 
   // Signatures
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setDrawColor(100, 116, 139);
-  doc.line(130, 148, 185, 148);
-  doc.text("Authorized Signatory", 157.5, 154, { align: "center" });
+  doc.line(130, 162, 185, 162);
+  doc.text("Authorized Signatory", 157.5, 168, { align: "center" });
   
   // Thank you note
   doc.setFontSize(10);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(100, 116, 139);
-  doc.text("Subject to realization of cheque/draft.", 20, 175);
+  doc.text("Subject to realization of cheque/draft.", 20, 185);
 
   drawFooter(doc);
   const receiptNum = payment.Receipts?.[0]?.receiptNumber || payment.Receipt?.receiptNumber || payment.paymentNumber || payment.id;
