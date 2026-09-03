@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { Users, Phone, MapPin, Building2, Calendar, ChevronDown, CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react";
 import api from "../services/api";
 
 const SuperAdminLeads = () => {
@@ -33,88 +34,148 @@ const SuperAdminLeads = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "New": return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">New</span>;
-      case "Contacted": return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Contacted</span>;
-      case "Approved": return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Approved</span>;
-      case "Rejected": return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Rejected</span>;
-      default: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{status}</span>;
+      case "New": 
+        return (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#eff6ff", color: "#1d4ed8", borderRadius: 20, fontSize: 13, fontWeight: 600, border: "1px solid #bfdbfe" }}>
+            <AlertCircle size={14} /> New
+          </div>
+        );
+      case "Contacted": 
+        return (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#fef3c7", color: "#b45309", borderRadius: 20, fontSize: 13, fontWeight: 600, border: "1px solid #fde68a" }}>
+            <Clock size={14} /> Contacted
+          </div>
+        );
+      case "Approved": 
+        return (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#ecfdf5", color: "#047857", borderRadius: 20, fontSize: 13, fontWeight: 600, border: "1px solid #a7f3d0" }}>
+            <CheckCircle2 size={14} /> Approved
+          </div>
+        );
+      case "Rejected": 
+        return (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#fef2f2", color: "#b91c1c", borderRadius: 20, fontSize: 13, fontWeight: 600, border: "1px solid #fecaca" }}>
+            <XCircle size={14} /> Rejected
+          </div>
+        );
+      default: 
+        return (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#f1f5f9", color: "#475569", borderRadius: 20, fontSize: 13, fontWeight: 600, border: "1px solid #e2e8f0" }}>
+            {status}
+          </div>
+        );
     }
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-24">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div style={{ padding: "32px 28px", maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 className="text-2xl font-serif font-bold text-[#11221c] tracking-tight">Demo Requests (Leads)</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage sign-ups and demo requests from the landing page</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#0D2418" }}>Demo Requests</h1>
+          <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Manage sign-ups and leads from the landing page.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ background: "#f1f5f9", padding: "8px 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, color: "#475569", fontWeight: 600, fontSize: 14 }}>
+            <Users size={18} /> Total Leads: {leads.length}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-[#fcfdfd]">
-              <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Venue & City</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+      <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)", overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <th style={{ padding: "16px 24px", color: "#475569", fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>Date</th>
+                <th style={{ padding: "16px 24px", color: "#475569", fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>Lead Info</th>
+                <th style={{ padding: "16px 24px", color: "#475569", fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>Venue Details</th>
+                <th style={{ padding: "16px 24px", color: "#475569", fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ padding: "16px 24px", color: "#475569", fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-50">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
-                      <span>Loading leads...</span>
-                    </div>
+                  <td colSpan="5" style={{ padding: "60px 24px", textAlign: "center", color: "#94a3b8" }}>
+                    Loading leads...
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                  <td colSpan="5" style={{ padding: "60px 24px", textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 48, height: 48, background: "#f1f5f9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#cbd5e1" }}>
+                        <Users size={24} />
                       </div>
-                      <p>No demo requests found.</p>
+                      <p style={{ margin: 0, fontSize: 15 }}>No demo requests found.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(lead.createdAt), "MMM d, yyyy")}
+                  <tr key={lead.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                    
+                    {/* Date */}
+                    <td style={{ padding: "20px 24px", verticalAlign: "top" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 14 }}>
+                        <Calendar size={16} />
+                        {format(new Date(lead.createdAt), "MMM d, yyyy")}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{lead.name}</div>
+
+                    {/* Lead Info */}
+                    <td style={{ padding: "20px 24px", verticalAlign: "top" }}>
+                      <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15, marginBottom: 4 }}>{lead.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontSize: 13 }}>
+                        <Phone size={14} /> {lead.phone}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{lead.venueName}</div>
-                      <div className="text-xs text-gray-500">{lead.city}</div>
+
+                    {/* Venue Details */}
+                    <td style={{ padding: "20px 24px", verticalAlign: "top" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#1e293b", fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                        <Building2 size={16} style={{ color: "#94a3b8" }} /> {lead.venueName}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#64748b", fontSize: 13 }}>
+                        <MapPin size={14} /> {lead.city}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {lead.phone}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+
+                    {/* Status */}
+                    <td style={{ padding: "20px 24px", verticalAlign: "top" }}>
                       {getStatusBadge(lead.status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <select 
-                        className="text-xs border-gray-200 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-white px-2 py-1 outline-none"
-                        value={lead.status}
-                        onChange={(e) => updateStatus(lead.id, e.target.value)}
-                      >
-                        <option value="New">Mark New</option>
-                        <option value="Contacted">Mark Contacted</option>
-                        <option value="Approved">Mark Approved</option>
-                        <option value="Rejected">Mark Rejected</option>
-                      </select>
+
+                    {/* Actions */}
+                    <td style={{ padding: "20px 24px", verticalAlign: "top", textAlign: "right" }}>
+                      <div style={{ position: "relative", display: "inline-block" }}>
+                        <select 
+                          style={{
+                            appearance: "none",
+                            background: "#fff",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 8,
+                            padding: "8px 36px 8px 12px",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#334155",
+                            cursor: "pointer",
+                            outline: "none",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                            transition: "all 0.2s"
+                          }}
+                          value={lead.status}
+                          onChange={(e) => updateStatus(lead.id, e.target.value)}
+                        >
+                          <option value="New">Mark New</option>
+                          <option value="Contacted">Mark Contacted</option>
+                          <option value="Approved">Approve Tenant</option>
+                          <option value="Rejected">Reject Lead</option>
+                        </select>
+                        <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} />
+                      </div>
                     </td>
+
                   </tr>
                 ))
               )}
