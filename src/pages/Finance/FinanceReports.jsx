@@ -272,7 +272,8 @@ export default function FinanceReports() {
                     <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Expenses</span>
                     <span style={{ color: "#dc2626", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalExpenses)}</span>
                   </div>
-              </div>
+                  </div>
+                </div>
               </div>
 
               {/* Net Profit (Accrual) */}
