@@ -83,9 +83,9 @@ export default function FinanceReports() {
             /* ═══════════════════════════════════════════ */
             /*            CASH BASIS VIEW                 */
             /* ═══════════════════════════════════════════ */
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               {/* Top Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {/* Total Received */}
                 <div style={{ background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -137,7 +137,7 @@ export default function FinanceReports() {
               </div>
 
               {/* Main Content: Income + Expenses */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Income (Cash Received) */}
                 <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
@@ -203,7 +203,7 @@ export default function FinanceReports() {
               </div>
 
               {/* Net Cash Profit */}
-              <div style={{ marginTop: 8, background: "#0f172a", borderRadius: 16, padding: "36px 32px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}>
+              <div style={{ background: "#0f172a", borderRadius: 16, padding: "36px 32px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}>
                 <div>
                   <p style={{ margin: "0 0 8px", color: "#94a3b8", fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Net Cash Profit (Received − Expenses)</p>
                   <h1 style={{ margin: 0, fontSize: 42, fontWeight: 800, color: (cash.netCashProfit || 0) >= 0 ? "#4ade80" : "#f87171" }}>
@@ -219,7 +219,8 @@ export default function FinanceReports() {
             /* ═══════════════════════════════════════════ */
             /*           ACCRUAL BASIS VIEW               */
             /* ═══════════════════════════════════════════ */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Revenue (Journal-based) */}
               <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
@@ -271,11 +272,11 @@ export default function FinanceReports() {
                     <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Expenses</span>
                     <span style={{ color: "#dc2626", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalExpenses)}</span>
                   </div>
-                </div>
+              </div>
               </div>
 
               {/* Net Profit (Accrual) */}
-              <div style={{ marginTop: 8, gridColumn: "1 / -1", background: "#0f172a", borderRadius: 16, padding: "36px 32px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}>
+              <div style={{ background: "#0f172a", borderRadius: 16, padding: "36px 32px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}>
                 <div>
                   <p style={{ margin: "0 0 8px", color: "#94a3b8", fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Net Profit / Loss (Accrual — After GST & Expenses)</p>
                   <h1 style={{ margin: 0, fontSize: 42, fontWeight: 800, color: (report.netProfit || 0) >= 0 ? "#4ade80" : "#f87171" }}>
