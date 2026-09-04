@@ -49,11 +49,14 @@ router.post("/tenants", async (req, res) => {
     });
 
     // 4. Create Owner User
+    const crypto = require("crypto");
+    const generatedPassword = crypto.randomBytes(4).toString("hex") + "!Aa"; // e.g., 'a1b2c3d4!Aa'
+
     await User.create({
       tenantId: tenant.id,
       name: ownerName || "Owner",
       email: email,
-      password: "password123", // default password
+      password: generatedPassword,
       role: "Owner",
       phone: phone || ""
     });
@@ -66,7 +69,7 @@ router.post("/tenants", async (req, res) => {
     await Settings.create({ tenantId: tenant.id, environmentId: prodEnv.id, venueName: name, email, phone, halls: defaultHalls });
     await Settings.create({ tenantId: tenant.id, environmentId: sandboxEnv.id, venueName: name, email, phone, halls: defaultHalls });
 
-    res.status(201).json({ message: "Tenant created successfully", tenant });
+    res.status(201).json({ message: "Tenant created successfully", tenant, defaultPassword: generatedPassword });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create tenant" });
