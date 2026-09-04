@@ -38,11 +38,14 @@ class AdminService {
     });
 
     // 4. Create Owner User
+    const crypto = require("crypto");
+    const generatedPassword = crypto.randomBytes(4).toString("hex") + "!Aa";
+
     await User.create({
       tenantId: tenant.id,
       name: ownerName || "Owner",
       email: email,
-      password: "password123", // default password
+      password: generatedPassword, // generated secure password
       role: ROLES.OWNER,
       phone: phone || ""
     });
@@ -55,7 +58,7 @@ class AdminService {
     await Settings.create({ tenantId: tenant.id, environmentId: prodEnv.id, venueName: name, email, phone, halls: defaultHalls });
     await Settings.create({ tenantId: tenant.id, environmentId: sandboxEnv.id, venueName: name, email, phone, halls: defaultHalls });
 
-    return tenant;
+    return { tenant, defaultPassword: generatedPassword };
   }
 
   async updateSubscription(tenantId, { plan, status, trialEndDate, subscriptionEndDate }) {

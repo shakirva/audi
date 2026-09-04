@@ -35,7 +35,7 @@ api.interceptors.response.use(
         window.location.href = window.location.pathname.split("/").slice(0, 2).join("/") + "/login";
       }
     }
-    if (error.response?.status === 403 && error.response?.data?.error === "Upgrade Required") {
+    if (error.response?.status === 403 && (error.response?.data?.code === "PLAN_UPGRADE_REQUIRED" || error.response?.data?.code === "LIMIT_EXCEEDED")) {
       window.dispatchEvent(new CustomEvent("plan-upgrade-required", { detail: error.response.data }));
     }
     

@@ -21,9 +21,11 @@ const upload = multer({ storage: storage });
 
 const router = express.Router();
 
+const { checkHallLimit } = require("../../middleware/planGate");
+
 router.get("/public/:slug", settingsController.getPublic);
 router.get("/", auth, tenantScope, subscriptionGuard, settingsController.get);
-router.put("/", auth, requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), tenantScope, subscriptionGuard, settingsController.update);
+router.put("/", auth, requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), tenantScope, subscriptionGuard, checkHallLimit, settingsController.update);
 
 router.post("/upload-logo", auth, requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), upload.single("logo"), (req, res) => {
   if (!req.file) {

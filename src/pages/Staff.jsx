@@ -105,50 +105,31 @@ function AssignJobModal({ open, onClose, staffMember, tSlug }) {
     
     setLoading(true);
     
-    setTimeout(() => {
+    try {
       
-      const jobId = "LOCAL_" + Date.now();
-      const newJob = {
-        id: jobId,
-        jobNumber: "JOB" + String(Date.now()).slice(-4),
+      // 1. Create Job
+      const res = await jobsAPI.create({
         customerName: "Internal Task",
         eventType: jobTitle,
-        status: "Planning",
-        createdAt: new Date().toISOString(),
-        eventDate: jobDate,
+        date: jobDate || new Date().toISOString().split('T')[0],
         hall: "N/A",
-        Booking: { 
-          customerName: "Internal Task", 
-          eventType: jobTitle, 
-          hall: "N/A", 
-          date: jobDate,
-          session: "Full Day",
-          totalAmount: 0
-        }
-      };
+        session: "Full Day"
+      });
+      const newJob = res.data.data;
 
-      // 1. Add Job to localJobs
-      const localJobs = JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]");
-      localJobs.unshift(newJob);
-      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(localJobs));
-
-      // 2. Assign staff to localStaff for this job
-      const localStaff = JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}");
-      const newStaff = { 
-        id: Date.now(), 
-        User: { id: staffMember.id, name: staffMember.name }, 
-        role: staffMember.role || "Staff", 
-        name: staffMember.name, 
-        userId: staffMember.id 
-      };
-      localStaff[jobId] = [newStaff];
-      localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(localStaff));
+      // 2. Assign staff to job
+      await jobsAPI.assignStaff(newJob.id, { 
+        userId: staffMember.id, 
+        role: staffMember.role || "Staff" 
+      });
 
       setLoading(false);
       addToast(`Assigned "${jobTitle}" to ${staffMember.name} successfully!`, "success");
       onClose();
-    }, 600);
-  };
+    } catch(err) {
+      setLoading(false);
+      addToast(err.response?.data?.message || "Failed to assign job", "error");
+    }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
