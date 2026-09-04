@@ -46,6 +46,7 @@ import { usePWA } from "./hooks/usePWA";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 import OfflineBanner from "./components/OfflineBanner";
+import UpgradeModal from "./components/UpgradeModal";
 
 const pageTitles = {
   "/": "Dashboard",
@@ -166,6 +167,8 @@ export default function App() {
       {!isOnline && <OfflineBanner />}
       {isInstallable && <PWAInstallPrompt onInstall={installApp} onDismiss={dismissInstall} />}
       {hasUpdate && <PWAUpdatePrompt onUpdate={applyUpdate} onDismiss={dismissUpdate} />}
+      
+      <UpgradeModal />
       
       <RoleProvider>
         <BookingsProvider>
