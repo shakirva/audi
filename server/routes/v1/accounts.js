@@ -6,11 +6,12 @@ const accountsDashboardController = require("../../controllers/accountsDashboard
 const { auth, requireRole } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
 const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
+const { planGate } = require("../../middleware/planGate");
 const { ROLES } = require("../../helpers/roles");
 
 const router = express.Router();
 
-router.use(auth, tenantScope, subscriptionGuard);
+router.use(auth, tenantScope, subscriptionGuard, planGate);
 router.use(requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER));
 
 // ── Existing routes ──

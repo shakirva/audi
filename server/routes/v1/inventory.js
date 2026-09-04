@@ -3,9 +3,13 @@ const router = express.Router();
 const { Inventory } = require("../../models");
 const { auth } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
+const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
+const { planGate } = require("../../middleware/planGate");
+
+router.use(auth, tenantScope, subscriptionGuard, planGate);
 
 // GET /api/v1/inventory
-router.get("/", auth, tenantScope, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const items = await Inventory.findAll({
       where: { tenantId: req.tenantId, environmentId: req.environmentId },
@@ -19,7 +23,7 @@ router.get("/", auth, tenantScope, async (req, res) => {
 });
 
 // POST /api/v1/inventory
-router.post("/", auth, tenantScope, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { itemName, category, totalQuantity, availableQuantity, condition, notes, unitPrice } = req.body;
     
@@ -48,7 +52,7 @@ router.post("/", auth, tenantScope, async (req, res) => {
 });
 
 // PUT /api/v1/inventory/:id
-router.put("/:id", auth, tenantScope, async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const item = await Inventory.findOne({
       where: { id: req.params.id, tenantId: req.tenantId, environmentId: req.environmentId }
@@ -71,7 +75,7 @@ router.put("/:id", auth, tenantScope, async (req, res) => {
 });
 
 // DELETE /api/v1/inventory/:id
-router.delete("/:id", auth, tenantScope, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const item = await Inventory.findOne({
       where: { id: req.params.id, tenantId: req.tenantId, environmentId: req.environmentId }

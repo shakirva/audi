@@ -51,23 +51,51 @@ router.get("/me", auth, async (req, res) => {
 // POST /api/auth/register (Owner only — create Manager/Staff accounts)
 router.post("/register", auth, async (req, res) => {
   try {
-    if (req.user.role !== "Owner") return res.status(403).json({ error: "Only Owner can create users" });
+    if (req.user.role !== "Owner" && req.user.role !== "SuperAdmin") return res.status(403).json({ error: "Only Owner can create users" });
 
     const { name, email, password, role, phone } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: "Name, email, and password required" });
 
-    const exists = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (exists) return res.status(409).json({ error: "Email already registered" });
+    // Check email uniqueness within tenant (not globally)
+    const exists = await User.findOne({ where: { email: email.toLowerCase(), tenantId: req.user.tenantId } });
+    if (exists) return res.status(409).json({ error: "Email already registered for this venue" });
 
-    const user = await User.create({ name, email, password, role: role || "Staff", phone: phone || "", tenantId: req.user.tenantId });
+    // Check user limit against subscription plan
+    const { Subscription } = require("../models");
+    const { checkLimit, getLimit } = require("../config/plans");
+    const subscription = await Subscription.findOne({
+      where: { tenantId: req.user.tenantId },
+      order: [["id", "DESC"]],
+    });
+
+    if (subscription) {
+      const currentCount = await User.count({ where: { tenantId: req.user.tenantId, active: true } });
+      if (!checkLimit(subscription.plan, "maxUsers", currentCount)) {
+        const max = getLimit(subscription.plan, "maxUsers");
+        return res.status(403).json({
+          error: "User limit reached",
+          code: "LIMIT_EXCEEDED",
+          limitType: "users",
+          currentCount,
+          maxAllowed: max,
+          message: `Your ${subscription.plan} plan allows up to ${max} users. Please upgrade to add more.`,
+        });
+      }
+    }
+
+    const user = await User.create({ name, email: email.toLowerCase(), password, role: role || "Staff", phone: phone || "", tenantId: req.user.tenantId });
     res.status(201).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
+    console.error("Register error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// POST /api/auth/bootstrap — one-time SuperAdmin seed (remove after use)
+// POST /api/auth/bootstrap — DISABLED IN PRODUCTION for security
 router.post("/bootstrap", async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Route not found" });
+  }
   try {
     const exists = await User.findOne({
       where: { email: "admin@venueza.com" }

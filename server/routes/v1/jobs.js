@@ -3,6 +3,7 @@ const jobController = require("../../controllers/job.controller");
 const { auth, requireRole } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
 const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
+const { planGate } = require("../../middleware/planGate");
 const { auditLog } = require("../../middleware/audit");
 const { validate } = require("../../middleware/validate");
 const { createJobSchema, updateJobStatusSchema, assignStaffSchema } = require("../../validators/job.validator");
@@ -10,7 +11,7 @@ const { ROLES } = require("../../helpers/roles");
 
 const router = express.Router();
 
-router.use(auth, tenantScope, subscriptionGuard);
+router.use(auth, tenantScope, subscriptionGuard, planGate);
 
 router.get("/", jobController.list);
 router.get("/:id", jobController.getOne);

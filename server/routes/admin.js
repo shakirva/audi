@@ -38,7 +38,7 @@ router.post("/tenants", async (req, res) => {
     // 3. Create Subscription
     const today = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(today.getDate() + 7); // 7-day trial
+    trialEnd.setDate(today.getDate() + 14); // 14-day trial
 
     await Subscription.create({
       tenantId: tenant.id,

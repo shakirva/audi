@@ -9,7 +9,7 @@ const Subscription = sequelize.define("Subscription", {
     references: { model: "Tenants", key: "id" },
   },
   plan: {
-    type: DataTypes.ENUM("trial", "basic", "premium", "enterprise"),
+    type: DataTypes.ENUM("trial", "starter", "professional", "business", "lifetime"),
     defaultValue: "trial",
   },
   status: {

@@ -64,6 +64,30 @@ router.get("/", auth, tenantScope, subscriptionGuard, async (req, res) => {
 router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, subscriptionGuard, async (req, res) => {
   try {
     const settings = await getSettings(req.tenantId, req.environmentId);
+    
+    // Enforce hall limit if halls are being updated
+    if (req.body.halls && Array.isArray(req.body.halls)) {
+      const { Subscription } = require("../models");
+      const { getLimit } = require("../config/plans");
+      const subscription = await Subscription.findOne({
+        where: { tenantId: req.tenantId },
+        order: [["id", "DESC"]],
+      });
+      if (subscription) {
+        const max = getLimit(subscription.plan, "maxHalls");
+        if (req.body.halls.length > max) {
+          return res.status(403).json({
+            error: "Hall limit reached",
+            code: "LIMIT_EXCEEDED",
+            limitType: "halls",
+            currentCount: req.body.halls.length,
+            maxAllowed: max,
+            message: `Your ${subscription.plan} plan allows up to ${max} hall(s). Please upgrade to add more.`,
+          });
+        }
+      }
+    }
+    
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
@@ -74,8 +98,6 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];
     });
-    // In Sequelize, if you modify a JSONB field you might need to use changed()
-    // but typically direct assignment works if you reassign the whole object.
     console.log("SAVING SETTINGS:", req.body); await settings.save();
     res.json(settings);
   } catch (err) {

@@ -2,9 +2,11 @@ const express = require("express");
 const router = express.Router();
 const { auth } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
+const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
+const { planGate } = require("../../middleware/planGate");
 const { LeaveRequest, User } = require("../../models");
 
-router.use(auth, tenantScope);
+router.use(auth, tenantScope, subscriptionGuard, planGate);
 
 // GET /api/v1/leaves
 router.get("/", async (req, res) => {
