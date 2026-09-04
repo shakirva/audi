@@ -16,12 +16,12 @@ const Job = sequelize.define("Job", {
   jobNumber: { type: DataTypes.STRING, allowNull: false },
   customerId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: { model: "Customers", key: "id" },
   },
   bookingId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: { model: "Bookings", key: "id" },
   },
   agreementId: {
@@ -39,6 +39,9 @@ const Job = sequelize.define("Job", {
   },
   eventDate: { type: DataTypes.STRING, allowNull: false },
   hall: { type: DataTypes.STRING, allowNull: false },
+  customerName: { type: DataTypes.STRING, allowNull: true },
+  eventType: { type: DataTypes.STRING, allowNull: true },
+  session: { type: DataTypes.STRING, allowNull: true },
   notes: { type: DataTypes.TEXT, allowNull: true },
   
   createdBy: { type: DataTypes.INTEGER, allowNull: true },

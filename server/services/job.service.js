@@ -142,7 +142,92 @@ class JobService {
     });
   }
 
-  // Checklists, Vendors, and Documents will have similar sub-methods.
+  async createStandaloneJob(data, { tenantId, environmentId, createdBy }) {
+    const job = await jobRepository.create({
+      tenantId,
+      environmentId,
+      eventDate: data.eventDate || data.date,
+      hall: data.hall,
+      customerName: data.customerName,
+      eventType: data.eventType,
+      session: data.session,
+      status: "Planning",
+      priority: "Normal",
+      createdBy,
+    });
+    
+    await JobTimeline.create({
+      tenantId,
+      environmentId,
+      jobId: job.id,
+      userId: createdBy,
+      action: "Job Created",
+      details: `Manual job created`,
+    });
+    return job;
+  }
+
+  async deleteJob(id, { tenantId, environmentId }) {
+    const job = await jobRepository.findById(id, { tenantId, environmentId });
+    if (!job) throw new NotFoundError("Job");
+    await jobRepository.delete(id);
+    return { success: true };
+  }
+
+  async toggleChecklist(jobId, data, { tenantId, environmentId, createdBy }) {
+    // If it exists, toggle it, else create it
+    const existing = await JobChecklist.findOne({
+      where: { tenantId, environmentId, jobId, taskName: data.taskName }
+    });
+    
+    if (existing) {
+      existing.isCompleted = !existing.isCompleted;
+      existing.completedAt = existing.isCompleted ? new Date() : null;
+      existing.completedBy = existing.isCompleted ? createdBy : null;
+      await existing.save();
+      return existing;
+    } else {
+      return JobChecklist.create({
+        tenantId,
+        environmentId,
+        jobId,
+        taskName: data.taskName,
+        isCompleted: true,
+        completedAt: new Date(),
+        completedBy: createdBy,
+        createdBy,
+      });
+    }
+  }
+
+  async addTask(jobId, data, { tenantId, environmentId, createdBy }) {
+    return JobChecklist.create({
+      tenantId,
+      environmentId,
+      jobId,
+      taskName: data.taskName,
+      isCompleted: false,
+      createdBy,
+    });
+  }
+
+  async removeTask(jobId, taskId, { tenantId, environmentId }) {
+    const task = await JobChecklist.findOne({
+      where: { id: taskId, jobId, tenantId, environmentId }
+    });
+    if (!task) throw new NotFoundError("Task");
+    await task.destroy();
+    return { success: true };
+  }
+
+  async removeStaff(jobId, staffId, { tenantId, environmentId }) {
+    const staff = await JobStaff.findOne({
+      where: { id: staffId, jobId, tenantId, environmentId }
+    });
+    if (!staff) throw new NotFoundError("JobStaff");
+    await staff.destroy();
+    return { success: true };
+  }
 }
 
 module.exports = new JobService();

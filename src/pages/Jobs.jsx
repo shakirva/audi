@@ -38,10 +38,6 @@ export default function Jobs() {
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [localChecklists, setLocalChecklists] = useState(() => JSON.parse(localStorage.getItem(`hm_local_checklists_${tSlug}`) || "{}") || {});
-  const [localTasks, setLocalTasks] = useState(() => JSON.parse(localStorage.getItem(`hm_local_tasks_${tSlug}`) || "{}") || {});
-  const [localStaff, setLocalStaff] = useState(() => JSON.parse(localStorage.getItem(`hm_local_staff_${tSlug}`) || "{}") || {});
-  const [localJobs, setLocalJobs] = useState(() => JSON.parse(localStorage.getItem(`hm_local_jobs_${tSlug}`) || "[]") || []);
   
   const [taskModal, setTaskModal] = useState({ open: false, taskName: "" });
   const [staffModal, setStaffModal] = useState({ open: false, staffId: "", staffName: "", role: "Sales" });
@@ -57,140 +53,204 @@ export default function Jobs() {
     });
   }, []);
 
-  const toggleChecklistLocal = (jobId, checklistId) => {
-    const key = `${jobId}_${checklistId}`;
-    const newState = !localChecklists[key];
-    const updated = { ...localChecklists, [key]: newState };
-    setLocalChecklists(updated);
-    localStorage.setItem(`hm_local_checklists_${tSlug}`, JSON.stringify(updated));
+  const toggleChecklistLocal = async (jobId, checklistId) => {
+    try {
+      await jobsAPI.toggleChecklist(jobId, { taskName: checklistId });
+      // update state optimistically
+      setJobs(jobs.map(j => {
+        if (j.id === jobId) {
+          const checklists = j.JobChecklists || [];
+          const idx = checklists.findIndex(c => c.taskName === checklistId);
+          if (idx >= 0) {
+            const updated = [...checklists];
+            updated[idx].isCompleted = !updated[idx].isCompleted;
+            return { ...j, JobChecklists: updated };
+          } else {
+            return { ...j, JobChecklists: [...checklists, { taskName: checklistId, isCompleted: true }] };
+          }
+        }
+        return j;
+      }));
+    } catch (e) {
+      addToast("Failed to update checklist", "error");
+    }
   };
 
-  const fetchJobs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = {};
-      if (search) params.search = search;
-      const res = await jobsAPI.getAll(params);
-      let data = res.data.data || [];
-      
-      // Filter for Staff Portal (Sales / Operations only see assigned jobs)
-      if (role === "Sales" || role === "Operations") {
-        data = data.filter(job => {
-          const staff = [...(job.JobStaffs || []), ...(job.Staff || []), ...(localStaff?.[job.id] || [])];
-          return staff.some(s => s.userId === user?.id || s.User?.id === user?.id || s.User?.name === user?.name || s.name === user?.name) ||
-                 job.salesExecutiveId === user?.id; // If they created the booking
-        });
-      }
-      setJobs(data);
-    } catch (err) {
-      const msg = err.response?.data?.message || "Failed to load jobs";
-      setError(msg);
-      addToast(msg, "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
-
   useEffect(() => {
-    const timer = setTimeout(() => fetchJobs(), 300);
-    return () => clearTimeout(timer);
-  }, [fetchJobs]);
+    const fetchAndMigrate = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const localJobsRaw = localStorage.getItem(`hm_local_jobs_${tSlug}`);
+        const localChecklistsRaw = localStorage.getItem(`hm_local_checklists_${tSlug}`);
+        const localTasksRaw = localStorage.getItem(`hm_local_tasks_${tSlug}`);
+        const localStaffRaw = localStorage.getItem(`hm_local_staff_${tSlug}`);
 
-  const handleCreateJob = (e) => {
-    e.preventDefault();
-    const newJob = {
-      id: "LOCAL_" + Date.now(),
-      jobNumber: "JOB" + String(Date.now()).slice(-4),
-      customerName: jobModal.customerName,
-      status: "Planning",
-      createdAt: new Date().toISOString(),
-      eventDate: jobModal.date,
-      hall: jobModal.hall,
-      Booking: { 
-        customerName: jobModal.customerName, 
-        eventType: jobModal.eventType, 
-        hall: jobModal.hall, 
-        date: jobModal.date,
-        session: jobModal.session,
-        totalAmount: jobModal.amount ? Number(jobModal.amount) : 0
+        if (localJobsRaw) {
+          const oldLocalJobs = JSON.parse(localJobsRaw) || [];
+          const oldTasks = JSON.parse(localTasksRaw || "{}");
+          const oldStaff = JSON.parse(localStaffRaw || "{}");
+          const oldChecklists = JSON.parse(localChecklistsRaw || "{}");
+
+          for (const lj of oldLocalJobs) {
+            try {
+              const res = await jobsAPI.create({
+                customerName: lj.customerName,
+                eventType: lj.Booking?.eventType || "Event",
+                hall: lj.hall,
+                date: lj.eventDate,
+                session: lj.Booking?.session || "Morning",
+              });
+              const newJob = res.data.data;
+              
+              const tasks = oldTasks[lj.id] || [];
+              for (const task of tasks) {
+                await jobsAPI.addTask(newJob.id, { taskName: task.taskName });
+              }
+              const staffList = oldStaff[lj.id] || [];
+              for (const staff of staffList) {
+                await jobsAPI.assignStaff(newJob.id, { userId: staff.userId, role: staff.role });
+              }
+              // checklists are job-independent in UI, so we just migrate if any existed for this LOCAL_ ID
+              const checklistKeys = Object.keys(oldChecklists).filter(k => k.startsWith(lj.id + "_") && oldChecklists[k]);
+              for (const key of checklistKeys) {
+                const taskName = key.replace(lj.id + "_", "");
+                await jobsAPI.toggleChecklist(newJob.id, { taskName });
+              }
+            } catch (err) {
+              console.error("Failed to migrate job", lj.id, err);
+            }
+          }
+          localStorage.removeItem(`hm_local_jobs_${tSlug}`);
+          localStorage.removeItem(`hm_local_tasks_${tSlug}`);
+          localStorage.removeItem(`hm_local_staff_${tSlug}`);
+          localStorage.removeItem(`hm_local_checklists_${tSlug}`);
+          addToast("Migrated local jobs to database", "success");
+        }
+
+        const params = {};
+        if (search) params.search = search;
+        const res = await jobsAPI.getAll(params);
+        let data = res.data.data || [];
+        
+        if (role === "Sales" || role === "Operations") {
+          data = data.filter(job => {
+            const staff = [...(job.JobStaffs || []), ...(job.Staff || [])];
+            return staff.some(s => s.userId === user?.id || s.User?.id === user?.id || s.User?.name === user?.name || s.name === user?.name) ||
+                   job.salesExecutiveId === user?.id || job.createdBy === user?.id; 
+          });
+        }
+        setJobs(data);
+      } catch (err) {
+        const msg = err.response?.data?.message || "Failed to load jobs";
+        setError(msg);
+        addToast(msg, "error");
+      } finally {
+        setLoading(false);
       }
     };
-    const updated = [newJob, ...localJobs];
-    setLocalJobs(updated);
-    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
-    setJobs(prev => [newJob, ...prev]);
-    setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
-    addToast("Job created successfully", "success");
+    if (tSlug) fetchAndMigrate();
+  }, [search, role, user, tSlug]);
+
+  const handleCreateJob = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await jobsAPI.create({
+        customerName: jobModal.customerName,
+        eventType: jobModal.eventType,
+        hall: jobModal.hall,
+        date: jobModal.date,
+        session: jobModal.session,
+        amount: jobModal.amount
+      });
+      setJobs([res.data.data, ...jobs]);
+      setJobModal({ open: false, customerName: "", eventType: "", hall: "Main Hall", date: "", session: "Morning", amount: "" });
+      addToast("Job created successfully", "success");
+    } catch(e) {
+      addToast("Failed to create job", "error");
+    }
   };
 
   const handleDeleteJob = async (id) => {
     if (!(await confirm("Are you sure you want to delete this job?"))) return;
-    const updated = localJobs.filter(j => j.id !== id);
-    setLocalJobs(updated);
-    localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
-    setJobs(prev => prev.filter(j => j.id !== id));
-    setSelectedJob(null);
-    addToast("Job deleted successfully", "success");
-  };
-
-  const handleUpdateStatus = (id, newStatus) => {
-    const isLocal = String(id).startsWith("LOCAL_");
-    if (isLocal) {
-      const updated = localJobs.map(j => j.id === id ? { ...j, status: newStatus } : j);
-      setLocalJobs(updated);
-      localStorage.setItem(`hm_local_jobs_${tSlug}`, JSON.stringify(updated));
+    try {
+      await jobsAPI.remove(id);
+      setJobs(prev => prev.filter(j => j.id !== id));
+      setSelectedJob(null);
+      addToast("Job deleted successfully", "success");
+    } catch(e) {
+      addToast("Failed to delete job", "error");
     }
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
-    if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
-    addToast("Job status updated", "success");
   };
 
-  const handleAddTask = (e) => {
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await jobsAPI.updateStatus(id, newStatus);
+      setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
+      if (selectedJob && selectedJob.id === id) setSelectedJob(prev => ({ ...prev, status: newStatus }));
+      addToast("Job status updated", "success");
+    } catch (e) {
+      addToast("Failed to update status", "error");
+    }
+  };
+
+  const handleAddTask = async (e) => {
     e.preventDefault();
     const jId = selectedJob.id;
-    const newTask = { id: Date.now(), taskName: taskModal.taskName, isCompleted: false };
-    const updated = { ...localTasks, [jId]: [...(localTasks?.[jId] || []), newTask] };
-    setLocalTasks(updated);
-    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
-    setTaskModal({ open: false, taskName: "" });
+    try {
+      const res = await jobsAPI.addTask(jId, { taskName: taskModal.taskName });
+      const newTask = res.data.data;
+      setJobs(jobs.map(j => j.id === jId ? { ...j, JobChecklists: [...(j.JobChecklists||[]), newTask] } : j));
+      setTaskModal({ open: false, taskName: "" });
+      addToast("Task added", "success");
+    } catch(e) {
+      addToast("Failed to add task", "error");
+    }
   };
 
-  const handleAddStaff = (e) => {
+  const handleAddStaff = async (e) => {
     e.preventDefault();
     const jId = selectedJob.id;
-    const u = usersList.find(x => x.id === staffModal.staffId);
-    const sName = u ? u.name : staffModal.staffName;
-    const newStaff = { id: Date.now(), User: { id: staffModal.staffId, name: sName }, role: staffModal.role, name: sName, userId: staffModal.staffId };
-    const updated = { ...localStaff, [jId]: [...(localStaff?.[jId] || []), newStaff] };
-    setLocalStaff(updated);
-    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
-    setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" });
+    try {
+      const res = await jobsAPI.assignStaff(jId, { userId: staffModal.staffId, role: staffModal.role });
+      const newStaff = res.data.data;
+      setJobs(jobs.map(j => j.id === jId ? { ...j, JobStaffs: [...(j.JobStaffs||[]), newStaff] } : j));
+      setStaffModal({ open: false, staffId: "", staffName: "", role: "Sales" });
+      addToast("Staff assigned", "success");
+    } catch (e) {
+      addToast(e.response?.data?.message || "Failed to assign staff", "error");
+    }
   };
 
-  const handleRemoveTask = (taskId) => {
+  const handleRemoveTask = async (taskId) => {
     const jId = selectedJob.id;
-    const current = localTasks[jId] || [];
-    const updated = { ...localTasks, [jId]: current.filter(t => t.id !== taskId) };
-    setLocalTasks(updated);
-    localStorage.setItem(`hm_local_tasks_${tSlug}`, JSON.stringify(updated));
+    try {
+      await jobsAPI.removeTask(jId, taskId);
+      setJobs(jobs.map(j => j.id === jId ? { ...j, JobChecklists: (j.JobChecklists||[]).filter(t => t.id !== taskId) } : j));
+    } catch(e) {
+      addToast("Failed to remove task", "error");
+    }
   };
 
-  const handleRemoveStaff = (staffLocalId) => {
+  const handleRemoveStaff = async (staffLocalId) => {
     const jId = selectedJob.id;
-    const current = localStaff[jId] || [];
-    const updated = { ...localStaff, [jId]: current.filter(s => s.id !== staffLocalId) };
-    setLocalStaff(updated);
-    localStorage.setItem(`hm_local_staff_${tSlug}`, JSON.stringify(updated));
+    try {
+      await jobsAPI.removeStaff(jId, staffLocalId);
+      setJobs(jobs.map(j => j.id === jId ? { ...j, JobStaffs: (j.JobStaffs||[]).filter(s => s.id !== staffLocalId) } : j));
+    } catch (e) {
+      addToast("Failed to remove staff", "error");
+    }
   };
 
   const getCustomerName = (job) => {
+    if (job.customerName) return job.customerName;
     if (job.Customer?.name) return job.Customer.name;
     if (job.Booking?.customerName) return job.Booking.customerName;
     return "Unknown Customer";
   };
 
   const getEventType = (job) => {
+    if (job.eventType) return job.eventType;
     if (job.Booking?.eventType) return job.Booking.eventType;
     return "Event";
   };
@@ -203,15 +263,11 @@ export default function Jobs() {
     const date = new Date(selectedJob.eventDate || selectedJob.Booking?.date || selectedJob.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
     const amount = selectedJob.Booking?.totalAmount ? `₹${Number(selectedJob.Booking.totalAmount).toLocaleString("en-IN")}` : "—";
     
-    // Fallback data if arrays are missing
-    const rawChecklists = [...(selectedJob.JobChecklists || selectedJob.Checklists || []), ...(localTasks?.[selectedJob.id] || [])];
-    const checklists = rawChecklists.map(c => ({
-      ...c,
-      isCompleted: localChecklists?.[`${selectedJob.id}_${c.id}`] !== undefined ? localChecklists[`${selectedJob.id}_${c.id}`] : c.isCompleted
-    }));
+    // Now using DB JobChecklists and JobStaffs
+    const checklists = selectedJob.JobChecklists || [];
     const completedTasks = checklists.filter(c => c.isCompleted).length;
     const totalTasks = checklists.length;
-    const staff = [...(selectedJob.JobStaffs || selectedJob.Staff || []), ...(localStaff?.[selectedJob.id] || [])];
+    const staff = selectedJob.JobStaffs || selectedJob.Staff || [];
     const timeline = selectedJob.JobTimelines || selectedJob.Timeline || [];
 
     return (
@@ -278,11 +334,11 @@ export default function Jobs() {
                   <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 13 }}>No checklist items added yet.</div>
                 ) : checklists.map((task, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, background: "#f8f9fa", borderRadius: 8, transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "#f8f9fa"}>
-                    <div onClick={() => toggleChecklistLocal(selectedJob.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                    <div onClick={() => toggleChecklistLocal(selectedJob.id, task.taskName)} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
                       <CheckCircle size={18} color={task.isCompleted ? "#22c55e" : "#cbd5e1"} />
                       <span style={{ fontSize: 14, color: task.isCompleted ? "#333" : "#666", textDecoration: task.isCompleted ? "line-through" : "none" }}>{task.taskName}</span>
                     </div>
-                    {task.id && !String(task.id).includes("-") && localTasks[selectedJob.id]?.some(t => t.id === task.id) && (
+                    {task.id && (
                       <button onClick={(e) => { e.stopPropagation(); handleRemoveTask(task.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                     )}
                   </div>
@@ -310,7 +366,7 @@ export default function Jobs() {
                       <div style={{ fontWeight: 700, color: "#333", fontSize: 14 }}>{s.User?.name || s.name || "Unknown"}</div>
                       <div style={{ fontSize: 12, color: "#666" }}>{s.role}</div>
                     </div>
-                    {s.id && localStaff[selectedJob.id]?.some(ls => ls.id === s.id) && (
+                    {s.id && (
                       <button onClick={() => handleRemoveStaff(s.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}><X size={14} /></button>
                     )}
                   </div>
@@ -455,12 +511,8 @@ export default function Jobs() {
             const eventType = getEventType(job);
             const hall = job.hall || job.Booking?.hall || "Main Hall";
             const date = new Date(job.eventDate || job.Booking?.date || job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-            const staffCount = (job.JobStaffs?.length || job.Staff?.length || 0) + (localStaff?.[job.id]?.length || 0);
-            const rawChecklists = [...(job.JobChecklists || job.Checklists || []), ...(localTasks?.[job.id] || [])];
-            const checklists = rawChecklists.map(c => ({
-              ...c,
-              isCompleted: localChecklists?.[`${job.id}_${c.id}`] !== undefined ? localChecklists[`${job.id}_${c.id}`] : c.isCompleted
-            }));
+            const staffCount = (job.JobStaffs?.length || job.Staff?.length || 0);
+            const checklists = job.JobChecklists || [];
             const completedTasks = checklists.filter(c => c.isCompleted).length;
             const totalTasks = checklists.length;
 

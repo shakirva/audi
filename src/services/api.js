@@ -169,15 +169,26 @@ export const jobsAPI = {
   getAll: (params) => api.get("/v1/jobs", { params }),
   getById: (id) => api.get(`/v1/jobs/${id}`),
   create: (data) => api.post("/v1/jobs", data),
+  remove: (id) => api.delete(`/v1/jobs/${id}`),
   update: (id, data) => api.put(`/v1/jobs/${id}`, data),
   updateStatus: (id, status) => api.patch(`/v1/jobs/${id}/status`, { status }),
-  updateChecklist: (id, data) => api.put(`/v1/jobs/${id}/checklist`, data),
+  toggleChecklist: (id, data) => api.post(`/v1/jobs/${id}/checklist/toggle`, data),
+  addTask: (id, data) => api.post(`/v1/jobs/${id}/tasks`, data),
+  removeTask: (id, taskId) => api.delete(`/v1/jobs/${id}/tasks/${taskId}`),
   assignStaff: (id, data) => api.post(`/v1/jobs/${id}/staff`, data),
+  removeStaff: (id, staffId) => api.delete(`/v1/jobs/${id}/staff/${staffId}`),
 };
 
 // ═══════════════════════════════════
 // MASTERS (Halls, Event Types, etc.)
 // ═══════════════════════════════════
+export const vendorsAPI = {
+  getAll: (params) => api.get("/v1/vendors", { params }),
+  create: (data) => api.post("/v1/vendors", data),
+  update: (id, data) => api.put(`/v1/vendors/${id}`, data),
+  remove: (id) => api.delete(`/v1/vendors/${id}`),
+};
+
 export const mastersAPI = {
   getAll: (params) => api.get("/v1/masters", { params }), // fallback if needed, but not matching backend route
   getByType: (type) => api.get(`/v1/masters/${type}`),

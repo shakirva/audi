@@ -19,6 +19,7 @@ const Vendor = sequelize.define("Vendor", {
   email: { type: DataTypes.STRING, allowNull: true },
   address: { type: DataTypes.STRING, allowNull: true },
   status: { type: DataTypes.STRING, defaultValue: "Active" }, // Active, Inactive
+  tags: { type: DataTypes.JSONB, defaultValue: [] },
 }, {
   paranoid: true,
   indexes: [

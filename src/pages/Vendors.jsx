@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCircle, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useRole } from "../context/RoleContext";
+import { vendorsAPI } from "../services/api";
 
 
 
@@ -12,13 +13,64 @@ export default function Vendors() {
   const tSlug = tenant?.slug || 'default';
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("All");
-  const [localVendors, setLocalVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_local_vendors_${tSlug}`) || "[]") || []);
-  const [deletedVendors, setDeletedVendors] = useState(() => JSON.parse(localStorage.getItem(`hm_deleted_vendors_${tSlug}`) || "[]") || []);
+  const [localVendors, setLocalVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
 
-  const allVendors = [...localVendors].filter(v => !deletedVendors.includes(v.id));
+  useEffect(() => {
+    const fetchAndMigrate = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch from API
+        const { data } = await vendorsAPI.getAll();
+        let serverVendors = data.data || [];
+        
+        // 2. Check for migration from localStorage
+        const localDataStr = localStorage.getItem(`hm_local_vendors_${tSlug}`);
+        const deletedDataStr = localStorage.getItem(`hm_deleted_vendors_${tSlug}`);
+        
+        if (localDataStr) {
+          const oldLocal = JSON.parse(localDataStr) || [];
+          const oldDeleted = JSON.parse(deletedDataStr || "[]") || [];
+          
+          // Filter to only those created locally (id starts with LOCAL_) and not deleted
+          const toMigrate = oldLocal.filter(v => v.id && v.id.startsWith("LOCAL_") && !oldDeleted.includes(v.id));
+          
+          if (toMigrate.length > 0) {
+            console.log("Migrating", toMigrate.length, "vendors to server...");
+            for (const v of toMigrate) {
+              await vendorsAPI.create({
+                name: v.name,
+                category: v.category,
+                phone: v.phone,
+                location: v.location,
+                email: v.email,
+                tags: v.tags
+              });
+            }
+            // Re-fetch after migration
+            const res2 = await vendorsAPI.getAll();
+            serverVendors = res2.data.data || [];
+          }
+          
+          // Cleanup localStorage
+          localStorage.removeItem(`hm_local_vendors_${tSlug}`);
+          localStorage.removeItem(`hm_deleted_vendors_${tSlug}`);
+        }
+        
+        setLocalVendors(serverVendors);
+      } catch (err) {
+        console.error("Failed to load vendors:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (tSlug) fetchAndMigrate();
+  }, [tSlug]);
+
+  const allVendors = localVendors;
 
   const categories = ["All", "Catering", "Decoration", "Sound & Stage", "Photography", "Event Management"];
 
@@ -28,64 +80,53 @@ export default function Vendors() {
     return true;
   });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (form.id) {
-      const updated = localVendors.map(v => v.id === form.id ? { 
-        ...v, 
-        name: form.name, 
-        category: form.category, 
-        phone: form.phone, 
-        location: form.location, 
-        email: form.email, 
-        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [] 
-      } : v);
-      setLocalVendors(updated);
-      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
-    } else {
-      const newVendor = { 
-        id: "LOCAL_" + Date.now(), 
-        name: form.name,
-        category: form.category,
-        phone: form.phone,
-        location: form.location,
-        email: form.email,
-        tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
-        status: "Active",
-        rating: 5.0,
-        jobs: 0,
-        totalBilled: 0,
-        totalPaid: 0
-      };
-      const updated = [newVendor, ...localVendors];
-      setLocalVendors(updated);
-      localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
+    try {
+      if (form.id) {
+        const { data } = await vendorsAPI.update(form.id, {
+          name: form.name, 
+          category: form.category, 
+          phone: form.phone, 
+          location: form.location, 
+          email: form.email, 
+          tags: form.tags ? (typeof form.tags === 'string' ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : form.tags) : [] 
+        });
+        setLocalVendors(localVendors.map(v => v.id === form.id ? data.data : v));
+      } else {
+        const { data } = await vendorsAPI.create({ 
+          name: form.name,
+          category: form.category,
+          phone: form.phone,
+          location: form.location,
+          email: form.email,
+          tags: form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : []
+        });
+        setLocalVendors([...localVendors, data.data]);
+      }
+      setModalOpen(false);
+      setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+    } catch (err) {
+      console.error("Failed to save vendor:", err);
+      alert(err.response?.data?.error || "Failed to save vendor. Please check if your plan supports this feature.");
     }
-    setModalOpen(false);
-    setForm({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
   };
 
   const handleDelete = async (id) => {
     const isConfirmed = await confirm("Are you sure you want to delete this vendor?");
     if (isConfirmed) {
-      if (id.startsWith("LOCAL_")) {
-        const updated = localVendors.filter(v => v.id !== id);
-        setLocalVendors(updated);
-        localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
-      } else {
-        const updated = [...deletedVendors, id];
-        setDeletedVendors(updated);
-        localStorage.setItem(`hm_deleted_vendors_${tSlug}`, JSON.stringify(updated));
+      try {
+        await vendorsAPI.remove(id);
+        setLocalVendors(localVendors.filter(v => v.id !== id));
+      } catch (err) {
+        console.error("Failed to delete vendor:", err);
+        alert("Failed to delete vendor");
       }
     }
   };
 
   const openEdit = (v, e) => {
     e.stopPropagation();
-    if (!v.id.startsWith("LOCAL_")) {
-      alert("Demo vendors cannot be edited.");
-      return;
-    }
     setForm({
       id: v.id,
       name: v.name,
@@ -98,28 +139,35 @@ export default function Vendors() {
     setModalOpen(true);
   };
 
-  const handleToggleStatus = (id, currentStatus) => {
-    const isLocal = String(id).startsWith("LOCAL_");
-    if (!isLocal) return; // Cannot edit demo vendors for now
+  const handleToggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === "Active" ? "Inactive" : currentStatus === "Inactive" ? "Pending" : "Active";
-    const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
-    setLocalVendors(updated);
-    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
-    if (selectedVendor && selectedVendor.id === id) {
-      setSelectedVendor({ ...selectedVendor, status: nextStatus });
+    try {
+      await vendorsAPI.update(id, { status: nextStatus });
+      const updated = localVendors.map(v => v.id === id ? { ...v, status: nextStatus } : v);
+      setLocalVendors(updated);
+      if (selectedVendor && selectedVendor.id === id) {
+        setSelectedVendor({ ...selectedVendor, status: nextStatus });
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status");
     }
   };
 
   const handleDeleteVendor = async (id) => {
     if (!(await confirm("Are you sure you want to delete this vendor?"))) return;
-    const updated = localVendors.filter(v => v.id !== id);
-    setLocalVendors(updated);
-    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
-    setSelectedVendor(null);
+    try {
+      await vendorsAPI.remove(id);
+      setLocalVendors(localVendors.filter(v => v.id !== id));
+      setSelectedVendor(null);
+    } catch (err) {
+      console.error("Failed to delete vendor:", err);
+      alert("Failed to delete vendor");
+    }
   };
 
   const handleFinanceUpdate = (id, field, amount) => {
-    if (!String(id).startsWith("LOCAL_")) return; // Only allow for local
+    // Finance update is simulated for now since Job module will handle actual payments
     const num = Number(amount) || 0;
     const updated = localVendors.map(v => {
       if (v.id === id) {
@@ -131,8 +179,11 @@ export default function Vendors() {
       return v;
     });
     setLocalVendors(updated);
-    localStorage.setItem(`hm_local_vendors_${tSlug}`, JSON.stringify(updated));
   };
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: "center" }}>Loading vendors...</div>;
+  }
 
   return (
     <div style={{ padding: window.innerWidth < 768 ? "16px" : "32px 40px", maxWidth: 1400, margin: "0 auto", fontFamily: "'DM Sans', sans-serif", background: "#f8fafc", borderRadius: 24, boxSizing: "border-box" }}>
