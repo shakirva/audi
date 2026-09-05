@@ -4,7 +4,7 @@ import { Download, Users, TrendingUp, Crosshair, Trophy, Filter } from "lucide-r
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
-import { enquiriesAPI, settingsAPI } from "../services/api";
+import { enquiriesAPI, settingsAPI, reportsAPI, isPlanRestriction } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16, margin: 0 };
@@ -29,6 +29,7 @@ export default function SalesReports() {
   const loadData = async () => {
     try {
       setLoading(true);
+      await reportsAPI.checkAccess();
       const [res, settingsRes] = await Promise.all([
         enquiriesAPI.getAll(),
         settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
@@ -37,7 +38,7 @@ export default function SalesReports() {
       setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
-      addToast("Failed to load report data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to load report data", "error");
     } finally {
       setLoading(false);
     }

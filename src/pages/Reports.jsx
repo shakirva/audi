@@ -5,7 +5,7 @@ import {
 import { useState, useEffect } from "react";
 import { useToast } from "../components/Toast";
 import { useBookings } from "../context/BookingsContext";
-import { settingsAPI } from "../services/api";
+import { settingsAPI, reportsAPI } from "../services/api";
 
 const card = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 14 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12, margin: 0 };
@@ -26,8 +26,10 @@ export default function Reports() {
   const [halls, setHalls] = useState([]);
 
   useEffect(() => {
-    settingsAPI.get().then(res => {
-      setHalls(res.data?.data?.halls || []);
+    reportsAPI.checkAccess().then(() => {
+      settingsAPI.get().then(res => {
+        setHalls(res.data?.data?.halls || []);
+      }).catch(() => {});
     }).catch(() => {});
   }, []);
 

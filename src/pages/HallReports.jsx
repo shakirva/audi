@@ -4,7 +4,7 @@ import { Download, Calendar, TrendingUp, AlertCircle, Building2, Filter } from "
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
-import { bookingsAPI, settingsAPI } from "../services/api";
+import { bookingsAPI, settingsAPI, reportsAPI, isPlanRestriction } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -29,6 +29,7 @@ export default function HallReports() {
   const loadData = async () => {
     try {
       setLoading(true);
+      await reportsAPI.checkAccess();
       const [bookRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll(),
         settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
@@ -37,7 +38,7 @@ export default function HallReports() {
       setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
-      addToast("Failed to load hall data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to load hall data", "error");
     } finally {
       setLoading(false);
     }

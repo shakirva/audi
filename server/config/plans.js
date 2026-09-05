@@ -344,6 +344,8 @@ const ROUTE_FEATURE_MAP = {
   "/jobs": "jobs",
   "/inventory": "inventory",
   "/audit-logs": "audit_logs",
+  "/api-access": "api_access",
+  "/reports": "advanced_reports",
 };
 
 module.exports = {

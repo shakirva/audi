@@ -31,6 +31,7 @@ const leavesRoutes = require("./leaves");
 const auditLogsRoutes = require("./auditLogs");
 const inventoryRoutes = require("./inventory");
 const vendorRoutes = require("./vendors");
+const reportRoutes = require("./reports");
 
 // Mount routes
 router.use("/bookings", bookingRoutes);
@@ -53,6 +54,7 @@ router.use("/leaves", leavesRoutes);
 router.use("/audit-logs", auditLogsRoutes);
 router.use("/inventory", inventoryRoutes);
 router.use("/vendors", vendorRoutes);
+router.use("/reports", reportRoutes);
 
 // Future v1 routes will be added here:
 // router.use("/enquiries", enquiryRoutes);
@@ -64,7 +66,6 @@ router.use("/vendors", vendorRoutes);
 // router.use("/receipts", receiptRoutes);
 // router.use("/payments", paymentRoutes);
 // router.use("/staff", staffRoutes);
-// router.use("/reports", reportRoutes);
 // router.use("/masters", masterRoutes);
 
 module.exports = router;

@@ -4,7 +4,7 @@ import { Download, Wallet, CreditCard, Banknote, PiggyBank, Filter } from "lucid
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
-import api, { bookingsAPI, settingsAPI, isPlanRestriction } from "../services/api";
+import api, { bookingsAPI, settingsAPI, reportsAPI, isPlanRestriction } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -30,6 +30,7 @@ export default function AccountsReports() {
   const loadData = async () => {
     try {
       setLoading(true);
+      await reportsAPI.checkAccess();
       const [bookingsRes, expensesRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll(),
         api.get("/v1/expenses").catch(() => ({ data: { data: [] } })),

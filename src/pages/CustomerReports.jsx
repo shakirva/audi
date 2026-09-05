@@ -3,7 +3,7 @@ import { Download, Users, Filter, CheckCircle2, UserCheck, Heart } from "lucide-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
-import { bookingsAPI } from "../services/api";
+import { bookingsAPI, reportsAPI, isPlanRestriction } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -22,11 +22,12 @@ export default function CustomerReports() {
   const loadData = async () => {
     try {
       setLoading(true);
+      await reportsAPI.checkAccess();
       const res = await bookingsAPI.getAll();
       setBookings(res.data?.data || []);
     } catch (err) {
       console.error(err);
-      addToast("Failed to load customer data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to load customer data", "error");
     } finally {
       setLoading(false);
     }

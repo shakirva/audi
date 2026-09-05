@@ -248,6 +248,13 @@ export const deleteChecksAPI = {
   customer: (customerId) => api.get(`/v1/delete-checks/customer/${customerId}`),
   enquiry: (enquiryId) => api.get(`/v1/delete-checks/enquiry/${enquiryId}`),
 };
+
+// ═══════════════════════════════════
+// REPORTS (Access Check)
+// ═══════════════════════════════════
+export const reportsAPI = {
+  checkAccess: () => api.get(`/v1/reports/access`),
+};
 // ═══════════════════════════════════
 // HR & STAFF
 // ═══════════════════════════════════
@@ -286,3 +293,18 @@ export const auditLogsAPI = {
   getAll: (params) => api.get("/v1/audit-logs", { params }),
   clear: () => api.delete("/v1/audit-logs/clear"),
 };
+
+/**
+ * Check if an Axios error is a known plan/subscription restriction.
+ * Use in catch blocks to suppress generic "Failed to load..." toasts
+ * when the UpgradeModal will handle the UX instead.
+ *
+ * Usage:
+ *   catch (err) {
+ *     if (!isPlanRestriction(err)) addToast("Failed to load ...", "error");
+ *   }
+ */
+export function isPlanRestriction(error) {
+  const code = error?.response?.data?.code;
+  return code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED";
+}
