@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, TrendingDown, RefreshCw, Wallet, ArrowDownRight, ArrowUpRight, CreditCard, Banknote, Building2, Smartphone, CircleDollarSign, AlertCircle } from "lucide-react";
-import { accountsAPI } from "../../services/api";
+import { accountsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 
 export default function FinanceReports() {
@@ -19,7 +19,7 @@ export default function FinanceReports() {
       const res = await accountsAPI.getProfitLoss({});
       setReport(res.data.data);
     } catch (error) {
-      addToast("Failed to fetch profit & loss report", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to fetch profit & loss report", "error");
     } finally {
       setLoading(false);
     }

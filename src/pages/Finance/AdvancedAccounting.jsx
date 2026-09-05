@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Calculator, Search, Filter } from "lucide-react";
-import { accountsAPI } from "../../services/api";
+import { accountsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmProvider";
 
@@ -21,7 +21,7 @@ export default function AdvancedAccounting() {
       const res = await accountsAPI.getVouchers({ limit: 100 });
       setVouchers(res.data.data?.data || res.data.data || []);
     } catch (error) {
-      addToast("Failed to fetch accounting vouchers", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to fetch accounting vouchers", "error");
     } finally {
       setLoading(false);
     }

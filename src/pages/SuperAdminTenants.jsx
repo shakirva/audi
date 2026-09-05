@@ -159,8 +159,8 @@ export default function SuperAdminTenants() {
                 <td style={{ padding: "16px" }}>
                   <span style={{ 
                     display: "inline-block", padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-                    background: t.Subscriptions?.[0]?.plan === "enterprise" ? "#fef3c7" : "#eff6ff",
-                    color: t.Subscriptions?.[0]?.plan === "enterprise" ? "#b45309" : "#1d4ed8"
+                    background: t.Subscriptions?.[0]?.plan === "business" ? "#fef3c7" : t.Subscriptions?.[0]?.plan === "professional" ? "#e0e7ff" : t.Subscriptions?.[0]?.plan === "starter" ? "#dcfce7" : "#eff6ff",
+                    color: t.Subscriptions?.[0]?.plan === "business" ? "#b45309" : t.Subscriptions?.[0]?.plan === "professional" ? "#4338ca" : t.Subscriptions?.[0]?.plan === "starter" ? "#15803d" : "#1d4ed8"
                   }}>
                     {t.Subscriptions?.[0]?.plan || "Trial"}
                   </span>
@@ -259,16 +259,17 @@ export default function SuperAdminTenants() {
                 <div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Plan</label>
                   <select value={newTenant.plan} onChange={e => setNewTenant({...newTenant, plan: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box", background: "#fff" }}>
-                    <option value="trial">Trial (7 Days)</option>
-                    <option value="premium">Premium</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="trial">Trial (14 Days)</option>
+                    <option value="starter">Starter — ₹999/month</option>
+                    <option value="professional">Professional — ₹3,999/month</option>
+                    <option value="business">Business — ₹6,999/month</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ background: "#fef3c7", padding: "12px", borderRadius: 8, marginBottom: 20, border: "1px solid #fde68a" }}>
-                <p style={{ fontSize: 12, color: "#92400e", margin: 0, display: "flex", gap: 6 }}>
-                  <Key size={14} /> The default owner password will be <strong>password123</strong>
+              <div style={{ background: "#ecfdf5", padding: "12px", borderRadius: 8, marginBottom: 20, border: "1px solid #a7f3d0" }}>
+                <p style={{ fontSize: 12, color: "#065f46", margin: 0, display: "flex", gap: 6 }}>
+                  <Key size={14} /> A secure temporary password will be generated automatically.
                 </p>
               </div>
 

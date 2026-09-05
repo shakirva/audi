@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, ShieldAlert, FileText, Trash2, Calendar, User as UserIcon, RefreshCw } from "lucide-react";
-import { auditLogsAPI } from "../services/api";
+import { auditLogsAPI, isPlanRestriction } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
@@ -17,7 +17,7 @@ export default function ActivityLogs() {
       const res = await auditLogsAPI.getAll({ limit: 500 }); // fetch up to 500 logs for now
       setLogs(res.data.data || []);
     } catch (err) {
-      addToast("Failed to fetch activity logs", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to fetch activity logs", "error");
     } finally {
       setLoading(false);
     }

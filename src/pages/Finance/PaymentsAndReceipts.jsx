@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
-import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI } from "../../services/api";
+import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
@@ -31,7 +31,7 @@ export default function PaymentsAndReceipts() {
       setDashboardData(dashboardRes.data.data || null);
       setSettings(settingsRes.data?.data || {});
     } catch (err) {
-      addToast("Failed to load data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to load data", "error");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Users, Search, Plus, UserCheck, UserX, Clock, Briefcase, Filter, X, Save, Trash2 } from "lucide-react";
-import { usersAPI, jobsAPI } from "../services/api";
+import { usersAPI, jobsAPI, isPlanRestriction } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useNavigate } from "react-router-dom";
 import { useConfirm } from "../components/ConfirmProvider";
@@ -130,6 +130,7 @@ function AssignJobModal({ open, onClose, staffMember, tSlug }) {
       setLoading(false);
       addToast(err.response?.data?.message || "Failed to assign job", "error");
     }
+  };
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
@@ -195,7 +196,7 @@ export default function Staff() {
       const res = await usersAPI.getAll();
       setStaffList(res.data.data || []);
     } catch (e) {
-      addToast("Failed to load staff", "error");
+      if (!isPlanRestriction(e)) addToast("Failed to load staff", "error");
     } finally {
       setLoading(false);
     }

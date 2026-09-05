@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BookOpen, Search, ArrowRight, ExternalLink } from "lucide-react";
-import { bookingsAPI } from "../../services/api";
+import { bookingsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { Link } from "react-router-dom";
 
@@ -21,7 +21,7 @@ export default function BookingAccounts() {
       const res = await bookingsAPI.getAll({ limit: 50 });
       setBookings(res.data.data?.data || res.data.data || []);
     } catch (error) {
-      addToast("Failed to fetch booking accounts", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to fetch booking accounts", "error");
     } finally {
       setLoading(false);
     }

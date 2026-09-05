@@ -4,7 +4,7 @@ import {
   ArrowLeft, CreditCard, Receipt as ReceiptIcon, FileText, 
   TrendingUp, Clock, History, LayoutDashboard, Wallet, Download, Eye 
 } from "lucide-react";
-import { accountsAPI, bookingsAPI } from "../../services/api";
+import { accountsAPI, bookingsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import AddExpenseModal from "./AddExpenseModal";
@@ -33,7 +33,7 @@ export default function BookingFinancialDashboard() {
       const res = await accountsAPI.getBookingLedger(id);
       setData(res.data.data);
     } catch (err) {
-      addToast("Failed to fetch booking financials", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to fetch booking financials", "error");
     } finally {
       setLoading(false);
     }

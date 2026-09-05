@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Search, Edit2, Trash2, Box, Download } from "lucide-react";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
-import { inventoryAPI } from "../services/api";
+import { inventoryAPI, isPlanRestriction } from "../services/api";
 import { generateInventoryReport } from "../utils/documentGenerator";
 
 const cardStyle = { background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" };
@@ -32,7 +32,7 @@ export default function Inventory() {
       const res = await inventoryAPI.getAll();
       if (res.data?.success) setItems(res.data.data);
     } catch (error) {
-      addToast("Failed to load inventory", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to load inventory", "error");
     } finally {
       setLoading(false);
     }

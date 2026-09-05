@@ -4,7 +4,7 @@ import { Download, Wallet, CreditCard, Banknote, PiggyBank, Filter } from "lucid
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "../components/Toast";
-import api, { bookingsAPI, settingsAPI } from "../services/api";
+import api, { bookingsAPI, settingsAPI, isPlanRestriction } from "../services/api";
 
 const cardSt = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 20 };
 const sTitle = { fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 16 };
@@ -41,7 +41,7 @@ export default function AccountsReports() {
       setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
-      addToast("Failed to load accounts data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to load accounts data", "error");
     } finally {
       setLoading(false);
     }

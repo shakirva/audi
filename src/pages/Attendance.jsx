@@ -5,7 +5,7 @@ import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 import { generateAttendanceReport } from "../utils/documentGenerator";
 
-import { attendanceAPI, usersAPI } from "../services/api";
+import { attendanceAPI, usersAPI, isPlanRestriction } from "../services/api";
 export default function Attendance() {
   const { confirm } = useConfirm();
   const { user, role } = useRole();
@@ -60,7 +60,7 @@ export default function Attendance() {
       }
     } catch (err) {
       console.error(err);
-      addToast("Failed to fetch attendance data", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to fetch attendance data", "error");
     } finally {
       setLoading(false);
     }

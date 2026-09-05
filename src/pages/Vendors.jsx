@@ -3,7 +3,7 @@ import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCirc
 import PageHeader from "../components/ui/PageHeader";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useRole } from "../context/RoleContext";
-import { vendorsAPI } from "../services/api";
+import { vendorsAPI, isPlanRestriction } from "../services/api";
 
 
 
@@ -62,7 +62,10 @@ export default function Vendors() {
         
         setLocalVendors(serverVendors);
       } catch (err) {
-        console.error("Failed to load vendors:", err);
+        if (!isPlanRestriction(err)) {
+          console.error("Failed to load vendors:", err);
+          setError("Failed to fetch vendors. Please check your connection.");
+        }
       } finally {
         setLoading(false);
       }

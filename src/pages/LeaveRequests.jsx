@@ -4,7 +4,7 @@ import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmProvider";
 
-import { leavesAPI } from "../services/api";
+import { leavesAPI, isPlanRestriction } from "../services/api";
 function NewLeaveModal({ open, onClose, onSuccess, user, role, initialData }) {
   const [form, setForm] = useState({ startDate: "", endDate: "", reason: "" });
 
@@ -97,7 +97,7 @@ export default function LeaveRequests() {
       }
     } catch (err) {
       console.error(err);
-      addToast("Failed to fetch leave requests", "error");
+      if (!isPlanRestriction(err)) addToast("Failed to fetch leave requests", "error");
     } finally {
       setLoading(false);
     }

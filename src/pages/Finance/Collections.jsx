@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Wallet, Search, ArrowRight, Printer, Trash2, Edit2 } from "lucide-react";
-import { paymentsAPI } from "../../services/api";
+import { paymentsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { generateReceipt } from "../../utils/documentGenerator";
 import EditPaymentModal from "../../components/EditPaymentModal";
@@ -31,7 +31,7 @@ export default function Collections() {
       const res = await paymentsAPI.getAll({ limit: 100 });
       setPayments(res.data.data?.data || res.data.data || []);
     } catch (error) {
-      addToast("Failed to fetch collections", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to fetch collections", "error");
     } finally {
       setLoading(false);
     }

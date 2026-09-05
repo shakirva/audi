@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Briefcase, Clock, CheckCircle, ChevronRight, UserCircle, Search, FileText, CheckSquare, Plus, ArrowLeft, RefreshCw, AlertCircle, Printer, X } from "lucide-react";
-import { jobsAPI } from "../services/api";
+import { jobsAPI, isPlanRestriction } from "../services/api";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useConfirm } from "../components/ConfirmProvider";
@@ -142,9 +142,11 @@ export default function Jobs() {
         }
         setJobs(data);
       } catch (err) {
-        const msg = err.response?.data?.message || "Failed to load jobs";
-        setError(msg);
-        addToast(msg, "error");
+        if (!isPlanRestriction(err)) {
+          const msg = err.response?.data?.message || "Failed to load jobs";
+          setError(msg);
+          addToast(msg, "error");
+        }
       } finally {
         setLoading(false);
       }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Receipt, Search, Plus, Edit, Trash2, IndianRupee } from "lucide-react";
-import { expensesAPI } from "../../services/api";
+import { expensesAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { useConfirm } from "../../components/ConfirmProvider";
 import AddExpenseModal from "./AddExpenseModal";
@@ -24,7 +24,7 @@ export default function PurchasesAndExpenses() {
       const res = await expensesAPI.getAll({ limit: 100 });
       setExpenses(res.data.data?.data || res.data.data || []);
     } catch (error) {
-      addToast("Failed to fetch expenses", "error");
+      if (!isPlanRestriction(error)) addToast("Failed to fetch expenses", "error");
     } finally {
       setLoading(false);
     }
