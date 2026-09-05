@@ -38,6 +38,7 @@ import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
 import Inventory from "./pages/Inventory";
 import Subscriptions from "./pages/Subscriptions";
+import SuperAdminSubscriptions from "./pages/SuperAdminSubscriptions";
 import Feedback from "./pages/Feedback";
 import { BookingsProvider } from "./context/BookingsContext";
 import { RoleProvider, useRole } from "./context/RoleContext";
@@ -83,6 +84,7 @@ function ProtectedRoute({ permission, children }) {
 }
 
 function AdminLayout() {
+  const { role } = useRole();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const title = pageTitles[location.pathname] || "Venueza";
@@ -125,7 +127,7 @@ function AdminLayout() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/tenants" element={<SuperAdminTenants />} />
             <Route path="/leads" element={<SuperAdminLeads />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions" element={role === "SuperAdmin" ? <SuperAdminSubscriptions /> : <Subscriptions />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/agreements" element={<Agreements />} />

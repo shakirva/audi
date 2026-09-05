@@ -20,6 +20,10 @@ const Subscription = sequelize.define("Subscription", {
   trialEndDate: { type: DataTypes.DATEONLY, allowNull: true },
   subscriptionStartDate: { type: DataTypes.DATEONLY, allowNull: true },
   subscriptionEndDate: { type: DataTypes.DATEONLY, allowNull: true },
+  billingPeriodMonths: { 
+    type: DataTypes.INTEGER, 
+    allowNull: true 
+  },
   managedBy: { type: DataTypes.STRING, defaultValue: "manual" },
   notes: { type: DataTypes.TEXT, defaultValue: "" },
 });

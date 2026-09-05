@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Lock, ArrowRight, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function UpgradeModal() {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleUpgradeRequired = (e) => {
@@ -35,7 +37,9 @@ export default function UpgradeModal() {
           <h2 style={{ margin: "0 0 12px 0", fontSize: 22, color: "#111", textAlign: "center" }}>Upgrade Required</h2>
           
           <p style={{ margin: "0 0 24px 0", fontSize: 15, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-            {detail?.message || "This feature requires a higher plan to access. Upgrade your workspace to unlock advanced tools and scale your operations."}
+            {detail?.code === "LIMIT_EXCEEDED" 
+              ? `You have reached the ${detail.limitType === "halls" ? "hall" : "user"} limit (${detail.maxAllowed}) on your current plan. Upgrade to add more.`
+              : detail?.message || "This feature requires a higher plan to access. Upgrade your workspace to unlock advanced tools and scale your operations."}
           </p>
           
           <div style={{ display: "flex", gap: 12 }}>
@@ -48,11 +52,11 @@ export default function UpgradeModal() {
             <button 
               onClick={() => {
                 setOpen(false);
-                window.location.href = "/settings?tab=Billing";
+                navigate("/subscriptions");
               }}
               style={{ flex: 1, padding: "12px", background: "#d97706", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
-              View Plans <ArrowRight size={16} />
+              Upgrade Plan <ArrowRight size={16} />
             </button>
           </div>
         </div>
