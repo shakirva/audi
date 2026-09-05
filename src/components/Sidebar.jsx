@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent, Database } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Settings, LogOut, CheckSquare, ChevronRight, Briefcase, Calculator, UsersRound, CreditCard, ShoppingCart, BarChart3, Map, Tent, Database, Lock } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,7 +8,7 @@ import { BASE_NAVIGATION } from "../constants/navigation";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment, moduleAccess } = useRole();
+  const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment, moduleAccess, subscription } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
 
@@ -151,30 +151,47 @@ export default function Sidebar({ open, onClose }) {
 
           if (item.type === "group") {
             const hasActiveChild = item.children.some(c => location.pathname === c.path);
+            
+            const isReportsGroup = item.id === "reports";
+            const isStarter = subscription?.plan === "starter";
+            const isLocked = isReportsGroup && isStarter;
+            
             // Open if explicitly selected, OR (has active child AND hasn't been explicitly closed)
-            const isOpen = openGroup === item.id || (openGroup === "" && hasActiveChild);
+            const isOpen = !isLocked && (openGroup === item.id || (openGroup === "" && hasActiveChild));
 
             return (
               <div key={item.id}>
                 <motion.div 
                   whileHover={{ background: "rgba(255,255,255,0.05)" }}
                   onClick={() => { 
+                    if (isLocked) {
+                      window.dispatchEvent(
+                        new CustomEvent("plan-upgrade-required", {
+                          detail: { feature: "Reports Center", requiredPlan: "Professional" }
+                        })
+                      );
+                      return;
+                    }
                     if (!collapsed) {
                       setOpenGroup(isOpen ? "NONE" : item.id);
                     }
                   }}
                   style={{ 
                     display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
-                    color: hasActiveChild ? "#fff" : "rgba(255,255,255,0.7)",
+                    color: hasActiveChild && !isLocked ? "#fff" : "rgba(255,255,255,0.7)",
                     marginBottom: 2
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <item.icon size={20} color={hasActiveChild ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0 }} />
-                    {!collapsed && <span style={{ fontSize: 15, fontWeight: hasActiveChild ? 700 : 500 }}>{item.label}</span>}
+                    <item.icon size={20} color={hasActiveChild && !isLocked ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0, opacity: isLocked ? 0.5 : 1 }} />
+                    {!collapsed && <span style={{ fontSize: 15, fontWeight: hasActiveChild && !isLocked ? 700 : 500, opacity: isLocked ? 0.5 : 1 }}>{item.label}</span>}
                   </div>
                   {!collapsed && (
-                    <motion.div animate={{ rotate: isOpen ? 90 : 0 }}><ChevronRight size={16} /></motion.div>
+                    isLocked ? (
+                      <Lock size={14} color="rgba(255,255,255,0.4)" />
+                    ) : (
+                      <motion.div animate={{ rotate: isOpen ? 90 : 0 }}><ChevronRight size={16} /></motion.div>
+                    )
                   )}
                 </motion.div>
                 

@@ -98,7 +98,7 @@ const PLANS = {
       payments: true,
       receipts: true,
       basic_finance: true,
-      basic_reports: true,
+      basic_reports: false,
       masters: true,
       availability: true,
       expenses: true,
@@ -345,7 +345,7 @@ const ROUTE_FEATURE_MAP = {
   "/inventory": "inventory",
   "/audit-logs": "audit_logs",
   "/api-access": "api_access",
-  "/reports": "advanced_reports",
+  "/reports": "basic_reports",
 };
 
 module.exports = {
