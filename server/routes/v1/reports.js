@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../../middleware/auth");
-const { tenantScope, subscriptionGuard } = require("../../middleware/tenant");
+const { auth } = require("../../middleware/auth");
+const { tenantScope } = require("../../middleware/tenantScope");
+const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
 const { planGate } = require("../../middleware/planGate");
 
 router.use(auth, tenantScope, subscriptionGuard, planGate);
