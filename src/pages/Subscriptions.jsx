@@ -25,6 +25,7 @@ const PLANS_CONFIG = {
       { name: "Accounting & Ledgers", included: false },
       { name: "Staff & HR", included: false },
       { name: "Jobs & Inventory", included: false },
+      { name: "Advanced Reports & Analytics", included: false },
       { name: "API & Data Exports", included: false },
     ],
     tier: 1
@@ -42,6 +43,7 @@ const PLANS_CONFIG = {
       { name: "Accounting & Ledgers", included: true },
       { name: "Staff & HR", included: true },
       { name: "Jobs & Inventory", included: true },
+      { name: "Advanced Reports & Analytics", included: true },
       { name: "API & Data Exports", included: false },
     ],
     tier: 2
@@ -60,6 +62,7 @@ const PLANS_CONFIG = {
       { name: "Accounting & Ledgers", included: true },
       { name: "Staff & HR", included: true },
       { name: "Jobs & Inventory", included: true },
+      { name: "Advanced Reports & Analytics", included: true },
       { name: "API & Data Exports", included: true },
     ],
     tier: 3
@@ -78,6 +81,7 @@ const PLANS_CONFIG = {
       { name: "Accounting & Ledgers", included: true },
       { name: "Staff & HR", included: true },
       { name: "Jobs & Inventory", included: true },
+      { name: "Advanced Reports & Analytics", included: true },
       { name: "API & Data Exports", included: true },
     ],
     tier: 99
