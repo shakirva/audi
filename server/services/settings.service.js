@@ -20,7 +20,7 @@ class SettingsService {
         tenantId: tenant.id,
         environmentId: env.id,
         status: {
-          [require("sequelize").Op.in]: ["Confirmed", "Completed", "Pending Payment"]
+          [require("sequelize").Op.in]: ["Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed"]
         }
       },
       attributes: ['date', 'session', 'status']
