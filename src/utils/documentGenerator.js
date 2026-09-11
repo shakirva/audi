@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { settingsAPI } from "../services/api";
+import { robustDownloadPDF } from "./pdfDownloadService";
 
 const getSettings = async () => {
   try {
@@ -12,7 +13,7 @@ const getSettings = async () => {
 };
 
 const downloadPDF = (doc, filename) => {
-  doc.save(filename);
+  robustDownloadPDF(doc, filename);
 };
 
 const formatDate = (dateInput) => {
