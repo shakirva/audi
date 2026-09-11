@@ -42,7 +42,9 @@ export default function FinanceReports() {
   };
 
   const cash = report?.cashBasis || {};
-  const collectionRate = cash.totalBooked > 0 ? ((cash.totalReceived / cash.totalBooked) * 100).toFixed(1) : 0;
+  // Collection Rate = Customer Collections / Booked Value (vendor income is separate)
+  const customerReceived = cash.totalCustomerReceived || 0;
+  const collectionRate = cash.totalBooked > 0 ? ((customerReceived / cash.totalBooked) * 100).toFixed(1) : 0;
 
   return (
     <div style={{ padding: "32px 28px", maxWidth: 1200, margin: "0 auto", fontFamily: "'DM Sans', sans-serif" }}>
@@ -99,25 +101,35 @@ export default function FinanceReports() {
             /* ═══════════════════════════════════════════ */
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               {/* Top Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* Total Received */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+                {/* Total Income */}
                 <div style={{ background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                     <div style={{ background: "#dcfce7", padding: 8, borderRadius: 10, color: "#16a34a" }}><ArrowDownRight size={18} /></div>
-                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Total Received</span>
+                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Total Income</span>
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#16a34a" }}>{fmt(cash.totalReceived)}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>Actual cash collected</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#16a34a" }}>{fmt(cash.totalReceived)}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>Customers + Vendors</div>
                 </div>
 
-                {/* Total Booked */}
+                {/* Customer Collections */}
                 <div style={{ background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                     <div style={{ background: "#e0e7ff", padding: 8, borderRadius: 10, color: "#4f46e5" }}><Wallet size={18} /></div>
-                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Total Booked Value</span>
+                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Booking Collections</span>
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a" }}>{fmt(cash.totalBooked)}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>Sum of all booking amounts</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#0f172a" }}>{fmt(customerReceived)}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>of {fmt(cash.totalBooked)} booked</div>
+                </div>
+
+                {/* Vendor Income */}
+                <div style={{ background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: "#fff7ed", padding: 8, borderRadius: 10, color: "#ea580c" }}><ArrowUpRight size={18} /></div>
+                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Vendor Income</span>
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#ea580c" }}>{fmt(cash.totalVendorReceived)}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>Catering, services, etc.</div>
                 </div>
 
                 {/* Outstanding */}
@@ -126,8 +138,8 @@ export default function FinanceReports() {
                     <div style={{ background: "#fef3c7", padding: 8, borderRadius: 10, color: "#d97706" }}><AlertCircle size={18} /></div>
                     <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Outstanding</span>
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#d97706" }}>{fmt(cash.totalOutstanding)}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>Yet to be collected</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#d97706" }}>{fmt(cash.totalOutstanding)}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>Booking balance due</div>
                 </div>
 
                 {/* Collection Rate */}
@@ -136,7 +148,7 @@ export default function FinanceReports() {
                     <div style={{ background: "#dcfce7", padding: 8, borderRadius: 10, color: "#16a34a" }}><TrendingUp size={18} /></div>
                     <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Collection Rate</span>
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a" }}>{collectionRate}%</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#0f172a" }}>{collectionRate}%</div>
                   <div style={{ 
                     marginTop: 8, height: 8, borderRadius: 4, background: "#f1f5f9", overflow: "hidden"
                   }}>
@@ -147,6 +159,7 @@ export default function FinanceReports() {
                       transition: "width 0.6s ease"
                     }} />
                   </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>Bookings only</div>
                 </div>
               </div>
 
