@@ -245,16 +245,16 @@ router.put("/:id", async (req, res) => {
     const { documentType, documentName, documentNumber, issuingAuthority, issueDate, expiryDate, hasExpiry, reminderDays, responsibleUserId, notes } = req.body;
 
     await doc.update({
-      documentType: documentType ?? doc.documentType,
-      documentName: documentName ?? doc.documentName,
-      documentNumber: documentNumber !== undefined ? documentNumber : doc.documentNumber,
-      issuingAuthority: issuingAuthority !== undefined ? issuingAuthority : doc.issuingAuthority,
-      issueDate: issueDate !== undefined ? issueDate : doc.issueDate,
-      expiryDate: hasExpiry === false ? null : (expiryDate !== undefined ? expiryDate : doc.expiryDate),
+      documentType: documentType || doc.documentType,
+      documentName: documentName || doc.documentName,
+      documentNumber: documentNumber === "" ? null : (documentNumber !== undefined ? documentNumber : doc.documentNumber),
+      issuingAuthority: issuingAuthority === "" ? null : (issuingAuthority !== undefined ? issuingAuthority : doc.issuingAuthority),
+      issueDate: issueDate === "" ? null : (issueDate !== undefined ? issueDate : doc.issueDate),
+      expiryDate: hasExpiry === false ? null : (expiryDate === "" ? null : (expiryDate !== undefined ? expiryDate : doc.expiryDate)),
       hasExpiry: hasExpiry !== undefined ? hasExpiry : doc.hasExpiry,
-      reminderDays: reminderDays ?? doc.reminderDays,
-      responsibleUserId: responsibleUserId !== undefined ? responsibleUserId : doc.responsibleUserId,
-      notes: notes !== undefined ? notes : doc.notes,
+      reminderDays: reminderDays !== undefined ? reminderDays : doc.reminderDays,
+      responsibleUserId: responsibleUserId === "" ? null : (responsibleUserId !== undefined ? responsibleUserId : doc.responsibleUserId),
+      notes: notes === "" ? null : (notes !== undefined ? notes : doc.notes),
       updatedBy: req.user?.id || null,
     });
 

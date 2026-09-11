@@ -146,12 +146,14 @@ export default function Compliance() {
   };
 
   const handleDelete = async (id, name) => {
-    const isConfirmed = await confirm({
-      title: "Delete Document",
-      message: `Are you sure you want to delete '${name}'? This action cannot be undone.`,
-      confirmText: "Delete",
-      confirmColor: "#ef4444"
-    });
+    const isConfirmed = await confirm(
+      `Are you sure you want to delete '${name}'? This action cannot be undone.`,
+      {
+        title: "Delete Document",
+        confirmText: "Delete",
+        isDanger: true
+      }
+    );
     
     if (isConfirmed) {
       try {
@@ -182,14 +184,14 @@ export default function Compliance() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", paddingBottom: 100 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 12 }}>
-            <ShieldCheck size={32} color={BRAND.primary} /> Compliance & Documents
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
+        <div style={{ flex: "1 1 min-content" }}>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+            <ShieldCheck size={28} color={BRAND.primary} style={{ flexShrink: 0 }} /> Compliance
           </h1>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 15 }}>Track venue licenses, registrations, and renewals.</p>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>Track venue licenses, registrations, and renewals.</p>
         </div>
-        <button onClick={() => openModal()} style={{ background: BRAND.primary, color: "#fff", border: "none", padding: "12px 24px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+        <button onClick={() => openModal()} style={{ background: BRAND.primary, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
           <Plus size={18} /> Add Document
         </button>
       </div>
