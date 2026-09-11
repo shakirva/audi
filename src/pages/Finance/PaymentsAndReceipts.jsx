@@ -32,7 +32,8 @@ export default function PaymentsAndReceipts() {
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
       setSettings(settingsRes.data?.data || {});
-      setVendorPayments(vpRes.data?.data || []);
+      const vpData = vpRes.data?.data?.data || vpRes.data?.data || [];
+      setVendorPayments(Array.isArray(vpData) ? vpData : []);
     } catch (err) {
       if (!isPlanRestriction(err)) addToast("Failed to load data", "error");
     } finally {
@@ -359,13 +360,13 @@ export default function PaymentsAndReceipts() {
                       <span style={{ fontWeight: 700, color: "#0f172a" }}>{vp.paymentNumber}</span>
                       <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 8, border: "1px solid #fed7aa" }}>Vendor</span>
                     </td>
-                    <td style={{ padding: "14px 20px", fontWeight: 600, color: "#334155" }}>{vp.Vendor?.name || vp.vendorName || "—"}</td>
-                    <td style={{ padding: "14px 20px", color: "#64748b" }}>{vp.date ? new Date(vp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
+                    <td style={{ padding: "14px 20px", fontWeight: 600, color: "#334155" }}>{vp.Vendor?.name || vp.Customer?.name || "—"}</td>
+                    <td style={{ padding: "14px 20px", color: "#64748b" }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
                     <td style={{ padding: "14px 20px" }}>
                       <span style={{ background: "#f1f5f9", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#475569" }}>{vp.paymentMode}</span>
                     </td>
                     <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(vp.amount)}</td>
-                    <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 12 }}>{vp.description || "—"}</td>
+                    <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 12 }}>{vp.notes || vp.description || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -390,8 +391,8 @@ export default function PaymentsAndReceipts() {
                   </div>
                   <span style={{ fontWeight: 700, color: "#16a34a", fontSize: 15 }}>{formatMoney(vp.amount)}</span>
                 </div>
-                <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{vp.Vendor?.name || vp.vendorName || "—"}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{vp.date ? new Date(vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
+                <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{vp.Vendor?.name || vp.Customer?.name || "—"}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
               </div>
             ))}
           </div>
