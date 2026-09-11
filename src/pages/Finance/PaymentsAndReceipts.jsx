@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
-import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI, isPlanRestriction } from "../../services/api";
+import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI, vendorsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
@@ -8,6 +8,7 @@ import PaymentHistoryModal from "./PaymentHistoryModal";
 export default function PaymentsAndReceipts() {
   const { addToast } = useToast();
   const [bookings, setBookings] = useState([]);
+  const [vendorPayments, setVendorPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dashboardData, setDashboardData] = useState(null);
@@ -22,14 +23,16 @@ export default function PaymentsAndReceipts() {
     setLoading(true);
     try {
       // Fetching up to 100 recent bookings to show payments pending
-      const [bookingsRes, dashboardRes, settingsRes] = await Promise.all([
+      const [bookingsRes, dashboardRes, settingsRes, vpRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 100 }),
         accountsAPI.getDashboard(),
-        settingsAPI.get().catch(() => ({ data: { data: {} } }))
+        settingsAPI.get().catch(() => ({ data: { data: {} } })),
+        vendorsAPI.getAllPayments().catch(() => ({ data: { data: [] } }))
       ]);
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
       setSettings(settingsRes.data?.data || {});
+      setVendorPayments(vpRes.data?.data || []);
     } catch (err) {
       if (!isPlanRestriction(err)) addToast("Failed to load data", "error");
     } finally {
@@ -322,6 +325,78 @@ export default function PaymentsAndReceipts() {
           </>
         )}
       </div>
+
+      {/* Vendor Receipts Section */}
+      {vendorPayments.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, background: "#fff7ed", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ArrowUpRight size={18} color="#ea580c" />
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Vendor Receipts</h2>
+              <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>Income received from vendors (catering, services, etc.)</p>
+            </div>
+          </div>
+
+          {/* Desktop */}
+          <div className="hidden md:block" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#fffbeb", borderBottom: "1px solid #e2e8f0" }}>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt ID</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Vendor</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Date</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Mode</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Amount</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendorPayments.map(vp => (
+                  <tr key={vp.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "14px 20px" }}>
+                      <span style={{ fontWeight: 700, color: "#0f172a" }}>{vp.paymentNumber}</span>
+                      <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 8, border: "1px solid #fed7aa" }}>Vendor</span>
+                    </td>
+                    <td style={{ padding: "14px 20px", fontWeight: 600, color: "#334155" }}>{vp.Vendor?.name || vp.vendorName || "—"}</td>
+                    <td style={{ padding: "14px 20px", color: "#64748b" }}>{vp.date ? new Date(vp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
+                    <td style={{ padding: "14px 20px" }}>
+                      <span style={{ background: "#f1f5f9", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#475569" }}>{vp.paymentMode}</span>
+                    </td>
+                    <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(vp.amount)}</td>
+                    <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 12 }}>{vp.description || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: "#f8fafc", borderTop: "2px solid #e2e8f0" }}>
+                  <td colSpan={4} style={{ padding: "14px 20px", fontWeight: 800, color: "#0f172a", fontSize: 14 }}>Total Vendor Income</td>
+                  <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 800, color: "#16a34a", fontSize: 16 }}>{formatMoney(vendorPayments.reduce((s, vp) => s + Number(vp.amount || 0), 0))}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Mobile */}
+          <div className="block md:hidden flex flex-col gap-3">
+            {vendorPayments.map(vp => (
+              <div key={vp.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 12, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div>
+                    <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{vp.paymentNumber}</span>
+                    <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6, border: "1px solid #fed7aa" }}>Vendor</span>
+                  </div>
+                  <span style={{ fontWeight: 700, color: "#16a34a", fontSize: 15 }}>{formatMoney(vp.amount)}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{vp.Vendor?.name || vp.vendorName || "—"}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{vp.date ? new Date(vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {collectPaymentBooking && (
         <CollectPaymentModal 
