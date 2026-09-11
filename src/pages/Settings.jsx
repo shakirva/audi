@@ -1403,67 +1403,70 @@ export default function Settings() {
       </div>
       )}
 
-      {/* ── WHATSAPP REMINDER SCHEDULE ── */}
-      <div id="reminders" style={cardSt}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 18 }}>📲</span>
-          </div>
-          <div>
-            <p style={sectionTitle}>WhatsApp Reminder Schedule</p>
-            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Auto-send balance payment reminders before the event date</p>
-          </div>
-        </div>
-
-        <p style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 10 }}>
-          Send reminder on these days before event:
-        </p>
-
-        {/* Current tags */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-          {reminderDays.sort((a, b) => a - b).map(day => (
-            <div key={day} style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-              background: "#dcfce7", color: "#15803d", border: "2px solid #25D366",
-            }}>
-              {day} {day === 1 ? "day" : "days"} before
-              <button onClick={() => toggleReminderDay(day)} style={{
-                background: "none", border: "none", padding: 0, cursor: "pointer",
-                display: "flex", alignItems: "center", lineHeight: 1,
-              }}><X size={12} color="#15803d" /></button>
+      {/* ── WHATSAPP REMINDER SCHEDULE (Hidden from UI) ── */}
+      {false && (
+        <div id="reminders" style={cardSt}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 18 }}>📲</span>
             </div>
-          ))}
-          {reminderDays.length === 0 && (
-            <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No days added yet — type a number below and press Add</span>
-          )}
-        </div>
+            <div>
+              <p style={sectionTitle}>WhatsApp Reminder Schedule</p>
+              <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Auto-send balance payment reminders before the event date</p>
+            </div>
+          </div>
 
-        {/* Number input to add a day */}
-        <ReminderDayAdder />
-
-        <div style={{ background: "#f0faf4", borderRadius: 10, padding: "12px 16px", marginBottom: 18, border: "1px solid #bbf7d0" }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: "#15803d", margin: 0 }}>
-            ✅ Currently configured: {reminderDays.length === 0
-              ? "No reminders set"
-              : reminderDays.sort((a,b)=>a-b).map(d => `${d} ${d===1?"day":"days"} before`).join(" + ")}
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 10 }}>
+            Send reminder on these days before event:
           </p>
-          <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4, margin: "4px 0 0" }}>
-            Reminders are shown on the Payments page and can also be triggered manually for each booking.
-          </p>
-        </div>
 
-        <button onClick={handleSaveReminderDays} style={{
-          display: "flex", alignItems: "center", gap: 7,
-          padding: "10px 20px", borderRadius: 10, border: "none",
-          background: "#25D366", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-          boxShadow: "0 2px 10px rgba(37,211,102,0.35)",
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = "#1ebe58"}
-          onMouseLeave={e => e.currentTarget.style.background = "#25D366"}>
-          <Save size={14} /> Save Reminder Schedule
-        </button>
-      </div>
+          {/* Current tags */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            {reminderDays.sort((a, b) => a - b).map(day => (
+              <div key={day} style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                background: "#dcfce7", color: "#15803d", border: "2px solid #25D366",
+              }}>
+                {day} {day === 1 ? "day" : "days"} before
+                <button onClick={() => toggleReminderDay(day)} style={{
+                  background: "none", border: "none", padding: 0, cursor: "pointer",
+                  display: "flex", alignItems: "center", lineHeight: 1,
+                }}><X size={12} color="#15803d" /></button>
+              </div>
+            ))}
+            {reminderDays.length === 0 && (
+              <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No days added yet — type a number below and press Add</span>
+            )}
+          </div>
+
+          {/* Number input to add a day */}
+          <ReminderDayAdder />
+
+          <div style={{ background: "#f0faf4", borderRadius: 10, padding: "12px 16px", marginBottom: 18, border: "1px solid #bbf7d0" }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "#15803d", margin: 0 }}>
+              ✅ Currently configured: {reminderDays.length === 0
+                ? "No reminders set"
+                : reminderDays.sort((a,b)=>a-b).map(d => `${d} ${d===1?"day":"days"} before`).join(" + ")}
+            </p>
+            <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4, margin: "4px 0 0" }}>
+              Reminders are shown on the Payments page and can also be triggered manually for each booking.
+            </p>
+          </div>
+
+          <button onClick={handleSaveReminderDays} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "10px 20px", borderRadius: 10, border: "none",
+            background: "#25D366", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+            boxShadow: "0 2px 10px rgba(37,211,102,0.35)",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "#1ebe58"}
+            onMouseLeave={e => e.currentTarget.style.background = "#25D366"}>
+            <Save size={14} /> Save Reminder Schedule
+          </button>
+        </div>
+      )}
+
 
       {/* ── BLACKOUT DATES & STAFF ROLES (Owner & Manager) ── */}
       {isAdminRole && (<>
