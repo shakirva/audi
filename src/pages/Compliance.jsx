@@ -220,7 +220,7 @@ export default function Compliance() {
 
       {/* Controls */}
       <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 8, background: "#f1f5f9", padding: 4, borderRadius: 12 }}>
+        <div style={{ display: "flex", gap: 8, background: "#f1f5f9", padding: 4, borderRadius: 12, overflowX: "auto", maxWidth: "100%", whiteSpace: "nowrap" }}>
           {[
             { id: "ALL", label: "All" },
             { id: "VALID", label: "Valid" },
@@ -248,7 +248,7 @@ export default function Compliance() {
           ))}
         </div>
         
-        <div style={{ position: "relative", width: 300 }}>
+        <div style={{ position: "relative", flex: "1 1 250px", maxWidth: "100%" }}>
           <Search size={18} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
           <input
             type="text"
