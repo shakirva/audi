@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle } from "lucide-react";
+import { Search, Filter, RefreshCw, Wallet, ArrowUpRight, Banknote, CreditCard, Calendar, Clock, LayoutGrid, List, MessageCircle, Printer } from "lucide-react";
 import { bookingsAPI, paymentsAPI, accountsAPI, settingsAPI, vendorsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
+import { generateVendorReceipt } from "../../utils/documentGenerator";
 
 export default function PaymentsAndReceipts() {
   const { addToast } = useToast();
@@ -351,6 +352,7 @@ export default function PaymentsAndReceipts() {
                   <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Mode</th>
                   <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Amount</th>
                   <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Description</th>
+                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt</th>
                 </tr>
               </thead>
               <tbody>
@@ -367,6 +369,11 @@ export default function PaymentsAndReceipts() {
                     </td>
                     <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(vp.amount)}</td>
                     <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 12 }}>{vp.notes || vp.description || "—"}</td>
+                    <td style={{ padding: "14px 20px", textAlign: "center" }}>
+                      <button onClick={() => generateVendorReceipt(vp)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <Printer size={14} /> Receipt
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -374,7 +381,7 @@ export default function PaymentsAndReceipts() {
                 <tr style={{ background: "#f8fafc", borderTop: "2px solid #e2e8f0" }}>
                   <td colSpan={4} style={{ padding: "14px 20px", fontWeight: 800, color: "#0f172a", fontSize: 14 }}>Total Vendor Income</td>
                   <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 800, color: "#16a34a", fontSize: 16 }}>{formatMoney(vendorPayments.reduce((s, vp) => s + Number(vp.amount || 0), 0))}</td>
-                  <td></td>
+                  <td colSpan={2}></td>
                 </tr>
               </tfoot>
             </table>
@@ -392,7 +399,12 @@ export default function PaymentsAndReceipts() {
                   <span style={{ fontWeight: 700, color: "#16a34a", fontSize: 15 }}>{formatMoney(vp.amount)}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{vp.Vendor?.name || vp.Customer?.name || "—"}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, marginBottom: 12 }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                   <button onClick={() => generateVendorReceipt(vp)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <Printer size={14} /> Receipt
+                   </button>
+                </div>
               </div>
             ))}
           </div>
