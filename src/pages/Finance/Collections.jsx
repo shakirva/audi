@@ -244,8 +244,8 @@ export default function Collections() {
                         {p.paymentMode}
                       </span>
                     </td>
-                    <td style={{ padding: "16px 24px", color: p.isVendorPayment ? "#ef4444" : "#16a34a", fontWeight: 700 }}>
-                      {p.isVendorPayment ? "-" : ""}₹{Number(p.amount).toLocaleString()}
+                    <td style={{ padding: "16px 24px", color: "#16a34a", fontWeight: 700 }}>
+                      ₹{Number(p.amount).toLocaleString()}
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <span style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "1px solid #e2e8f0" }}>
@@ -319,8 +319,8 @@ export default function Collections() {
                       </>
                     )}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: p.isVendorPayment ? "#ef4444" : "#16a34a" }}>
-                    {p.isVendorPayment ? "-" : ""}₹{Number(p.amount).toLocaleString()}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
+                    ₹{Number(p.amount).toLocaleString()}
                   </div>
                 </div>
                 

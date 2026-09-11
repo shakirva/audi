@@ -1056,7 +1056,7 @@ class AccountingEngine {
 
     const totalOutstanding = totalBooked - totalReceived;
 
-    // ── VENDOR PAYMENTS (cash outflows to vendors) ──
+    // ── VENDOR PAYMENTS (income from vendors — e.g. catering teams paying auditorium) ──
     let vendorPaymentWhere = { tenantId, environmentId, status: "Completed" };
     if (startDate && endDate) {
       vendorPaymentWhere.date = { [Op.between]: [startDate, endDate] };
@@ -1076,37 +1076,52 @@ class AccountingEngine {
       raw: true
     });
 
-    // Merge vendor payments into expenses for the report
-    const allExpenses = [...expenseItems];
-    if (totalVendorPayments > 0) {
-      allExpenses.push({ code: "VP", name: "Vendor Payments", amount: totalVendorPayments });
-    }
-    const totalAllExpenses = totalExpenses + totalVendorPayments;
+    // Vendor payments are INCOME (vendors pay the auditorium)
+    const totalAllReceived = totalReceived + totalVendorPayments;
+
+    // Merge vendor payment modes into customer payment modes for unified income display
+    const allPaymentsByMode = [...paymentsByMode.map(p => ({
+      mode: p.paymentMode,
+      total: parseInt(p.total) || 0,
+      count: parseInt(p.count) || 0
+    }))];
+    
+    // Add vendor payments by mode (tagged separately)
+    vendorPaymentsByMode.forEach(vp => {
+      const existing = allPaymentsByMode.find(p => p.mode === vp.paymentMode);
+      if (existing) {
+        existing.total += parseInt(vp.total) || 0;
+        existing.count += parseInt(vp.count) || 0;
+      } else {
+        allPaymentsByMode.push({
+          mode: vp.paymentMode,
+          total: parseInt(vp.total) || 0,
+          count: parseInt(vp.count) || 0
+        });
+      }
+    });
 
     return {
       // Accrual basis (journal ledgers)
       income: incomeItems,
       totalIncome,
-      expenses: allExpenses,
-      totalExpenses: totalAllExpenses,
-      netProfit: totalIncome - totalAllExpenses,
-      // Cash basis (actual payments)
+      expenses: expenseItems,
+      totalExpenses,
+      netProfit: totalIncome - totalExpenses,
+      // Cash basis (actual payments + vendor income)
       cashBasis: {
-        totalReceived,
+        totalReceived: totalAllReceived,
+        totalCustomerReceived: totalReceived,
+        totalVendorReceived: totalVendorPayments,
         totalBooked,
         totalOutstanding,
-        totalVendorPayments,
-        paymentsByMode: paymentsByMode.map(p => ({
-          mode: p.paymentMode,
-          total: parseInt(p.total) || 0,
-          count: parseInt(p.count) || 0
-        })),
+        paymentsByMode: allPaymentsByMode,
         vendorPaymentsByMode: vendorPaymentsByMode.map(p => ({
           mode: p.paymentMode,
           total: parseInt(p.total) || 0,
           count: parseInt(p.count) || 0
         })),
-        netCashProfit: totalReceived - totalAllExpenses,
+        netCashProfit: totalAllReceived - totalExpenses,
       }
     };
   }

@@ -152,13 +152,13 @@ export default function FinanceReports() {
 
               {/* Main Content: Income + Expenses */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Income (Cash Received) */}
+                {/* Income (Cash Received — Customers + Vendors) */}
                 <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ background: "#dcfce7", padding: 8, borderRadius: 8, color: "#16a34a" }}><TrendingUp size={20} /></div>
                     <div>
                       <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Income (Cash Received)</h2>
-                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>Actual payments collected from customers</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>Customer bookings + Vendor collections</p>
                     </div>
                   </div>
                   <div style={{ padding: 24 }}>
@@ -178,23 +178,41 @@ export default function FinanceReports() {
                         </div>
                       ))
                     )}
+                    {/* Show vendor income breakdown if available */}
+                    {cash.totalVendorReceived > 0 && (
+                      <div style={{ marginTop: 12, padding: "12px 0", borderTop: "2px solid #e2e8f0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: "#334155", fontWeight: 600, fontSize: 13 }}>Customer Collections</span>
+                          </div>
+                          <span style={{ color: "#16a34a", fontWeight: 600, fontSize: 14 }}>{fmt(cash.totalCustomerReceived)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: "#334155", fontWeight: 600, fontSize: 13 }}>Vendor Collections</span>
+                            <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, border: "1px solid #fed7aa" }}>Vendor</span>
+                          </div>
+                          <span style={{ color: "#16a34a", fontWeight: 600, fontSize: 14 }}>{fmt(cash.totalVendorReceived)}</span>
+                        </div>
+                      </div>
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
                       <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Received</span>
                       <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 18 }}>{fmt(cash.totalReceived)}</span>
                     </div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 8 }}>
-                      * Only completed payments are counted as income
+                      * Includes customer bookings + vendor payments (catering, etc.)
                     </div>
                   </div>
                 </div>
 
-                {/* Expenses & Vendor Payments */}
+                {/* Expenses */}
                 <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ background: "#fee2e2", padding: 8, borderRadius: 8, color: "#dc2626" }}><TrendingDown size={20} /></div>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Expenses & Vendor Payments</h2>
-                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>All recorded expenses and vendor outflows</p>
+                      <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Expenses & Direct Costs</h2>
+                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>All recorded expenses from ledgers</p>
                     </div>
                   </div>
                   <div style={{ padding: 24 }}>
@@ -202,13 +220,8 @@ export default function FinanceReports() {
                       <p style={{ color: "#94a3b8", margin: 0 }}>No expenses recorded.</p>
                     ) : (
                       report.expenses.map((item) => (
-                        <div key={item.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px dashed #e2e8f0" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ color: "#475569", fontWeight: 500 }}>{item.name}</span>
-                            {item.code === "VP" && (
-                              <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, border: "1px solid #fed7aa" }}>Vendor</span>
-                            )}
-                          </div>
+                        <div key={item.code} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px dashed #e2e8f0" }}>
+                          <span style={{ color: "#475569", fontWeight: 500 }}>{item.name}</span>
                           <span style={{ color: "#dc2626", fontWeight: 700 }}>{fmt(item.amount)}</span>
                         </div>
                       ))
