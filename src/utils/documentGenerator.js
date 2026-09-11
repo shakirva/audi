@@ -677,6 +677,154 @@ export const generateReceipt = async (payment, booking) => {
   downloadPDF(doc, `Receipt_${receiptNum}.pdf`);
 };
 
+export const generateVendorReceipt = async (payment) => {
+  const doc = new jsPDF();
+  const settings = await getSettings();
+  
+  // Header
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 44, "F");
+
+  doc.setTextColor(255, 255, 255);
+  
+  let textX = 14;
+  if (settings.logoUrl) {
+    try {
+      const imgData = await fetchImage(settings.logoUrl);
+      doc.addImage(imgData, 'PNG', 14, 10, 24, 24);
+      textX = 42;
+    } catch (e) {
+      console.warn("Failed to load logo", e);
+    }
+  }
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(settings.venueName || "VENUEZA", textX, 14);
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text(settings.location || "Premium Venue & Event Management", textX, 20);
+  
+  let contactStr = [];
+  if (settings.phone) contactStr.push(settings.phone);
+  if (settings.email) contactStr.push(settings.email);
+  
+  if (contactStr.length > 0) {
+    doc.text(contactStr.join(" | "), textX, 26);
+  }
+
+  if (settings.gstin) {
+    doc.text(`GSTIN: ${settings.gstin}`, textX, 32);
+  }
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("PAYMENT VOUCHER", 196, 14, { align: "right" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Date: ${formatDate(payment.paymentDate || payment.createdAt)}`, 196, 22, { align: "right" });
+  doc.text(`Voucher No: ${payment.paymentNumber || payment.id}`, 196, 28, { align: "right" });
+
+  // Receipt Body Border
+  doc.setDrawColor(200, 200, 200);
+  doc.setFillColor(255, 251, 235); // Warm amber tint for vendor
+  doc.roundedRect(14, 55, 182, 110, 3, 3, "FD");
+
+  // Content
+  doc.setTextColor(...textDark);
+  
+  // Paid To
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Paid To (Vendor):", 20, 68);
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${payment.Vendor?.name || payment.Customer?.name || "Vendor"}`, 70, 68);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(70, 70, 185, 70);
+
+  // The sum of
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("The sum of Rupees:", 20, 82);
+  
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  
+  const numToWords = (num) => {
+    const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+    if ((num = num.toString()).length > 9) return 'overflow';
+    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+    str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+    str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+    str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+    str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    return str.trim() + ' Only';
+  };
+  
+  doc.text(numToWords(payment.amount), 65, 82);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 84, 185, 84);
+
+  // Towards
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Towards:", 20, 96);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${payment.notes || "Vendor Payment"}`, 65, 96);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 98, 185, 98);
+
+  // Payment Date
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Payment Date:", 20, 110);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatDate(payment.paymentDate || payment.createdAt), 65, 110);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 112, 185, 112);
+
+  // By Mode
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("By Payment Mode:", 20, 124);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${payment.paymentMode || "Cash"} ${payment.referenceNumber ? `(Ref: ${payment.referenceNumber})` : ""}`, 65, 124);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(65, 126, 185, 126);
+
+  // Amount Box
+  doc.setFillColor(254, 243, 199); // amber-100
+  doc.roundedRect(20, 149, 60, 20, 2, 2, "F");
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(239, 68, 68); // Red for outgoing payment
+  doc.text(`₹ ${Number(payment.amount || 0).toLocaleString()}/-`, 50, 162, { align: "center" });
+
+  // Signatures
+  doc.setTextColor(...textDark);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setDrawColor(100, 116, 139);
+  doc.line(130, 162, 185, 162);
+  doc.text("Authorized Signatory", 157.5, 168, { align: "center" });
+  
+  // Note
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(100, 116, 139);
+  doc.text("This is a vendor payment voucher.", 20, 185);
+
+  drawFooter(doc, settings);
+  downloadPDF(doc, `Vendor_Payment_${payment.paymentNumber || payment.id}.pdf`);
+};
+
 export const generateAttendanceReport = async (monthName, year, attendanceData, usersData) => {
   const doc = new jsPDF();
   const settings = await getSettings();

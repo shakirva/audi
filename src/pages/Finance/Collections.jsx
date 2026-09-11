@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Wallet, Search, ArrowRight, Printer, Trash2, Edit2 } from "lucide-react";
 import { paymentsAPI, vendorsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
-import { generateReceipt } from "../../utils/documentGenerator";
+import { generateReceipt, generateVendorReceipt } from "../../utils/documentGenerator";
 import EditPaymentModal from "../../components/EditPaymentModal";
 import { useConfirm } from "../../components/ConfirmProvider";
 
@@ -260,14 +260,12 @@ export default function Collections() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
-                      {!p.isVendorPayment && (
-                        <button 
-                          onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
-                          style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#334155" }}
-                        >
-                          <Printer size={14} /> Receipt
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => p.isVendorPayment ? generateVendorReceipt(p) : generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
+                        style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: p.isVendorPayment ? "#f97316" : "#334155" }}
+                      >
+                        <Printer size={14} /> {p.isVendorPayment ? "Voucher" : "Receipt"}
+                      </button>
                     </td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
                       {!p.isVendorPayment && (
@@ -348,14 +346,12 @@ export default function Collections() {
                 </div>
                 
                 <div style={{ display: "flex", gap: 8 }}>
-                  {!p.isVendorPayment && (
-                    <button 
-                      onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
-                      style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155" }}
-                    >
-                      <Printer size={16} /> Receipt
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => p.isVendorPayment ? generateVendorReceipt(p) : generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
+                    style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: p.isVendorPayment ? "#f97316" : "#334155" }}
+                  >
+                    <Printer size={16} /> {p.isVendorPayment ? "Voucher" : "Receipt"}
+                  </button>
                   {!p.isVendorPayment && (
                     <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
                       <Edit2 size={16} />
