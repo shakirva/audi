@@ -183,7 +183,7 @@ export default function Compliance() {
   });
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", paddingBottom: 100 }}>
+    <div style={{ padding: "clamp(16px, 4vw, 24px)", maxWidth: 1200, margin: "0 auto", paddingBottom: 100 }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
         <div style={{ flex: "1 1 min-content" }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
@@ -278,7 +278,7 @@ export default function Compliance() {
           <p style={{ margin: 0, color: "#64748b" }}>Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 350px), 1fr))", gap: 16 }}>
           {filteredDocs.map(doc => (
             <div key={doc.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
