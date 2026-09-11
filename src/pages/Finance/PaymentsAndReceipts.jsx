@@ -73,6 +73,30 @@ export default function PaymentsAndReceipts() {
     }
   };
 
+  const sendVendorPaymentReminder = (vendor) => {
+    const total = Number(vendor.totalBilled) || 0;
+    const collected = Number(vendor.totalPaid) || 0;
+    const balance = Math.max(0, total - collected);
+    
+    if (balance <= 0) {
+      alert("No pending balance for this vendor.");
+      return;
+    }
+    
+    const venueNameLocal = settings?.venueName || "Our Auditorium";
+    const msg = `Hello ${vendor.name},\n\nThis is a gentle reminder from ${venueNameLocal} regarding your outstanding balance of ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    
+    const num = (vendor.phone || "").replace(/\D/g, "");
+    if (num) {
+      const phoneNum = num.length === 10 ? `91${num}` : num;
+      const text = encodeURIComponent(msg);
+      const waUrl = `https://wa.me/${phoneNum}?text=${text}`;
+      window.open(waUrl, "_blank");
+    } else {
+      alert("No phone number available for this vendor.");
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -389,6 +413,11 @@ export default function PaymentsAndReceipts() {
                       </td>
                       <td style={{ padding: "14px 20px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          {outstanding > 0 && (
+                            <button onClick={() => sendVendorPaymentReminder(vendor)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }} title="Send Balance Alert">
+                              <MessageCircle size={14} />
+                            </button>
+                          )}
                           <button onClick={() => setHistoryVendor(vendor)} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                             History
                           </button>
@@ -441,11 +470,16 @@ export default function PaymentsAndReceipts() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => setHistoryVendor(vendor)} style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {outstanding > 0 && (
+                      <button onClick={() => sendVendorPaymentReminder(vendor)} style={{ flex: "1 1 auto", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#166534", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <MessageCircle size={16} /> Alert
+                      </button>
+                    )}
+                    <button onClick={() => setHistoryVendor(vendor)} style={{ flex: "1 1 auto", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                       History
                     </button>
-                    <button onClick={() => setCollectPaymentVendor(vendor)} style={{ flex: 1, background: "#0f172a", border: "none", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <button onClick={() => setCollectPaymentVendor(vendor)} style={{ flex: "1 1 auto", background: "#0f172a", border: "none", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                       Collect
                     </button>
                   </div>
