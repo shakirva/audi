@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, CalendarDays, FileText, IndianRupee, Store, Set
 import { useRole } from "../context/RoleContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { settingsAPI } from "../services/api";
+import { settingsAPI, complianceAPI } from "../services/api";
 import { BASE_NAVIGATION } from "../constants/navigation";
 
 export default function Sidebar({ open, onClose }) {
@@ -11,6 +11,7 @@ export default function Sidebar({ open, onClose }) {
   const { role, user, logout, venueInfo, setVenueInfo, activeEnvironment, moduleAccess, subscription } = useRole();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
+  const [complianceBadge, setComplianceBadge] = useState({ expired: 0, expiringSoon: 0 });
 
   // Load venue info from settings API on mount (if not already cached)
   useEffect(() => {
@@ -27,6 +28,11 @@ export default function Sidebar({ open, onClose }) {
         }
       }).catch(() => {});
     }
+    // Fetch compliance badge counts
+    complianceAPI.getSummary().then(res => {
+      const s = res.data?.data;
+      if (s) setComplianceBadge({ expired: s.expired || 0, expiringSoon: s.expiringSoon || 0 });
+    }).catch(() => {});
   }, []);
 
   const PRIMARY_COLOR = "#0D2418";
@@ -143,7 +149,26 @@ export default function Sidebar({ open, onClose }) {
                   }}
                 >
                   <item.icon size={20} color={isActive ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ fontSize: 15, fontWeight: isActive ? 700 : 500 }}>{item.label}</span>}
+                  {!collapsed && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                      <span style={{ fontSize: 15, fontWeight: isActive ? 700 : 500 }}>{item.label}</span>
+                      {item.path === "/compliance" && (complianceBadge.expired > 0 || complianceBadge.expiringSoon > 0) && (
+                        <span style={{
+                          background: complianceBadge.expired > 0 ? "#ef4444" : "#f59e0b",
+                          color: "#fff",
+                          fontSize: 10,
+                          fontWeight: 800,
+                          padding: "2px 6px",
+                          borderRadius: 8,
+                          minWidth: 18,
+                          textAlign: "center",
+                          lineHeight: "14px",
+                        }}>
+                          {complianceBadge.expired + complianceBadge.expiringSoon}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               </Link>
             );

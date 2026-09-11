@@ -285,6 +285,22 @@ export const leavesAPI = {
   remove: (id) => api.delete(`/v1/leaves/${id}`),
 };
 
+// ═══════════════════════════════════
+// COMPLIANCE & DOCUMENTS
+// ═══════════════════════════════════
+export const complianceAPI = {
+  getAll: (params) => api.get("/v1/compliance", { params }),
+  get: (id) => api.get(`/v1/compliance/${id}`),
+  getSummary: () => api.get("/v1/compliance/summary"),
+  getDefaultTypes: () => api.get("/v1/compliance/types/defaults"),
+  create: (data) => api.post("/v1/compliance", data),
+  update: (id, data) => api.put(`/v1/compliance/${id}`, data),
+  uploadFile: (id, formData) => api.post(`/v1/compliance/${id}/upload`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  remove: (id) => api.delete(`/v1/compliance/${id}`),
+};
+
 export default api;
 
 // ═══════════════════════════════════

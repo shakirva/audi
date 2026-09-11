@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Briefcase, CreditCard, UsersRound, CheckSquare, BarChart3, Settings, Database } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, CreditCard, UsersRound, CheckSquare, BarChart3, Settings, Database, ShieldCheck } from "lucide-react";
 
 export const BASE_NAVIGATION = [
   { type: "link", path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations", "Reception", "Accounts"] },
@@ -56,6 +56,7 @@ export const BASE_NAVIGATION = [
       { path: "/reports/customer", label: "Customer Reports" }
     ]
   },
+  { type: "link", path: "/compliance", icon: ShieldCheck, label: "Compliance & Documents", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"] },
   { 
     type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
     children: [

@@ -33,6 +33,7 @@ const inventoryRoutes = require("./inventory");
 const vendorRoutes = require("./vendors");
 const reportRoutes = require("./reports");
 const utilsRoutes = require("./utils");
+const complianceRoutes = require("./compliance");
 
 // Mount routes
 router.use("/bookings", bookingRoutes);
@@ -57,6 +58,7 @@ router.use("/inventory", inventoryRoutes);
 router.use("/vendors", vendorRoutes);
 router.use("/reports", reportRoutes);
 router.use("/utils", utilsRoutes);
+router.use("/compliance", complianceRoutes);
 
 // Future v1 routes will be added here:
 // router.use("/enquiries", enquiryRoutes);

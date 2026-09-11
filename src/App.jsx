@@ -37,6 +37,7 @@ import Attendance from "./pages/Attendance";
 import LeaveRequests from "./pages/LeaveRequests";
 import Vendors from "./pages/Vendors";
 import Inventory from "./pages/Inventory";
+import Compliance from "./pages/Compliance";
 import Subscriptions from "./pages/Subscriptions";
 import SuperAdminSubscriptions from "./pages/SuperAdminSubscriptions";
 import Feedback from "./pages/Feedback";
@@ -139,6 +140,7 @@ function AdminLayout() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leaves" element={<LeaveRequests />} />
+            <Route path="/compliance" element={<ProtectedRoute permission="canViewSettings"><Compliance /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>

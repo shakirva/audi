@@ -44,6 +44,7 @@ const {
 const Inventory = require("./Inventory");
 const VendorBill = require("./VendorBill");
 const VendorPayment = require("./VendorPayment");
+const ComplianceDocument = require("./ComplianceDocument");
 
 // ── Tenant has many ──
 Tenant.hasMany(Environment, { foreignKey: "tenantId", onDelete: "CASCADE" });
@@ -78,6 +79,7 @@ Tenant.hasMany(LeaveRequest, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(Inventory, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(VendorBill, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(VendorPayment, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(ComplianceDocument, { foreignKey: "tenantId", onDelete: "CASCADE" });
 
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -107,6 +109,7 @@ Environment.hasMany(Voucher, { foreignKey: "environmentId", onDelete: "CASCADE" 
 Environment.hasMany(Inventory, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(VendorBill, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(VendorPayment, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(ComplianceDocument, { foreignKey: "environmentId", onDelete: "CASCADE" });
 
 // ── Customer has many ──
 Customer.hasMany(Booking, { foreignKey: "customerId", onDelete: "SET NULL" });
@@ -191,6 +194,7 @@ LeaveRequest.belongsTo(Tenant, { foreignKey: "tenantId" });
 Inventory.belongsTo(Tenant, { foreignKey: "tenantId" });
 VendorBill.belongsTo(Tenant, { foreignKey: "tenantId" });
 VendorPayment.belongsTo(Tenant, { foreignKey: "tenantId" });
+ComplianceDocument.belongsTo(Tenant, { foreignKey: "tenantId" });
 
 // ── Belongs to Environment ──
 Booking.belongsTo(Environment, { foreignKey: "environmentId" });
@@ -219,6 +223,9 @@ Voucher.belongsTo(Environment, { foreignKey: "environmentId" });
 Inventory.belongsTo(Environment, { foreignKey: "environmentId" });
 VendorBill.belongsTo(Environment, { foreignKey: "environmentId" });
 VendorPayment.belongsTo(Environment, { foreignKey: "environmentId" });
+ComplianceDocument.belongsTo(Environment, { foreignKey: "environmentId" });
+ComplianceDocument.belongsTo(User, { as: "ResponsibleUser", foreignKey: "responsibleUserId" });
+User.hasMany(ComplianceDocument, { foreignKey: "responsibleUserId" });
 
 // ── Journal/Voucher associations ──
 
@@ -295,6 +302,7 @@ module.exports = {
   ChartOfAccount, JournalEntry, JournalEntryLine, Voucher, FinancialPeriod, Attendance, LeaveRequest, Feedback,
   MasterHall, MasterPackage, MasterService, MasterEventType, MasterLeadSource, MasterPaymentMode, MasterBank, MasterExpenseCategory, Inventory,
   VendorBill, VendorPayment,
+  ComplianceDocument,
   DemoRequest
 };
 

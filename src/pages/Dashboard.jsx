@@ -8,8 +8,8 @@ import {
 import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
-import { bookingsAPI, enquiriesAPI } from "../services/api";
-import { CreditCard, FileText } from "lucide-react";
+import { bookingsAPI, enquiriesAPI, complianceAPI } from "../services/api";
+import { CreditCard, FileText, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const BRAND = {
   primary: "#1B4332",
@@ -70,6 +70,7 @@ function ExecutiveCockpit() {
   const [distData, setDistData] = React.useState([]);
   const [todaysEvents, setTodaysEvents] = React.useState([]);
   const [thisWeeksEvents, setThisWeeksEvents] = React.useState([]);
+  const [complianceAlerts, setComplianceAlerts] = React.useState(null);
 
   React.useEffect(() => {
     loadDashboard();
@@ -77,11 +78,16 @@ function ExecutiveCockpit() {
 
   const loadDashboard = async () => {
     try {
-      const [statsRes, bookingsRes, enqRes] = await Promise.all([
+      const [statsRes, bookingsRes, enqRes, compRes] = await Promise.all([
         bookingsAPI.getStats(),
         bookingsAPI.getAll({ limit: 1000 }),
-        enquiriesAPI.getAll({ limit: 1000 })
+        enquiriesAPI.getAll({ limit: 1000 }),
+        complianceAPI.getSummary().catch(() => null)
       ]);
+
+      if (compRes?.data?.data) {
+        setComplianceAlerts(compRes.data.data);
+      }
 
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enqRes.data?.data || [];
@@ -302,6 +308,34 @@ function ExecutiveCockpit() {
           </div>
         </div>
       </div>
+
+      {/* Row 3: Compliance & Document Alerts (Show only if there are urgent items or expired items) */}
+      {complianceAlerts && (complianceAlerts.urgentItems?.length > 0) && (
+        <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", marginBottom: 24, border: "1px solid #fecaca", background: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#991b1b", display: "flex", alignItems: "center", gap: 8 }}>
+              <ShieldAlert size={20} color="#ef4444" /> Compliance Action Required
+            </h3>
+            <button onClick={() => navigate("/compliance")} style={{ background: "#fef2f2", color: "#ef4444", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+              View All Documents
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+            {complianceAlerts.urgentItems.map(item => (
+              <div key={item.id} style={{ background: item.status === "EXPIRED" ? "#fef2f2" : "#fffbeb", padding: 16, borderRadius: 16, border: `1px solid ${item.status === "EXPIRED" ? "#fecaca" : "#fde68a"}` }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: item.status === "EXPIRED" ? "#ef4444" : "#d97706", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
+                  {item.documentType}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{item.documentName}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: item.status === "EXPIRED" ? "#b91c1c" : "#b45309" }}>
+                  {item.statusMessage}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
