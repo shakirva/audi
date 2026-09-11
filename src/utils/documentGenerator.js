@@ -12,18 +12,7 @@ const getSettings = async () => {
 };
 
 const downloadPDF = (doc, filename) => {
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 200);
+  doc.save(filename);
 };
 
 const formatDate = (dateInput) => {
