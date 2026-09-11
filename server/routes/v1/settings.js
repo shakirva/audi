@@ -24,6 +24,7 @@ const router = express.Router();
 const { checkHallLimit } = require("../../middleware/planGate");
 
 router.get("/public/:slug", settingsController.getPublic);
+router.post("/public/:slug/enquiry", settingsController.createPublicEnquiry);
 router.get("/", auth, tenantScope, subscriptionGuard, settingsController.get);
 router.put("/", auth, requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), tenantScope, subscriptionGuard, checkHallLimit, settingsController.update);
 

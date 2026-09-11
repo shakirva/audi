@@ -15,6 +15,17 @@ class SettingsService {
 
     const settings = await settingsRepository.findOrCreateSettings(tenant.id, env.id);
     
+    const bookings = await Booking.findAll({
+      where: {
+        tenantId: tenant.id,
+        environmentId: env.id,
+        status: {
+          [require("sequelize").Op.in]: ["Confirmed", "Completed", "Pending Payment"]
+        }
+      },
+      attributes: ['date', 'session', 'status']
+    });
+    
     return {
       name: settings.venueName,
       location: settings.location,
@@ -23,8 +34,33 @@ class SettingsService {
       blackoutDates: settings.blackoutDates || [],
       gallery: settings.gallery || [],
       eventTypes: settings.eventTypes || ["Wedding", "Reception", "Engagement", "Birthday", "Conference", "Anniversary", "Baptism", "Other"],
-      sessions: settings.sessions || [{ name: "Morning", time: "09:00 AM - 02:00 PM" }, { name: "Evening", time: "04:00 PM - 10:00 PM" }, { name: "Full Day", time: "09:00 AM - 10:00 PM" }]
+      sessions: settings.sessions || [{ name: "Morning", time: "09:00 AM - 02:00 PM" }, { name: "Evening", time: "04:00 PM - 10:00 PM" }, { name: "Full Day", time: "09:00 AM - 10:00 PM" }],
+      bookings: bookings || []
     };
+  }
+
+  async createPublicEnquiry(slug, data) {
+    const tenant = await Tenant.findOne({ where: { slug, status: 'active' } });
+    if (!tenant) throw new NotFoundError("Tenant");
+
+    const env = await Environment.findOne({ where: { tenantId: tenant.id, type: 'production' } });
+    if (!env) throw new NotFoundError("Production environment");
+
+    const { Enquiry } = require("../models");
+    
+    return Enquiry.create({
+      tenantId: tenant.id,
+      environmentId: env.id,
+      enquirerName: data.customerName,
+      enquirerPhone: data.phone,
+      eventType: data.eventType,
+      tentativeDate: data.date,
+      session: data.session,
+      guestCount: data.guests ? parseInt(data.guests) : 0,
+      remarks: data.notes,
+      source: "Public Website",
+      status: "New Enquiry"
+    });
   }
 
   async getSettings(tenantId, environmentId, environmentType) {

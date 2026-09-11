@@ -109,6 +109,7 @@ export const feedbackAPI = {
 export const settingsAPI = {
   get: () => api.get("/v1/settings"),
   getPublic: (slug) => api.get(`/v1/settings/public/${slug}`),
+  createPublicEnquiry: (slug, data) => api.post(`/v1/settings/public/${slug}/enquiry`, data),
   update: (data) => api.put("/v1/settings", data),
   uploadLogo: (formData) => api.post("/v1/settings/upload-logo", formData, {
     headers: { "Content-Type": "multipart/form-data" }

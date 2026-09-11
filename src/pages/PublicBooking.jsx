@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, CheckCircle, X, Play, Images } from "lucide-react";
 import Logo from "../components/Logo";
 import { useParams } from "react-router-dom";
-import { useBookings } from "../context/BookingsContext";
 import { useToast, ToastProvider } from "../components/Toast";
-import { bookingsAPI, settingsAPI } from "../services/api";
+import { settingsAPI } from "../services/api";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -310,10 +309,9 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions }) {
 
 function PublicBookingInner() {
   const { slug } = useParams();
-  const { bookings } = useBookings();
   const { addToast } = useToast();
   
-  const [venueInfo, setVenueInfo] = useState({ name: "Loading...", location: "", phone: "", halls: [], gallery: [] });
+  const [venueInfo, setVenueInfo] = useState({ name: "Loading...", location: "", phone: "", halls: [], gallery: [], bookings: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -348,7 +346,7 @@ function PublicBookingInner() {
   const handleDayClick = (day) => {
     const ds = getDateStr(day);
     if (ds < todayStr) return;
-    const status = getDayStatus(ds, bookings, venueInfo.blackoutDates || []);
+    const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || []);
     if (status === "blocked") return;
     if (status === "full") { addToast("This date is fully booked. Please choose another date.", "error"); return; }
     setSelectedDate(ds);
@@ -357,8 +355,7 @@ function PublicBookingInner() {
 
   const handleSubmit = async (form) => {
     try {
-      await bookingsAPI.createEnquiry({
-        tenantSlug: slug,
+      await settingsAPI.createPublicEnquiry(slug, {
         customerName: form.name,
         phone: form.phone,
         eventType: form.eventType,
@@ -366,10 +363,12 @@ function PublicBookingInner() {
         session: form.session,
         guests: form.guests,
         notes: form.notes,
-        hall: "Main Hall" // Public booking typically defaults to Main Hall or user can't select it here
+        hall: "Main Hall"
       });
     } catch (err) {
       console.error("Failed to save enquiry:", err);
+      addToast("Failed to save enquiry. Please try again.", "error");
+      return;
     }
 
     const msg = encodeURIComponent(
@@ -384,7 +383,7 @@ function PublicBookingInner() {
 
   // Count bookings per day for the current month
   const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const monthBookings = bookings.filter(b => b.date.startsWith(monthStr) && b.status !== "Cancelled");
+  const monthBookings = (venueInfo.bookings || []).filter(b => b.date.startsWith(monthStr) && b.status !== "Cancelled");
 
   const halls = venueInfo.halls || [];
 
@@ -473,13 +472,13 @@ function PublicBookingInner() {
             {cells.map((day, i) => {
               if (!day) return <div key={i} />;
               const ds = getDateStr(day);
-              const status = getDayStatus(ds, bookings, venueInfo.blackoutDates || []);
+              const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || []);
               const sc = STATUS_COLORS[status];
               const isToday = ds === todayStr;
               const isWeekend = [0, 6].includes((firstDay + day - 1) % 7);
               const isPast = status === "past";
               const isBlocked = status === "blocked";
-              const dayBks = bookings.filter(b => b.date === ds && b.status !== "Cancelled");
+              const dayBks = (venueInfo.bookings || []).filter(b => b.date === ds && b.status !== "Cancelled");
 
               return (
                 <div

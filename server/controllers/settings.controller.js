@@ -11,6 +11,15 @@ class SettingsController {
     }
   }
 
+  async createPublicEnquiry(req, res, next) {
+    try {
+      const result = await settingsService.createPublicEnquiry(req.params.slug, req.body);
+      return sendSuccess(res, { data: result, message: "Enquiry submitted successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async get(req, res, next) {
     try {
       const result = await settingsService.getSettings(req.tenantId, req.environmentId, req.environmentType);
