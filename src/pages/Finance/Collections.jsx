@@ -264,15 +264,13 @@ export default function Collections() {
                         onClick={() => p.isVendorPayment ? generateVendorReceipt(p) : generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
                         style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: p.isVendorPayment ? "#f97316" : "#334155" }}
                       >
-                        <Printer size={14} /> {p.isVendorPayment ? "Voucher" : "Receipt"}
+                        <Printer size={14} /> Receipt
                       </button>
                     </td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
-                      {!p.isVendorPayment && (
-                        <button onClick={() => setEditPayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", marginRight: 12 }} title="Edit">
-                          <Edit2 size={16} />
-                        </button>
-                      )}
+                      <button onClick={() => setEditPayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", marginRight: 12 }} title="Edit">
+                        <Edit2 size={16} />
+                      </button>
                       <button onClick={() => handleDeletePayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
                         <Trash2 size={16} />
                       </button>
@@ -350,13 +348,11 @@ export default function Collections() {
                     onClick={() => p.isVendorPayment ? generateVendorReceipt(p) : generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
                     style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: p.isVendorPayment ? "#f97316" : "#334155" }}
                   >
-                    <Printer size={16} /> {p.isVendorPayment ? "Voucher" : "Receipt"}
+                    <Printer size={16} /> Receipt
                   </button>
-                  {!p.isVendorPayment && (
-                    <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
-                      <Edit2 size={16} />
-                    </button>
-                  )}
+                  <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
+                    <Edit2 size={16} />
+                  </button>
                   <button onClick={() => handleDeletePayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fee2e2", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#ef4444" }} title="Delete">
                     <Trash2 size={16} />
                   </button>

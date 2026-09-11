@@ -199,6 +199,7 @@ export const vendorsAPI = {
   getPayments: (vendorId) => api.get(`/v1/vendors/${vendorId}/payments`),
   getAllPayments: () => api.get("/v1/vendors/all-payments"),
   createPayment: (vendorId, data) => api.post(`/v1/vendors/${vendorId}/payments`, data),
+  updatePayment: (vendorId, paymentId, data) => api.put(`/v1/vendors/${vendorId}/payments/${paymentId}`, data),
   deletePayment: (vendorId, paymentId) => api.delete(`/v1/vendors/${vendorId}/payments/${paymentId}`),
   // Ledger
   getLedger: (vendorId) => api.get(`/v1/vendors/${vendorId}/ledger`),

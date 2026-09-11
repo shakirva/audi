@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
-import { paymentsAPI, usersAPI } from "../services/api";
+import { paymentsAPI, usersAPI, vendorsAPI } from "../services/api";
 import { useToast } from "./Toast";
 
 export default function EditPaymentModal({ open, payment, onClose, onSuccess }) {
@@ -92,13 +92,20 @@ export default function EditPaymentModal({ open, payment, onClose, onSuccess }) 
         finalNotes = `Collected By: ${collectedBy}\n${notes}`;
       }
 
-      await paymentsAPI.update(payment.id, {
+      const updateData = {
         amount: Number(amount),
         paymentMode: method,
         referenceNumber: finalRef,
         notes: finalNotes,
         paymentDate: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
-      });
+      };
+
+      if (payment.isVendorPayment) {
+        await vendorsAPI.updatePayment(payment.vendorId, payment._vendorPaymentId, updateData);
+      } else {
+        await paymentsAPI.update(payment.id, updateData);
+      }
+      
       addToast("Payment updated successfully!", "success");
       onSuccess();
     } catch (err) {

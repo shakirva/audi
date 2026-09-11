@@ -329,6 +329,50 @@ router.post("/:id/payments", async (req, res) => {
   }
 });
 
+// PUT /api/v1/vendors/:id/payments/:paymentId
+router.put("/:id/payments/:paymentId", async (req, res) => {
+  const { amount, paymentMode, referenceNumber, notes, paymentDate } = req.body;
+  const t = await sequelize.transaction();
+  try {
+    const payment = await VendorPayment.findOne({
+      where: { id: req.params.paymentId, vendorId: req.params.id, tenantId: req.tenantId, environmentId: req.environmentId },
+      include: [{ model: Vendor }],
+      transaction: t,
+    });
+    if (!payment) { await t.rollback(); return res.status(404).json({ success: false, error: "Payment not found" }); }
+    
+    // Reverse old entry
+    await accountingEngine.reverseVendorPayment(payment.id, req.user.id, "Payment Edited", req.tenantId, req.environmentId, t);
+    
+    // Update payment
+    await payment.update({
+      amount: amount || payment.amount,
+      paymentMode: paymentMode || payment.paymentMode,
+      referenceNumber: referenceNumber !== undefined ? referenceNumber : payment.referenceNumber,
+      description: notes !== undefined ? notes : payment.description,
+      date: paymentDate ? new Date(paymentDate) : payment.date
+    }, { transaction: t });
+    
+    // Create new entry
+    await accountingEngine.onVendorPaymentMade(payment, payment.Vendor, {
+      tenantId: req.tenantId, environmentId: req.environmentId,
+      createdBy: req.user.id, transaction: t,
+    });
+    
+    // Update bill status if linked
+    if (payment.vendorBillId) {
+      await updateBillStatus(payment.vendorBillId, t);
+    }
+    
+    await t.commit();
+    res.json({ success: true, data: payment });
+  } catch (error) {
+    await t.rollback();
+    console.error("Update vendor payment error:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to update vendor payment" });
+  }
+});
+
 // DELETE /api/v1/vendors/:id/payments/:paymentId
 router.delete("/:id/payments/:paymentId", async (req, res) => {
   const t = await sequelize.transaction();
