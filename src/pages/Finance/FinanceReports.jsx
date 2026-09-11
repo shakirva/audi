@@ -188,13 +188,13 @@ export default function FinanceReports() {
                   </div>
                 </div>
 
-                {/* Expenses */}
+                {/* Expenses & Vendor Payments */}
                 <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ padding: 24, borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ background: "#fee2e2", padding: 8, borderRadius: 8, color: "#dc2626" }}><TrendingDown size={20} /></div>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Expenses & Direct Costs</h2>
-                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>All recorded expenses from ledgers</p>
+                      <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Expenses & Vendor Payments</h2>
+                      <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>All recorded expenses and vendor outflows</p>
                     </div>
                   </div>
                   <div style={{ padding: 24 }}>
@@ -202,8 +202,13 @@ export default function FinanceReports() {
                       <p style={{ color: "#94a3b8", margin: 0 }}>No expenses recorded.</p>
                     ) : (
                       report.expenses.map((item) => (
-                        <div key={item.code} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px dashed #e2e8f0" }}>
-                          <span style={{ color: "#475569", fontWeight: 500 }}>{item.name}</span>
+                        <div key={item.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px dashed #e2e8f0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: "#475569", fontWeight: 500 }}>{item.name}</span>
+                            {item.code === "VP" && (
+                              <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, border: "1px solid #fed7aa" }}>Vendor</span>
+                            )}
+                          </div>
                           <span style={{ color: "#dc2626", fontWeight: 700 }}>{fmt(item.amount)}</span>
                         </div>
                       ))
