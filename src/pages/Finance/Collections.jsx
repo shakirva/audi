@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Wallet, Search, ArrowRight, Printer, Trash2, Edit2 } from "lucide-react";
-import { paymentsAPI, isPlanRestriction } from "../../services/api";
+import { paymentsAPI, vendorsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { generateReceipt } from "../../utils/documentGenerator";
 import EditPaymentModal from "../../components/EditPaymentModal";
@@ -28,8 +28,17 @@ export default function Collections() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const res = await paymentsAPI.getAll({ limit: 100 });
-      setPayments(res.data.data?.data || res.data.data || []);
+      const [custRes, vendorRes] = await Promise.all([
+        paymentsAPI.getAll({ limit: 100 }),
+        vendorsAPI.getAllPayments().catch(() => ({ data: { data: { data: [] } } }))
+      ]);
+      const custPayments = custRes.data.data?.data || custRes.data.data || [];
+      const vendorPayments = vendorRes.data.data?.data || vendorRes.data.data || [];
+      // Merge and sort by date (newest first)
+      const all = [...custPayments, ...vendorPayments].sort((a, b) => 
+        new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt)
+      );
+      setPayments(all);
     } catch (error) {
       if (!isPlanRestriction(error)) addToast("Failed to fetch collections", "error");
     } finally {
@@ -37,7 +46,7 @@ export default function Collections() {
     }
   };
 
-  const handleDeletePayment = async (id) => {
+  const handleDeletePayment = async (p) => {
     const isConfirmed = await confirm(
       "Are you sure you want to delete this payment collection? This will permanently remove it and affect associated ledgers.",
       {
@@ -49,7 +58,11 @@ export default function Collections() {
 
     if (isConfirmed) {
       try {
-        await paymentsAPI.remove(id);
+        if (p.isVendorPayment) {
+          await vendorsAPI.deletePayment(p.vendorId, p._vendorPaymentId);
+        } else {
+          await paymentsAPI.remove(p.id);
+        }
         addToast("Collection deleted successfully", "success");
         fetchPayments();
       } catch (err) {
@@ -74,7 +87,8 @@ export default function Collections() {
       (p.paymentNumber || "").toLowerCase().includes(sTerm) || 
       (p.Booking?.bookingId || "").toLowerCase().includes(sTerm) ||
       (p.amount ? p.amount.toString().includes(searchTerm) : false) ||
-      (p.Customer?.name || "").toLowerCase().includes(sTerm);
+      (p.Customer?.name || "").toLowerCase().includes(sTerm) ||
+      (p.Vendor?.name || "").toLowerCase().includes(sTerm);
     
     if (!matchesSearch) return false;
 
@@ -200,26 +214,43 @@ export default function Collections() {
                 </tr>
               ) : (
                 filtered.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9", background: p.isVendorPayment ? "#fffbeb" : "transparent" }}>
                     <td style={{ padding: "16px 24px", fontWeight: 600, color: "#334155" }}>
-                      {p.Receipts && p.Receipts.length > 0 ? p.Receipts[0].receiptNumber : p.paymentNumber}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {p.Receipts && p.Receipts.length > 0 ? p.Receipts[0].receiptNumber : p.paymentNumber}
+                        {p.isVendorPayment && (
+                          <span style={{ fontSize: 10, background: "#f97316", color: "#fff", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>Vendor</span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       {new Date(p.paymentDate || p.createdAt).toLocaleDateString()}
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
-                      <div style={{ fontWeight: 600, color: "#1e293b" }}>{p.Booking?.bookingId || "-"}</div>
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{p.Customer?.name || "-"}</div>
+                      {p.isVendorPayment ? (
+                        <>
+                          <div style={{ fontWeight: 600, color: "#f97316" }}>Vendor Payment</div>
+                          <div style={{ fontSize: 12, color: "#94a3b8" }}>{p.Vendor?.name || p.Customer?.name || "-"}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight: 600, color: "#1e293b" }}>{p.Booking?.bookingId || "-"}</div>
+                          <div style={{ fontSize: 12, color: "#94a3b8" }}>{p.Customer?.name || "-"}</div>
+                        </>
+                      )}
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <span style={{ display: "inline-block", padding: "4px 8px", background: "#f1f5f9", borderRadius: 4, fontSize: 12, fontWeight: 600 }}>
                         {p.paymentMode}
                       </span>
                     </td>
-                    <td style={{ padding: "16px 24px", color: "#16a34a", fontWeight: 700 }}>₹{Number(p.amount).toLocaleString()}</td>
+                    <td style={{ padding: "16px 24px", color: p.isVendorPayment ? "#ef4444" : "#16a34a", fontWeight: 700 }}>
+                      {p.isVendorPayment ? "-" : ""}₹{Number(p.amount).toLocaleString()}
+                    </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <span style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "1px solid #e2e8f0" }}>
                         {(() => {
+                          if (p.isVendorPayment) return p.Vendor?.name || "Vendor";
                           if (p.notes && p.notes.includes("Collected By:")) {
                             const match = p.notes.match(/Collected By:\s*([^\n]+)/);
                             if (match && match[1]) return match[1].trim();
@@ -229,18 +260,22 @@ export default function Collections() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
-                      <button 
-                        onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
-                        style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#334155" }}
-                      >
-                        <Printer size={14} /> Receipt
-                      </button>
+                      {!p.isVendorPayment && (
+                        <button 
+                          onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
+                          style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "6px 12px", borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#334155" }}
+                        >
+                          <Printer size={14} /> Receipt
+                        </button>
+                      )}
                     </td>
                     <td style={{ padding: "16px 24px", textAlign: "right" }}>
-                      <button onClick={() => setEditPayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", marginRight: 12 }} title="Edit">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => handleDeletePayment(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
+                      {!p.isVendorPayment && (
+                        <button onClick={() => setEditPayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", marginRight: 12 }} title="Edit">
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      <button onClick={() => handleDeletePayment(p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }} title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -261,6 +296,7 @@ export default function Collections() {
         ) : (
           filtered.map((p) => {
             const collector = (() => {
+              if (p.isVendorPayment) return p.Vendor?.name || "Vendor";
               if (p.notes && p.notes.includes("Collected By:")) {
                 const match = p.notes.match(/Collected By:\s*([^\n]+)/);
                 if (match && match[1]) return match[1].trim();
@@ -269,14 +305,26 @@ export default function Collections() {
             })();
             
             return (
-              <div key={p.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+              <div key={p.id} style={{ background: p.isVendorPayment ? "#fffbeb" : "#fff", borderRadius: 12, border: `1px solid ${p.isVendorPayment ? "#fed7aa" : "#e2e8f0"}`, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{p.Booking?.bookingId || "-"}</div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{p.Customer?.name || "-"}</div>
+                    {p.isVendorPayment ? (
+                      <>
+                        <div style={{ fontWeight: 700, color: "#f97316", fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
+                          Vendor Payment
+                          <span style={{ fontSize: 10, background: "#f97316", color: "#fff", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>Vendor</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{p.Vendor?.name || p.Customer?.name || "-"}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>{p.Booking?.bookingId || "-"}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{p.Customer?.name || "-"}</div>
+                      </>
+                    )}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
-                    ₹{Number(p.amount).toLocaleString()}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: p.isVendorPayment ? "#ef4444" : "#16a34a" }}>
+                    {p.isVendorPayment ? "-" : ""}₹{Number(p.amount).toLocaleString()}
                   </div>
                 </div>
                 
@@ -294,22 +342,26 @@ export default function Collections() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.paymentMode}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>Collected By</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>{p.isVendorPayment ? "Vendor" : "Collected By"}</div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{collector}</div>
                   </div>
                 </div>
                 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button 
-                    onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
-                    style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155" }}
-                  >
-                    <Printer size={16} /> Receipt
-                  </button>
-                  <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDeletePayment(p.id)} style={{ border: "1px solid #e2e8f0", background: "#fee2e2", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#ef4444" }} title="Delete">
+                  {!p.isVendorPayment && (
+                    <button 
+                      onClick={() => generateReceipt(p, { ...p.Booking, Customer: p.Customer })}
+                      style={{ flex: 1, border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155" }}
+                    >
+                      <Printer size={16} /> Receipt
+                    </button>
+                  )}
+                  {!p.isVendorPayment && (
+                    <button onClick={() => setEditPayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fff", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#3b82f6" }} title="Edit">
+                      <Edit2 size={16} />
+                    </button>
+                  )}
+                  <button onClick={() => handleDeletePayment(p)} style={{ border: "1px solid #e2e8f0", background: "#fee2e2", padding: "8px", borderRadius: 8, cursor: "pointer", color: "#ef4444" }} title="Delete">
                     <Trash2 size={16} />
                   </button>
                 </div>

@@ -1,15 +1,12 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, ContentContainer, Button, formatCurrency } from "../../components/ui/VDS";
 import PrintWrapper from "../../components/ui/PrintWrapper";
 import { Lock, Calculator, CheckCircle, Printer } from "lucide-react";
 
 const fetchCashClosing = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/finance/reports/cash-closing", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/finance/reports/cash-closing");
   return res.data.data;
 };
 

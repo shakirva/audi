@@ -28,7 +28,7 @@ const Voucher = sequelize.define("Voucher", {
 
   // Source tracking
   sourceModule: {
-    type: DataTypes.ENUM("Payment", "Expense", "Booking", "Refund", "Vendor", "Manual"),
+    type: DataTypes.ENUM("Payment", "Expense", "Booking", "Refund", "Vendor", "VendorBill", "VendorPayment", "Manual"),
     allowNull: false,
   },
   sourceId: { type: DataTypes.INTEGER, allowNull: true },

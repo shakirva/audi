@@ -201,17 +201,40 @@ export default function Sidebar({ open, onClose }) {
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 44, paddingBottom: 8 }}>
                         {item.children.map(child => {
                           const isChildActive = location.pathname === child.path;
+                          const isChildLocked = child.isAdvanced && isStarter;
+                          
                           return (
-                            <Link key={child.path} to={child.path} style={{ textDecoration: "none" }}>
-                              <div style={{ 
-                                padding: "8px 12px", borderRadius: 8, fontSize: 14, 
-                                color: isChildActive ? ACCENT_COLOR : "rgba(255,255,255,0.6)",
-                                fontWeight: isChildActive ? 700 : 500,
-                                background: isChildActive ? "rgba(212,160,23,0.1)" : "transparent"
-                              }}>
-                                {child.label}
-                              </div>
-                            </Link>
+                            <div key={child.path} onClick={() => {
+                              if (isChildLocked) {
+                                window.dispatchEvent(
+                                  new CustomEvent("plan-upgrade-required", {
+                                    detail: { feature: child.label, requiredPlan: "Professional" }
+                                  })
+                                );
+                              }
+                            }} style={{ cursor: "pointer" }}>
+                              {isChildLocked ? (
+                                <div style={{ 
+                                  padding: "8px 12px", borderRadius: 8, fontSize: 14, 
+                                  color: "rgba(255,255,255,0.4)",
+                                  fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "space-between"
+                                }}>
+                                  {child.label}
+                                  <Lock size={12} color="rgba(255,255,255,0.3)" />
+                                </div>
+                              ) : (
+                                <Link to={child.path} style={{ textDecoration: "none" }}>
+                                  <div style={{ 
+                                    padding: "8px 12px", borderRadius: 8, fontSize: 14, 
+                                    color: isChildActive ? ACCENT_COLOR : "rgba(255,255,255,0.6)",
+                                    fontWeight: isChildActive ? 700 : 500,
+                                    background: isChildActive ? "rgba(212,160,23,0.1)" : "transparent"
+                                  }}>
+                                    {child.label}
+                                  </div>
+                                </Link>
+                              )}
+                            </div>
                           );
                         })}
                       </div>

@@ -489,6 +489,71 @@ class AccountingEngine {
     await this.postJournal(data, transaction);
   }
 
+  // ═══════════════════════════════════
+  // VENDOR BILL (records expense + liability)
+  // ═══════════════════════════════════
+  async onVendorBillCreated(bill, vendor, { tenantId, environmentId, createdBy, transaction }) {
+    if (!bill.amount || bill.amount <= 0) return;
+
+    // Debit: Misc Expense (4008) — vendor cost is an expense
+    // Credit: Vendor Payable (2005) — we owe the vendor
+    await this.createEntry({
+      tenantId, environmentId,
+      date: bill.date || new Date(),
+      description: `Vendor Bill #${bill.billNumber} — ${vendor.name}`,
+      debitCode: "4008",   // Miscellaneous Expense
+      creditCode: "2005",  // Vendor Payable (Accounts Payable)
+      amount: parseFloat(bill.amount),
+      voucherType: "EV",   // Expense Voucher
+      sourceModule: "VendorBill",
+      sourceId: bill.id,
+      createdBy,
+      transaction,
+    });
+  }
+
+  // ═══════════════════════════════════
+  // VENDOR PAYMENT (reduces liability, money goes out)
+  // ═══════════════════════════════════
+  async onVendorPaymentMade(payment, vendor, { tenantId, environmentId, createdBy, transaction }) {
+    if (!payment.amount || payment.amount <= 0) return;
+
+    // paymentMode determines which account the money leaves from
+    const isCash = payment.paymentMode === "Cash";
+    const creditCode = isCash ? "1001" : "1002"; // Cash in Hand OR Bank Account
+
+    // Debit: Vendor Payable (2005) — reduce what we owe the vendor
+    // Credit: Cash (1001) or Bank (1002) — money going out
+    await this.createEntry({
+      tenantId, environmentId,
+      date: payment.date || new Date(),
+      description: `Vendor Payment #${payment.paymentNumber} — ${vendor.name} via ${payment.paymentMode}`,
+      debitCode: "2005",   // Vendor Payable
+      creditCode,          // Cash or Bank
+      amount: parseFloat(payment.amount),
+      voucherType: "PV",   // Payment Voucher
+      sourceModule: "VendorPayment",
+      sourceId: payment.id,
+      paymentMode: payment.paymentMode,
+      referenceNumber: payment.referenceNumber,
+      createdBy,
+      transaction,
+    });
+  }
+
+  // ═══════════════════════════════════
+  // VENDOR REVERSALS
+  // ═══════════════════════════════════
+  async reverseVendorBill(billId, userId, remarks, tenantId, environmentId, transaction) {
+    const entry = await JournalEntry.findOne({ where: { sourceModule: "VendorBill", sourceId: billId, status: "Posted" }, transaction });
+    if (entry) await this.reverseJournal(entry.id, userId, remarks, transaction);
+  }
+
+  async reverseVendorPayment(paymentId, userId, remarks, tenantId, environmentId, transaction) {
+    const entry = await JournalEntry.findOne({ where: { sourceModule: "VendorPayment", sourceId: paymentId, status: "Posted" }, transaction });
+    if (entry) await this.reverseJournal(entry.id, userId, remarks, transaction);
+  }
+
   // ── BOOKING FINANCIAL SUMMARY METHODS ──
 
   async getBookingSummary(bookingId, tenantId, environmentId, transaction) {
@@ -644,7 +709,6 @@ class AccountingEngine {
         ...(accountCode ? { where: { '$lines.account.code$': accountCode }, required: true } : {})
       },
       { model: Customer, attributes: ["id", "name"], required: false },
-      { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false },
     ];
 
     // If filtering by account code, find matching journal entries through lines
@@ -671,7 +735,6 @@ class AccountingEngine {
       include: [
         { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
         { model: Customer, attributes: ["id", "name"], required: false },
-        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false },
       ],
       order: [["date", "DESC"], ["createdAt", "DESC"]],
       limit,
@@ -685,61 +748,96 @@ class AccountingEngine {
   // VOUCHER LIST
   // ═══════════════════════════════════
   async getVouchers({ tenantId, environmentId, voucherType, startDate, endDate, page = 1, limit = 50 }) {
-    const where = { tenantId, environmentId };
-    if (voucherType) where.voucherType = voucherType;
+    const where = { tenantId, environmentId, status: "Posted" };
     if (startDate && endDate) where.date = { [Op.between]: [startDate, endDate] };
 
-    const { count, rows } = await Voucher.findAndCountAll({
+    const { count, rows } = await JournalEntry.findAndCountAll({
       where,
       include: [
         { model: Customer, attributes: ["id", "name"], required: false },
         { model: Booking, attributes: ["id", "bookingId", "customerName"], required: false },
+        { model: JournalEntryLine, as: 'lines', attributes: ["debit"] }
       ],
       order: [["date", "DESC"], ["createdAt", "DESC"]],
-      limit,
-      offset: (page - 1) * limit,
+      limit: voucherType ? undefined : limit,
+      offset: voucherType ? undefined : (page - 1) * limit,
     });
 
-    return { data: rows, total: count, page, limit };
+    const mappedRows = rows.map(entry => {
+      const amount = entry.lines ? entry.lines.reduce((sum, line) => sum + parseFloat(line.debit || 0), 0) : 0;
+      
+      let vType = "JV";
+      if (entry.sourceModule === "Payment") vType = "RV";
+      else if (entry.sourceModule === "Expense" || entry.sourceModule === "VendorBill") vType = "EV";
+      else if (entry.sourceModule === "VendorPayment") vType = "PV";
+      else if (entry.sourceModule === "Refund") vType = "RFV";
+
+      return {
+        id: entry.id,
+        voucherNumber: entry.journalNumber,
+        voucherType: vType,
+        date: entry.date,
+        createdAt: entry.createdAt,
+        description: entry.description,
+        sourceModule: entry.sourceModule,
+        sourceId: entry.sourceId,
+        amount,
+        status: entry.status,
+        Customer: entry.Customer,
+        Booking: entry.Booking
+      };
+    });
+
+    if (voucherType) {
+       const filteredRows = mappedRows.filter(r => r.voucherType === voucherType);
+       return { 
+         data: filteredRows.slice((page - 1) * limit, page * limit), 
+         total: filteredRows.length, 
+         page, 
+         limit 
+       };
+    }
+
+    return { data: mappedRows, total: count, page, limit };
   }
 
   async deleteVoucher(id, { tenantId, environmentId }) {
-    const voucher = await Voucher.findOne({ where: { id, tenantId, environmentId } });
-    if (!voucher) throw new Error("Voucher not found");
+    // Vouchers map to JournalEntries now
+    const entry = await JournalEntry.findOne({ where: { id, tenantId, environmentId } });
+    if (!entry) throw new Error("Journal Entry not found");
     
-    // If voucher was auto-generated from a Payment, delete the Payment to ensure 
-    // all cashbooks, receipts, and booking advances are properly reverted
-    if (voucher.sourceModule === 'Payment' && voucher.sourceId) {
+    // If it was auto-generated from a Payment, delete the Payment
+    if (entry.sourceModule === 'Payment' && entry.sourceId) {
       const paymentService = require("./payment.service");
       try {
-        await paymentService.removePayment(voucher.sourceId, { tenantId, environmentId });
-        return { success: true, message: "Associated payment and voucher deleted" };
+        await paymentService.removePayment(entry.sourceId, { tenantId, environmentId });
+        return { success: true, message: "Associated payment and journal deleted" };
       } catch (e) {
         console.warn("[AccountingEngine] Payment already deleted or error:", e.message);
       }
     }
 
-    // If voucher was auto-generated from an Expense, delete the Expense
-    if (voucher.sourceModule === 'Expense' && voucher.sourceId) {
+    // If it was auto-generated from an Expense, delete the Expense
+    if (entry.sourceModule === 'Expense' && entry.sourceId) {
       const expenseService = require("./expense.service");
       try {
-        await expenseService.deleteExpense(voucher.sourceId, { tenantId, environmentId });
+        await expenseService.deleteExpense(entry.sourceId, { tenantId, environmentId });
+        return { success: true, message: "Associated expense and journal deleted" };
       } catch (e) {
         console.warn("[AccountingEngine] Expense already deleted or error:", e.message);
       }
     }
 
-    // Fallback: Delete manually created voucher or orphan voucher
+    // Fallback: Just reverse/delete the journal
+    const { sequelize } = require("../models");
     const t = await sequelize.transaction();
     try {
-      // Delete associated journal entries
-      await JournalEntry.destroy({
-        where: { voucherId: voucher.id, tenantId, environmentId },
+      const JournalEntryLine = require("../models/JournalEntryLine");
+      await JournalEntryLine.destroy({
+        where: { journalEntryId: entry.id },
         transaction: t
       });
-      
-      // Delete the voucher itself
-      await voucher.destroy({ transaction: t });
+      await entry.destroy({ transaction: t });
       
       await t.commit();
       return { success: true };
@@ -774,7 +872,6 @@ class AccountingEngine {
       where: { customerId, tenantId, environmentId },
       include: [
         { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
-        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false }
       ],
       order: [["date", "DESC"]],
     });
@@ -828,7 +925,6 @@ class AccountingEngine {
       where: { bookingId: realBookingId, tenantId, environmentId },
       include: [
         { model: JournalEntryLine, as: "lines", include: [{ model: ChartOfAccount, as: "account", attributes: ["code", "name", "type"] }] },
-        { model: Voucher, attributes: ["voucherNumber", "voucherType"], required: false }
       ],
       order: [["date", "DESC"], ["createdAt", "DESC"]],
     });

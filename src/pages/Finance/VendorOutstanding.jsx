@@ -1,13 +1,10 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, TableToolbar, DataTable, Button, StatusBadge, formatCurrency } from "../../components/ui/VDS";
 
 const fetchVendorOutstanding = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/finance/reports/vendor-outstanding", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/finance/reports/vendor-outstanding");
   return res.data.data;
 };
 

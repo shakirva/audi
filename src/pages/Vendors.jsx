@@ -18,6 +18,12 @@ export default function Vendors() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [form, setForm] = useState({ id: null, name: "", category: "Catering", phone: "", location: "", email: "", tags: "" });
+  const [billModal, setBillModal] = useState(false);
+  const [payModal, setPayModal] = useState(false);
+  const [billForm, setBillForm] = useState({ description: "", amount: "", date: new Date().toISOString().split("T")[0], dueDate: "", notes: "" });
+  const [payForm, setPayForm] = useState({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
+  const [vendorBills, setVendorBills] = useState([]);
+  const [vendorPayments, setVendorPayments] = useState([]);
 
   useEffect(() => {
     const fetchAndMigrate = async () => {
@@ -169,19 +175,43 @@ export default function Vendors() {
     }
   };
 
-  const handleFinanceUpdate = (id, field, amount) => {
-    // Finance update is simulated for now since Job module will handle actual payments
-    const num = Number(amount) || 0;
-    const updated = localVendors.map(v => {
-      if (v.id === id) {
-        const newVal = (v[field] || 0) + num;
-        const updatedV = { ...v, [field]: newVal };
-        if (selectedVendor?.id === id) setSelectedVendor(updatedV);
-        return updatedV;
-      }
-      return v;
-    });
-    setLocalVendors(updated);
+  const loadVendorFinance = async (vendorId) => {
+    try {
+      const [bRes, pRes] = await Promise.all([vendorsAPI.getBills(vendorId), vendorsAPI.getPayments(vendorId)]);
+      setVendorBills(bRes.data.data || []);
+      setVendorPayments(pRes.data.data || []);
+    } catch (e) { console.error("Failed to load vendor finance:", e); }
+  };
+
+  const handleCreateBill = async (e) => {
+    e.preventDefault();
+    if (!selectedVendor) return;
+    try {
+      await vendorsAPI.createBill(selectedVendor.id, { ...billForm, amount: Number(billForm.amount) });
+      setBillModal(false);
+      setBillForm({ description: "", amount: "", date: new Date().toISOString().split("T")[0], dueDate: "", notes: "" });
+      await loadVendorFinance(selectedVendor.id);
+      // Refresh vendor list to update totals
+      const { data } = await vendorsAPI.getAll();
+      setLocalVendors(data.data || []);
+      const updated = (data.data || []).find(v => v.id === selectedVendor.id);
+      if (updated) setSelectedVendor(updated);
+    } catch (err) { alert(err.response?.data?.error || "Failed to create bill"); }
+  };
+
+  const handleCreatePayment = async (e) => {
+    e.preventDefault();
+    if (!selectedVendor) return;
+    try {
+      await vendorsAPI.createPayment(selectedVendor.id, { ...payForm, amount: Number(payForm.amount), vendorBillId: payForm.vendorBillId || null });
+      setPayModal(false);
+      setPayForm({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
+      await loadVendorFinance(selectedVendor.id);
+      const { data } = await vendorsAPI.getAll();
+      setLocalVendors(data.data || []);
+      const updated = (data.data || []).find(v => v.id === selectedVendor.id);
+      if (updated) setSelectedVendor(updated);
+    } catch (err) { alert(err.response?.data?.error || "Failed to record payment"); }
   };
 
   if (loading) {
@@ -251,7 +281,7 @@ export default function Vendors() {
       {/* VENDOR GRID */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
         {filtered.map(vendor => (
-          <div key={vendor.id} onClick={() => setSelectedVendor(vendor)} style={{
+          <div key={vendor.id} onClick={() => { setSelectedVendor(vendor); loadVendorFinance(vendor.id); }} style={{
             background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #f1f5f9", 
             boxShadow: "0 4px 15px rgba(0,0,0,0.03)", position: "relative", transition: "transform 0.2s", cursor: "pointer"
           }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={e => e.currentTarget.style.transform = "none"}>
@@ -370,33 +400,57 @@ export default function Vendors() {
               <div style={{ marginBottom: 24, borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontWeight: 700 }}>FINANCIAL OVERVIEW</p>
-                  <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#fee2e2" : "#dcfce7", color: (selectedVendor.totalBilled - selectedVendor.totalPaid > 0) ? "#ef4444" : "#16a34a" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: ((selectedVendor.totalBilled || 0) - (selectedVendor.totalPaid || 0) > 0) ? "#fee2e2" : "#dcfce7", color: ((selectedVendor.totalBilled || 0) - (selectedVendor.totalPaid || 0) > 0) ? "#ef4444" : "#16a34a" }}>
                     Balance Due: ₹{((selectedVendor.totalBilled || 0) - (selectedVendor.totalPaid || 0)).toLocaleString("en-IN")}
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
                   <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Billed</p>
                     <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>₹{(selectedVendor.totalBilled || 0).toLocaleString("en-IN")}</p>
-                    {String(selectedVendor.id).startsWith("LOCAL_") && (
-                      <button onClick={() => {
-                        const amt = window.prompt("Enter new bill amount to add (₹):");
-                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalBilled", amt);
-                      }} style={{ background: "none", border: "none", color: "#0ea5e9", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Add Bill</button>
-                    )}
                   </div>
                   <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>Total Paid</p>
                     <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#16a34a" }}>₹{(selectedVendor.totalPaid || 0).toLocaleString("en-IN")}</p>
-                    {String(selectedVendor.id).startsWith("LOCAL_") && (
-                      <button onClick={() => {
-                        const amt = window.prompt("Enter payment amount to add (₹):");
-                        if (amt) handleFinanceUpdate(selectedVendor.id, "totalPaid", amt);
-                      }} style={{ background: "none", border: "none", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: 0, marginTop: 8, cursor: "pointer" }}>+ Record Payment</button>
-                    )}
                   </div>
                 </div>
+
+                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  <button onClick={() => setBillModal(true)} style={{ flex: 1, padding: "10px", background: "#e0f2fe", color: "#0284c7", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>+ Add Bill</button>
+                  <button onClick={() => setPayModal(true)} style={{ flex: 1, padding: "10px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>+ Record Payment</button>
+                </div>
+
+                {/* Transaction History */}
+                {(vendorBills.length > 0 || vendorPayments.length > 0) && (
+                  <div>
+                    <p style={{ margin: "0 0 8px", fontSize: 12, color: "#64748b", fontWeight: 700 }}>TRANSACTION HISTORY</p>
+                    <div style={{ maxHeight: 200, overflowY: "auto", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                      {[
+                        ...vendorBills.filter(b => b.status !== "Cancelled").map(b => ({ type: "Bill", date: b.date, number: b.billNumber, desc: b.description, amount: b.amount, status: b.status, mode: null })),
+                        ...vendorPayments.filter(p => p.status === "Completed").map(p => ({ type: "Payment", date: p.date, number: p.paymentNumber, desc: p.description || `via ${p.paymentMode}`, amount: p.amount, status: null, mode: p.paymentMode, ref: p.referenceNumber })),
+                      ].sort((a, b) => new Date(b.date) - new Date(a.date)).map((txn, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #f8fafc", fontSize: 12 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: txn.type === "Bill" ? "#ef4444" : "#16a34a", flexShrink: 0 }} />
+                            <div>
+                              <span style={{ fontWeight: 700, color: "#0f172a" }}>{txn.number}</span>
+                              <span style={{ color: "#94a3b8", marginLeft: 6 }}>{new Date(txn.date).toLocaleDateString("en-IN")}</span>
+                              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{txn.desc}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontWeight: 800, color: txn.type === "Bill" ? "#ef4444" : "#16a34a" }}>
+                              {txn.type === "Bill" ? "+" : "-"}₹{Number(txn.amount).toLocaleString("en-IN")}
+                            </div>
+                            {txn.mode && <span style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>{txn.mode === "Cash" ? "💵" : txn.mode === "UPI" ? "📱" : txn.mode === "Cheque" ? "📝" : "🏦"} {txn.mode}{txn.ref ? ` (${txn.ref})` : ""}</span>}
+                            {txn.status && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: 700, background: txn.status === "Paid" ? "#dcfce7" : txn.status === "Partial" ? "#fef3c7" : "#fee2e2", color: txn.status === "Paid" ? "#16a34a" : txn.status === "Partial" ? "#d97706" : "#ef4444" }}>{txn.status}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 20 }}>
@@ -404,9 +458,6 @@ export default function Vendors() {
                   <button onClick={() => handleToggleStatus(selectedVendor.id, selectedVendor.status)} style={{ padding: "10px 16px", background: selectedVendor.status === "Active" ? "#fef3c7" : "#dcfce7", color: selectedVendor.status === "Active" ? "#d97706" : "#16a34a", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
                     Mark as {selectedVendor.status === "Active" ? "Inactive" : "Active"}
                   </button>
-                  {String(selectedVendor.id).startsWith("LOCAL_") && (
-                    <button onClick={() => handleDeleteVendor(selectedVendor.id)} style={{ padding: "10px 16px", background: "#fee2e2", color: "#ef4444", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Delete Vendor</button>
-                  )}
                 </div>
                 <button onClick={() => setSelectedVendor(null)} style={{ padding: "10px 24px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer", fontSize: 13 }}>Close</button>
               </div>
@@ -456,6 +507,100 @@ export default function Vendors() {
               <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
                 <button type="button" onClick={() => setModalOpen(false)} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
                 <button type="submit" style={{ flex: 1, padding: "12px", background: "#1B4332", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Save Vendor</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD BILL MODAL */}
+      {billModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", width: 400, borderRadius: 20, padding: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h3 style={{ margin: 0, fontSize: 18, color: "#1e293b", fontWeight: 800 }}>Add Vendor Bill</h3>
+              <button onClick={() => setBillModal(false)} style={{ background: "none", border: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer" }}>&times;</button>
+            </div>
+            <form onSubmit={handleCreateBill} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Description *</label>
+                <input type="text" required value={billForm.description} onChange={e => setBillForm({...billForm, description: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="e.g. Catering for Wedding" />
+              </div>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Amount (₹) *</label>
+                  <input type="number" required value={billForm.amount} onChange={e => setBillForm({...billForm, amount: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="0.00" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Date *</label>
+                  <input type="date" required value={billForm.date} onChange={e => setBillForm({...billForm, date: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Notes (Optional)</label>
+                <textarea value={billForm.notes} onChange={e => setBillForm({...billForm, notes: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", minHeight: 60 }} placeholder="Any additional details..." />
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+                <button type="button" onClick={() => setBillModal(false)} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: "12px", background: "#0284c7", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Add Bill</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RECORD PAYMENT MODAL */}
+      {payModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", width: 400, borderRadius: 20, padding: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h3 style={{ margin: 0, fontSize: 18, color: "#1e293b", fontWeight: 800 }}>Record Payment</h3>
+              <button onClick={() => setPayModal(false)} style={{ background: "none", border: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer" }}>&times;</button>
+            </div>
+            <form onSubmit={handleCreatePayment} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Amount (₹) *</label>
+                  <input type="number" required value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="0.00" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Date *</label>
+                  <input type="date" required value={payForm.date} onChange={e => setPayForm({...payForm, date: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} />
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Payment Mode *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {["Cash", "UPI", "Bank Transfer", "Cheque"].map(mode => (
+                    <label key={mode} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: payForm.paymentMode === mode ? "2px solid #16a34a" : "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", background: payForm.paymentMode === mode ? "#f0fdf4" : "#fff", fontWeight: 600, fontSize: 13 }}>
+                      <input type="radio" name="paymentMode" value={mode} checked={payForm.paymentMode === mode} onChange={e => setPayForm({...payForm, paymentMode: e.target.value})} style={{ display: "none" }} />
+                      {mode === "Cash" ? "💵" : mode === "UPI" ? "📱" : mode === "Cheque" ? "📝" : "🏦"} {mode}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {payForm.paymentMode !== "Cash" && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Reference Number</label>
+                  <input type="text" value={payForm.referenceNumber} onChange={e => setPayForm({...payForm, referenceNumber: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder={payForm.paymentMode === "UPI" ? "UPI Txn ID" : payForm.paymentMode === "Cheque" ? "Cheque Number" : "NEFT/IMPS Ref"} />
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Link to Bill (Optional)</label>
+                <select value={payForm.vendorBillId} onChange={e => setPayForm({...payForm, vendorBillId: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }}>
+                  <option value="">-- No specific bill --</option>
+                  {vendorBills.filter(b => b.status !== "Paid" && b.status !== "Cancelled").map(b => (
+                    <option key={b.id} value={b.id}>{b.billNumber} - ₹{Number(b.amount).toLocaleString()} ({b.description})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+                <button type="button" onClick={() => setPayModal(false)} style={{ flex: 1, padding: "12px", background: "#f1f5f9", border: "none", borderRadius: 8, fontWeight: 700, color: "#475569", cursor: "pointer" }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: "12px", background: "#16a34a", border: "none", borderRadius: 8, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Record Payment</button>
               </div>
             </form>
           </div>

@@ -71,7 +71,11 @@ export default function AddStaffModal({ open, onClose, onSave, editingUser }) {
       setForm({ name: "", email: "", phone: "", password: "", role: "Staff" });
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || `Failed to ${editingUser ? "update" : "create"} user.`);
+      if (err?.response?.data?.code === "LIMIT_EXCEEDED" || err?.response?.data?.code === "PLAN_UPGRADE_REQUIRED") {
+        onClose();
+      } else {
+        setError(err?.response?.data?.message || `Failed to ${editingUser ? "update" : "create"} user.`);
+      }
     } finally {
       setLoading(false);
     }

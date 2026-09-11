@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, ContentContainer, Button, formatCurrency } from "../../components/ui/VDS";
 
 const USE_MOCK = true; // Use mock data for demo polish before live integration
@@ -27,10 +27,7 @@ const MOCK_DASHBOARD = {
 };
 
 const fetchDashboard = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/accounts/dashboard", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/accounts/dashboard");
   return res.data.data;
 };
 

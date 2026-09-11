@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BookOpen, Search, ArrowRight, ExternalLink } from "lucide-react";
-import { bookingsAPI, isPlanRestriction } from "../../services/api";
+import { bookingsAPI, isPlanRestriction, api } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { Link } from "react-router-dom";
 
@@ -11,8 +11,20 @@ export default function BookingAccounts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBalance, setFilterBalance] = useState("All");
 
+  const [hasAccess, setHasAccess] = useState(null);
+
   useEffect(() => {
-    fetchBookings();
+    const checkAccess = async () => {
+      try {
+        await api.get("/v1/accounts/verify-booking-accounts");
+        setHasAccess(true);
+        fetchBookings();
+      } catch (error) {
+        setHasAccess(false);
+        setLoading(false);
+      }
+    };
+    checkAccess();
   }, []);
 
   const fetchBookings = async () => {
@@ -78,6 +90,8 @@ export default function BookingAccounts() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
           <div style={{ gridColumn: "1 / -1", padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 16 }}>Loading booking accounts...</div>
+        ) : hasAccess === false ? (
+          <div style={{ gridColumn: "1 / -1", padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 16 }}>Feature locked.</div>
         ) : filtered.length === 0 ? (
           <div style={{ gridColumn: "1 / -1", padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 16 }}>No booking accounts found.</div>
         ) : (

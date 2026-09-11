@@ -6,28 +6,29 @@ const accountsDashboardController = require("../../controllers/accountsDashboard
 const { auth, requireRole } = require("../../middleware/auth");
 const { tenantScope } = require("../../middleware/tenantScope");
 const { subscriptionGuard } = require("../../middleware/subscriptionGuard");
-const { planGate } = require("../../middleware/planGate");
+const { planGate, requireFeature } = require("../../middleware/planGate");
 const { ROLES } = require("../../helpers/roles");
 
 const router = express.Router();
 
-router.use(auth, tenantScope, subscriptionGuard, planGate);
+router.use(auth, tenantScope, subscriptionGuard);
 router.use(requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.ACCOUNTS, ROLES.TESTER));
 
 // ── Existing routes ──
-router.get("/statements", accountStatementController.getStatements);
-router.get("/cash-book", cashBookController.getLedger);
-router.get("/bank-book", bankBookController.getLedger);
+router.get("/statements", requireFeature("advanced_accounting"), accountStatementController.getStatements);
+router.get("/cash-book", requireFeature("advanced_accounting"), cashBookController.getLedger);
+router.get("/bank-book", requireFeature("advanced_accounting"), bankBookController.getLedger);
 
 // ── New accounting routes ──
-router.get("/dashboard", accountsDashboardController.getDashboard);
-router.get("/ledger", accountsDashboardController.getLedger);
-router.get("/vouchers", accountsDashboardController.getVouchers);
-router.delete("/vouchers/:id", accountsDashboardController.deleteVoucher);
-router.get("/chart-of-accounts", accountsDashboardController.getChartOfAccounts);
-router.get("/customer-ledger/:customerId", accountsDashboardController.getCustomerLedger);
-router.get("/booking-ledger/:bookingId", accountsDashboardController.getBookingLedger);
-router.get("/profit-loss", accountsDashboardController.getProfitLoss);
-router.get("/outstanding", accountsDashboardController.getOutstanding);
+router.get("/dashboard", requireFeature("payments"), accountsDashboardController.getDashboard);
+router.get("/verify-booking-accounts", requireFeature("booking_accounts"), (req, res) => res.json({ ok: true }));
+router.get("/ledger", requireFeature("advanced_accounting"), accountsDashboardController.getLedger);
+router.get("/vouchers", requireFeature("advanced_accounting"), accountsDashboardController.getVouchers);
+router.delete("/vouchers/:id", requireFeature("advanced_accounting"), accountsDashboardController.deleteVoucher);
+router.get("/chart-of-accounts", requireFeature("advanced_accounting"), accountsDashboardController.getChartOfAccounts);
+router.get("/customer-ledger/:customerId", requireFeature("advanced_accounting"), accountsDashboardController.getCustomerLedger);
+router.get("/booking-ledger/:bookingId", requireFeature("booking_accounts"), accountsDashboardController.getBookingLedger);
+router.get("/profit-loss", requireFeature("finance_reports"), accountsDashboardController.getProfitLoss);
+router.get("/outstanding", requireFeature("advanced_accounting"), accountsDashboardController.getOutstanding);
 
 module.exports = router;

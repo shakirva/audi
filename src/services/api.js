@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
+const API_BASE = import.meta.env.PROD ? "/api" : (import.meta.env.VITE_API_URL || "http://localhost:5005/api");
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -191,6 +191,17 @@ export const vendorsAPI = {
   create: (data) => api.post("/v1/vendors", data),
   update: (id, data) => api.put(`/v1/vendors/${id}`, data),
   remove: (id) => api.delete(`/v1/vendors/${id}`),
+  // Bills
+  getBills: (vendorId) => api.get(`/v1/vendors/${vendorId}/bills`),
+  createBill: (vendorId, data) => api.post(`/v1/vendors/${vendorId}/bills`, data),
+  deleteBill: (vendorId, billId) => api.delete(`/v1/vendors/${vendorId}/bills/${billId}`),
+  // Payments
+  getPayments: (vendorId) => api.get(`/v1/vendors/${vendorId}/payments`),
+  getAllPayments: () => api.get("/v1/vendors/all-payments"),
+  createPayment: (vendorId, data) => api.post(`/v1/vendors/${vendorId}/payments`, data),
+  deletePayment: (vendorId, paymentId) => api.delete(`/v1/vendors/${vendorId}/payments/${paymentId}`),
+  // Ledger
+  getLedger: (vendorId) => api.get(`/v1/vendors/${vendorId}/ledger`),
 };
 
 export const mastersAPI = {
@@ -308,3 +319,5 @@ export function isPlanRestriction(error) {
   const code = error?.response?.data?.code;
   return code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED";
 }
+
+export { api };

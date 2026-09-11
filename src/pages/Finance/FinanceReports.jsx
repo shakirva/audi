@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, TrendingDown, RefreshCw, Wallet, ArrowDownRight, ArrowUpRight, CreditCard, Banknote, Building2, Smartphone, CircleDollarSign, AlertCircle } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, RefreshCw, Wallet, ArrowDownRight, ArrowUpRight, CreditCard, Banknote, Building2, Smartphone, CircleDollarSign, AlertCircle, Lock } from "lucide-react";
 import { accountsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
+import { useRole } from "../../context/RoleContext";
 
 export default function FinanceReports() {
   const { addToast } = useToast();
+  const { subscription } = useRole();
+  const isStarter = subscription?.plan === "starter";
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("cash"); // "cash" | "accrual"
@@ -62,15 +65,26 @@ export default function FinanceReports() {
             💰 Cash Basis
           </button>
           <button 
-            onClick={() => setViewMode("accrual")}
+            onClick={() => {
+              if (isStarter) {
+                window.dispatchEvent(
+                  new CustomEvent("plan-upgrade-required", {
+                    detail: { feature: "Accrual Accounting", requiredPlan: "Professional" }
+                  })
+                );
+                return;
+              }
+              setViewMode("accrual");
+            }}
             style={{ 
               padding: "8px 16px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
               background: viewMode === "accrual" ? "#0D2418" : "transparent",
               color: viewMode === "accrual" ? "#fff" : "#64748b",
-              transition: "all 0.2s"
+              transition: "all 0.2s",
+              display: "flex", alignItems: "center", gap: 6
             }}
           >
-            📊 Accrual Basis
+            📊 Accrual Basis {isStarter && <Lock size={12} style={{ opacity: 0.5 }} />}
           </button>
         </div>
       </div>

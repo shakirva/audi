@@ -22,7 +22,7 @@ const JournalEntry = sequelize.define("JournalEntry", {
 
   // Source tracking for Idempotency
   sourceModule: {
-    type: DataTypes.ENUM("Payment", "Expense", "Booking", "Refund", "Vendor", "Manual", "Opening"),
+    type: DataTypes.ENUM("Payment", "Expense", "Booking", "Refund", "Vendor", "VendorBill", "VendorPayment", "Manual", "Opening"),
     allowNull: false,
   },
   sourceId: { type: DataTypes.INTEGER, allowNull: true },

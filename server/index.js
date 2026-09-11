@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("dotenv").config({ path: ".env.release" });
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -82,6 +83,16 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+// ── Version ──
+app.get("/api/version", (req, res) => {
+  res.json({
+    environment: process.env.NODE_ENV || "development",
+    commit: process.env.COMMIT_SHA || "unknown",
+    release: process.env.RELEASE_ID || "unknown",
+    timestamp: process.env.RELEASE_TIMESTAMP || new Date().toISOString()
+  });
+});
+
 // ── 404 handler ──
 app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
@@ -93,10 +104,18 @@ app.use(errorHandler);
 // ── Connect to PostgreSQL and start server ──
 const PORT = process.env.PORT || 5000;
 
-sequelize
-  .sync({ alter: true }) // creates tables if they don't exist
-  .then(async () => {
+const initDB = async () => {
+  if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging") {
+    await sequelize.authenticate();
+    console.log("✅ Connected to PostgreSQL (production mode, sync disabled)");
+  } else {
+    await sequelize.sync({ alter: true }); // creates tables if they don't exist
     console.log("✅ Connected to PostgreSQL & synced tables");
+  }
+};
+
+initDB()
+  .then(async () => {
     
     // FIX: Populate missing createdBy in Bookings from Enquiries
     try {
@@ -148,7 +167,64 @@ sequelize
       console.log("⚠️ Could not reset stuck Enquiries:", e.message);
     }
 
-    
+    // MIGRATION: Create VendorBills and VendorPayments tables if they don't exist
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS "VendorBills" (
+          id SERIAL PRIMARY KEY,
+          "tenantId" INTEGER NOT NULL REFERENCES "Tenants"(id),
+          "environmentId" INTEGER NOT NULL REFERENCES "Environments"(id),
+          "vendorId" INTEGER NOT NULL REFERENCES "Vendors"(id),
+          "billNumber" VARCHAR(255) NOT NULL,
+          date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          "dueDate" TIMESTAMP WITH TIME ZONE,
+          description VARCHAR(255) NOT NULL,
+          amount DECIMAL(12,2) NOT NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
+          "bookingId" INTEGER REFERENCES "Bookings"(id),
+          notes TEXT,
+          "createdBy" INTEGER,
+          "deletedAt" TIMESTAMP WITH TIME ZONE,
+          "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        );
+      `);
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS "VendorPayments" (
+          id SERIAL PRIMARY KEY,
+          "tenantId" INTEGER NOT NULL REFERENCES "Tenants"(id),
+          "environmentId" INTEGER NOT NULL REFERENCES "Environments"(id),
+          "vendorId" INTEGER NOT NULL REFERENCES "Vendors"(id),
+          "vendorBillId" INTEGER REFERENCES "VendorBills"(id),
+          "paymentNumber" VARCHAR(255) NOT NULL,
+          date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          amount DECIMAL(12,2) NOT NULL,
+          "paymentMode" VARCHAR(255) NOT NULL,
+          "referenceNumber" VARCHAR(255),
+          description VARCHAR(255),
+          status VARCHAR(20) NOT NULL DEFAULT 'Completed',
+          "createdBy" INTEGER,
+          "deletedAt" TIMESTAMP WITH TIME ZONE,
+          "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        );
+      `);
+      console.log("✅ VendorBills & VendorPayments tables ensured");
+    } catch (e) {
+      console.log("⚠️ VendorBills/VendorPayments migration:", e.message);
+    }
+
+    // MIGRATION: Add VendorBill/VendorPayment to sourceModule ENUMs
+    try {
+      await sequelize.query(`ALTER TYPE "enum_JournalEntries_sourceModule" ADD VALUE IF NOT EXISTS 'VendorBill';`);
+      await sequelize.query(`ALTER TYPE "enum_JournalEntries_sourceModule" ADD VALUE IF NOT EXISTS 'VendorPayment';`);
+      await sequelize.query(`ALTER TYPE "enum_Vouchers_sourceModule" ADD VALUE IF NOT EXISTS 'VendorBill';`);
+      await sequelize.query(`ALTER TYPE "enum_Vouchers_sourceModule" ADD VALUE IF NOT EXISTS 'VendorPayment';`);
+      console.log("✅ VendorBill/VendorPayment ENUM values ensured");
+    } catch (e) {
+      console.log("⚠️ ENUM migration:", e.message);
+    }
+
     app.listen(PORT, () => {
       console.log(`🚀 Venueza API running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
@@ -159,3 +235,5 @@ sequelize
     console.error("❌ PostgreSQL connection failed:", err.message);
     process.exit(1);
   });
+
+module.exports = app;

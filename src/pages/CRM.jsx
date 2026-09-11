@@ -9,9 +9,8 @@ import SafeDeleteModal from "../components/SafeDeleteModal";
 import { useRole } from "../context/RoleContext";
 
 const pipelineStages = [
-  "New Enquiry", "Contacted", "Follow-up", "Need a demo", "Customer Visit", "Direct Meet", 
-  "Interested", "Call them back", "Brochure Sent (WhatsApp)", "Booking Confirmed", 
-  "Not attending", "Wrong number", "Got another Number", "Not interested", "Rejected", "Lost", "Cancelled"
+  "New Enquiry", "Contacted", "Follow-up", "Interested", "Customer Visit", 
+  "Booking Confirmed", "Lost", "Cancelled"
 ];
 
 const LEAD_SCORE_STYLE = {

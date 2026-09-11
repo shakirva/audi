@@ -6,6 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App";
 
+// Expose build info
+if (typeof __VENUEZA_BUILD__ !== "undefined") {
+  window.__VENUEZA_BUILD__ = __VENUEZA_BUILD__;
+}
+
 // Calculate dynamic basename for tenant routing
 let basename = "/";
 const pathParts = window.location.pathname.split("/").filter(Boolean);

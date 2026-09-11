@@ -186,10 +186,31 @@ class SettingsService {
     return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
-  async toggleUserActive(userId, tenantId) {
+  async toggleUserActive(userId, tenantId, plan) {
     const user = await User.findOne({ where: { id: userId, tenantId } });
     if (!user) throw new NotFoundError("User");
     if (user.role === ROLES.OWNER) throw new BadRequestError("Cannot deactivate the Owner account");
+    
+    // Check limit if activating
+    if (!user.active && plan) {
+      const { checkLimit, getLimit } = require("../config/plans");
+      const currentCount = await User.count({ where: { tenantId, active: true } });
+      if (!checkLimit(plan, "maxUsers", currentCount)) {
+        const error = new Error("User limit reached");
+        error.status = 403;
+        error.code = "LIMIT_EXCEEDED";
+        error.responsePayload = {
+          error: "User limit reached",
+          code: "LIMIT_EXCEEDED",
+          limitType: "users",
+          currentCount,
+          maxAllowed: getLimit(plan, "maxUsers"),
+          message: `Your ${plan} plan allows up to ${getLimit(plan, "maxUsers")} users. Please upgrade your plan to add more users.`
+        };
+        throw error;
+      }
+    }
+    
     user.active = !user.active;
     await user.save();
     return { id: user.id, name: user.name, active: user.active };

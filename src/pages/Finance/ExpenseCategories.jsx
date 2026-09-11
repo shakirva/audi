@@ -1,14 +1,11 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, TableToolbar, DataTable, Button, formatCurrency } from "../../components/ui/VDS";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 
 const fetchExpenseCategories = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/finance/reports/expense-categories", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/finance/reports/expense-categories");
   return res.data.data;
 };
 

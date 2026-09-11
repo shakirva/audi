@@ -23,11 +23,11 @@ export const BASE_NAVIGATION = [
     type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Accounts"],
     children: [
       { path: "/finance/payments", label: "Payments & Receipts" },
-      { path: "/finance/booking-accounts", label: "Booking Accounts" },
+      { path: "/finance/booking-accounts", label: "Booking Accounts", isAdvanced: true },
       { path: "/finance/collections", label: "Collections" },
       { path: "/finance/expenses", label: "Purchases & Expenses" },
       { path: "/finance/reports", label: "Financial Statements" },
-      { path: "/finance/advanced", label: "Advanced Accounting" }
+      { path: "/finance/advanced", label: "Advanced Accounting", isAdvanced: true }
     ]
   },
   { 

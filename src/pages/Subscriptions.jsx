@@ -282,19 +282,26 @@ export default function Subscriptions() {
                 </div>
                 
                 <div style={{ flex: 1 }}>
-                  {pConfig.features.map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, fontSize: 14, color: f.included ? "#374151" : "#9ca3af", fontWeight: f.included ? 600 : 400 }}>
-                      {f.included ? <Check size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: 2 }} /> : <X size={18} color="#d1d5db" style={{ flexShrink: 0, marginTop: 2 }} />}
-                      <span>{f.name}</span>
-                    </div>
-                  ))}
+                  {pConfig.features.map((f, i) => {
+                    const planColor = planKey === "professional" ? "#2563eb" : planKey === "business" ? "#ea580c" : "#374151";
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, fontSize: 14, color: f.included ? "#374151" : "#9ca3af", fontWeight: f.included ? 600 : 400 }}>
+                        {f.included ? (
+                          <CheckCircle2 size={18} color={planColor} style={{ flexShrink: 0, marginTop: 1 }} />
+                        ) : (
+                          <X size={18} color="#e5e7eb" style={{ flexShrink: 0, marginTop: 1 }} />
+                        )}
+                        <span>{f.name}</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 
                 <div style={{ marginTop: 24 }}>
                   {isCurrent ? (
                     <button disabled style={{ width: "100%", padding: "12px", borderRadius: 8, border: "1px solid #d1d5db", background: "#f3f4f6", color: "#6b7280", fontWeight: 700, cursor: "not-allowed" }}>Active Plan</button>
                   ) : isHigher ? (
-                    <button onClick={() => setUpgradeFlow(pConfig)} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: "#0D2418", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <button onClick={() => setUpgradeFlow(pConfig)} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: planKey === "professional" ? "#2563eb" : planKey === "business" ? "#111827" : "#0D2418", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       Upgrade to {pConfig.name} <ArrowRight size={16} />
                     </button>
                   ) : (

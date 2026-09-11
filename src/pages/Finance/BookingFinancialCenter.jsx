@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { formatCurrency, StatusBadge } from "./FinanceShared";
 
 const USE_MOCK = true; // Still keeping a fallback for safety during UI demo, can switch to false
@@ -49,10 +49,7 @@ const MOCK_SUMMARY = {
 };
 
 const fetchBookingSummary = async (id) => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get(`http://localhost:3000/api/v1/finance/booking-summary/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get(`/v1/finance/booking-summary/${id}`);
   return res.data.data;
 };
 

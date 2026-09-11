@@ -39,6 +39,7 @@ const PLANS = {
       expenses: true,
 
       // Professional features — available during trial so users experience full value
+      booking_accounts: true,
       advanced_accounting: true,
       chart_of_accounts: true,
       vouchers: true,
@@ -104,6 +105,7 @@ const PLANS = {
       expenses: true,
 
       // Professional features — NOT available on Starter
+      booking_accounts: false,
       advanced_accounting: false,
       chart_of_accounts: false,
       vouchers: false,
@@ -118,13 +120,13 @@ const PLANS = {
       vendor_statements: false,
       financial_periods: false,
       tax_invoices: false,
-      finance_reports: false,
+      finance_reports: true,
       staff_management: false,
       attendance: false,
       leave_management: false,
       jobs: false,
       vendors: false,
-      inventory: false,
+      inventory: true,
       advanced_reports: false,
       role_access: false,
       revenue_privacy: false,
@@ -168,6 +170,7 @@ const PLANS = {
       expenses: true,
 
       // Professional features — all available
+      booking_accounts: true,
       advanced_accounting: true,
       chart_of_accounts: true,
       vouchers: true,
@@ -230,7 +233,7 @@ const PLANS = {
       masters: true,
       availability: true,
       expenses: true,
-
+      booking_accounts: true,
       advanced_accounting: true,
       chart_of_accounts: true,
       vouchers: true,
@@ -280,7 +283,7 @@ const PLANS = {
       enquiry_management: true, followups: true, agreements: true, payments: true,
       receipts: true, basic_finance: true, basic_reports: true, masters: true,
       availability: true, expenses: true,
-      advanced_accounting: true, chart_of_accounts: true, vouchers: true,
+      booking_accounts: true, advanced_accounting: true, chart_of_accounts: true, vouchers: true,
       journal_entries: true, general_ledger: true, trial_balance: true,
       profit_loss: true, balance_sheet: true, cash_book: true, bank_book: true,
       customer_statements: true, vendor_statements: true, financial_periods: true,
@@ -343,6 +346,7 @@ const ROUTE_FEATURE_MAP = {
   "/leaves": "leave_management",
   "/jobs": "jobs",
   "/inventory": "inventory",
+  "/vendors": "vendors",
   "/audit-logs": "audit_logs",
   "/api-access": "api_access",
   "/reports": "basic_reports",

@@ -4,7 +4,7 @@ import Logo from "../components/Logo";
 import { useToast } from "../components/Toast";
 import { useRole } from "../context/RoleContext";
 import { useBookings } from "../context/BookingsContext";
-import { authAPI, settingsAPI, usersAPI, mastersAPI } from "../services/api";
+import { authAPI, settingsAPI, usersAPI, mastersAPI, isPlanRestriction } from "../services/api";
 import { useConfirm } from "../components/ConfirmProvider";
 import CreateHallModal from "../components/CreateHallModal";
 import AddStaffModal from "../components/AddStaffModal";
@@ -220,6 +220,8 @@ export default function Settings() {
 
   const [facilities, setFacilities] = useState([]);
   const [newFacility, setNewFacility] = useState({ name: "", price: "", gst: "" });
+  const [maxHalls, setMaxHalls] = useState(null);
+  const [maxUsers, setMaxUsers] = useState(null);
 
   useEffect(() => {
     loadSettings();
@@ -250,6 +252,8 @@ export default function Settings() {
       const response = await settingsAPI.get();
       const data = response.data.data;
       setSettingsId(data.id);
+      setMaxHalls(data._maxHalls !== undefined ? data._maxHalls : null);
+      setMaxUsers(data._maxUsers !== undefined ? data._maxUsers : null);
       setVenue({
         name: data.venueName || "",
         owner: data.ownerName || "",
@@ -330,6 +334,15 @@ export default function Settings() {
   };
 
   const handleAddHall = () => {
+    if (maxHalls !== null && halls.length >= maxHalls) {
+      window.dispatchEvent(new CustomEvent("plan-upgrade-required", {
+        detail: {
+          code: "LIMIT_EXCEEDED",
+          message: `You have reached the hall limit (${maxHalls}) on your current plan. Upgrade to add more.`
+        }
+      }));
+      return;
+    }
     setEditHallIndex(null);
     setShowCreateHallModal(true);
   };
@@ -353,14 +366,18 @@ export default function Settings() {
       // Update shared venueInfo so Sidebar/Header reflect changes immediately
       setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner, logoUrl: venue.logoUrl });
       addToast("Venue settings saved! 🏛️", "success");
-    } catch (e) { addToast("Failed to save", "error"); }
+    } catch (e) { 
+      if (!isPlanRestriction(e)) addToast("Failed to save", "error"); 
+    }
   };
 
   const handleSaveHalls = async () => {
     try {
       await settingsAPI.update({ halls });
       addToast("Hall pricing updated! ✅", "success");
-    } catch (e) { addToast("Failed to save", "error"); }
+    } catch (e) { 
+      if (!isPlanRestriction(e)) addToast("Failed to save", "error"); 
+    }
   };
 
   const handleSaveNotifs = async () => {
@@ -643,7 +660,21 @@ export default function Settings() {
 
   const StaffAdder = () => (
     <button
-      onClick={() => { setEditingStaff(null); setShowAddStaffModal(true); }}
+      onClick={() => { 
+        if (maxUsers !== null) {
+          const activeUsersCount = dbUsers.filter(u => u.active).length;
+          if (activeUsersCount >= maxUsers) {
+            window.dispatchEvent(new CustomEvent("plan-upgrade-required", {
+              detail: {
+                code: "LIMIT_EXCEEDED",
+                message: `You have reached the user limit (${maxUsers}) on your current plan. Upgrade to add more users.`
+              }
+            }));
+            return;
+          }
+        }
+        setEditingStaff(null); setShowAddStaffModal(true); 
+      }}
       style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "10px 18px", borderRadius: 10, border: "none",
@@ -1385,7 +1416,7 @@ export default function Settings() {
         </div>
 
         <p style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 10 }}>
-          Send reminder automatically on these days before event:
+          Send reminder on these days before event:
         </p>
 
         {/* Current tags */}
@@ -1527,7 +1558,7 @@ export default function Settings() {
                     loadUsers();
                     addToast(`User ${s.active ? 'deactivated' : 'activated'}`, "success");
                   } catch(e) {
-                    addToast("Failed to toggle user status", "error");
+                    if (!isPlanRestriction(e)) addToast("Failed to toggle user status", "error");
                   }
                 }} style={{ cursor: "pointer", border: "none", background: "none", fontSize: 11, fontWeight: 600, color: s.active ? "#15803d" : "#ef4444", background: s.active ? "#dcfce7" : "#fee2e2", padding: "3px 10px", borderRadius: 20, textAlign: "center" }}>
                   {s.active ? "Active" : "Inactive"}
@@ -1831,21 +1862,30 @@ export default function Settings() {
         }}
         onSave={async (newHall) => {
           let updatedHalls = [];
-          if (editHallIndex !== null) {
+          const isEdit = editHallIndex !== null;
+          if (isEdit) {
             updatedHalls = halls.map((h, i) => i === editHallIndex ? { ...h, ...newHall } : h);
-            setHalls(updatedHalls);
-            addToast(`${newHall.name} updated successfully!`, "success");
           } else {
             updatedHalls = [...halls, newHall];
-            setHalls(updatedHalls);
-            addToast(`${newHall.name} added successfully!`, "success");
           }
-          setEditHallIndex(null);
           
           try {
             await settingsAPI.update({ halls: updatedHalls });
+            
+            // On successful backend update, update UI and show toast
+            setHalls(updatedHalls);
+            if (isEdit) {
+              addToast(`${newHall.name} updated successfully!`, "success");
+            } else {
+              addToast(`${newHall.name} added successfully!`, "success");
+            }
+            setShowCreateHallModal(false);
+            setEditHallIndex(null);
           } catch(e) {
-            console.error("Failed to auto-save halls to db", e);
+            console.error("Failed to save halls to db", e);
+            if (!isPlanRestriction(e)) {
+              addToast("Failed to save hall", "error");
+            }
           }
         }}
       />

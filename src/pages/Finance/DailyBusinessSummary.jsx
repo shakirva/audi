@@ -1,14 +1,11 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, ContentContainer, Button, formatCurrency } from "../../components/ui/VDS";
 import { Printer, TrendingUp, Calendar, CheckCircle } from "lucide-react";
 
 const fetchDailySummary = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/finance/reports/daily-business-summary", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/finance/reports/daily-business-summary");
   return res.data.data;
 };
 

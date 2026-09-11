@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../../services/api";
 import { PageLayout, MetricGrid, MetricCard, TableToolbar, DataTable, Button, StatusBadge, formatCurrency } from "../../components/ui/VDS";
 
 const USE_MOCK = false;
@@ -21,10 +21,7 @@ const MOCK_SUMMARY = {
 };
 
 const fetchProfitReport = async () => {
-  const token = localStorage.getItem("hm_token");
-  const res = await axios.get("http://localhost:3000/api/v1/finance/reports/booking-profit", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await api.get("/v1/finance/reports/booking-profit");
   return res.data.data;
 };
 

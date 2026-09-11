@@ -14,7 +14,19 @@ class SettingsController {
   async get(req, res, next) {
     try {
       const result = await settingsService.getSettings(req.tenantId, req.environmentId, req.environmentType);
-      return sendSuccess(res, { data: result });
+      
+      const { getLimit } = require("../config/plans");
+      const maxHalls = req.subscription ? getLimit(req.subscription.plan, "maxHalls") : 0;
+      const maxUsers = req.subscription ? getLimit(req.subscription.plan, "maxUsers") : 0;
+      
+      return sendSuccess(res, { 
+        data: { 
+          ...result.toJSON ? result.toJSON() : result,
+          _plan: req.subscription ? req.subscription.plan : null,
+          _maxHalls: maxHalls,
+          _maxUsers: maxUsers
+        } 
+      });
     } catch (err) {
       next(err);
     }
@@ -102,9 +114,13 @@ class SettingsController {
 
   async toggleUserActive(req, res, next) {
     try {
-      const result = await settingsService.toggleUserActive(req.params.id, req.tenantId);
+      const plan = req.subscription ? req.subscription.plan : null;
+      const result = await settingsService.toggleUserActive(req.params.id, req.tenantId, plan);
       return sendSuccess(res, { data: result, message: `User ${result.active ? 'activated' : 'deactivated'} successfully` });
     } catch (err) {
+      if (err.code === "LIMIT_EXCEEDED") {
+        return res.status(403).json(err.responsePayload);
+      }
       next(err);
     }
   }

@@ -21,13 +21,13 @@ const { User, Settings } = require("../models");
  */
 const planGate = (req, res, next) => {
   try {
-    if (!req.subscription) {
-      return res.status(403).json({ error: "No subscription found" });
-    }
-
     // SuperAdmin bypasses all plan checks
     if (req.user && req.user.role === "SuperAdmin") {
       return next();
+    }
+
+    if (!req.subscription) {
+      return res.status(403).json({ error: "No subscription found" });
     }
 
     const plan = req.subscription.plan;
@@ -66,12 +66,12 @@ const planGate = (req, res, next) => {
  */
 const requireFeature = (featureKey) => (req, res, next) => {
   try {
-    if (!req.subscription) {
-      return res.status(403).json({ error: "No subscription found" });
-    }
-
     if (req.user && req.user.role === "SuperAdmin") {
       return next();
+    }
+
+    if (!req.subscription) {
+      return res.status(403).json({ error: "No subscription found" });
     }
 
     const plan = req.subscription.plan;
