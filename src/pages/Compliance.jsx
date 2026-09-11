@@ -12,7 +12,7 @@ const BRAND = {
 };
 
 export default function Compliance() {
-  const confirm = useConfirm();
+  const { confirm } = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
