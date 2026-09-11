@@ -345,14 +345,14 @@ export default function PaymentsAndReceipts() {
           <div className="hidden md:block" style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ background: "#fffbeb", borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt ID</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Vendor</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Date</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Mode</th>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt ID</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Vendor</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Date</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Mode</th>
                   <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Amount</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Description</th>
-                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#92400e", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Description</th>
+                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt</th>
                 </tr>
               </thead>
               <tbody>
