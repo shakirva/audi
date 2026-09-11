@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
-import { paymentsAPI, usersAPI } from "../../services/api";
+import { paymentsAPI, usersAPI, vendorsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { useRole } from "../../context/RoleContext";
 
-export default function CollectPaymentModal({ open, booking, onClose, onSuccess }) {
+export default function CollectPaymentModal({ open, booking, vendor, onClose, onSuccess }) {
   const { addToast } = useToast();
   const { user } = useRole();
   const [loading, setLoading] = useState(false);
@@ -28,10 +28,10 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
     }
   }, [open, user]);
 
-  if (!open || !booking) return null;
+  if (!open || (!booking && !vendor)) return null;
 
-  const total = Number(booking.totalAmount) || 0;
-  const collected = (Number(booking.advance) || 0) + (Number(booking.depositAmount) || 0);
+  const total = vendor ? (Number(vendor.totalBilled) || 0) : (Number(booking.totalAmount) || 0);
+  const collected = vendor ? (Number(vendor.totalPaid) || 0) : ((Number(booking.advance) || 0) + (Number(booking.depositAmount) || 0));
   const outstanding = Math.max(0, total - collected);
 
   const handleSubmit = async (e) => {
@@ -55,14 +55,24 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
         finalNotes = `Collected By: ${collectedBy}\n${notes}`;
       }
 
-      await paymentsAPI.create({
-        bookingId: booking._id || booking.id, // Use integer ID
-        amount: Number(amount),
-        paymentMode: method,
-        referenceNumber: finalRef,
-        notes: finalNotes,
-        paymentDate: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
-      });
+      if (vendor) {
+        await vendorsAPI.createPayment(vendor.id, {
+          amount: Number(amount),
+          paymentMode: method,
+          referenceNumber: finalRef,
+          description: finalNotes,
+          date: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
+        });
+      } else {
+        await paymentsAPI.create({
+          bookingId: booking._id || booking.id, // Use integer ID
+          amount: Number(amount),
+          paymentMode: method,
+          referenceNumber: finalRef,
+          notes: finalNotes,
+          paymentDate: collectionDate ? new Date(collectionDate).toISOString() : new Date().toISOString()
+        });
+      }
       addToast("Payment collected successfully!", "success");
       onSuccess();
     } catch (err) {
@@ -85,7 +95,9 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
           <div style={{ padding: "20px 28px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Collect Payment</h2>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>{booking.customerName} • {booking.bookingNumber || booking.id}</p>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+                {vendor ? vendor.name : `${booking.customerName} • ${booking.bookingNumber || booking.id}`}
+              </p>
             </div>
             <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}><X size={24} /></button>
           </div>
@@ -99,7 +111,7 @@ export default function CollectPaymentModal({ open, booking, onClose, onSuccess 
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>₹{outstanding.toLocaleString()}</div>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 4 }}>Total Booking</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 4 }}>{vendor ? "Total Billed" : "Total Booking"}</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#334155" }}>₹{total.toLocaleString()}</div>
               </div>
             </div>

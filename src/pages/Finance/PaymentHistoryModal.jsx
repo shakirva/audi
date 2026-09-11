@@ -1,40 +1,48 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Receipt, Printer, FileText, ArrowDownToLine, RefreshCw } from "lucide-react";
-import { paymentsAPI } from "../../services/api";
+import { paymentsAPI, vendorsAPI } from "../../services/api";
 import { useToast } from "../../components/Toast";
-import { generateReceipt, generateInvoice } from "../../utils/documentGenerator";
+import { generateReceipt, generateInvoice, generateVendorReceipt } from "../../utils/documentGenerator";
 
-export default function PaymentHistoryModal({ open, booking, onClose }) {
+export default function PaymentHistoryModal({ open, booking, vendor, onClose }) {
   const { addToast } = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    if (open && booking) {
+    if (open && (booking || vendor)) {
       fetchPayments();
     }
-  }, [open, booking]);
+  }, [open, booking, vendor]);
 
   const fetchPayments = async () => {
     setLoading(true);
     try {
-      const res = await paymentsAPI.getAll({ bookingId: booking._id || booking.id });
-      const fetched = res.data.data || [];
+      let fetched = [];
+      if (vendor) {
+        const res = await vendorsAPI.getPayments(vendor.id);
+        fetched = res.data.data || [];
+      } else {
+        const res = await paymentsAPI.getAll({ bookingId: booking._id || booking.id });
+        fetched = res.data.data || [];
+      }
       
-      const sumPayments = fetched.reduce((sum, p) => sum + Number(p.amount), 0);
-      const totalAdvance = (Number(booking.advance) || 0) + (Number(booking.depositAmount) || 0);
-      
-      if (sumPayments < totalAdvance) {
-        fetched.push({
-          id: "synthetic-advance",
-          amount: totalAdvance - sumPayments,
-          paymentMode: "Advance (Booking Time)",
-          paymentDate: booking.createdAt,
-          referenceNumber: "Auto-recorded",
-          createdAt: booking.createdAt
-        });
+      if (!vendor) {
+        const sumPayments = fetched.reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalAdvance = (Number(booking.advance) || 0) + (Number(booking.depositAmount) || 0);
+        
+        if (sumPayments < totalAdvance) {
+          fetched.push({
+            id: "synthetic-advance",
+            amount: totalAdvance - sumPayments,
+            paymentMode: "Advance (Booking Time)",
+            paymentDate: booking.createdAt,
+            referenceNumber: "Auto-recorded",
+            createdAt: booking.createdAt
+          });
+        }
       }
       
       fetched.sort((a, b) => new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt));
@@ -70,7 +78,11 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
   };
 
   const printReceipt = (p) => {
-    generateReceipt(p, booking);
+    if (vendor) {
+      generateVendorReceipt(p);
+    } else {
+      generateReceipt(p, booking);
+    }
   };
 
   const printFinalInvoice = () => {
@@ -85,7 +97,7 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
     });
   };
 
-  if (!open || !booking) return null;
+  if (!open || (!booking && !vendor)) return null;
 
   return (
     <AnimatePresence>
@@ -98,7 +110,9 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
           <div style={{ padding: "24px 32px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Payment History</h2>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>{booking.customerName} • {booking.bookingNumber || booking.id}</p>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+                {vendor ? vendor.name : `${booking.customerName} • ${booking.bookingNumber || booking.id}`}
+              </p>
             </div>
             <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}><X size={24} /></button>
           </div>
@@ -148,14 +162,16 @@ export default function PaymentHistoryModal({ open, booking, onClose }) {
             )}
           </div>
           
-          <div style={{ padding: "16px 32px", borderTop: "1px solid #f1f5f9", background: "#f8fafc", display: "flex", justifyContent: "flex-end" }}>
-            <button 
-              onClick={printFinalInvoice}
-              style={{ background: "#0f172a", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
-            >
-              <FileText size={16} /> Print Final Invoice
-            </button>
-          </div>
+          {!vendor && (
+            <div style={{ padding: "16px 32px", borderTop: "1px solid #f1f5f9", background: "#f8fafc", display: "flex", justifyContent: "flex-end" }}>
+              <button 
+                onClick={printFinalInvoice}
+                style={{ background: "#0f172a", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 4px rgba(15,23,42,0.2)" }}
+              >
+                <FileText size={16} /> Print Final Invoice
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>

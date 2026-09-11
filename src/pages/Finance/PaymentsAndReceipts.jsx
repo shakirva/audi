@@ -9,7 +9,7 @@ import { generateVendorReceipt } from "../../utils/documentGenerator";
 export default function PaymentsAndReceipts() {
   const { addToast } = useToast();
   const [bookings, setBookings] = useState([]);
-  const [vendorPayments, setVendorPayments] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dashboardData, setDashboardData] = useState(null);
@@ -18,31 +18,30 @@ export default function PaymentsAndReceipts() {
   // Modal states
   const [collectPaymentBooking, setCollectPaymentBooking] = useState(null);
   const [historyBooking, setHistoryBooking] = useState(null);
+  const [collectPaymentVendor, setCollectPaymentVendor] = useState(null);
+  const [historyVendor, setHistoryVendor] = useState(null);
   const [venueName, setVenueName] = useState("Our Auditorium");
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
       // Fetching up to 100 recent bookings to show payments pending
-      const [bookingsRes, dashboardRes, settingsRes, vpRes] = await Promise.all([
+      const [bookingsRes, dashboardRes, settingsRes, vendorsRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 100 }),
         accountsAPI.getDashboard(),
         settingsAPI.get().catch(() => ({ data: { data: {} } })),
-        vendorsAPI.getAllPayments().catch(() => ({ data: { data: [] } }))
+        vendorsAPI.getAll().catch(() => ({ data: { data: [] } }))
       ]);
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
       setSettings(settingsRes.data?.data || {});
-      const vpData = vpRes.data?.data?.data || vpRes.data?.data || [];
-      setVendorPayments(Array.isArray(vpData) ? vpData : []);
+      setVendors(vendorsRes.data?.data || []);
     } catch (err) {
       if (!isPlanRestriction(err)) addToast("Failed to load data", "error");
     } finally {
       setLoading(false);
     }
   };
-
-  // Fetch venue name for dynamic branding
   useEffect(() => {
     settingsAPI.get().then(res => {
       const name = res.data?.data?.venueName;
@@ -98,8 +97,20 @@ export default function PaymentsAndReceipts() {
     return sum + Math.max(0, total - paid);
   }, 0);
 
-  // Formatting helper
-  const formatMoney = (val) => `₹${Number(val).toLocaleString()}`;
+  const handlePaymentSuccess = () => {
+    setCollectPaymentBooking(null);
+    fetchBookings();
+  };
+
+  const handleVendorPaymentSuccess = () => {
+    setCollectPaymentVendor(null);
+    fetchBookings();
+  };
+
+  // Helper functions
+  const formatMoney = (amount) => {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
+  };
 
   return (
     <div className="hm-bookings-wrapper">
@@ -329,7 +340,7 @@ export default function PaymentsAndReceipts() {
       </div>
 
       {/* Vendor Receipts Section */}
-      {vendorPayments.length > 0 && (
+      {vendors.length > 0 && (
         <div style={{ marginTop: 32 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
             <div style={{ width: 36, height: 36, background: "#fff7ed", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -346,41 +357,54 @@ export default function PaymentsAndReceipts() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt ID</th>
                   <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Vendor</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Date</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Mode</th>
-                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Amount</th>
-                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Description</th>
-                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Receipt</th>
+                  <th style={{ padding: "14px 20px", textAlign: "left", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Phone / Email</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Total Amount</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Collected</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#dc2626", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Outstanding</th>
+                  <th style={{ padding: "14px 20px", textAlign: "center", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Progress</th>
+                  <th style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#64748b", textTransform: "uppercase", fontSize: 11, letterSpacing: 0.5 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {vendorPayments.map(vp => (
-                  <tr key={vp.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "14px 20px" }}>
-                      <span style={{ fontWeight: 700, color: "#0f172a" }}>{vp.paymentNumber}</span>
-                      <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 8, border: "1px solid #fed7aa" }}>Vendor</span>
-                    </td>
-                    <td style={{ padding: "14px 20px", fontWeight: 600, color: "#334155" }}>{vp.Vendor?.name || vp.Customer?.name || "—"}</td>
-                    <td style={{ padding: "14px 20px", color: "#64748b" }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
-                    <td style={{ padding: "14px 20px" }}>
-                      <span style={{ background: "#f1f5f9", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#475569" }}>{vp.paymentMode}</span>
-                    </td>
-                    <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(vp.amount)}</td>
-                    <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 12 }}>{vp.notes || vp.description || "—"}</td>
-                    <td style={{ padding: "14px 20px", textAlign: "center" }}>
-                      <button onClick={() => generateVendorReceipt(vp)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <Printer size={14} /> Receipt
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {vendors.map(vendor => {
+                  const total = Number(vendor.totalBilled) || 0;
+                  const collected = Number(vendor.totalPaid) || 0;
+                  const outstanding = Math.max(0, total - collected);
+                  const progress = total > 0 ? Math.round((collected / total) * 100) : 0;
+                  return (
+                    <tr key={vendor.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "14px 20px" }}>
+                        <span style={{ fontWeight: 700, color: "#0f172a" }}>{vendor.name}</span>
+                        <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 8, border: "1px solid #fed7aa" }}>Vendor</span>
+                      </td>
+                      <td style={{ padding: "14px 20px", color: "#64748b", fontSize: 13 }}>{vendor.phone || vendor.email || "—"}</td>
+                      <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 600, color: "#334155" }}>{formatMoney(total)}</td>
+                      <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 700, color: "#16a34a" }}>{formatMoney(collected)}</td>
+                      <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 600, color: "#dc2626" }}>{formatMoney(outstanding)}</td>
+                      <td style={{ padding: "14px 20px", textAlign: "center" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: progress === 100 ? "#dcfce7" : "#f1f5f9", padding: "4px 10px", borderRadius: 12 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: progress === 100 ? "#166534" : "#475569" }}>{progress}%</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 20px", textAlign: "right" }}>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <button onClick={() => setHistoryVendor(vendor)} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                            History
+                          </button>
+                          <button onClick={() => setCollectPaymentVendor(vendor)} style={{ background: "#0f172a", border: "none", padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>
+                            Collect
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr style={{ background: "#f8fafc", borderTop: "2px solid #e2e8f0" }}>
                   <td colSpan={4} style={{ padding: "14px 20px", fontWeight: 800, color: "#0f172a", fontSize: 14 }}>Total Vendor Income</td>
-                  <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 800, color: "#16a34a", fontSize: 16 }}>{formatMoney(vendorPayments.reduce((s, vp) => s + Number(vp.amount || 0), 0))}</td>
+                  <td style={{ padding: "14px 20px", textAlign: "right", fontWeight: 800, color: "#16a34a", fontSize: 16 }}>{formatMoney(vendors.reduce((s, v) => s + Number(v.totalPaid || 0), 0))}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tfoot>
@@ -389,44 +413,78 @@ export default function PaymentsAndReceipts() {
 
           {/* Mobile */}
           <div className="block md:hidden flex flex-col gap-3">
-            {vendorPayments.map(vp => (
-              <div key={vp.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 12, padding: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div>
-                    <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{vp.paymentNumber}</span>
-                    <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6, border: "1px solid #fed7aa" }}>Vendor</span>
+            {vendors.map(vendor => {
+              const total = Number(vendor.totalBilled) || 0;
+              const collected = Number(vendor.totalPaid) || 0;
+              const outstanding = Math.max(0, total - collected);
+              const progress = total > 0 ? Math.round((collected / total) * 100) : 0;
+              return (
+                <div key={vendor.id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 16 }}>{vendor.name}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{vendor.phone || vendor.email || "—"}</div>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: progress === 100 ? "#dcfce7" : "#f1f5f9", padding: "4px 10px", borderRadius: 12, height: "fit-content" }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: progress === 100 ? "#166534" : "#475569" }}>{progress}%</span>
+                    </div>
                   </div>
-                  <span style={{ fontWeight: 700, color: "#16a34a", fontSize: 15 }}>{formatMoney(vp.amount)}</span>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                    <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 4 }}>Collected</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#16a34a" }}>{formatMoney(collected)}</div>
+                    </div>
+                    <div style={{ background: "#fff1f2", padding: 12, borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9f1239", textTransform: "uppercase", marginBottom: 4 }}>Outstanding</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#dc2626" }}>{formatMoney(outstanding)}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setHistoryVendor(vendor)} style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      History
+                    </button>
+                    <button onClick={() => setCollectPaymentVendor(vendor)} style={{ flex: 1, background: "#0f172a", border: "none", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      Collect
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{vp.Vendor?.name || vp.Customer?.name || "—"}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, marginBottom: 12 }}>{(vp.paymentDate || vp.date) ? new Date(vp.paymentDate || vp.date).toLocaleDateString("en-IN") : "—"} • {vp.paymentMode}</div>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                   <button onClick={() => generateVendorReceipt(vp)} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "6px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <Printer size={14} /> Receipt
-                   </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {collectPaymentBooking && (
-        <CollectPaymentModal 
-          open={!!collectPaymentBooking} 
-          booking={collectPaymentBooking} 
-          onClose={() => setCollectPaymentBooking(null)} 
-          onSuccess={() => { setCollectPaymentBooking(null); fetchBookings(); }} 
-        />
-      )}
+      {/* Collect Payment Modal (Bookings) */}
+      <CollectPaymentModal
+        open={!!collectPaymentBooking}
+        booking={collectPaymentBooking}
+        onClose={() => setCollectPaymentBooking(null)}
+        onSuccess={handlePaymentSuccess}
+      />
       
-      {historyBooking && (
-        <PaymentHistoryModal
-          open={!!historyBooking}
-          booking={historyBooking}
-          onClose={() => setHistoryBooking(null)}
-        />
-      )}
+      {/* Payment History Modal (Bookings) */}
+      <PaymentHistoryModal
+        open={!!historyBooking}
+        booking={historyBooking}
+        onClose={() => setHistoryBooking(null)}
+      />
+
+      {/* Collect Payment Modal (Vendors) */}
+      <CollectPaymentModal
+        open={!!collectPaymentVendor}
+        vendor={collectPaymentVendor}
+        onClose={() => setCollectPaymentVendor(null)}
+        onSuccess={handleVendorPaymentSuccess}
+      />
+      
+      {/* Payment History Modal (Vendors) */}
+      <PaymentHistoryModal
+        open={!!historyVendor}
+        vendor={historyVendor}
+        onClose={() => setHistoryVendor(null)}
+      />
 
     </div>
   );
