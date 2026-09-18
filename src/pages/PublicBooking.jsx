@@ -21,10 +21,10 @@ function getDayStatus(dateStr, bookings, blackoutDates = []) {
   if (blackoutDates.includes(dateStr)) return "blocked";
   const today = new Date().toISOString().split("T")[0];
   if (dateStr < today) return "past";
-  const dayBookings = bookings.filter(b => b.date.startsWith(dateStr) && b.status !== "Cancelled");
+  const dayBookings = bookings.filter(b => b.date && b.date.startsWith(dateStr) && b.status !== "Cancelled");
   if (dayBookings.length === 0) return "available";
 
-  const activeBookings = dayBookings.filter(b => b.status === "Confirmed" || b.status === "Completed" || b.status === "Pending Payment");
+  const activeBookings = dayBookings.filter(b => ["Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed"].includes(b.status));
   
   if (activeBookings.length === 0) return "enquiry";
 

@@ -8,7 +8,7 @@ import { accountsAPI, bookingsAPI, isPlanRestriction } from "../../services/api"
 import { useToast } from "../../components/Toast";
 import CollectPaymentModal from "./CollectPaymentModal";
 import AddExpenseModal from "./AddExpenseModal";
-import { generateQuotation, generateAgreement, generateInvoice, generateReceiptSummary, generateReceipt, generateStatement } from "../../utils/documentGenerator";
+import { generateQuotation, generateAgreement, generateInvoice, generateReceiptSummary, generateReceipt, generateStatement, generateConsolidatedBill, generateProformaInvoice } from "../../utils/documentGenerator";
 
 export default function BookingFinancialDashboard() {
   const { id } = useParams();
@@ -594,6 +594,31 @@ export default function BookingFinancialDashboard() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={() => generateReceiptSummary(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
                   <button onClick={() => generateReceiptSummary(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                </div>
+              </div>
+
+              {/* Proforma Invoice — always available */}
+              <div style={{ padding: 20, border: "1px solid #e0f2fe", borderRadius: 14, background: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 36, height: 36, background: "#eff6ff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={18} color="#2563eb" /></div>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>Proforma Invoice</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => generateProformaInvoice(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}><Eye size={15} /> View</button>
+                  <button onClick={() => generateProformaInvoice(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#1B4332", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
+                </div>
+              </div>
+
+              {/* Consolidated Bill — ALWAYS available (the key document) */}
+              <div style={{ padding: 20, border: "2px solid #f59e0b", borderRadius: 14, background: "#fffbeb", boxShadow: "0 2px 8px rgba(245,158,11,0.08)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <div style={{ width: 36, height: 36, background: "#fef3c7", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><ReceiptIcon size={18} color="#d97706" /></div>
+                  <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14 }}>Consolidated Bill</div>
+                </div>
+                <p style={{ fontSize: 11, color: "#a16207", margin: "0 0 12px", lineHeight: 1.4 }}>Full breakdown with facilities, payments & balance due. Available anytime.</p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => generateConsolidatedBill(data, "preview")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#fff", border: "1px solid #fde68a", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#92400e" }}><Eye size={15} /> View</button>
+                  <button onClick={() => generateConsolidatedBill(data, "download")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: "#d97706", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff" }}><Download size={15} /> Download</button>
                 </div>
               </div>
 

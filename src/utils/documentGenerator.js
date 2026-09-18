@@ -141,36 +141,384 @@ export const generateQuotation = async (data, action = "download") => {
   doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 80);
   doc.text(`Guests: ${booking.guests || 0}`, 120, 86);
 
-  // Pricing Table
-    autoTable(doc, {
+  // ── Build facility line-item breakdown (same logic as invoice) ──
+  const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
+  const totalTax = Number(booking.taxes || 0);
+  const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
+
+  let exactFacTax = 0, facTotal = 0;
+  facilities.forEach(f => {
+    const p = Number(f.price || 0) * Number(f.count || 1);
+    facTotal += p;
+    const gstRate = Number(f.gst || 0);
+    if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
+  });
+
+  const hallTax = Math.max(0, totalTax - exactFacTax);
+  const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
+
+  let hallTaxPct = Number(booking.taxPercentage);
+  if (!hallTaxPct && settings.halls) {
+    const selectedHall = settings.halls.find(h => h.name === booking.hall);
+    if (selectedHall) hallTaxPct = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+  }
+  if (!hallTaxPct) hallTaxPct = 18;
+
+  let dynamicBody = [];
+  dynamicBody.push([
+    `${booking.eventType || "Event"} at ${booking.hall || "Venue"}`,
+    "1",
+    booking.session || "-",
+    hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct}%)` : "-",
+    (hallBase + hallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  ]);
+
+  facilities.forEach(f => {
+    const count = Number(f.count || 1);
+    const p = Number(f.price || 0) * count;
+    const gstRate = Number(f.gst || 0);
+    const gstAmt = (p * gstRate) / 100;
+    const fBase = p - gstAmt;
+    dynamicBody.push([
+      f.name, count.toString(), f.time || "-",
+      fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
+      p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ]);
+  });
+
+  if (Number(booking.discount || 0) > 0) {
+    dynamicBody.push([
+      "Discount Applied", "-", "-", "-", "-",
+      `- ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+  }
+
+  autoTable(doc, {
     startY: 90,
     headStyles: { fillColor: primaryColor, textColor: 255 },
-    head: [["Description", "Amount (INR)"]],
-    body: [
-      ...(Number(booking.taxes || 0) > 0 
-        ? [
-            ["Total Amount (incl. Tax)", `Rs. ${Number(booking.totalAmount).toLocaleString()}`],
-            ["Net Amount (Base)", `Rs. ${(Number(booking.totalAmount || 0) - Number(booking.taxes || 0)).toLocaleString()}`],
-            ["Total Tax", `Rs. ${Number(booking.taxes).toLocaleString()}`],
-          ]
-        : [
-            ["Hall Rental", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`],
-          ]
-      ),
-      ...(Number(booking.discount || 0) > 0 ? [["Discount Applied", `- Rs. ${Number(booking.discount).toLocaleString()}`]] : []),
-    ],
+    head: [["Item Description", "Qty", "Time", "Base (INR)", "GST (INR)", "Total (INR)"]],
+    body: dynamicBody,
     foot: [
-      ["Total (What Client Pays)", `Rs. ${Number(booking.totalAmount || 0).toLocaleString()}`]
+      ["Estimated Total", "", "", "", "", `Rs. ${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
     ],
     footStyles: { fillColor: [241, 245, 249], textColor: textDark, fontStyle: "bold" },
     theme: "grid"
   });
 
-  drawFooter(doc);
+  // Disclaimer
+  const disclaimerY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 150) + 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...textLight);
+  doc.text("This is a quotation only and does not constitute a tax invoice. Prices are subject to change.", 14, disclaimerY);
+
+  drawFooter(doc, settings);
   if (action === "preview") {
     window.open(doc.output('bloburl'), '_blank');
   } else {
     downloadPDF(doc, `Quotation_${booking.bookingId || booking.id}.pdf`);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// CONSOLIDATED BILL — Available ANYTIME (the key missing document)
+// Shows: Full facility breakdown + Payment history + Balance due
+// ══════════════════════════════════════════════════════════════════════
+export const generateConsolidatedBill = async (data, action = "download") => {
+  try {
+    const doc = new jsPDF();
+    const { booking, payments, totalPaid, outstanding } = data;
+    const settings = await getSettings();
+
+    await drawHeader(doc, "CONSOLIDATED BILL", booking, settings);
+
+    // Bill To
+    doc.setTextColor(...textDark);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bill To:", 14, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 14, 62);
+    doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
+    const clientGst = booking.clientGstNumber || booking.Customer?.gstNumber;
+    if (clientGst && clientGst !== "undefined" && clientGst !== "null") {
+      doc.text(`GSTIN: ${clientGst}`, 14, 74);
+    }
+
+    // Booking Info
+    doc.setFont("helvetica", "bold");
+    doc.text("Booking Details:", 120, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ref: ${booking.bookingId || booking.id}`, 120, 62);
+    doc.text(`Event: ${booking.eventType || "N/A"}`, 120, 68);
+    doc.text(`Date: ${formatDate(booking.date)}`, 120, 74);
+    doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 80);
+    doc.text(`Guests: ${booking.guests || 0}`, 120, 86);
+
+    // ── Build facility line-item table ──
+    const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
+    const totalTax = Number(booking.taxes || 0);
+    const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
+
+    let exactFacTax = 0, facTotal = 0;
+    facilities.forEach(f => {
+      const p = Number(f.price || 0) * Number(f.count || 1);
+      facTotal += p;
+      const gstRate = Number(f.gst || 0);
+      if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
+    });
+
+    const hallTax = Math.max(0, totalTax - exactFacTax);
+    const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
+
+    let hallTaxPct = Number(booking.taxPercentage);
+    if (!hallTaxPct && settings.halls) {
+      const selectedHall = settings.halls.find(h => h.name === booking.hall);
+      if (selectedHall) hallTaxPct = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+    }
+    if (!hallTaxPct) hallTaxPct = 18;
+
+    let dynamicBody = [];
+    dynamicBody.push([
+      `${booking.eventType || "Event"} at ${booking.hall || "Venue"}`,
+      "1", booking.session || "-",
+      hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct}%)` : "-",
+      (hallBase + hallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ]);
+
+    facilities.forEach(f => {
+      const count = Number(f.count || 1);
+      const p = Number(f.price || 0) * count;
+      const gstRate = Number(f.gst || 0);
+      const gstAmt = (p * gstRate) / 100;
+      const fBase = p - gstAmt;
+      dynamicBody.push([
+        f.name, count.toString(), f.time || "-",
+        fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
+        p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      ]);
+    });
+
+    if (Number(booking.discount || 0) > 0) {
+      dynamicBody.push([
+        "Discount Applied", "-", "-", "-", "-",
+        `- ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ]);
+    }
+
+    // Line items table with payment summary in footer
+    autoTable(doc, {
+      startY: 90,
+      headStyles: { fillColor: primaryColor, textColor: 255 },
+      head: [["Item Description", "Qty", "Time", "Base (INR)", "GST (INR)", "Total (INR)"]],
+      body: dynamicBody,
+      foot: [
+        ["Gross Total", "", "", "", "", `${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+        ["Total Paid", "", "", "", "", `${Number(totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+        ["Balance Due", "", "", "", "", `${Number(outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
+      ],
+      footStyles: { fillColor: [248, 250, 252], textColor: textDark, fontStyle: "bold" },
+      theme: "grid"
+    });
+
+    // Payment History
+    if (payments && payments.length > 0) {
+      const startY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 100) + 15;
+      doc.setTextColor(...textDark);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Payment History", 14, startY);
+      const payBody = payments.map(p => {
+        let dateStr = "";
+        try { dateStr = formatDate(p.paymentDate || p.createdAt || Date.now()); } catch(e) { dateStr = "-"; }
+        return [
+          dateStr,
+          p.Receipt?.receiptNumber || p.referenceNumber || "-",
+          p.paymentMode || "Cash",
+          `Rs. ${Number(p.amount || 0).toLocaleString()}`
+        ];
+      });
+      autoTable(doc, {
+        startY: startY + 5,
+        headStyles: { fillColor: [100, 116, 139] },
+        head: [["Date", "Receipt No", "Mode", "Amount"]],
+        body: payBody,
+        theme: "grid"
+      });
+    }
+
+    // Bank Details
+    if (settings.bankName && settings.accountNumber) {
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 15 : 200;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Bank Details for Payment:", 14, finalY);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Bank Name: ${settings.bankName}`, 14, finalY + 6);
+      doc.text(`Account Name: ${settings.accountName || settings.legalName || settings.venueName}`, 14, finalY + 11);
+      doc.text(`Account No: ${settings.accountNumber}`, 14, finalY + 16);
+      doc.text(`IFSC Code: ${settings.ifscCode || "N/A"}`, 14, finalY + 21);
+    }
+
+    // Disclaimer — important: this is NOT a tax invoice
+    const discY = doc.lastAutoTable ? doc.lastAutoTable.finalY + (settings.bankName ? 42 : 15) : 220;
+    doc.setFontSize(8);
+    doc.setTextColor(220, 38, 38); // Red color for emphasis
+    doc.setFont("helvetica", "bold");
+    doc.text("This is a Consolidated Bill for reference only — NOT a Final Tax Invoice.", 14, discY);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...textLight);
+    doc.text("Final Tax Invoice will be issued upon full settlement of the outstanding balance.", 14, discY + 5);
+
+    drawFooter(doc, settings);
+    if (action === "preview") {
+      window.open(doc.output('bloburl'), '_blank');
+    } else {
+      downloadPDF(doc, `Consolidated_Bill_${booking.bookingId || booking.id}.pdf`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("PDF Error: " + err.message);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// PROFORMA INVOICE — Formal pre-payment document
+// Shows: Full facility breakdown (no payment history)
+// ══════════════════════════════════════════════════════════════════════
+export const generateProformaInvoice = async (data, action = "download") => {
+  try {
+    const doc = new jsPDF();
+    const { booking } = data;
+    const settings = await getSettings();
+
+    await drawHeader(doc, "PROFORMA INVOICE", booking, settings);
+
+    // Bill To
+    doc.setTextColor(...textDark);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bill To:", 14, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${booking.Customer?.name || booking.customerName || "Customer"}`, 14, 62);
+    doc.text(`Phone: ${booking.Customer?.phone || booking.phone || "N/A"}`, 14, 68);
+    const clientGst = booking.clientGstNumber || booking.Customer?.gstNumber;
+    if (clientGst && clientGst !== "undefined" && clientGst !== "null") {
+      doc.text(`GSTIN: ${clientGst}`, 14, 74);
+    }
+
+    // Invoice Info
+    doc.setFont("helvetica", "bold");
+    doc.text("Proforma Details:", 120, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ref: ${booking.bookingId || booking.id}`, 120, 62);
+    doc.text(`Event: ${booking.eventType || "N/A"}`, 120, 68);
+    doc.text(`Date: ${formatDate(booking.date)}`, 120, 74);
+    doc.text(`Hall: ${booking.hall || "N/A"} (${booking.session || "Full Day"})`, 120, 80);
+    doc.text(`Guests: ${booking.guests || 0}`, 120, 86);
+
+    // ── Facility line-item table ──
+    const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
+    const totalTax = Number(booking.taxes || 0);
+    const baseAmount = Math.max(0, Number(booking.totalAmount || 0) - totalTax);
+
+    let exactFacTax = 0, facTotal = 0;
+    facilities.forEach(f => {
+      const p = Number(f.price || 0) * Number(f.count || 1);
+      facTotal += p;
+      const gstRate = Number(f.gst || 0);
+      if (gstRate > 0) exactFacTax += (p * gstRate) / 100;
+    });
+
+    const hallTax = Math.max(0, totalTax - exactFacTax);
+    const hallBase = Math.max(0, baseAmount - (facTotal - exactFacTax));
+
+    let hallTaxPct = Number(booking.taxPercentage);
+    if (!hallTaxPct && settings.halls) {
+      const selectedHall = settings.halls.find(h => h.name === booking.hall);
+      if (selectedHall) hallTaxPct = selectedHall.gstRate !== undefined ? selectedHall.gstRate : 18;
+    }
+    if (!hallTaxPct) hallTaxPct = 18;
+
+    let dynamicBody = [];
+    dynamicBody.push([
+      `${booking.eventType || "Event"} at ${booking.hall || "Venue"}`,
+      "1", booking.session || "-",
+      hallBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      hallTax > 0 ? `${hallTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${hallTaxPct}%)` : "-",
+      (hallBase + hallTax).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ]);
+
+    facilities.forEach(f => {
+      const count = Number(f.count || 1);
+      const p = Number(f.price || 0) * count;
+      const gstRate = Number(f.gst || 0);
+      const gstAmt = (p * gstRate) / 100;
+      const fBase = p - gstAmt;
+      dynamicBody.push([
+        f.name, count.toString(), f.time || "-",
+        fBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        gstRate > 0 ? `${gstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gstRate}%)` : "-",
+        p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      ]);
+    });
+
+    if (Number(booking.discount || 0) > 0) {
+      dynamicBody.push([
+        "Discount Applied", "-", "-", "-", "-",
+        `- ${Number(booking.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ]);
+    }
+
+    autoTable(doc, {
+      startY: 90,
+      headStyles: { fillColor: primaryColor, textColor: 255 },
+      head: [["Item Description", "Qty", "Time", "Base (INR)", "GST (INR)", "Total (INR)"]],
+      body: dynamicBody,
+      foot: [
+        ["Total Payable", "", "", "", "", `Rs. ${Number(booking.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]
+      ],
+      footStyles: { fillColor: [241, 245, 249], textColor: textDark, fontStyle: "bold" },
+      theme: "grid"
+    });
+
+    // Bank Details
+    if (settings.bankName && settings.accountNumber) {
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 15 : 200;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Bank Details for Payment:", 14, finalY);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Bank Name: ${settings.bankName}`, 14, finalY + 6);
+      doc.text(`Account Name: ${settings.accountName || settings.legalName || settings.venueName}`, 14, finalY + 11);
+      doc.text(`Account No: ${settings.accountNumber}`, 14, finalY + 16);
+      doc.text(`IFSC Code: ${settings.ifscCode || "N/A"}`, 14, finalY + 21);
+    }
+
+    // Disclaimer
+    const discY = doc.lastAutoTable ? doc.lastAutoTable.finalY + (settings.bankName ? 42 : 15) : 220;
+    doc.setFontSize(8);
+    doc.setTextColor(220, 38, 38);
+    doc.setFont("helvetica", "bold");
+    doc.text("This is a Proforma Invoice — NOT a Tax Invoice.", 14, discY);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...textLight);
+    doc.text("Tax Invoice will be issued upon full payment. Prices are subject to change until confirmed.", 14, discY + 5);
+
+    drawFooter(doc, settings);
+    if (action === "preview") {
+      window.open(doc.output('bloburl'), '_blank');
+    } else {
+      downloadPDF(doc, `Proforma_Invoice_${booking.bookingId || booking.id}.pdf`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("PDF Error: " + err.message);
   }
 };
 
