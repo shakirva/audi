@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, CheckCircle, X, Play, Images } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, CheckCircle2, X, Play, Images, User, Building2, Calendar, Users } from "lucide-react";
 import Logo from "../components/Logo";
 import { useParams } from "react-router-dom";
 import { useToast, ToastProvider } from "../components/Toast";
