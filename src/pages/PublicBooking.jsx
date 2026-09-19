@@ -36,12 +36,12 @@ function getDayStatus(dateStr, bookings, blackoutDates = []) {
 }
 
 const STATUS_COLORS = {
-  available: { bg: "#dcfce7", border: "#86efac", text: "#15803d", dot: "#22c55e", label: "Available" },
-  partial:   { bg: "#fef9c3", border: "#fde047", text: "#a16207", dot: "#eab308", label: "Partial"   },
-  full:      { bg: "#fee2e2", border: "#fca5a5", text: "#b91c1c", dot: "#ef4444", label: "Full"       },
+  available: { bg: "#dcfce7", border: "#22c55e", text: "#15803d", dot: "#22c55e", label: "Available" },
+  partial:   { bg: "#fef9c3", border: "#eab308", text: "#a16207", dot: "#eab308", label: "Partial"   },
+  full:      { bg: "#fee2e2", border: "#ef4444", text: "#b91c1c", dot: "#ef4444", label: "Full"       },
   enquiry:   { bg: "#dbeafe", border: "#93c5fd", text: "#1d4ed8", dot: "#3b82f6", label: "Enquiry"     },
-  past:      { bg: "#f3f4f6", border: "#e5e7eb", text: "#9ca3af", dot: "#d1d5db", label: "Past"       },
-  blocked:   { bg: "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)", border: "#d1d5db", text: "#9ca3af", dot: "#9ca3af", label: "Blocked" },
+  past:      { bg: "#f9fafb", border: "#e5e7eb", text: "#c0c4cc", dot: "#d1d5db", label: "Past"       },
+  blocked:   { bg: "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)", border: "#9ca3af", text: "#9ca3af", dot: "#9ca3af", label: "Blocked" },
 };
 
 const GALLERY_CATEGORIES = ["All", "Halls", "Events", "Decor", "Videos"];
@@ -429,12 +429,16 @@ function PublicBookingInner() {
       await settingsAPI.createPublicEnquiry(slug, {
         customerName: form.name,
         phone: form.phone,
+        gender: form.gender,
+        place: form.place,
+        address: form.address,
         eventType: form.eventType,
         date: selectedDate,
         session: form.session,
         guests: form.guests,
+        budget: form.budget,
         notes: form.notes,
-        hall: "Main Hall"
+        hallPreference: form.hallPreference
       });
     } catch (err) {
       console.error("Failed to save enquiry:", err);
@@ -516,17 +520,20 @@ function PublicBookingInner() {
             </button>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: 20, padding: "12px 24px 4px", flexWrap: "wrap" }}>
-            {Object.entries(STATUS_COLORS).filter(([k]) => k !== "past" && k !== "blocked").map(([key, val]) => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: val.dot }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>{val.label}</span>
+          {/* Legend — matches ERP calendar style */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 14, padding: "12px 24px 4px", flexWrap: "wrap" }}>
+            {[
+              { color: "#22c55e", bg: "#dcfce7",  label: "Available" },
+              { color: "#eab308", bg: "#fef9c3",  label: "Partial" },
+              { color: "#ef4444", bg: "#fee2e2",  label: "Full" },
+              { color: "#93c5fd", bg: "#dbeafe",  label: "Enquiry only" },
+              { color: "#9ca3af", bg: "#f3f4f6",  label: "Blocked" },
+            ].map(item => (
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: item.bg, border: `1.5px solid ${item.color}` }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>{item.label}</span>
               </div>
             ))}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#d1d5db" }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>Past / Blocked</span>
-            </div>
           </div>
 
           {/* Weekday headers */}
@@ -538,8 +545,8 @@ function PublicBookingInner() {
             ))}
           </div>
 
-          {/* Day cells */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "4px 16px 20px", gap: 4 }}>
+          {/* Day cells — matches ERP calendar style */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "8px 12px 12px", gap: 2 }}>
             {cells.map((day, i) => {
               if (!day) return <div key={i} />;
               const ds = getDateStr(day);
@@ -556,40 +563,43 @@ function PublicBookingInner() {
                   key={day}
                   onClick={() => !isPast && !isBlocked && handleDayClick(day)}
                   style={{
-                    borderRadius: 12, padding: "8px 4px 10px",
-                    cursor: isPast ? "default" : "pointer",
-                    minHeight: 70,
-                    background: sc.bg,
-                    border: `2px solid ${isToday ? "#1B4332" : sc.border}`,
-                    opacity: isPast ? 0.5 : 1,
+                    borderRadius: 8, padding: "4px 3px 5px",
+                    cursor: isPast || isBlocked ? "default" : "pointer",
+                    minHeight: 52,
+                    background: isBlocked ? sc.bg : isToday ? "#F0F4EF" : isPast ? "#f9fafb" : sc.bg,
+                    border: isBlocked ? `2px solid ${sc.border}` : isToday ? "2px solid #1B4332" : isPast ? "2px solid #e5e7eb" : `2px solid ${sc.border}`,
                     transition: "all 0.15s",
-                    position: "relative",
+                    opacity: isBlocked ? 0.65 : isPast ? 0.45 : 1,
                   }}
-                  onMouseEnter={e => { if (!isPast) { e.currentTarget.style.transform = "scale(1.04)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)"; } }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={e => { if (!isPast && !isBlocked) e.currentTarget.style.opacity = "0.8"; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = isBlocked ? "0.65" : isPast ? "0.45" : "1"; }}
                   title={isPast ? "Past date" : status === "full" ? "Fully booked" : "Click to enquire"}
                 >
-                  {/* Today badge */}
-                  {isToday && <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#1B4332" }} />}
-
-                  <div style={{ textAlign: "center", fontSize: 14, fontWeight: isToday ? 800 : 600, color: isWeekend && !isPast ? "#b91c1c" : sc.text }}>
+                  <div style={{
+                    textAlign: "center", fontSize: 11, fontWeight: isToday ? 700 : 500,
+                    color: isBlocked ? "#9ca3af" : isPast ? "#c0c4cc" : isToday ? "#1B4332" : isWeekend ? "#ef4444" : "#374151",
+                    marginBottom: 2,
+                  }}>
                     {day}
+                    {isBlocked && <div style={{ fontSize: 8, color: "#9ca3af", fontWeight: 700, marginTop: 1 }}>🚫 Blocked</div>}
                   </div>
-
-                  {/* Session pills */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, marginTop: 4 }}>
-                    {dayBks.length > 0 && dayBks.slice(0, 2).map((b, bi) => (
-                      <div key={bi} style={{ fontSize: 8, fontWeight: 700, background: "rgba(0,0,0,0.08)", color: sc.text, padding: "1px 5px", borderRadius: 6, whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {b.session === "Full Day" ? "Full" : b.session.slice(0, 3)}
-                      </div>
-                    ))}
-                    {dayBks.length > 2 && <div style={{ fontSize: 8, color: sc.text, fontWeight: 700 }}>+{dayBks.length - 2}</div>}
-                  </div>
-
-                  {/* Status dot */}
-                  <div style={{ textAlign: "center", marginTop: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: sc.dot, margin: "0 auto" }} />
-                  </div>
+                  {/* Booking dots — matches ERP */}
+                  {!isBlocked && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
+                      {dayBks.slice(0, 3).map((b, bi) => {
+                        const dotColor = status === "enquiry" ? "#3b82f6" : status === "full" ? "#ef4444" : status === "partial" ? "#f59e0b" : "#22c55e";
+                        return (
+                          <div key={bi} style={{
+                            width: 5, height: 5, borderRadius: "50%",
+                            background: dotColor,
+                          }} title={`${b.session || "Booking"}`} />
+                        );
+                      })}
+                      {dayBks.length > 3 && (
+                        <span style={{ fontSize: 7, color: "#9ca3af", lineHeight: 1 }}>+{dayBks.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
