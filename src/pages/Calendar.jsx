@@ -33,6 +33,7 @@ export default function Calendar() {
   const [showModal, setShowModal] = useState(false);
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [allowPastDates, setAllowPastDates] = useState(false);
+  const [hallCount, setHallCount] = useState(3);
 
   const [enquiries, setEnquiries] = useState([]);
 
@@ -63,6 +64,7 @@ export default function Calendar() {
         const settings = res.data.data || res.data;
         if (settings?.blackoutDates) setBlackoutDates(settings.blackoutDates);
         if (settings?.allowPastDateBooking) setAllowPastDates(settings.allowPastDateBooking);
+        if (settings?.halls && settings.halls.length > 0) setHallCount(settings.halls.length);
       })
       .catch(console.error);
       
@@ -100,7 +102,7 @@ export default function Calendar() {
 
   // Availability colour: check how many unique halls are booked on a given day
   // 0 halls → green (fully available), 1-2 → yellow (partial), 3 → red (fully booked)
-  const TOTAL_HALLS = 3;
+  const TOTAL_HALLS = hallCount;
   const availColor = (day) => {
     const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     // Blocked date overrides everything

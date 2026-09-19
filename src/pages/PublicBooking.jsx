@@ -11,28 +11,32 @@ const MONTHS   = ["January","February","March","April","May","June","July","Augu
 function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 function getFirstDay(y, m)    { return new Date(y, m, 1).getDay(); }
 
-/* ─── Availability legend ─────────────────────────────
-  green  = fully available
-  yellow = partially booked (1–2 sessions taken)
-  red    = fully booked (all 3 sessions OR Full Day taken)
-  gray   = past date
+/* ─── Availability logic ─────────────────────────────
+  MUST MATCH ERP Calendar.jsx exactly:
+  green  = no halls booked (fully available)
+  yellow = some halls booked but not all (partial)
+  red    = ALL halls booked (fully booked)
+  blue   = only enquiries, no confirmed bookings
+  gray   = past / blocked date
 ─────────────────────────────────────────────────────── */
-function getDayStatus(dateStr, bookings, blackoutDates = []) {
+function getDayStatus(dateStr, bookings, blackoutDates = [], totalHalls = 3) {
   if (blackoutDates.includes(dateStr)) return "blocked";
   const today = new Date().toISOString().split("T")[0];
   if (dateStr < today) return "past";
   const dayBookings = bookings.filter(b => b.date && b.date.startsWith(dateStr) && b.status !== "Cancelled");
   if (dayBookings.length === 0) return "available";
 
-  const activeBookings = dayBookings.filter(b => ["Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed"].includes(b.status));
-  
-  if (activeBookings.length === 0) return "enquiry";
+  // Active = everything except enquiry-only statuses
+  const activeBookings = dayBookings.filter(b => b.status !== "Enquiry" && b.status !== "New Enquiry");
 
-  const hasFullDay = activeBookings.some(b => b.session === "Full Day");
-  if (hasFullDay) return "full";
-  const sessions = new Set(activeBookings.map(b => b.session));
-  if (sessions.size >= 2) return "full";
-  return "partial";
+  // Only enquiries on this day → blue
+  if (dayBookings.length > 0 && activeBookings.length === 0) return "enquiry";
+
+  // Count unique halls booked (same logic as ERP Calendar.jsx)
+  const uniqueHalls = new Set(activeBookings.map(b => b.hall)).size;
+  if (uniqueHalls === 0) return "available";
+  if (uniqueHalls < totalHalls) return "partial";
+  return "full";
 }
 
 const STATUS_COLORS = {
@@ -417,7 +421,7 @@ function PublicBookingInner() {
   const handleDayClick = (day) => {
     const ds = getDateStr(day);
     if (ds < todayStr) return;
-    const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || []);
+    const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || [], halls.length || 3);
     if (status === "blocked") return;
     if (status === "full") { addToast("This date is fully booked. Please choose another date.", "error"); return; }
     setSelectedDate(ds);
@@ -550,7 +554,7 @@ function PublicBookingInner() {
             {cells.map((day, i) => {
               if (!day) return <div key={i} />;
               const ds = getDateStr(day);
-              const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || []);
+              const status = getDayStatus(ds, venueInfo.bookings || [], venueInfo.blackoutDates || [], halls.length || 3);
               const sc = STATUS_COLORS[status];
               const isToday = ds === todayStr;
               const isWeekend = [0, 6].includes((firstDay + day - 1) % 7);
