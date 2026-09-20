@@ -592,8 +592,15 @@ export default function Settings() {
       setItems(updated);
     };
 
-    const handleRemove = (idx) => {
+    const handleRemove = async (idx) => {
+      const sessName = normalized[idx]?.name || "this session";
+      const ok = await confirm(
+        `Are you sure you want to delete the "${sessName}" session? This will affect all booking forms that use this session.`,
+        { title: "Delete Session", confirmText: "Delete", isDanger: true }
+      );
+      if (!ok) return;
       setItems(normalized.filter((_, i) => i !== idx));
+      addToast(`"${sessName}" session removed. Click "Save Options" to apply.`, "success");
     };
 
     return (
@@ -649,8 +656,11 @@ export default function Settings() {
                 )}
 
                 {/* Delete */}
-                <button onClick={() => handleRemove(idx)} style={{ background: "none", border: "none", padding: 2, cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }}>
-                  <X size={14} color="#C0392B" />
+                <button onClick={() => handleRemove(idx)} title={`Delete ${sess.name}`} style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0, transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.borderColor = "#f87171"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.borderColor = "#fecaca"; }}
+                >
+                  <Trash2 size={13} color="#dc2626" />
                 </button>
               </div>
             ))}
