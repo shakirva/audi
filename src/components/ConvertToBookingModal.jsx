@@ -258,7 +258,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
         .catch(console.error)
         .finally(() => setFetchingAvailability(false));
     } else {
-      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+      setAvailability({ bookedSessions: [], status: "Available" });
     }
   }, [formData.date, formData.hall]);
 
@@ -341,11 +341,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       }
     }
     
-    // Check local state availability before sending
     let isBooked = false;
-    if (formData.session === "Morning" && availability.morning === "booked") isBooked = true;
-    if (formData.session === "Evening" && availability.evening === "booked") isBooked = true;
-    if (formData.session === "Full Day" && availability.fullDay === "booked") isBooked = true;
+    if (availability.bookedSessions?.includes(formData.session) || availability.bookedSessions?.includes("Full Day") || (formData.session === "Full Day" && availability.bookedSessions?.length > 0)) {
+      isBooked = true;
+    }
     
     if (isBooked) {
       addToast(`This session is already booked on ${formData.date}. Please choose another session.`, "error");
@@ -522,11 +521,10 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Hall</label>
                   <select value={formData.hall} onChange={e => setFormData({ ...formData, hall: e.target.value })} style={iStyle}>
                     <option value="">-- Select Hall --</option>
-                    <option value="Main Hall">Main Hall</option>
-                    <option value="Mini Hall">Mini Hall</option>
-                    <option value="Open Stage">Open Stage</option>
-                    <option value="Pool Area">Pool Area</option>
-                    {formData.hall && !["Main Hall", "Mini Hall", "Open Stage", "Pool Area"].includes(formData.hall) && (
+                    {(settings.halls || []).map(h => (
+                      <option key={h.name} value={h.name}>{h.name}</option>
+                    ))}
+                    {formData.hall && !(settings.halls || []).find(h => h.name === formData.hall) && (
                        <option value={formData.hall}>{formData.hall}</option>
                     )}
                   </select>
@@ -535,10 +533,32 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   <label style={labelSt}>Session</label>
                   <select value={formData.session} onChange={e => setFormData({ ...formData, session: e.target.value })} style={iStyle}>
                      <option value="">-- Select --</option>
-                     <option value="Morning" disabled={availability.morning === "booked"}>Morning {availability.morning === "booked" ? "(Booked)" : ""}</option>
-                     <option value="Afternoon" disabled={availability.morning === "booked"}>Afternoon {availability.morning === "booked" ? "(Booked)" : ""}</option>
-                     <option value="Evening" disabled={availability.evening === "booked"}>Evening {availability.evening === "booked" ? "(Booked)" : ""}</option>
-                     <option value="Full Day" disabled={availability.fullDay === "booked"}>Full Day {availability.fullDay === "booked" ? "(Booked)" : ""}</option>
+                     {(() => {
+                       let allowed = settings.sessions && settings.sessions.length > 0 
+                         ? settings.sessions 
+                         : ["Morning", "Afternoon", "Evening", "Full Day"].map(s => ({ name: s }));
+                       
+                       const selectedHall = settings.halls?.find(h => h.name === formData.hall);
+                       if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
+                         const filtered = allowed.filter(s => selectedHall.allowedSessions.includes(s.name));
+                         if (filtered.length > 0) allowed = filtered;
+                       }
+                       
+                       return allowed.map(s => {
+                         const sName = s.name.toLowerCase();
+                         // Fallback check against old static availability flags, or a direct match if the API supports it
+                         let isBooked = false;
+                         if (availability.bookedSessions?.includes(s.name) || availability.bookedSessions?.includes("Full Day") || (s.name === "Full Day" && availability.bookedSessions?.length > 0)) {
+                           isBooked = true;
+                         }
+                         
+                         return (
+                           <option key={s.name} value={s.name} disabled={isBooked}>
+                             {s.name} {isBooked ? "(Booked)" : ""}
+                           </option>
+                         );
+                       });
+                     })()}
                   </select>
                 </div>
                 <div style={{ position: "relative", zIndex: 10 }}>

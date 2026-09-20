@@ -25,7 +25,7 @@ const Enquiry = sequelize.define("Enquiry", {
   enquirerAddress: { type: DataTypes.TEXT, allowNull: true },
   eventType: { type: DataTypes.STRING, allowNull: false },
   tentativeDate: { type: DataTypes.STRING, allowNull: true },
-  session: { type: DataTypes.ENUM("Morning", "Afternoon", "Evening", "Full Day"), allowNull: true },
+  session: { type: DataTypes.STRING(50), allowNull: true },
   hallPreference: { type: DataTypes.STRING, allowNull: true },
   guestCount: { type: DataTypes.INTEGER, defaultValue: 0 },
   budget: { type: DataTypes.INTEGER, defaultValue: 0 },

@@ -552,6 +552,134 @@ export default function Settings() {
     );
   };
 
+  // ── SessionTimeEditor: each venue configures their own session time slots ──
+  const SessionTimeEditor = ({ title, desc, items, setItems }) => {
+    const [newName, setNewName] = useState("");
+    const [newStart, setNewStart] = useState("");
+    const [newEnd, setNewEnd] = useState("");
+
+    // Normalize: convert legacy string items ("Morning") to objects ({ name, startTime, endTime })
+    const normalized = (items || []).map(item => {
+      if (typeof item === "string") return { name: item, startTime: "", endTime: "" };
+      return { name: item.name || "", startTime: item.startTime || "", endTime: item.endTime || "", time: item.time || "" };
+    });
+
+    const formatTime12h = (t) => {
+      if (!t) return "";
+      const [h, m] = t.split(":").map(Number);
+      const ampm = h >= 12 ? "PM" : "AM";
+      const hr = h % 12 || 12;
+      return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
+    };
+
+    const handleAdd = () => {
+      if (!newName.trim()) return;
+      if (normalized.find(s => s.name.toLowerCase() === newName.trim().toLowerCase())) return;
+      const timeLabel = (newStart && newEnd) ? `${formatTime12h(newStart)} – ${formatTime12h(newEnd)}` : "";
+      setItems([...normalized, { name: newName.trim(), startTime: newStart, endTime: newEnd, time: timeLabel }]);
+      setNewName(""); setNewStart(""); setNewEnd("");
+    };
+
+    const handleUpdate = (idx, field, value) => {
+      const updated = [...normalized];
+      updated[idx] = { ...updated[idx], [field]: value };
+      // Auto-update the human-readable `time` label
+      if (field === "startTime" || field === "endTime") {
+        const s = updated[idx].startTime;
+        const e = updated[idx].endTime;
+        updated[idx].time = (s && e) ? `${formatTime12h(s)} – ${formatTime12h(e)}` : "";
+      }
+      setItems(updated);
+    };
+
+    const handleRemove = (idx) => {
+      setItems(normalized.filter((_, i) => i !== idx));
+    };
+
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <label style={labelSt}>{title}</label>
+        <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, marginTop: -2 }}>{desc}</p>
+
+        {normalized.length === 0 && (
+          <div style={{ padding: "16px", textAlign: "center", background: "#f9fafb", borderRadius: 10, border: "1px dashed #d1d5db", fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+            No sessions configured yet. Add your venue's session slots below.
+          </div>
+        )}
+
+        {normalized.length > 0 && (
+          <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+            {normalized.map((sess, idx) => (
+              <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f8fafc", padding: "10px 14px", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                {/* Session name (editable) */}
+                <input
+                  value={sess.name}
+                  onChange={e => handleUpdate(idx, "name", e.target.value)}
+                  style={{ ...iStyle, flex: 1.5, fontWeight: 700, fontSize: 13, padding: "6px 10px", borderColor: "#e5e7eb" }}
+                  placeholder="Session name"
+                />
+
+                {/* Start time */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", whiteSpace: "nowrap" }}>FROM</span>
+                  <input
+                    type="time"
+                    value={sess.startTime}
+                    onChange={e => handleUpdate(idx, "startTime", e.target.value)}
+                    style={{ ...iStyle, padding: "5px 6px", fontSize: 12, borderColor: "#e5e7eb", flex: 1, minWidth: 80 }}
+                  />
+                </div>
+
+                {/* End time */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", whiteSpace: "nowrap" }}>TO</span>
+                  <input
+                    type="time"
+                    value={sess.endTime}
+                    onChange={e => handleUpdate(idx, "endTime", e.target.value)}
+                    style={{ ...iStyle, padding: "5px 6px", fontSize: 12, borderColor: "#e5e7eb", flex: 1, minWidth: 80 }}
+                  />
+                </div>
+
+                {/* Preview label */}
+                {sess.time && (
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "#1B4332", background: "#dcfce7", padding: "3px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
+                    {sess.time}
+                  </span>
+                )}
+
+                {/* Delete */}
+                <button onClick={() => handleRemove(idx)} style={{ background: "none", border: "none", padding: 2, cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                  <X size={14} color="#C0392B" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add new session row */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            style={{ ...iStyle, flex: 2, minWidth: 120 }}
+            placeholder="Session name (e.g. Morning)"
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 100 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af" }}>FROM</span>
+            <input type="time" value={newStart} onChange={e => setNewStart(e.target.value)} style={{ ...iStyle, padding: "5px 6px", fontSize: 12, flex: 1 }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 100 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af" }}>TO</span>
+            <input type="time" value={newEnd} onChange={e => setNewEnd(e.target.value)} style={{ ...iStyle, padding: "5px 6px", fontSize: 12, flex: 1 }} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }} />
+          </div>
+          <button onClick={handleAdd} style={{ padding: "8px 16px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Add Session</button>
+        </div>
+      </div>
+    );
+  };
+
   const EventTypeEditor = ({ title, desc, items, setItems, globalSessions }) => {
     const [newName, setNewName] = useState("");
     
@@ -615,17 +743,23 @@ export default function Settings() {
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                     <select id={`sess_name_${item.name}`} style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb", background: "#f9fafb" }}>
                       <option value="">-- Select Session --</option>
-                      <option value="Morning">Morning</option>
-                      <option value="Afternoon">Afternoon</option>
-                      <option value="Evening">Evening</option>
-                      <option value="Night">Night</option>
-                      <option value="Full Day">Full Day</option>
+                      {(globalSessions || []).map(sess => {
+                        const sessName = typeof sess === "string" ? sess : sess.name;
+                        const sessTime = typeof sess === "string" ? "" : (sess.time || "");
+                        return (
+                          <option key={sessName} value={sessName} data-time={sessTime}>{sessName}{sessTime ? ` (${sessTime})` : ""}</option>
+                        );
+                      })}
                     </select>
                     <input id={`sess_time_${item.name}`} placeholder="Time (e.g. 9am - 2pm)" style={{ ...iStyle, padding: "4px 8px", fontSize: 11, flex: 1, borderColor: "#e5e7eb" }} onKeyDown={e => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const sName = document.getElementById(`sess_name_${item.name}`).value;
-                        const sTime = document.getElementById(`sess_time_${item.name}`).value;
+                        let sTime = document.getElementById(`sess_time_${item.name}`).value;
+                        if (!sTime && sName) {
+                          const match = (globalSessions || []).find(gs => (typeof gs === "string" ? gs : gs.name) === sName);
+                          if (match && typeof match !== "string" && match.time) sTime = match.time;
+                        }
                         if (sName) {
                           const newSessions = [...(item.sessions || []), { name: sName, time: sTime }];
                           setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
@@ -636,7 +770,11 @@ export default function Settings() {
                     }} />
                     <button onClick={() => {
                       const sName = document.getElementById(`sess_name_${item.name}`).value;
-                      const sTime = document.getElementById(`sess_time_${item.name}`).value;
+                      let sTime = document.getElementById(`sess_time_${item.name}`).value;
+                      if (!sTime && sName) {
+                        const match = (globalSessions || []).find(gs => (typeof gs === "string" ? gs : gs.name) === sName);
+                        if (match && typeof match !== "string" && match.time) sTime = match.time;
+                      }
                       if (sName) {
                         const newSessions = [...(item.sessions || []), { name: sName, time: sTime }];
                         setItems(normalizedItems.map(i => i.name === item.name ? { ...i, sessions: newSessions } : i));
@@ -1609,8 +1747,9 @@ export default function Settings() {
             <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Manage options for forms throughout the app</p>
           </div>
         </div>
-        <EventTypeEditor title="Event Types" desc="Available events in booking forms and their specific sessions" items={eventTypes} setItems={setEventTypes} globalSessions={sessions} />
+        <EventTypeEditor title="Event Types" desc="Event categories for booking forms (e.g. Wedding, Reception). Session timings are configured globally below." items={Array.isArray(eventTypes) ? eventTypes : []} setItems={(newItems) => setEventTypes(newItems)} globalSessions={sessions} />
         <ListEditor title="📍 Places / Areas" desc="Customer locations shown as suggestions in the New Enquiry form (e.g. Kannur, Thalassery)" items={places} setItems={setPlaces} />
+        <SessionTimeEditor title="⏱️ Global Sessions" desc="Configure your venue's session time slots. Each convention center can define their own timings here — these appear in all booking & enquiry forms." items={sessions} setItems={setSessions} />
 
         <button onClick={handleSaveLists} style={{
           display: "flex", alignItems: "center", gap: 7,

@@ -78,16 +78,14 @@ class AvailabilityService {
     const bookedSessions = bookings.map(b => b.session);
 
     let status = "Available";
-    if (bookedSessions.includes("Full Day") || (bookedSessions.includes("Morning") && bookedSessions.includes("Evening"))) {
+    if (bookedSessions.includes("Full Day") || bookedSessions.length >= 2) {
       status = "Fully Booked";
     } else if (bookedSessions.length > 0) {
       status = "Partially Booked";
     }
 
     return {
-      morning: bookedSessions.includes("Full Day") || bookedSessions.includes("Morning") ? "booked" : "available",
-      evening: bookedSessions.includes("Full Day") || bookedSessions.includes("Evening") ? "booked" : "available",
-      fullDay: status === "Available" ? "available" : "booked",
+      bookedSessions,
       status
     };
   }
@@ -135,7 +133,7 @@ class AvailabilityService {
       const sessions = dateMap[dateStr] || [];
       
       let status = "Available";
-      if (sessions.includes("Full Day") || (sessions.includes("Morning") && sessions.includes("Evening"))) {
+      if (sessions.includes("Full Day") || sessions.length >= 2) {
         status = "Fully Booked";
       } else if (sessions.length > 0) {
         status = "Partially Booked";
@@ -143,8 +141,7 @@ class AvailabilityService {
       
       result[dateStr] = {
         status,
-        morning: sessions.includes("Full Day") || sessions.includes("Morning") ? "booked" : "available",
-        evening: sessions.includes("Full Day") || sessions.includes("Evening") ? "booked" : "available",
+        bookedSessions: sessions,
       };
     }
 

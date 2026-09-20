@@ -611,17 +611,36 @@ function PublicBookingInner() {
 
           {/* Month stats */}
           <div style={{ borderTop: "1px solid #f3f4f6", padding: "14px 28px", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-            {[
-              { label: "Total Booked", value: monthBookings.length, color: "#1B4332" },
-              { label: "Full Days",    value: monthBookings.filter(b => b.session === "Full Day").length, color: "#b91c1c" },
-              { label: "Mornings",     value: monthBookings.filter(b => b.session === "Morning").length, color: "#D4A017" },
-              { label: "Evenings",     value: monthBookings.filter(b => b.session === "Evening").length, color: "#2563eb" },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</p>
-                <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
-              </div>
-            ))}
+            {(() => {
+              const stats = [{ label: "Total Booked", value: monthBookings.length, color: "#1B4332" }];
+              // Count sessions
+              const sessionCounts = {};
+              monthBookings.forEach(b => {
+                const s = b.session || "Unknown";
+                sessionCounts[s] = (sessionCounts[s] || 0) + 1;
+              });
+              // Sort by count desc and take top 3
+              const topSessions = Object.entries(sessionCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3);
+                
+              const colors = ["#b91c1c", "#D4A017", "#2563eb"];
+              topSessions.forEach(([name, count], idx) => {
+                stats.push({ label: name, value: count, color: colors[idx % colors.length] });
+              });
+              
+              // Pad to 4 if needed
+              while (stats.length < 4) {
+                 stats.push({ label: "-", value: 0, color: "#9ca3af" });
+              }
+              
+              return stats.map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</p>
+                  <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
+                </div>
+              ));
+            })()}
           </div>
         </div>
 

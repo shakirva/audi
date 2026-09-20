@@ -175,31 +175,15 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     }
   }, [open]);
 
-  // Auto-correct session if not allowed by event type or hall
+  // Auto-correct session if not supported by selected hall
   useEffect(() => {
-    let allowedSessionNames = [];
-    
-    if (settingsEventTypes.length > 0) {
-      const currentEv = settingsEventTypes.find(t => (typeof t === "string" ? t : t.name) === form.eventType);
-      if (currentEv) {
-        allowedSessionNames = currentEv.sessions ? currentEv.sessions.map(s => s.name) : (currentEv.allowedSessions || []);
-      }
-    }
-    
     const selectedHall = settingsHalls.find(h => h.name === form.hallPreference);
     if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
-       if (allowedSessionNames.length > 0) {
-          allowedSessionNames = allowedSessionNames.filter(s => selectedHall.allowedSessions.includes(s));
-          if (allowedSessionNames.length === 0) allowedSessionNames = [...selectedHall.allowedSessions];
-       } else {
-          allowedSessionNames = [...selectedHall.allowedSessions];
-       }
+      if (form.session && !selectedHall.allowedSessions.includes(form.session)) {
+        setForm(prev => ({ ...prev, session: "" }));
+      }
     }
-
-    if (form.session && allowedSessionNames.length > 0 && !allowedSessionNames.includes(form.session)) {
-      setForm(prev => ({ ...prev, session: "" }));
-    }
-  }, [form.eventType, form.hallPreference, settingsEventTypes, settingsHalls]);
+  }, [form.hallPreference, settingsHalls]);
 
   // Fetch real-time availability
   useEffect(() => {
@@ -209,15 +193,17 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         .then(res => {
           const avail = res.data.data;
           setAvailability(avail);
-          // Auto clear selected session if it's no longer available
-          if (form.session === "Morning" && avail.morning === "booked") setForm(prev => ({ ...prev, session: "" }));
-          if (form.session === "Evening" && avail.evening === "booked") setForm(prev => ({ ...prev, session: "" }));
-          if (form.session === "Full Day" && avail.fullDay === "booked") setForm(prev => ({ ...prev, session: "" }));
+          if (form.session) {
+            const isBooked = avail.bookedSessions?.includes(form.session) || avail.bookedSessions?.includes("Full Day") || (form.session === "Full Day" && avail.bookedSessions?.length > 0);
+            if (isBooked) {
+              setForm(prev => ({ ...prev, session: "" }));
+            }
+          }
         })
         .catch(console.error)
         .finally(() => setFetchingAvailability(false));
     } else {
-      setAvailability({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+      setAvailability({ bookedSessions: [], status: "Available" });
     }
   }, [form.tentativeDate, form.hallPreference, editData]);
 
@@ -577,33 +563,20 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 <label style={labelSt}>SESSION *</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                   {(() => {
-                    let allowed = [];
-                    if (settingsEventTypes.length > 0) {
-                      const currentEv = settingsEventTypes.find(t => (typeof t === "string" ? t : t.name) === form.eventType);
-                      if (currentEv && currentEv.sessions) {
-                        allowed = currentEv.sessions;
-                      } else if (currentEv && currentEv.allowedSessions) {
-                        allowed = currentEv.allowedSessions.map(s => ({ name: s }));
-                      } else {
-                        allowed = settingsSessions.length > 0 ? settingsSessions : SESSIONS.map(s => ({ name: s }));
-                      }
-                    } else {
-                      allowed = settingsSessions.length > 0 ? settingsSessions : SESSIONS.map(s => ({ name: s }));
-                    }
+                    // Single source of truth: global sessions from Settings
+                    let allowed = settingsSessions.length > 0 ? settingsSessions : SESSIONS.map(s => ({ name: s }));
 
+                    // Filter by hall's supported sessions if configured
                     const selectedHall = settingsHalls.find(h => h.name === form.hallPreference);
                     if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
-                       allowed = allowed.filter(s => selectedHall.allowedSessions.includes(s.name));
-                       if (allowed.length === 0) {
-                         allowed = selectedHall.allowedSessions.map(s => ({ name: s }));
-                       }
+                       const filtered = allowed.filter(s => selectedHall.allowedSessions.includes(s.name));
+                       if (filtered.length > 0) allowed = filtered;
                     }
                     return allowed.map(s => {
                       let isBooked = false;
-                      if (s.name === "Morning" && availability.morning === "booked") isBooked = true;
-                      if (s.name === "Evening" && availability.evening === "booked") isBooked = true;
-                      if (s.name === "Full Day" && availability.fullDay === "booked") isBooked = true;
-                      if (s.name === "Afternoon" && availability.morning === "booked") isBooked = true; // simplifying logic
+                      if (availability.bookedSessions?.includes(s.name) || availability.bookedSessions?.includes("Full Day") || (s.name === "Full Day" && availability.bookedSessions?.length > 0)) {
+                        isBooked = true;
+                      }
                       
                       return (
                       <div
@@ -890,7 +863,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         </div>
       )}
 
-      {/* ── Custom Event Type Confirmation Modal ── */}
+      {/* ── Custom Event Type Confirmation Modal (simplified — no session selection) ── */}
       {eventTypeToConfirm && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -909,24 +882,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
             <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
               Add New Event Type?
             </h3>
-            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-              Permanently add <strong>"{eventTypeToConfirm}"</strong>? Please select available sessions for this event. (You can customize timings later in Settings)
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Permanently add <strong>"{eventTypeToConfirm}"</strong> to your event types list? Session timings are configured globally in Settings.
             </p>
-
-            <div style={{ marginBottom: 24, textAlign: "left" }}>
-               <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 10 }}>Available Sessions *</label>
-               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                 {["Morning", "Afternoon", "Evening", "Night", "Full Day"].map(s => (
-                   <label key={s} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: selectedSessions.includes(s) ? "#f0faf4" : "#f9fafb", padding: "6px 12px", borderRadius: 8, border: `1px solid ${selectedSessions.includes(s) ? "#1B4332" : "#e5e7eb"}` }}>
-                     <input type="checkbox" checked={selectedSessions.includes(s)} onChange={(e) => {
-                       if (e.target.checked) setSelectedSessions([...selectedSessions, s]);
-                       else setSelectedSessions(selectedSessions.filter(x => x !== s));
-                     }} style={{ margin: 0, accentColor: "#1B4332" }} />
-                     <span style={{ fontSize: 13, fontWeight: 600, color: selectedSessions.includes(s) ? "#1B4332" : "#4b5563" }}>{s}</span>
-                   </label>
-                 ))}
-               </div>
-            </div>
 
             <div style={{ display: "flex", gap: 12 }}>
               <button
@@ -936,13 +894,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                 Cancel
               </button>
               <button
-                disabled={selectedSessions.length === 0}
                 onClick={async () => {
                   const newEvt = eventTypeToConfirm;
-                  const newSessions = selectedSessions.map(s => ({ name: s, time: "" }));
-                  const newEventTypes = [...settingsEventTypes, { name: newEvt, sessions: newSessions }];
+                  const newEventTypes = [...settingsEventTypes.map(t => typeof t === "string" ? t : t.name), newEvt];
                   setSettingsEventTypes(newEventTypes);
-                  setForm(prev => ({ ...prev, eventType: newEvt, session: selectedSessions[0] }));
+                  setForm(prev => ({ ...prev, eventType: newEvt }));
                   setEventTypeQuery(newEvt);
                   setEventTypeToConfirm(null);
                   try {
@@ -950,7 +906,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                     addToast(`"${newEvt}" added to Event Types!`, "success");
                   } catch(e) {}
                 }}
-                style={{ flex: 1, padding: "12px", background: selectedSessions.length === 0 ? "#9ca3af" : "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: selectedSessions.length === 0 ? "not-allowed" : "pointer" }}
+                style={{ flex: 1, padding: "12px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
               >
                 Yes, Add It
               </button>

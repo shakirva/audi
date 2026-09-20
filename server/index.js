@@ -109,7 +109,7 @@ const initDB = async () => {
     await sequelize.authenticate();
     console.log("✅ Connected to PostgreSQL (production mode, sync disabled)");
   } else {
-    await sequelize.sync({ alter: true }); // creates tables if they don't exist
+    await sequelize.sync({ alter: false }); // creates tables if they don't exist
     console.log("✅ Connected to PostgreSQL & synced tables");
   }
 };
