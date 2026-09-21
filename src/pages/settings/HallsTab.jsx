@@ -106,6 +106,39 @@ export default function HallsTab({
     setHalls(newHalls);
   };
 
+  const handleSlabChange = (hIdx, sIdx, field, value) => {
+    const newHalls = [...halls];
+    const slabs = [...(newHalls[hIdx].slabs || [])];
+    const slab = { ...slabs[sIdx] };
+    
+    // Parse to number, allow empty string
+    slab[field] = value === "" ? "" : Number(value);
+    
+    // Calculate dependent values
+    if (field === 'perPerson') {
+      // If user edits Per Guest Charge, recalculate Total Amount
+      const g = slab.guests || 0;
+      const h = slab.baseAmount || 0;
+      const p = slab.perPerson || 0;
+      slab.totalAmount = h + (g * p);
+    } else {
+      // If user edits Guests, Hall Price, or Total Amount, recalculate Per Guest Charge
+      const g = slab.guests || 0;
+      const h = slab.baseAmount || 0;
+      const t = slab.totalAmount || 0;
+      if (g > 0) {
+        // Keep precise decimal for exact math, but don't force a messy float if it's an integer
+        slab.perPerson = parseFloat(((t - h) / g).toFixed(4));
+      } else {
+        slab.perPerson = 0;
+      }
+    }
+    
+    slabs[sIdx] = slab;
+    newHalls[hIdx].slabs = slabs;
+    setHalls(newHalls);
+  };
+
   const handleSaveHalls = async () => {
     try {
       await settingsAPI.update({ halls });
@@ -313,54 +346,27 @@ export default function HallsTab({
 
               {hall.pricingType === "slab" && (
                 <div>
-                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Configure guest slabs (e.g. Up to 300 guests = Rs. 390,000)</p>
+                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>Configure guest slabs (e.g. Up to 300 guests = Rs. 390,000)</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 12, fontStyle: "italic" }}>Total Amount = Hall Price + (Per Guest Charge × Guests)</p>
                   
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {(hall.slabs || []).map((slab, sIdx) => (
                       <div key={sIdx} style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Up to Guests</label>
-                          <input type="number" value={slab.guests || ""} onChange={e => {
-                            const newSlabs = [...(hall.slabs || [])];
-                            newSlabs[sIdx].guests = Number(e.target.value);
-                            const g = newSlabs[sIdx].guests || 0;
-                            const t = newSlabs[sIdx].totalAmount || 0;
-                            const b = newSlabs[sIdx].baseAmount || 0;
-                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
-                            handleHallChange(idx, "slabs", newSlabs);
-                          }} style={iStyle} />
+                          <input type="number" value={slab.guests || ""} onChange={e => handleSlabChange(idx, sIdx, "guests", e.target.value)} style={iStyle} />
                         </div>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Total Amount (₹)</label>
-                          <input type="number" value={slab.totalAmount || ""} onChange={e => {
-                            const newSlabs = [...(hall.slabs || [])];
-                            newSlabs[sIdx].totalAmount = Number(e.target.value);
-                            const g = newSlabs[sIdx].guests || 0;
-                            const t = newSlabs[sIdx].totalAmount || 0;
-                            const b = newSlabs[sIdx].baseAmount || 0;
-                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
-                            handleHallChange(idx, "slabs", newSlabs);
-                          }} style={iStyle} />
+                          <input type="number" value={slab.totalAmount || ""} onChange={e => handleSlabChange(idx, sIdx, "totalAmount", e.target.value)} style={iStyle} />
                         </div>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Hall Price</label>
-                          <input type="number" value={slab.baseAmount || ""} onChange={e => {
-                            const newSlabs = [...(hall.slabs || [])];
-                            newSlabs[sIdx].baseAmount = Number(e.target.value);
-                            const g = newSlabs[sIdx].guests || 0;
-                            const t = newSlabs[sIdx].totalAmount || 0;
-                            const b = newSlabs[sIdx].baseAmount || 0;
-                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
-                            handleHallChange(idx, "slabs", newSlabs);
-                          }} style={iStyle} placeholder="₹" />
+                          <input type="number" value={slab.baseAmount || ""} onChange={e => handleSlabChange(idx, sIdx, "baseAmount", e.target.value)} style={iStyle} placeholder="₹" />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Per Person</label>
-                          <input type="number" value={slab.perPerson || ""} onChange={e => {
-                            const newSlabs = [...(hall.slabs || [])];
-                            newSlabs[sIdx].perPerson = Number(e.target.value);
-                            handleHallChange(idx, "slabs", newSlabs);
-                          }} style={iStyle} placeholder="₹" />
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Per Guest Charge</label>
+                          <input type="number" value={slab.perPerson || ""} onChange={e => handleSlabChange(idx, sIdx, "perPerson", e.target.value)} style={iStyle} placeholder="₹" step="0.01" />
                         </div>
                         <button onClick={() => {
                           const newSlabs = (hall.slabs || []).filter((_, i) => i !== sIdx);
