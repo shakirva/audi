@@ -53,7 +53,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   const [settingsEventTypes, setSettingsEventTypes] = useState([]);
   const [settingsSessions, setSettingsSessions] = useState([]);
   
-  const [availability, setAvailability] = useState({ morning: "available", evening: "available", fullDay: "available", status: "Available" });
+  const [availability, setAvailability] = useState({ bookedSessions: [], status: "Available" });
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
   const [allowPastDates, setAllowPastDates] = useState(false);

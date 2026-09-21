@@ -558,10 +558,40 @@ export default function Settings() {
     const [newStart, setNewStart] = useState("");
     const [newEnd, setNewEnd] = useState("");
 
+    // Parse "9:00 AM – 2:00 PM" or "09:00 AM - 02:00 PM" back to { startTime: "09:00", endTime: "14:00" }
+    const parseTimeLabel = (timeStr) => {
+      if (!timeStr) return { startTime: "", endTime: "" };
+      // Match patterns like "9:00 AM – 2:00 PM" or "09:00 AM - 02:00 PM"
+      const parts = timeStr.split(/\s*[–\-]\s*/);
+      if (parts.length !== 2) return { startTime: "", endTime: "" };
+      const parse12h = (s) => {
+        const match = s.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!match) return "";
+        let h = parseInt(match[1], 10);
+        const m = match[2];
+        const ampm = match[3].toUpperCase();
+        if (ampm === "PM" && h !== 12) h += 12;
+        if (ampm === "AM" && h === 12) h = 0;
+        return `${String(h).padStart(2, "0")}:${m}`;
+      };
+      return { startTime: parse12h(parts[0]), endTime: parse12h(parts[1]) };
+    };
+
     // Normalize: convert legacy string items ("Morning") to objects ({ name, startTime, endTime })
+    // Also recover startTime/endTime from the human-readable `time` label if missing
     const normalized = (items || []).map(item => {
-      if (typeof item === "string") return { name: item, startTime: "", endTime: "" };
-      return { name: item.name || "", startTime: item.startTime || "", endTime: item.endTime || "", time: item.time || "" };
+      if (typeof item === "string") return { name: item, startTime: "", endTime: "", time: "" };
+      const name = item.name || "";
+      let startTime = item.startTime || "";
+      let endTime = item.endTime || "";
+      const time = item.time || "";
+      // If we have a time label but no startTime/endTime, parse it back
+      if (time && (!startTime || !endTime)) {
+        const parsed = parseTimeLabel(time);
+        if (!startTime && parsed.startTime) startTime = parsed.startTime;
+        if (!endTime && parsed.endTime) endTime = parsed.endTime;
+      }
+      return { name, startTime, endTime, time };
     });
 
     const formatTime12h = (t) => {
@@ -2040,6 +2070,7 @@ export default function Settings() {
       <CreateHallModal
         open={showCreateHallModal}
         editData={editHallIndex !== null ? halls[editHallIndex] : null}
+        globalSessions={sessions}
         onClose={() => {
           setShowCreateHallModal(false);
           setEditHallIndex(null);

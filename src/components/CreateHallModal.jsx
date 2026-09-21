@@ -14,9 +14,15 @@ const labelSt = {
   display: "block", marginBottom: 6,
 };
 
-const ALL_SESSIONS = ["Morning", "Afternoon", "Evening", "Full Day"];
-
-export default function CreateHallModal({ open, onClose, onSave, editData }) {
+export default function CreateHallModal({ open, onClose, onSave, editData, globalSessions = [] }) {
+  // Derive session names from global config; fallback to defaults if not configured
+  const sessionNames = globalSessions.length > 0
+    ? globalSessions.map(s => typeof s === "string" ? s : s.name)
+    : ["Morning", "Evening", "Full Day"];
+  const sessionTimeMap = {};
+  (globalSessions || []).forEach(s => {
+    if (typeof s !== "string" && s.name) sessionTimeMap[s.name] = s.time || "";
+  });
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -26,7 +32,7 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
     pricingType: "flat",
     price: "",
     pricePerPax: "",
-    allowedSessions: ["Morning", "Afternoon", "Evening", "Full Day"],
+    allowedSessions: [...sessionNames],
     slabs: [],
     gstRate: 18
   });
@@ -39,11 +45,11 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
         price: editData.price || "",
         pricePerPax: editData.pricePerPax || "",
         gstRate: editData.gstRate !== undefined ? editData.gstRate : 18,
-        allowedSessions: editData.allowedSessions || ["Morning", "Afternoon", "Evening", "Full Day"],
+        allowedSessions: editData.allowedSessions || [...sessionNames],
       });
       setStep(1);
     } else if (open) {
-      setForm({ name: "", icon: "✨", capacity: "", description: "", pricingType: "flat", price: "", pricePerPax: "", gstRate: 18, allowedSessions: [...ALL_SESSIONS], slabs: [] });
+      setForm({ name: "", icon: "✨", capacity: "", description: "", pricingType: "flat", price: "", pricePerPax: "", gstRate: 18, allowedSessions: [...sessionNames], slabs: [] });
       setStep(1);
     }
   }, [open, editData]);
@@ -184,17 +190,20 @@ export default function CreateHallModal({ open, onClose, onSave, editData }) {
               <div>
                 <label style={labelSt}><Clock size={11} style={{ display: "inline", marginRight: 4 }}/> Supported Sessions</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {ALL_SESSIONS.map(s => (
+                  {sessionNames.map(s => (
                     <div key={s} onClick={() => toggleSession(s)}
                       style={{
                         padding: "8px 14px", borderRadius: 20, cursor: "pointer",
                         border: `1.5px solid ${form.allowedSessions.includes(s) ? "#1B4332" : "#e5e7eb"}`,
                         background: form.allowedSessions.includes(s) ? "#1B4332" : "#fff",
                         color: form.allowedSessions.includes(s) ? "#fff" : "#6b7280",
-                        fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+                        fontSize: 12, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, transition: "all 0.15s"
                       }}>
-                      {form.allowedSessions.includes(s) && <CheckCircle size={12} color="#fff" />}
-                      {s}
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        {form.allowedSessions.includes(s) && <CheckCircle size={12} color="#fff" />}
+                        {s}
+                      </div>
+                      {sessionTimeMap[s] && <span style={{ fontSize: 9, opacity: 0.7 }}>{sessionTimeMap[s]}</span>}
                     </div>
                   ))}
                 </div>
