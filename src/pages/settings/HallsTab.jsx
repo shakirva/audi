@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Edit, Edit3, Trash2, IndianRupee } from "lucide-react";
+import { Building2, Plus, Edit, Edit3, Trash2, IndianRupee, Save } from "lucide-react";
 import CreateHallModal from "../../components/CreateHallModal";
 import { mastersAPI, settingsAPI, isPlanRestriction } from "../../services/api";
 import { useConfirm } from "../../components/ConfirmProvider";
@@ -97,6 +97,21 @@ export default function HallsTab({
       addToast("Facility deleted", "info");
     } catch (e) {
       addToast("Failed to delete facility", "error");
+    }
+  };
+
+  const handleHallChange = (idx, field, value) => {
+    const newHalls = [...halls];
+    newHalls[idx] = { ...newHalls[idx], [field]: value };
+    setHalls(newHalls);
+  };
+
+  const handleSaveHalls = async () => {
+    try {
+      await settingsAPI.update({ halls });
+      addToast("Hall pricing saved! 💰", "success");
+    } catch (e) {
+      addToast("Failed to save hall pricing", "error");
     }
   };
 
@@ -255,6 +270,128 @@ export default function HallsTab({
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div style={cardSt}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <IndianRupee size={20} color="#d97706" />
+          </div>
+          <div>
+            <p style={sectionTitle}>Hall Pricing Configuration</p>
+            <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Configure specific rates and slab pricing based on models</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
+          {halls.map((hall, idx) => (
+            <div key={idx} style={{
+              border: "1.5px solid #e2e8f0", borderRadius: 12, padding: "16px 20px",
+              background: "#f8fafc"
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{hall.icon}</span> {hall.name} 
+                <span style={{ fontSize: 11, color: "#64748b", background: "#e2e8f0", padding: "4px 8px", borderRadius: 6 }}>
+                  {hall.pricingType === "slab" ? "Slab Wise" : hall.pricingType === "per_pax" ? "Per Pax" : "Flat Rate"}
+                </span>
+              </div>
+              
+              {(!hall.pricingType || hall.pricingType === "flat") && (
+                <div style={{ width: 220 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "flex", alignItems: "center", gap: 6, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}><IndianRupee size={12} /> Flat Rate per Session</label>
+                  <input type="number" value={hall.price} onChange={e => handleHallChange(idx, "price", e.target.value)} style={iStyle} />
+                </div>
+              )}
+
+              {hall.pricingType === "per_pax" && (
+                <div style={{ width: 220 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "flex", alignItems: "center", gap: 6, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}><IndianRupee size={12} /> Rate per Pax</label>
+                  <input type="number" value={hall.pricePerPax || 0} onChange={e => handleHallChange(idx, "pricePerPax", e.target.value)} style={iStyle} />
+                </div>
+              )}
+
+              {hall.pricingType === "slab" && (
+                <div>
+                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Configure guest slabs (e.g. Up to 300 guests = Rs. 390,000)</p>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {(hall.slabs || []).map((slab, sIdx) => (
+                      <div key={sIdx} style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Up to Guests</label>
+                          <input type="number" value={slab.guests || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].guests = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Total Amount (₹)</label>
+                          <input type="number" value={slab.totalAmount || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].totalAmount = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Hall Price</label>
+                          <input type="number" value={slab.baseAmount || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].baseAmount = Number(e.target.value);
+                            const g = newSlabs[sIdx].guests || 0;
+                            const t = newSlabs[sIdx].totalAmount || 0;
+                            const b = newSlabs[sIdx].baseAmount || 0;
+                            if (g > 0) newSlabs[sIdx].perPerson = Math.round((t - b) / g);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} placeholder="₹" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Per Person</label>
+                          <input type="number" value={slab.perPerson || ""} onChange={e => {
+                            const newSlabs = [...(hall.slabs || [])];
+                            newSlabs[sIdx].perPerson = Number(e.target.value);
+                            handleHallChange(idx, "slabs", newSlabs);
+                          }} style={iStyle} placeholder="₹" />
+                        </div>
+                        <button onClick={() => {
+                          const newSlabs = (hall.slabs || []).filter((_, i) => i !== sIdx);
+                          handleHallChange(idx, "slabs", newSlabs);
+                        }} style={{ padding: 8, background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", height: 35 }}>
+                          <Trash2 size={16} color="#ef4444" />
+                        </button>
+                      </div>
+                    ))}
+                    <button onClick={() => {
+                      const newSlabs = [...(hall.slabs || []), { guests: 0, totalAmount: 0, baseAmount: 0, perPerson: 0 }];
+                      handleHallChange(idx, "slabs", newSlabs);
+                    }} style={{ padding: "8px 16px", background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", width: "fit-content", marginTop: 4 }}>
+                      + Add Slab
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
+          <button onClick={handleSaveHalls} style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "10px 24px", borderRadius: 8, border: "none",
+            background: "#1B4332", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(27,67,50,0.2)",
+          }}>
+            <Save size={16} /> Save Pricing Configuration
+          </button>
         </div>
       </div>
 
