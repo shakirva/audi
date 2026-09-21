@@ -95,10 +95,15 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
       "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode"
     ];
+    const jsonbFields = ["halls", "blackoutDates", "notifications", "gallery", "eventTypes", "sessions", "expenseCategories", "places", "moduleAccess"];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];
     });
-    console.log("SAVING SETTINGS:", req.body); await settings.save();
+    // Force Sequelize to detect JSONB field mutations (it uses reference equality)
+    jsonbFields.forEach(key => {
+      if (req.body[key] !== undefined) settings.changed(key, true);
+    });
+    await settings.save();
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: "Failed to update settings" });

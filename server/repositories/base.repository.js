@@ -77,6 +77,12 @@ class BaseRepository {
     Object.keys(data).forEach((key) => {
       if (data[key] !== undefined) {
         instance[key] = data[key];
+        // Force Sequelize to detect JSONB/JSON field mutations
+        // (Sequelize uses reference equality which silently skips unchanged-looking objects)
+        const fieldType = instance.rawAttributes?.[key]?.type?.constructor?.name;
+        if (fieldType === 'JSONB' || fieldType === 'JSON' || typeof data[key] === 'object') {
+          instance.changed(key, true);
+        }
       }
     });
     await instance.save(options);
