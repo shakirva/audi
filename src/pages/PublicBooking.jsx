@@ -361,14 +361,10 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Users size={12} /> Details
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Est. Guests *</label>
                   <input type="number" value={form.guests} onChange={e => set("guests", e.target.value)} placeholder="e.g. 400" required style={iStyle} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-                </div>
-                <div>
-                  <label style={labelSt}>Budget (₹) *</label>
-                  <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="e.g. 150000" required style={iStyle} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
               </div>
             </div>
