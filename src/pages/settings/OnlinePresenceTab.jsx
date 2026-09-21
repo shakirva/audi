@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Copy, ImagePlus, Trash2, Film, Image as ImageIcon } from "lucide-react";
 import { settingsAPI } from "../../services/api";
+import { useRole } from "../../context/RoleContext";
 import { useConfirm } from "../../components/ConfirmProvider";
 
 export default function OnlinePresenceTab({
@@ -10,12 +11,13 @@ export default function OnlinePresenceTab({
   addToast
 }) {
   const { confirm } = useConfirm();
+  const { tenant } = useRole();
   
   const [newMedia, setNewMedia] = useState({ type: "image", src: "", label: "", category: "Halls" });
   const [mediaError, setMediaError] = useState("");
 
   const GALLERY_CATEGORIES = ["Halls", "Events", "Decor", "Videos"];
-  const tenantSlug = localStorage.getItem("tenantSlug");
+  const tenantSlug = tenant?.slug;
   const publicBookingUrl = tenantSlug ? `https://venueza.cloud/book/${tenantSlug}` : "https://venueza.cloud/book/...";
 
   const getYouTubeId = (url) => {
