@@ -602,12 +602,22 @@ export default function Settings() {
       return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
       if (!newName.trim()) return;
       if (normalized.find(s => s.name.toLowerCase() === newName.trim().toLowerCase())) return;
       const timeLabel = (newStart && newEnd) ? `${formatTime12h(newStart)} – ${formatTime12h(newEnd)}` : "";
-      setItems([...normalized, { name: newName.trim(), startTime: newStart, endTime: newEnd, time: timeLabel }]);
+      
+      const newSessions = [...normalized, { name: newName.trim(), startTime: newStart, endTime: newEnd, time: timeLabel }];
+      setItems(newSessions);
       setNewName(""); setNewStart(""); setNewEnd("");
+      
+      // Auto-save to prevent data loss if user forgets to click "Save Options"
+      try {
+        await settingsAPI.update({ sessions: newSessions });
+        addToast(`"${newName.trim()}" session added and saved! ✅`, "success");
+      } catch (e) {
+        addToast("Failed to save new session", "error");
+      }
     };
 
     const handleUpdate = (idx, field, value) => {
@@ -629,8 +639,16 @@ export default function Settings() {
         { title: "Delete Session", confirmText: "Delete", isDanger: true }
       );
       if (!ok) return;
-      setItems(normalized.filter((_, i) => i !== idx));
-      addToast(`"${sessName}" session removed. Click "Save Options" to apply.`, "success");
+      
+      const newSessions = normalized.filter((_, i) => i !== idx);
+      setItems(newSessions);
+      
+      try {
+        await settingsAPI.update({ sessions: newSessions });
+        addToast(`"${sessName}" session removed.`, "success");
+      } catch (e) {
+        addToast("Failed to remove session", "error");
+      }
     };
 
     return (
