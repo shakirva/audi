@@ -175,15 +175,30 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     }
   }, [open]);
 
-  // Auto-correct session if not supported by selected hall
+  // Auto-correct session if not supported by selected hall or event type
   useEffect(() => {
+    if (!form.session) return;
+    
+    // Check Hall Support
     const selectedHall = settingsHalls.find(h => h.name === form.hallPreference);
     if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
-      if (form.session && !selectedHall.allowedSessions.includes(form.session)) {
+      if (!selectedHall.allowedSessions.includes(form.session)) {
         setForm(prev => ({ ...prev, session: "" }));
+        return;
       }
     }
-  }, [form.hallPreference, settingsHalls]);
+
+    // Check Event Type Support
+    if (form.eventType) {
+      const selectedEvent = settingsEventTypes.find(e => (typeof e === 'string' ? e : e.name) === form.eventType);
+      if (selectedEvent && selectedEvent.sessions && selectedEvent.sessions.length > 0) {
+         const eventAllowedNames = selectedEvent.sessions.map(s => s.name);
+         if (!eventAllowedNames.includes(form.session)) {
+           setForm(prev => ({ ...prev, session: "" }));
+         }
+      }
+    }
+  }, [form.hallPreference, form.eventType, form.session, settingsHalls, settingsEventTypes]);
 
   // Fetch real-time availability
   useEffect(() => {
@@ -572,6 +587,17 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                        const filtered = allowed.filter(s => selectedHall.allowedSessions.includes(s.name));
                        if (filtered.length > 0) allowed = filtered;
                     }
+                    
+                    // Filter by event type's supported sessions if configured
+                    if (form.eventType) {
+                      const selectedEvent = settingsEventTypes.find(e => (typeof e === 'string' ? e : e.name) === form.eventType);
+                      if (selectedEvent && selectedEvent.sessions && selectedEvent.sessions.length > 0) {
+                         const eventAllowedNames = selectedEvent.sessions.map(s => s.name);
+                         const filtered = allowed.filter(s => eventAllowedNames.includes(s.name));
+                         allowed = filtered; // Strict restriction: if event restricts it, enforce it.
+                      }
+                    }
+
                     return allowed.map(s => {
                       let isBooked = false;
                       if (availability.bookedSessions?.includes(s.name) || availability.bookedSessions?.includes("Full Day") || (s.name === "Full Day" && availability.bookedSessions?.length > 0)) {
