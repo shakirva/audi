@@ -77,7 +77,7 @@ const PaymentRemindersSection = ({ reminders }) => {
             const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0);
           const evtDateStr = new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const customerPhone = b.phone || b.Customer?.phone || "";
-          const msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your upcoming event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${bal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
+          const msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your recent event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${bal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
           const whatsappUrl = `https://wa.me/${customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
 
           return (
@@ -172,7 +172,9 @@ function ExecutiveCockpit() {
         const diffTime = todayDate - eventDate;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        return reminderDays.includes(diffDays);
+        if (reminderDays.length === 0) return false;
+        const minDays = Math.min(...reminderDays);
+        return diffDays >= minDays;
       });
       setPaymentReminders(activeReminders);
 
@@ -479,7 +481,9 @@ function ReceptionCockpit() {
         const diffTime = todayDate - eventDate;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        return reminderDays.includes(diffDays);
+        if (reminderDays.length === 0) return false;
+        const minDays = Math.min(...reminderDays);
+        return diffDays >= minDays;
       });
       setPaymentReminders(activeReminders);
 
