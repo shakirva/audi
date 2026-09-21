@@ -108,7 +108,10 @@ class SettingsService {
   }
 
   async updateSettings(data, { tenantId, environmentId }) {
-    const settings = await settingsRepository.findOrCreateSettings(tenantId, environmentId);
+    const Settings = require("../models/Settings");
+    
+    // Ensure settings record exists
+    await settingsRepository.findOrCreateSettings(tenantId, environmentId);
     
     const allowed = [
       "venueName", "ownerName", "location", "phone", "email", "gstin",
@@ -123,7 +126,18 @@ class SettingsService {
       if (data[key] !== undefined) updateData[key] = data[key];
     });
     
-    return settingsRepository.update(settings, updateData);
+    // Use direct SQL UPDATE to bypass Sequelize JSONB mutation detection issues
+    console.log("[Settings] Saving keys:", Object.keys(updateData).join(", "));
+    if (updateData.sessions) {
+      console.log("[Settings] Sessions payload:", JSON.stringify(updateData.sessions));
+    }
+    
+    await Settings.update(updateData, {
+      where: { tenantId, environmentId }
+    });
+    
+    // Return fresh instance
+    return settingsRepository.findOrCreateSettings(tenantId, environmentId);
   }
 
   async getCustomers({ tenantId, environmentId }) {
