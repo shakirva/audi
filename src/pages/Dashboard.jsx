@@ -8,7 +8,7 @@ import {
 import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
-import { bookingsAPI, enquiriesAPI, complianceAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, complianceAPI, settingsAPI } from "../services/api";
 import { CreditCard, FileText, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const BRAND = {
@@ -51,6 +51,53 @@ const eventDistData = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SHARED COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
+const PaymentRemindersSection = ({ reminders }) => {
+  if (!reminders || reminders.length === 0) return null;
+
+  return (
+    <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", marginBottom: 24, border: "1px solid #fed7aa", background: "#fff" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#c2410c", display: "flex", alignItems: "center", gap: 8 }}>
+          <MessageCircle size={20} color="#ea580c" /> Automated Payment Reminders
+        </h3>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#ea580c", background: "#ffedd5", padding: "4px 8px", borderRadius: 8 }}>
+          {reminders.length} Action{reminders.length !== 1 ? 's' : ''} Needed
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+        {reminders.map(b => {
+          const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0);
+          const evtDateStr = new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const customerPhone = b.phone || b.Customer?.phone || "";
+          const msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your upcoming event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${bal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
+          const whatsappUrl = `https://wa.me/${customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
+
+          return (
+            <div key={b.id} style={{ background: "#fff7ed", padding: 16, borderRadius: 16, border: "1px solid #fdba74", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{b.customerName}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#c2410c" }}>{b.eventType} • {evtDateStr}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Balance</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#ef4444" }}>₹{bal.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#22c55e", color: "#fff", textDecoration: "none", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, transition: "background 0.2s" }}>
+                <MessageCircle size={16} /> Send WhatsApp Reminder
+              </a>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1. MANAGER / OWNER MODE (Executive Command Center)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -71,6 +118,7 @@ function ExecutiveCockpit() {
   const [todaysEvents, setTodaysEvents] = React.useState([]);
   const [thisWeeksEvents, setThisWeeksEvents] = React.useState([]);
   const [complianceAlerts, setComplianceAlerts] = React.useState(null);
+  const [paymentReminders, setPaymentReminders] = React.useState([]);
 
   React.useEffect(() => {
     loadDashboard();
@@ -78,11 +126,12 @@ function ExecutiveCockpit() {
 
   const loadDashboard = async () => {
     try {
-      const [statsRes, bookingsRes, enqRes, compRes] = await Promise.all([
+      const [statsRes, bookingsRes, enqRes, compRes, settingsRes] = await Promise.all([
         bookingsAPI.getStats(),
         bookingsAPI.getAll({ limit: 1000 }),
         enquiriesAPI.getAll({ limit: 1000 }),
-        complianceAPI.getSummary().catch(() => null)
+        complianceAPI.getSummary().catch(() => null),
+        settingsAPI.get().catch(() => null)
       ]);
 
       if (compRes?.data?.data) {
@@ -91,12 +140,35 @@ function ExecutiveCockpit() {
 
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enqRes.data?.data || [];
+      const settingsData = settingsRes?.data?.data || {};
+      const reminderDays = settingsData.reminderDays || [];
       
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
       
+      // Compute Payment Reminders based on configured reminder days
+      const activeReminders = allBookings.filter(b => {
+        if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry' || b.status === 'Completed' || b.status === 'Closed') return false;
+        
+        const total = Number(b.totalAmount) || 0;
+        const paid = Number(b.advance) || 0;
+        const balance = total - paid;
+        if (balance <= 0) return false;
+        
+        const eventDate = new Date(b.date);
+        eventDate.setHours(0,0,0,0);
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+        
+        const diffTime = eventDate - todayDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return reminderDays.includes(diffDays);
+      });
+      setPaymentReminders(activeReminders);
+
       // Compute upcoming bookings (future dates)
       const upcomingCount = allBookings.filter(b => {
         if (!b.date) return false;
@@ -309,7 +381,10 @@ function ExecutiveCockpit() {
         </div>
       </div>
 
-      {/* Row 3: Compliance & Document Alerts (Show only if there are urgent items or expired items) */}
+      {/* Row 3: Payment Reminders */}
+      <PaymentRemindersSection reminders={paymentReminders} />
+
+      {/* Row 4: Compliance & Document Alerts (Show only if there are urgent items or expired items) */}
       {complianceAlerts && (complianceAlerts.urgentItems?.length > 0) && (
         <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", marginBottom: 24, border: "1px solid #fecaca", background: "#fff" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -349,6 +424,7 @@ function ReceptionCockpit() {
   const { user } = useRole();
   const [events, setEvents] = React.useState([]);
   const [enquiries, setEnquiries] = React.useState([]);
+  const [paymentReminders, setPaymentReminders] = React.useState([]);
 
   React.useEffect(() => {
     loadData();
@@ -356,12 +432,16 @@ function ReceptionCockpit() {
 
   const loadData = async () => {
     try {
-      const [bookingsRes, enquiriesRes] = await Promise.all([
+      const [bookingsRes, enquiriesRes, settingsRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 1000 }),
-        enquiriesAPI.getAll({ limit: 1000 })
+        enquiriesAPI.getAll({ limit: 1000 }),
+        settingsAPI.get().catch(() => null)
       ]);
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enquiriesRes.data?.data || [];
+      const settingsData = settingsRes?.data?.data || {};
+      const reminderDays = settingsData.reminderDays || [];
+
       const filteredBookings = allBookings.filter(b => b.createdBy === user?.id || b.salesExecutiveId === user?.id || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id);
       const filteredEnquiries = allEnquiries.filter(e => e.createdBy === user?.id || e.salesExecutiveId === user?.id || e.salesExecutiveName === user?.name || e.assignedTo === user?.name || e.userId === user?.id);
 
@@ -376,6 +456,26 @@ function ReceptionCockpit() {
       });
       setEvents(todaysEvents);
       
+      const activeReminders = filteredBookings.filter(b => {
+        if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry' || b.status === 'Completed' || b.status === 'Closed') return false;
+        
+        const total = Number(b.totalAmount) || 0;
+        const paid = Number(b.advance) || 0;
+        const balance = total - paid;
+        if (balance <= 0) return false;
+        
+        const eventDate = new Date(b.date);
+        eventDate.setHours(0,0,0,0);
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+        
+        const diffTime = eventDate - todayDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return reminderDays.includes(diffDays);
+      });
+      setPaymentReminders(activeReminders);
+
       setEnquiries(filteredEnquiries);
     } catch(err) {
       console.error("Failed to load reception data", err);
@@ -424,6 +524,8 @@ function ReceptionCockpit() {
           </div>
         </motion.div>
       </div>
+
+      <PaymentRemindersSection reminders={paymentReminders} />
 
       <div style={{ background: "#fff", borderRadius: 32, padding: 32, boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
         <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>Follow-up Queue (CRM)</h3>
