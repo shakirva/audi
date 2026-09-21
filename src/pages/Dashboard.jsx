@@ -169,7 +169,7 @@ function ExecutiveCockpit() {
         const todayDate = new Date();
         todayDate.setHours(0,0,0,0);
         
-        const diffTime = eventDate - todayDate;
+        const diffTime = todayDate - eventDate;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         return reminderDays.includes(diffDays);
@@ -476,7 +476,7 @@ function ReceptionCockpit() {
         const todayDate = new Date();
         todayDate.setHours(0,0,0,0);
         
-        const diffTime = eventDate - todayDate;
+        const diffTime = todayDate - eventDate;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         return reminderDays.includes(diffDays);

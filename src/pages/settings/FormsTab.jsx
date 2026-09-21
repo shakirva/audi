@@ -437,7 +437,7 @@ export default function FormsTab({
           </div>
           <h3 style={sectionTitle}>Automated Reminder Schedule</h3>
         </div>
-        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Number of days before an event to send automated payment reminders.</p>
+        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Number of days after an event to send automated payment reminders.</p>
         
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
           {reminderDays.map(d => (
@@ -452,7 +452,7 @@ export default function FormsTab({
         
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <input type="number" min="1" max="365" value={newReminderDay} onChange={e => setNewReminderDay(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleAddReminder(); }} placeholder="Days" style={{ ...iStyle, width: 100, textAlign: "center" }} />
-          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>days before event</span>
+          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>days after event</span>
           <button onClick={handleAddReminder} style={{ padding: "10px 20px", borderRadius: 8, background: "#1e293b", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
         </div>
       </div>
