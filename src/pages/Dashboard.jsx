@@ -54,7 +54,7 @@ const eventDistData = [
 // SHARED COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 const PaymentRemindersSection = ({ reminders }) => {
-  if (!reminders || reminders.length === 0) return null;
+  if (!reminders) return null;
 
   return (
     <div className="hm-card" style={{ borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.02)", marginBottom: 24, border: "1px solid #fed7aa", background: "#fff" }}>
@@ -62,13 +62,19 @@ const PaymentRemindersSection = ({ reminders }) => {
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#c2410c", display: "flex", alignItems: "center", gap: 8 }}>
           <MessageCircle size={20} color="#ea580c" /> Automated Payment Reminders
         </h3>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#ea580c", background: "#ffedd5", padding: "4px 8px", borderRadius: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: reminders.length > 0 ? "#ea580c" : "#64748b", background: reminders.length > 0 ? "#ffedd5" : "#f1f5f9", padding: "4px 8px", borderRadius: 8 }}>
           {reminders.length} Action{reminders.length !== 1 ? 's' : ''} Needed
         </span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-        {reminders.map(b => {
-          const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0);
+      
+      {reminders.length === 0 ? (
+        <div style={{ padding: "20px", textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 16, border: "1px dashed #cbd5e1" }}>
+          No automated payment reminders due today.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          {reminders.map(b => {
+            const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0);
           const evtDateStr = new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const customerPhone = b.phone || b.Customer?.phone || "";
           const msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your upcoming event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${bal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
@@ -92,7 +98,8 @@ const PaymentRemindersSection = ({ reminders }) => {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
