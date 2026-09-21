@@ -201,18 +201,12 @@ export default function FormsTab({
   // --- Edit Event Type Modal State ---
   const [editEventModalOpen, setEditEventModalOpen] = useState(false);
   const [activeEventIdx, setActiveEventIdx] = useState(null);
-  const [customSessionType, setCustomSessionType] = useState("existing"); // "existing" or "custom"
   const [selectedExistingSession, setSelectedExistingSession] = useState("");
-  const [customSessionStart, setCustomSessionStart] = useState("");
-  const [customSessionEnd, setCustomSessionEnd] = useState("");
 
   const openEditEventModal = (idx) => {
     setActiveEventIdx(idx);
     setEditEventModalOpen(true);
-    setCustomSessionType("existing");
     setSelectedExistingSession("");
-    setCustomSessionStart("");
-    setCustomSessionEnd("");
   };
 
   const handleAddSessionToEvent = async () => {
@@ -220,21 +214,12 @@ export default function FormsTab({
     const activeEt = eventTypes[activeEventIdx];
     const etSessions = [...(activeEt.sessions || [])];
     
-    if (customSessionType === "existing") {
-      if (!selectedExistingSession) return addToast("Please select a session.", "error");
-      const matched = sessions.find(s => s.name === selectedExistingSession);
-      if (!matched) return;
-      if (etSessions.some(s => s.name === matched.name)) return addToast("Session already added.", "error");
-      
-      etSessions.push({ name: matched.name, time: matched.time });
-    } else {
-      if (!customSessionStart || !customSessionEnd) return addToast("Start and end time required.", "error");
-      const timeStr = `${formatTime12h(customSessionStart)} – ${formatTime12h(customSessionEnd)}`;
-      const customName = `Custom (${timeStr})`;
-      if (etSessions.some(s => s.name === customName)) return addToast("This custom session already exists.", "error");
-      
-      etSessions.push({ name: customName, time: timeStr });
-    }
+    if (!selectedExistingSession) return addToast("Please select a session.", "error");
+    const matched = sessions.find(s => s.name === selectedExistingSession);
+    if (!matched) return;
+    if (etSessions.some(s => s.name === matched.name)) return addToast("Session already added.", "error");
+    
+    etSessions.push({ name: matched.name, time: matched.time });
 
     const updatedEvents = [...eventTypes];
     updatedEvents[activeEventIdx] = { ...activeEt, sessions: etSessions };
@@ -242,8 +227,6 @@ export default function FormsTab({
     if (await handleSaveData({ eventTypes: updatedEvents })) {
       setEventTypes(updatedEvents);
       setSelectedExistingSession("");
-      setCustomSessionStart("");
-      setCustomSessionEnd("");
       addToast("Session added to event.", "success");
     }
   };
@@ -538,40 +521,15 @@ export default function FormsTab({
             <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "16px" }}>
               <label style={labelSt}>Add Session to Event</label>
               
-              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-                  <input type="radio" name="sessionType" value="existing" checked={customSessionType === "existing"} onChange={() => setCustomSessionType("existing")} style={{ accentColor: "#1B4332" }} />
-                  Existing Session
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-                  <input type="radio" name="sessionType" value="custom" checked={customSessionType === "custom"} onChange={() => setCustomSessionType("custom")} style={{ accentColor: "#1B4332" }} />
-                  Custom Time
-                </label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <select value={selectedExistingSession} onChange={e => setSelectedExistingSession(e.target.value)} style={{ ...iStyle, flex: 1 }}>
+                  <option value="">-- Select Session --</option>
+                  {sessions.map((s, i) => (
+                    <option key={i} value={s.name}>{s.name} ({s.time})</option>
+                  ))}
+                </select>
+                <button onClick={handleAddSessionToEvent} style={{ padding: "10px 16px", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Add</button>
               </div>
-
-              {customSessionType === "existing" ? (
-                <div style={{ display: "flex", gap: 10 }}>
-                  <select value={selectedExistingSession} onChange={e => setSelectedExistingSession(e.target.value)} style={{ ...iStyle, flex: 1 }}>
-                    <option value="">-- Select Session --</option>
-                    {sessions.map((s, i) => (
-                      <option key={i} value={s.name}>{s.name} ({s.time})</option>
-                    ))}
-                  </select>
-                  <button onClick={handleAddSessionToEvent} style={{ padding: "10px 16px", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Add</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>Start Time</label>
-                    <input type="time" value={customSessionStart} onChange={e => setCustomSessionStart(e.target.value)} style={iStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, display: "block" }}>End Time</label>
-                    <input type="time" value={customSessionEnd} onChange={e => setCustomSessionEnd(e.target.value)} style={iStyle} />
-                  </div>
-                  <button onClick={handleAddSessionToEvent} style={{ padding: "10px 16px", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", height: 41 }}>Add</button>
-                </div>
-              )}
             </div>
           </div>
         )}
