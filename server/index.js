@@ -152,6 +152,15 @@ initDB()
     } catch (e) {
       // Ignored - usually means it already exists
     }
+
+    // MIGRATION: Add reminderDays to Settings
+    try {
+      await sequelize.query('ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "reminderDays" JSONB DEFAULT \'[3, 7]\'::jsonb;');
+      console.log("✅ Added reminderDays to Settings table");
+    } catch (e) {
+      console.log("⚠️ Could not add reminderDays:", e.message);
+    }
+
     
     // FIX: Reset Enquiries that are "Booking Confirmed" but have no actual Booking
     try {
