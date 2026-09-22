@@ -135,13 +135,33 @@ export default function AccountsReports() {
 
   const filteredPayments = payments.filter(p => {
     if (p.status !== "Completed") return false;
-    if (!isDateInFilter(p.paymentDate || p.createdAt)) return false;
+    
+    // Filter by the EVENT date of the booking, not the date the payment was made.
+    // This aligns with the user's expectation that "Last Month" revenue = revenue from "Last Month's events".
+    const booking = bookings.find(b => String(b.id) === String(p.bookingId));
+    let targetDate = p.paymentDate || p.createdAt;
+    
+    if (booking && (booking.date || booking.createdAt)) {
+      targetDate = booking.date || booking.createdAt;
+    }
+    
+    if (!isDateInFilter(targetDate)) return false;
     if (!matchesBookingFilters(p.bookingId)) return false;
     return true;
   });
 
   const filteredExpenses = expenses.filter(e => {
-    if (!isDateInFilter(e.date || e.createdAt)) return false;
+    let targetDate = e.date || e.createdAt;
+    
+    // If expense is linked to a booking, align it with the booking's event date
+    if (e.bookingId) {
+      const booking = bookings.find(b => String(b.id) === String(e.bookingId));
+      if (booking && (booking.date || booking.createdAt)) {
+        targetDate = booking.date || booking.createdAt;
+      }
+    }
+    
+    if (!isDateInFilter(targetDate)) return false;
     if (!matchesBookingFilters(e.bookingId)) return false;
     return true; 
   });
