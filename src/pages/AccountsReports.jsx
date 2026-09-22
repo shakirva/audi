@@ -109,17 +109,26 @@ export default function AccountsReports() {
   };
 
   // Helper to check if a booking matches the hall/exec/place filters
-  const matchesBookingFilters = (bookingId, customerId) => {
+  const matchesBookingFilters = (bookingId) => {
     if (filterHall === "All Halls" && filterExecutive === "All Staff" && filterPlace === "All Locations") return true;
     
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking) return false; // If there are filters but no booking, it doesn't match
+    const booking = bookings.find(b => String(b.id) === String(bookingId));
+    if (!booking) return false; // If there are filters applied but no booking attached, exclude it.
     
-    if (filterHall !== "All Halls" && booking.hall !== filterHall) return false;
-    const execName = booking.SalesExecutive?.name || booking.salesExecutiveName;
-    if (filterExecutive !== "All Staff" && execName !== filterExecutive) return false;
-    const placeName = booking.Customer?.city || booking.place || booking.address;
-    if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
+    if (filterHall !== "All Halls") {
+      const bHall = booking.hall || "";
+      if (bHall.toLowerCase() !== filterHall.toLowerCase()) return false;
+    }
+    
+    if (filterExecutive !== "All Staff") {
+      const execName = booking.SalesExecutive?.name || booking.salesExecutiveName || "";
+      if (execName.toLowerCase() !== filterExecutive.toLowerCase()) return false;
+    }
+    
+    if (filterPlace !== "All Locations") {
+      const placeName = booking.Customer?.city || booking.place || booking.address || "";
+      if (placeName.toLowerCase() !== filterPlace.toLowerCase()) return false;
+    }
     
     return true;
   };
@@ -127,14 +136,13 @@ export default function AccountsReports() {
   const filteredPayments = payments.filter(p => {
     if (p.status !== "Completed") return false;
     if (!isDateInFilter(p.paymentDate || p.createdAt)) return false;
-    if (!matchesBookingFilters(p.bookingId, p.customerId)) return false;
+    if (!matchesBookingFilters(p.bookingId)) return false;
     return true;
   });
 
   const filteredExpenses = expenses.filter(e => {
     if (!isDateInFilter(e.date || e.createdAt)) return false;
-    // Expenses don't always have bookings, so we might just apply date filter.
-    // If strict correlation is needed, we could filter expenses by event/booking if linked.
+    if (!matchesBookingFilters(e.bookingId)) return false;
     return true; 
   });
 
