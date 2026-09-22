@@ -134,8 +134,8 @@ export default function SalesReports() {
 
     filteredEnquiries.forEach(e => {
       const date = new Date(e.createdAt).toLocaleDateString();
-      const name = e.Customer?.name || e.customerName || "N/A";
-      const phone = e.Customer?.phone || e.phone || "N/A";
+      const name = e.Customer?.name || e.enquirerName || e.customerName || "N/A";
+      const phone = e.Customer?.phone || e.enquirerPhone || e.phone || "N/A";
       const event = e.eventType || "N/A";
       const hall = e.hallPreference || e.hall || "N/A";
       const status = e.status || "N/A";
