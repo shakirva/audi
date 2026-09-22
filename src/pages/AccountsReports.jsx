@@ -112,7 +112,7 @@ export default function AccountsReports() {
   const matchesBookingFilters = (bookingId) => {
     if (filterHall === "All Halls" && filterExecutive === "All Staff" && filterPlace === "All Locations") return true;
     
-    const booking = bookings.find(b => String(b.id) === String(bookingId));
+    const booking = bookings.find(b => String(b._id) === String(bookingId) || String(b.id) === String(bookingId));
     if (!booking) return false; // If there are filters applied but no booking attached, exclude it.
     
     if (filterHall !== "All Halls") {
@@ -137,8 +137,7 @@ export default function AccountsReports() {
     if (p.status !== "Completed") return false;
     
     // Filter by the EVENT date of the booking, not the date the payment was made.
-    // This aligns with the user's expectation that "Last Month" revenue = revenue from "Last Month's events".
-    const booking = bookings.find(b => String(b.id) === String(p.bookingId));
+    const booking = bookings.find(b => String(b._id) === String(p.bookingId) || String(b.id) === String(p.bookingId));
     let targetDate = p.paymentDate || p.createdAt;
     
     if (booking && (booking.date || booking.createdAt)) {
@@ -155,7 +154,7 @@ export default function AccountsReports() {
     
     // If expense is linked to a booking, align it with the booking's event date
     if (e.bookingId) {
-      const booking = bookings.find(b => String(b.id) === String(e.bookingId));
+      const booking = bookings.find(b => String(b._id) === String(e.bookingId) || String(b.id) === String(e.bookingId));
       if (booking && (booking.date || booking.createdAt)) {
         targetDate = booking.date || booking.createdAt;
       }
