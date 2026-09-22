@@ -221,10 +221,12 @@ export default function AccountsReports() {
     
     const doc = new jsPDF();
     
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(27, 67, 50);
     doc.text("Financial Report", 14, 22);
     
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(100);
     const dateStr = filterDate === "Custom Date" 
@@ -237,16 +239,18 @@ export default function AccountsReports() {
     
     doc.setFontSize(12);
     doc.setTextColor(0);
-    doc.setFont(undefined, 'bold');
+    doc.setFont("helvetica", "bold");
     doc.text("Executive Summary", 14, 42);
     
-    doc.setFont(undefined, 'normal');
+    const cleanStr = (str) => str.replace(/₹/g, 'Rs. ');
+    
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(`Gross Revenue: ${formatLakhs(totalRev)}`, 14, 50);
-    doc.text(`Total Expenses: ${formatLakhs(totalExp)}`, 105, 50);
-    doc.text(`Net Profit: ${formatLakhs(netProfit)}`, 14, 58);
+    doc.text(`Gross Revenue: ${cleanStr(formatLakhs(totalRev))}`, 14, 50);
+    doc.text(`Total Expenses: ${cleanStr(formatLakhs(totalExp))}`, 105, 50);
+    doc.text(`Net Profit: ${cleanStr(formatLakhs(netProfit))}`, 14, 58);
     doc.text(`Profit Margin: ${margin}%`, 105, 58);
-    doc.text(`Cash In Hand: ${formatLakhs(cashInHand)}`, 14, 66);
+    doc.text(`Cash In Hand: ${cleanStr(formatLakhs(cashInHand))}`, 14, 66);
 
     const tableColumn = ["Date", "Type", "Ref / Mode", "Receipt/Bill No.", "Details", "Amount"];
     const tableRows = [];
@@ -281,8 +285,8 @@ export default function AccountsReports() {
         "", 
         "", 
         "",
-        `Rev: ₹${totalRev.toLocaleString()} | Exp: ₹${totalExp.toLocaleString()}`, 
-        `Net: ${formatLakhs(netProfit)}`
+        `Rev: Rs. ${totalRev.toLocaleString()} | Exp: Rs. ${totalExp.toLocaleString()}`, 
+        `Net: ${cleanStr(formatLakhs(netProfit))}`
       ]);
     }
 
