@@ -248,30 +248,42 @@ export default function AccountsReports() {
     doc.text(`Profit Margin: ${margin}%`, 105, 58);
     doc.text(`Cash In Hand: ${formatLakhs(cashInHand)}`, 14, 66);
 
-    const tableColumn = ["Date", "Type", "Ref / Mode", "Details", "Amount"];
+    const tableColumn = ["Date", "Type", "Ref / Mode", "Receipt/Bill No.", "Details", "Amount"];
     const tableRows = [];
 
     filteredPayments.forEach(p => {
       const date = new Date(p.paymentDate || p.createdAt).toLocaleDateString();
       const booking = bookings.find(b => b.id === p.bookingId);
-      const name = booking?.Customer?.name || booking?.customerName || "Customer Payment";
+      const name = p.Customer?.name || booking?.Customer?.name || booking?.customerName || "Customer Payment";
       const mode = p.paymentMode || "Transfer";
+      const receiptNo = p.paymentNumber || p.referenceNumber || "-";
       const amount = `+ ${p.amount.toLocaleString()}`;
-      tableRows.push([date, "Revenue", mode, name, amount]);
+      tableRows.push([date, "Revenue", mode, receiptNo, name, amount]);
     });
 
     filteredExpenses.forEach(e => {
       const date = new Date(e.date || e.createdAt).toLocaleDateString();
       const category = e.category || "Expense";
       const desc = e.description || "N/A";
+      const billNo = e.expenseNumber || e.billNumber || e.referenceNumber || "-";
       const amount = `- ${e.amount.toLocaleString()}`;
-      tableRows.push([date, "Expense", category, desc, amount]);
+      tableRows.push([date, "Expense", category, billNo, desc, amount]);
     });
 
     tableRows.sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
     if (tableRows.length === 0) {
-      tableRows.push(["-", "-", "No transactions found for this period", "-", "-"]);
+      tableRows.push(["-", "-", "-", "No transactions found for this period", "-", "-"]);
+    } else {
+      // Add Totals Row at the bottom
+      tableRows.push([
+        "", 
+        "", 
+        "", 
+        "",
+        `Rev: ₹${totalRev.toLocaleString()} | Exp: ₹${totalExp.toLocaleString()}`, 
+        `Net: ${formatLakhs(netProfit)}`
+      ]);
     }
 
     autoTable(doc, {
@@ -280,8 +292,16 @@ export default function AccountsReports() {
       startY: 75,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [27, 67, 50] },
+      didParseCell: function(data) {
+        // Bold the totals row
+        if (data.row.index === tableRows.length - 1 && tableRows.length > 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [240, 249, 244];
+        }
+      },
       didDrawPage: function (data) {
         doc.setFontSize(8);
+        doc.setTextColor(100);
         doc.text(
           `Page ${doc.internal.getNumberOfPages()}`,
           doc.internal.pageSize.width - 20,
