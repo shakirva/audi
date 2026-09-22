@@ -28,20 +28,43 @@ export default function AccountsReports() {
     loadData();
   }, []);
 
+  const fetchAllPages = async (url, params = {}) => {
+    let allData = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      try {
+        const res = await api.get(url, { params: { ...params, page, limit: 100 } });
+        const items = res.data?.data || [];
+        allData = [...allData, ...items];
+        if (items.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } catch (err) {
+        console.error(`Failed to fetch ${url} page ${page}`, err);
+        hasMore = false;
+      }
+    }
+    return allData;
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
       await reportsAPI.checkAccess();
-      const [paymentsRes, bookingsRes, expensesRes, settingsRes] = await Promise.all([
-        paymentsAPI.getAll({ limit: 10000 }).catch(() => ({ data: { data: [] } })),
-        bookingsAPI.getAll().catch(() => ({ data: { data: [] } })),
-        api.get("/v1/expenses").catch(() => ({ data: { data: [] } })),
+      
+      const [paymentsData, bookingsData, expensesData, settingsRes] = await Promise.all([
+        fetchAllPages("/v1/payments"),
+        fetchAllPages("/v1/bookings"),
+        fetchAllPages("/v1/expenses"),
         settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
       ]);
 
-      setPayments(paymentsRes.data?.data || []);
-      setBookings(bookingsRes.data?.data || []);
-      setExpenses(expensesRes.data?.data || []);
+      setPayments(paymentsData);
+      setBookings(bookingsData);
+      setExpenses(expensesData);
       setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
@@ -64,6 +87,12 @@ export default function AccountsReports() {
     
     const now = new Date();
     
+    // Normalize to local YYYY-MM-DD for accurate comparison to custom start/end strings
+    const localYYYY = d.getFullYear();
+    const localMM = String(d.getMonth() + 1).padStart(2, '0');
+    const localDD = String(d.getDate()).padStart(2, '0');
+    const localDateStr = `${localYYYY}-${localMM}-${localDD}`;
+    
     if (filterDate === "This Month") {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     } else if (filterDate === "Last Month") {
@@ -72,9 +101,8 @@ export default function AccountsReports() {
     } else if (filterDate === "This Year") {
       return d.getFullYear() === now.getFullYear();
     } else if (filterDate === "Custom Date") {
-      const time = d.getTime();
-      if (customStartDate && time < new Date(customStartDate).getTime()) return false;
-      if (customEndDate && time > new Date(customEndDate).getTime() + 86400000) return false;
+      if (customStartDate && localDateStr < customStartDate) return false;
+      if (customEndDate && localDateStr > customEndDate) return false;
       return true;
     }
     return true;
