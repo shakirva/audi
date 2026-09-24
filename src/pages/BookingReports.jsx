@@ -256,7 +256,7 @@ export default function BookingReports() {
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
           {[
-            { label: "Total Bookings", value: totalBookings, sub: filterDate, icon: CalendarDays, color: "#1B4332", bg: "#f0faf4" },
+            { label: "Total Bookings", value: totalBookings, sub: filterText, icon: CalendarDays, color: "#1B4332", bg: "#f0faf4" },
           { label: "Completed", value: completed, sub: "Successfully Executed", icon: CheckCircle2, color: "#059669", bg: "#dcfce7" },
           { label: "Upcoming", value: upcoming, sub: "Scheduled Events", icon: CalendarCheck, color: "#2563eb", bg: "#eff6ff" },
           { label: "Cancelled", value: cancelled, sub: `${cancelRate}% Cancel Rate`, icon: Ban, color: "#dc2626", bg: "#fef2f2" },
