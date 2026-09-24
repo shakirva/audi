@@ -13,7 +13,8 @@ export default function CustomerReports() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("All Time");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     loadData();
@@ -34,16 +35,18 @@ export default function CustomerReports() {
   };
 
   const filteredBookings = bookings.filter(b => {
-    if (filterDate !== "All Time") {
+    if (startDate || endDate) {
       const bDate = new Date(b.date || b.createdAt);
-      const now = new Date();
-      if (filterDate === "This Month") {
-        if (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear()) return false;
-      } else if (filterDate === "Last Month") {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
-      } else if (filterDate === "This Year") {
-        if (bDate.getFullYear() !== now.getFullYear()) return false;
+      bDate.setHours(0, 0, 0, 0);
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        if (bDate < sDate) return false;
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(0, 0, 0, 0);
+        if (bDate > eDate) return false;
       }
     }
     return true;
@@ -62,7 +65,8 @@ export default function CustomerReports() {
     doc.text("Customer & Event Details Report", 14, 22);
     doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterText}`, 14, 30);
     
     doc.setFontSize(10);
     doc.setTextColor(0);
@@ -125,12 +129,15 @@ export default function CustomerReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option value="All Time">Date: All Time</option>
-          <option value="This Month">Date: This Month</option>
-          <option value="Last Month">Date: Last Month</option>
-          <option value="This Year">Date: This Year</option>
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: "10px 0" }}>
@@ -198,6 +205,19 @@ export default function CustomerReports() {
                   ))
                 )}
               </tbody>
+              {/* Table Footer with Totals */}
+              {filteredBookings.length > 0 && (
+                <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
+                  <tr>
+                    <td colSpan="4" style={{ padding: "16px 24px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
+                      Total Customers Listed:
+                    </td>
+                    <td style={{ padding: "16px 24px", fontWeight: 800, fontSize: 14, color: "#111827" }}>
+                      {filteredBookings.length}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>

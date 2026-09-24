@@ -48,7 +48,7 @@ export default function Agreements() {
       // Filter out enquiries if we only want confirmed/actual bookings
       let fetched = (res.data.data || []).filter(b => b.status !== "Enquiry");
       if (role === "Sales") {
-        fetched = fetched.filter(b => b.createdBy === user?.name || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
+        fetched = fetched.filter(b => b.createdBy === user?.id || b.salesExecutiveName === user?.name || b.bookedBy === user?.name || b.userId === user?.id || b.salesExecutiveId === user?.id);
       }
       setAgreements(fetched);
     } catch (err) {

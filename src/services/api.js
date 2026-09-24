@@ -248,6 +248,7 @@ export const adminAPI = {
   getTenants: () => api.get("/admin/tenants"),
   createTenant: (data) => api.post("/admin/tenants", data),
   updateTenant: (id, data) => api.put(`/admin/tenants/${id}`, data),
+  removeTenant: (id) => api.delete(`/admin/tenants/${id}`),
   updateSubscription: (id, data) => api.put(`/admin/tenants/${id}/subscription`, data),
   toggleSandbox: (id) => api.patch(`/admin/tenants/${id}/toggle-sandbox`),
   toggleStatus: (id) => api.patch(`/admin/tenants/${id}/status`),

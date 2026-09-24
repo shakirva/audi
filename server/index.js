@@ -160,7 +160,13 @@ initDB()
     } catch (e) {
       console.log("⚠️ Could not add reminderDays:", e.message);
     }
-
+    // MIGRATION: Add customPrice to Subscriptions
+    try {
+      await sequelize.query('ALTER TABLE "Subscriptions" ADD COLUMN IF NOT EXISTS "customPrice" DECIMAL(10,2);');
+      console.log("✅ Added customPrice to Subscriptions table");
+    } catch (e) {
+      console.log("⚠️ Could not add customPrice:", e.message);
+    }
     
     // FIX: Reset Enquiries that are "Booking Confirmed" but have no actual Booking
     try {

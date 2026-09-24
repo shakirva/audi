@@ -23,8 +23,29 @@ class SettingsService {
           [require("sequelize").Op.in]: ["Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed"]
         }
       },
-      attributes: ['date', 'session', 'status']
+      attributes: ['date', 'session', 'status', 'hall']
     });
+
+    const enquiries = await require("../models/Enquiry").findAll({
+      where: {
+        tenantId: tenant.id,
+        environmentId: env.id,
+        status: {
+          [require("sequelize").Op.notIn]: ["Booking Confirmed", "Lost", "Cancelled"]
+        },
+        tentativeDate: {
+          [require("sequelize").Op.not]: null
+        }
+      },
+      attributes: ['tentativeDate', 'session', 'hallPreference']
+    });
+
+    const mappedEnquiries = enquiries.map(e => ({
+      date: e.tentativeDate,
+      session: e.session,
+      hall: e.hallPreference,
+      status: "Enquiry"
+    }));
     
     return {
       name: settings.venueName,
@@ -35,7 +56,7 @@ class SettingsService {
       gallery: settings.gallery || [],
       eventTypes: settings.eventTypes || ["Wedding", "Reception", "Engagement", "Birthday", "Conference", "Anniversary", "Baptism", "Other"],
       sessions: settings.sessions || [{ name: "Morning", time: "09:00 AM - 02:00 PM" }, { name: "Evening", time: "04:00 PM - 10:00 PM" }, { name: "Full Day", time: "09:00 AM - 10:00 PM" }],
-      bookings: bookings || []
+      bookings: [...bookings, ...mappedEnquiries]
     };
   }
 
@@ -54,8 +75,8 @@ class SettingsService {
       enquirerName: data.customerName,
       enquirerPhone: data.phone,
       gender: data.gender,
-      place: data.place,
-      address: data.address,
+      enquirerArea: data.place,
+      enquirerAddress: data.address,
       eventType: data.eventType,
       tentativeDate: data.date,
       session: data.session,

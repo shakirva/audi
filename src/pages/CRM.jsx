@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2 } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -248,17 +248,22 @@ export default function CRM() {
                       const lss = LEAD_SCORE_STYLE[enq.leadScore] || LEAD_SCORE_STYLE.Warm;
                       const name = getEnquiryName(enq);
                       const phone = getEnquiryPhone(enq);
+                      const isPublic = enq.source === "Public Website";
                       return (
                         <div key={enq.id}
                           onMouseEnter={() => setHoveredEnq(enq.id)}
                           onMouseLeave={() => setHoveredEnq(null)}
                           style={{
-                            background: getConflictStatus(enq) ? "#fffafa" : "#fff", 
+                            background: getConflictStatus(enq) ? "#fffafa" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
                             padding: "14px", borderRadius: 8, 
-                            border: getConflictStatus(enq) ? "1px solid #fecaca" : "1px solid #eaeaea",
+                            border: getConflictStatus(enq) ? "1px solid #fecaca" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
                             boxShadow: "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
-                            transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none"
+                            transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none",
+                            position: "relative"
                           }}>
+                          {isPublic && !enq.SalesExecutive && (
+                             <div style={{ position: "absolute", top: -8, right: -8, background: "#d946ef", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 12, boxShadow: "0 2px 4px rgba(217,70,239,0.3)" }}>NEW WEB LEAD</div>
+                          )}
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                             <span style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", background: "rgba(27,67,50,0.1)", padding: "2px 6px", borderRadius: 4 }}>
                               {enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}
@@ -280,36 +285,69 @@ export default function CRM() {
                                 </span>
                               )}
                             </div>
-                            {enq.status !== "Booking Confirmed" && hoveredEnq === enq.id ? (
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <select
-                                  value={enq.status}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => handleStatusChange(enq.id, e.target.value)}
-                                  style={{
-                                    fontSize: 10, padding: "4px", borderRadius: 4, border: "1px solid #ddd", background: "#f8f9fa", cursor: "pointer", maxWidth: 90
-                                  }}
-                                >
-                                  {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
-                                  style={{ background: "#e0f2fe", color: "#0284c7", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                >
-                                  <Edit2 size={11}/> Edit
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                                  style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                >
-                                  <CheckCircle2 size={11}/> Convert
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
-                                  style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                >
-                                  <Trash2 size={11}/> Delete
-                                </button>
+                            
+                            {/* Action Buttons Container */}
+                            {hoveredEnq === enq.id && enq.status !== "Booking Confirmed" ? (
+                              <div style={{ display: "flex", gap: 6, zIndex: 10 }}>
+                                {isPublic && !enq.SalesExecutive ? (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                      style={{ background: "#d946ef", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <Edit2 size={11}/> Assign
+                                    </button>
+                                    <button
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        const phoneNum = `91${getEnquiryPhone(enq).replace(/\D/g, "").slice(-10)}`;
+                                        const msg = encodeURIComponent(`Hi ${name},\n\nThank you for your enquiry regarding ${enq.hallPreference || 'our hall'} on ${enq.tentativeDate || 'the requested date'}.\nUnfortunately, this date is already booked / unavailable. We apologize for the inconvenience and hope to serve you in the future!`);
+                                        window.open(`https://wa.me/${phoneNum}?text=${msg}`, "_blank");
+                                        handleStatusChange(enq.id, "Cancelled");
+                                      }}
+                                      style={{ background: "#fef3c7", color: "#d97706", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <XCircle size={11}/> Reject
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
+                                      style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <Trash2 size={11}/> Delete
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <select
+                                      value={enq.status}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => handleStatusChange(enq.id, e.target.value)}
+                                      style={{
+                                        fontSize: 10, padding: "4px", borderRadius: 4, border: "1px solid #ddd", background: "#f8f9fa", cursor: "pointer", maxWidth: 90
+                                      }}
+                                    >
+                                      {pipelineStages.filter(s => s !== "Booking Confirmed").map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                      style={{ background: "#e0f2fe", color: "#0284c7", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <Edit2 size={11}/> Edit
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                      style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <CheckCircle2 size={11}/> Convert
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
+                                      style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <Trash2 size={11}/> Delete
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ) : (
                               <div style={{ display: "flex", alignItems: "center", gap: 6, background: enq.SalesExecutive ? "#f8f9fa" : "#fee2e2", padding: "2px 8px 2px 2px", borderRadius: 12, border: `1px solid ${enq.SalesExecutive ? "#eaeaea" : "#fca5a5"}` }}>

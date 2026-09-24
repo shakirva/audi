@@ -165,7 +165,12 @@ export default function Attendance() {
     }
   };
 
-  const todayEntry = attendance.find(a => a.userId === user?.id && a.date === new Date().toISOString().split("T")[0]);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayEntry = attendance.find(a => {
+    if (a.userId !== user?.id) return false;
+    if (!a.date) return false;
+    return a.date.split("T")[0] === todayStr;
+  });
 
   const filteredAttendance = attendance.filter(a => a.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 

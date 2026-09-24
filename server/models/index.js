@@ -80,6 +80,16 @@ Tenant.hasMany(Inventory, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(VendorBill, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(VendorPayment, { foreignKey: "tenantId", onDelete: "CASCADE" });
 Tenant.hasMany(ComplianceDocument, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterHall, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterPackage, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterService, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterEventType, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterLeadSource, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterPaymentMode, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterBank, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(MasterExpenseCategory, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(Feedback, { foreignKey: "tenantId", onDelete: "CASCADE" });
+Tenant.hasMany(FinancialPeriod, { foreignKey: "tenantId", onDelete: "CASCADE" });
 
 // ── Environment has many ──
 Environment.hasMany(Booking, { foreignKey: "environmentId", onDelete: "CASCADE" });
@@ -110,6 +120,16 @@ Environment.hasMany(Inventory, { foreignKey: "environmentId", onDelete: "CASCADE
 Environment.hasMany(VendorBill, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(VendorPayment, { foreignKey: "environmentId", onDelete: "CASCADE" });
 Environment.hasMany(ComplianceDocument, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterHall, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterPackage, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterService, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterEventType, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterLeadSource, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterPaymentMode, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterBank, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(MasterExpenseCategory, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(Feedback, { foreignKey: "environmentId", onDelete: "CASCADE" });
+Environment.hasMany(FinancialPeriod, { foreignKey: "environmentId", onDelete: "CASCADE" });
 
 // ── Customer has many ──
 Customer.hasMany(Booking, { foreignKey: "customerId", onDelete: "SET NULL" });
@@ -195,6 +215,16 @@ Inventory.belongsTo(Tenant, { foreignKey: "tenantId" });
 VendorBill.belongsTo(Tenant, { foreignKey: "tenantId" });
 VendorPayment.belongsTo(Tenant, { foreignKey: "tenantId" });
 ComplianceDocument.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterHall.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterPackage.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterService.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterEventType.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterLeadSource.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterPaymentMode.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterBank.belongsTo(Tenant, { foreignKey: "tenantId" });
+MasterExpenseCategory.belongsTo(Tenant, { foreignKey: "tenantId" });
+Feedback.belongsTo(Tenant, { foreignKey: "tenantId" });
+FinancialPeriod.belongsTo(Tenant, { foreignKey: "tenantId" });
 
 // ── Belongs to Environment ──
 Booking.belongsTo(Environment, { foreignKey: "environmentId" });
@@ -224,6 +254,17 @@ Inventory.belongsTo(Environment, { foreignKey: "environmentId" });
 VendorBill.belongsTo(Environment, { foreignKey: "environmentId" });
 VendorPayment.belongsTo(Environment, { foreignKey: "environmentId" });
 ComplianceDocument.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterHall.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterPackage.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterService.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterEventType.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterLeadSource.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterPaymentMode.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterBank.belongsTo(Environment, { foreignKey: "environmentId" });
+MasterExpenseCategory.belongsTo(Environment, { foreignKey: "environmentId" });
+Feedback.belongsTo(Environment, { foreignKey: "environmentId" });
+FinancialPeriod.belongsTo(Environment, { foreignKey: "environmentId" });
+
 ComplianceDocument.belongsTo(User, { as: "ResponsibleUser", foreignKey: "responsibleUserId" });
 User.hasMany(ComplianceDocument, { foreignKey: "responsibleUserId" });
 

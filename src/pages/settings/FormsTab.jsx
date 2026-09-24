@@ -162,21 +162,41 @@ export default function FormsTab({
   // --- Event Type Modal State ---
   const [eventTypeModalOpen, setEventTypeModalOpen] = useState(false);
   const [newEventTypeName, setNewEventTypeName] = useState("");
+  const [newEventSessions, setNewEventSessions] = useState([]);
 
   const handleAddEventType = async () => {
     const name = newEventTypeName.trim();
     if (!name) return addToast("Event type name is required.", "error");
-    if (eventTypes.some(et => (typeof et === 'string' ? et : et.name).toLowerCase() === name.toLowerCase())) {
+    if (eventTypes.some(et => {
+      if (!et) return false;
+      const etName = typeof et === 'string' ? et : et.name;
+      return etName ? etName.toLowerCase() === name.toLowerCase() : false;
+    })) {
       return addToast("Event type already exists.", "error");
     }
     
-    const newEvents = [...eventTypes, { name, sessions: [] }];
+    // Map selected session names to their full objects
+    const selectedSessionsData = newEventSessions.map(sessName => {
+      const match = sessions.find(s => s.name === sessName);
+      return match ? { name: match.name, time: match.time } : null;
+    }).filter(Boolean);
+    
+    const newEvents = [...eventTypes, { name, sessions: selectedSessionsData }];
     if (await handleSaveData({ eventTypes: newEvents })) {
       setEventTypes(newEvents);
       setEventTypeModalOpen(false);
       setNewEventTypeName("");
+      setNewEventSessions([]);
       addToast("Event type added successfully.", "success");
     }
+  };
+
+  const toggleNewEventSession = (sessionName) => {
+    setNewEventSessions(prev => 
+      prev.includes(sessionName) 
+        ? prev.filter(n => n !== sessionName) 
+        : [...prev, sessionName]
+    );
   };
 
   const handleDeleteEventType = async (idx) => {
@@ -212,6 +232,7 @@ export default function FormsTab({
   const handleAddSessionToEvent = async () => {
     if (activeEventIdx === null) return;
     const activeEt = eventTypes[activeEventIdx];
+    const name = typeof activeEt === 'string' ? activeEt : activeEt.name;
     const etSessions = [...(activeEt.sessions || [])];
     
     if (!selectedExistingSession) return addToast("Please select a session.", "error");
@@ -222,7 +243,7 @@ export default function FormsTab({
     etSessions.push({ name: matched.name, time: matched.time });
 
     const updatedEvents = [...eventTypes];
-    updatedEvents[activeEventIdx] = { ...activeEt, sessions: etSessions };
+    updatedEvents[activeEventIdx] = { name, sessions: etSessions };
     
     if (await handleSaveData({ eventTypes: updatedEvents })) {
       setEventTypes(updatedEvents);
@@ -234,10 +255,11 @@ export default function FormsTab({
   const handleRemoveSessionFromEvent = async (sessIdxToRemove) => {
     if (activeEventIdx === null) return;
     const activeEt = eventTypes[activeEventIdx];
-    const etSessions = activeEt.sessions.filter((_, i) => i !== sessIdxToRemove);
+    const name = typeof activeEt === 'string' ? activeEt : activeEt.name;
+    const etSessions = (activeEt.sessions || []).filter((_, i) => i !== sessIdxToRemove);
     
     const updatedEvents = [...eventTypes];
-    updatedEvents[activeEventIdx] = { ...activeEt, sessions: etSessions };
+    updatedEvents[activeEventIdx] = { name, sessions: etSessions };
     
     if (await handleSaveData({ eventTypes: updatedEvents })) {
       setEventTypes(updatedEvents);
@@ -487,6 +509,27 @@ export default function FormsTab({
             <label style={labelSt}>Event Type Name *</label>
             <input value={newEventTypeName} onChange={e => setNewEventTypeName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleAddEventType(); }} placeholder="e.g. Wedding" style={iStyle} />
           </div>
+          {sessions.length > 0 && (
+            <div>
+              <label style={labelSt}>Supported Sessions (Optional)</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, background: "#f8fafc", padding: "12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                {sessions.map((s, idx) => (
+                  <label key={idx} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155", cursor: "pointer" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={newEventSessions.includes(s.name)} 
+                      onChange={() => toggleNewEventSession(s.name)} 
+                      style={{ accentColor: "#1B4332", width: 16, height: 16 }}
+                    />
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontWeight: 600 }}>{s.name}</span>
+                      <span style={{ fontSize: 11, color: "#64748b" }}>{s.time}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
             <button onClick={() => setEventTypeModalOpen(false)} style={{ padding: "10px 20px", background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
             <button onClick={handleAddEventType} style={{ padding: "10px 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add Event Type</button>

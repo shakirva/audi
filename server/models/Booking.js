@@ -68,6 +68,7 @@ const Booking = sequelize.define("Booking", {
   discount: { type: DataTypes.INTEGER, defaultValue: 0 },
   taxes: { type: DataTypes.INTEGER, defaultValue: 0 },
   advance: { type: DataTypes.INTEGER, defaultValue: 0 },
+  depositAmount: { type: DataTypes.INTEGER, defaultValue: 0 },
   totalAmount: { type: DataTypes.INTEGER, defaultValue: 0 },
   status: { type: DataTypes.ENUM("Draft", "Confirmed", "Agreement Pending", "Advance Pending", "Ready For Job", "Completed", "Closed", "Cancelled"), defaultValue: "Draft" },
   invoiceStatus: { type: DataTypes.ENUM("Pending", "Generated"), defaultValue: "Pending" },

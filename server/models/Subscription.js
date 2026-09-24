@@ -24,6 +24,10 @@ const Subscription = sequelize.define("Subscription", {
     type: DataTypes.INTEGER, 
     allowNull: true 
   },
+  customPrice: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
   managedBy: { type: DataTypes.STRING, defaultValue: "manual" },
   notes: { type: DataTypes.TEXT, defaultValue: "" },
 });

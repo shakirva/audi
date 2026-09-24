@@ -25,12 +25,13 @@ export default function Bookings() {
   const [venueName, setVenueName] = useState("Our Auditorium");
 
   useEffect(() => {
+    refetch();
     settingsAPI.get().then(res => {
       setSettings(res.data?.data || {});
       const name = res.data?.data?.venueName;
       if (name) setVenueName(name);
     }).catch(() => {});
-  }, []);
+  }, [refetch]);
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Copy, ImagePlus, Trash2, Film, Image as ImageIcon } from "lucide-react";
+import { Link, Copy, ImagePlus, Trash2, Film, Image as ImageIcon, Upload } from "lucide-react";
 import { settingsAPI } from "../../services/api";
 import { useRole } from "../../context/RoleContext";
 import { useConfirm } from "../../components/ConfirmProvider";
@@ -13,10 +13,11 @@ export default function OnlinePresenceTab({
   const { confirm } = useConfirm();
   const { tenant } = useRole();
   
-  const [newMedia, setNewMedia] = useState({ type: "image", src: "", label: "", category: "Halls" });
+  const [newMedia, setNewMedia] = useState({ type: "upload", src: "", file: null, label: "", category: "Halls" });
   const [mediaError, setMediaError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const GALLERY_CATEGORIES = ["Halls", "Events", "Decor", "Videos"];
+  const GALLERY_CATEGORIES = ["Halls", "Events", "Decor"];
   const tenantSlug = tenant?.slug;
   const publicBookingUrl = tenantSlug ? `https://venueza.cloud/book/${tenantSlug}` : "https://venueza.cloud/book/...";
 
@@ -27,20 +28,46 @@ export default function OnlinePresenceTab({
 
   const handleAddMedia = async () => {
     setMediaError("");
-    if (!newMedia.src.trim()) { setMediaError("Please enter a URL."); return; }
+    if (newMedia.type === "upload" && !newMedia.file) { setMediaError("Please select a file to upload."); return; }
+    if (newMedia.type !== "upload" && !newMedia.src.trim()) { setMediaError("Please enter a URL."); return; }
     if (!newMedia.label.trim()) { setMediaError("Please enter a label."); return; }
+    
+    let finalSrc = newMedia.src;
+    let finalType = newMedia.type === "upload" ? "image" : newMedia.type;
     let newItems = [];
-    if (newMedia.type === "video") {
-      const ytId = getYouTubeId(newMedia.src);
+
+    if (newMedia.type === "upload" && newMedia.file) {
+       setIsUploading(true);
+       try {
+         const formData = new FormData();
+         formData.append("logo", newMedia.file);
+         const uploadRes = await settingsAPI.uploadLogo(formData);
+         if (uploadRes.data?.success) {
+           finalSrc = uploadRes.data.url;
+         } else {
+           setMediaError("Failed to upload image.");
+           setIsUploading(false);
+           return;
+         }
+       } catch (err) {
+         setMediaError("Upload error: " + err.message);
+         setIsUploading(false);
+         return;
+       }
+       setIsUploading(false);
+    }
+
+    if (finalType === "video") {
+      const ytId = getYouTubeId(finalSrc);
       if (!ytId) { setMediaError("Please enter a valid YouTube URL (youtube.com/watch?v=... or youtu.be/...)."); return; }
       const embedSrc = `https://www.youtube.com/embed/${ytId}`;
       const thumb = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
       newItems = [...galleryItems, { id: Date.now(), type: "video", src: embedSrc, thumb, label: newMedia.label, category: newMedia.category }];
     } else {
-      newItems = [...galleryItems, { id: Date.now(), type: "image", src: newMedia.src.trim(), label: newMedia.label, category: newMedia.category }];
+      newItems = [...galleryItems, { id: Date.now(), type: "image", src: finalSrc.trim(), label: newMedia.label, category: newMedia.category }];
     }
     setGalleryItems(newItems);
-    setNewMedia({ type: "image", src: "", label: "", category: "Halls" });
+    setNewMedia({ type: "upload", src: "", file: null, label: "", category: "Halls" });
     try {
       await settingsAPI.update({ gallery: newItems });
       addToast("Media added to gallery! 🖼️", "success");
@@ -139,35 +166,52 @@ export default function OnlinePresenceTab({
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
             
             <div style={{ display: "flex", background: "#e2e8f0", borderRadius: 8, padding: 4 }}>
-              <button onClick={() => setNewMedia({ ...newMedia, type: "image", src: "" })} style={{ padding: "6px 16px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: newMedia.type === "image" ? "#fff" : "transparent", color: newMedia.type === "image" ? "#1e293b" : "#64748b", boxShadow: newMedia.type === "image" ? "0 1px 3px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => setNewMedia({ ...newMedia, type: "upload", src: "", file: null })} style={{ padding: "6px 16px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: newMedia.type === "upload" ? "#fff" : "transparent", color: newMedia.type === "upload" ? "#1e293b" : "#64748b", boxShadow: newMedia.type === "upload" ? "0 1px 3px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", gap: 6 }}>
+                <Upload size={14} /> Upload Image
+              </button>
+              <button onClick={() => setNewMedia({ ...newMedia, type: "image", src: "", file: null })} style={{ padding: "6px 16px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: newMedia.type === "image" ? "#fff" : "transparent", color: newMedia.type === "image" ? "#1e293b" : "#64748b", boxShadow: newMedia.type === "image" ? "0 1px 3px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", gap: 6 }}>
                 <ImageIcon size={14} /> Image URL
               </button>
-              <button onClick={() => setNewMedia({ ...newMedia, type: "video", src: "" })} style={{ padding: "6px 16px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: newMedia.type === "video" ? "#fff" : "transparent", color: newMedia.type === "video" ? "#1e293b" : "#64748b", boxShadow: newMedia.type === "video" ? "0 1px 3px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => setNewMedia({ ...newMedia, type: "video", src: "", file: null })} style={{ padding: "6px 16px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: newMedia.type === "video" ? "#fff" : "transparent", color: newMedia.type === "video" ? "#1e293b" : "#64748b", boxShadow: newMedia.type === "video" ? "0 1px 3px rgba(0,0,0,0.1)" : "none", display: "flex", alignItems: "center", gap: 6 }}>
                 <Film size={14} /> YouTube
               </button>
             </div>
 
             <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 8 }}>
-              <input 
-                placeholder={newMedia.type === "video" ? "YouTube Video URL (e.g. https://youtube.com/watch?v=...)" : "Image URL (e.g. https://.../image.jpg)"} 
-                value={newMedia.src} 
-                onChange={e => setNewMedia({ ...newMedia, src: e.target.value })} 
-                style={iStyle} 
-              />
+              {newMedia.type === "upload" ? (
+                <input 
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setNewMedia({ ...newMedia, file, src: URL.createObjectURL(file) });
+                    }
+                  }}
+                  style={iStyle} 
+                />
+              ) : (
+                <input 
+                  placeholder={newMedia.type === "video" ? "YouTube Video URL (e.g. https://youtube.com/watch?v=...)" : "Image URL (e.g. https://.../image.jpg)"} 
+                  value={newMedia.src} 
+                  onChange={e => setNewMedia({ ...newMedia, src: e.target.value })} 
+                  style={iStyle} 
+                />
+              )}
               <div style={{ display: "flex", gap: 8 }}>
                 <input placeholder="Caption / Title" value={newMedia.label} onChange={e => setNewMedia({ ...newMedia, label: e.target.value })} style={{ ...iStyle, flex: 2 }} />
                 <select value={newMedia.category} onChange={e => setNewMedia({ ...newMedia, category: e.target.value })} style={{ ...iStyle, flex: 1, background: "#fff" }}>
                   {GALLERY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <button onClick={handleAddMedia} style={{ padding: "0 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  Add
+                <button disabled={isUploading} onClick={handleAddMedia} style={{ padding: "0 20px", background: "#1B4332", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: isUploading ? "not-allowed" : "pointer", opacity: isUploading ? 0.7 : 1 }}>
+                  {isUploading ? "..." : "Add"}
                 </button>
               </div>
               {mediaError && <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>{mediaError}</span>}
             </div>
 
-            {newMedia.src && newMedia.type === "image" && (
-              <img src={newMedia.src} alt="Preview" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }} onError={(e) => { e.target.style.display = "none"; setMediaError("Invalid image URL"); }} onLoad={() => setMediaError("")} />
+            {newMedia.src && (newMedia.type === "image" || newMedia.type === "upload") && (
+              <img src={newMedia.src} alt="Preview" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }} onError={(e) => { e.target.style.display = "none"; setMediaError("Invalid image URL"); }} onLoad={(e) => { e.target.style.display = "block"; setMediaError(""); }} />
             )}
             {newMedia.src && newMedia.type === "video" && getYouTubeId(newMedia.src) && (
               <img src={`https://img.youtube.com/vi/${getYouTubeId(newMedia.src)}/hqdefault.jpg`} alt="Preview" style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #cbd5e1" }} />

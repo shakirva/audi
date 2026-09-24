@@ -17,7 +17,8 @@ export default function BookingReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("All Time");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -61,16 +62,18 @@ export default function BookingReports() {
     const partyName = b.bookingParty;
     if (filterParty !== "All Parties" && partyName !== filterParty) return false;
     
-    if (filterDate !== "All Time") {
+    if (startDate || endDate) {
       const bDate = new Date(b.date || b.createdAt);
-      const now = new Date();
-      if (filterDate === "This Month") {
-        if (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear()) return false;
-      } else if (filterDate === "Last Month") {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        if (bDate.getMonth() !== lastMonth.getMonth() || bDate.getFullYear() !== lastMonth.getFullYear()) return false;
-      } else if (filterDate === "This Year") {
-        if (bDate.getFullYear() !== now.getFullYear()) return false;
+      bDate.setHours(0, 0, 0, 0);
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        if (bDate < sDate) return false;
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(0, 0, 0, 0);
+        if (bDate > eDate) return false;
       }
     }
     return true;
@@ -112,6 +115,8 @@ export default function BookingReports() {
 
   const eventData = Object.keys(eventCounts).map(k => ({ name: k, value: eventCounts[k] })).sort((a,b) => b.value - a.value);
 
+  const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
+
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
     
@@ -121,7 +126,7 @@ export default function BookingReports() {
     doc.text("Booking Report", 14, 22);
     doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterText}`, 14, 30);
     
     doc.setFontSize(10);
     doc.setTextColor(0);
@@ -202,12 +207,15 @@ export default function BookingReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option value="All Time">Date: All Time</option>
-          <option value="This Month">Date: This Month</option>
-          <option value="Last Month">Date: Last Month</option>
-          <option value="This Year">Date: This Year</option>
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+          )}
+        </div>
         
         <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
@@ -242,7 +250,7 @@ export default function BookingReports() {
         {/* Title for Print Only */}
         <div style={{ display: "none" }} className="print-show">
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>Booking Reports</h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterDate}</p>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterText}</p>
         </div>
 
         {/* KPIs */}
@@ -303,6 +311,86 @@ export default function BookingReports() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
             )}
           </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Bookings Table */}
+      <div style={{ ...cardSt, marginTop: 24, padding: "20px 0 0 0", overflow: "hidden" }}>
+        <div style={{ padding: "0 20px 16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={sTitle}>Booking Details</p>
+          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>{filteredBookings.length} Records</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Date</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>ID</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Customer</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Event / Hall</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600, textAlign: "right" }}>Advance</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600, textAlign: "right" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBookings.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "#9ca3af" }}>No bookings found for this period</td>
+                </tr>
+              ) : (
+                filteredBookings.map((b, i) => {
+                  const date = new Date(b.date || b.createdAt).toLocaleDateString();
+                  const id = b.bookingId || "N/A";
+                  const name = b.Customer?.name || b.customerName || "N/A";
+                  const event = b.eventType || "N/A";
+                  const hall = b.hall || "N/A";
+                  const status = b.status || "N/A";
+                  const adv = b.advance ? `₹${b.advance.toLocaleString()}` : "0";
+                  const total = b.totalAmount ? `₹${b.totalAmount.toLocaleString()}` : "0";
+                  
+                  // Color coding for status
+                  let statusBg = "#f3f4f6";
+                  let statusColor = "#4b5563";
+                  if (status === "Completed") { statusBg = "#dcfce7"; statusColor = "#059669"; }
+                  else if (status === "Cancelled") { statusBg = "#fef2f2"; statusColor = "#dc2626"; }
+                  else if (status === "Confirmed" || status === "Upcoming") { statusBg = "#eff6ff"; statusColor = "#2563eb"; }
+                  
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
+                      <td style={{ padding: "12px 20px", color: "#374151" }}>{date}</td>
+                      <td style={{ padding: "12px 20px", color: "#6b7280", fontSize: 12 }}>{id}</td>
+                      <td style={{ padding: "12px 20px", color: "#111827", fontWeight: 500 }}>{name}</td>
+                      <td style={{ padding: "12px 20px", color: "#4b5563" }}>{event}<br/><span style={{ fontSize: 11, color: "#9ca3af" }}>{hall}</span></td>
+                      <td style={{ padding: "12px 20px" }}>
+                        <span style={{ padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: statusBg, color: statusColor }}>
+                          {status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 20px", textAlign: "right", fontWeight: 600, color: "#4b5563" }}>{adv}</td>
+                      <td style={{ padding: "12px 20px", textAlign: "right", fontWeight: 700, color: "#111827" }}>{total}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            {/* Table Footer with Totals */}
+            {filteredBookings.length > 0 && (
+              <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
+                <tr>
+                  <td colSpan="4" style={{ padding: "16px 20px" }}></td>
+                  <td style={{ padding: "16px 20px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
+                    Grand Totals:
+                  </td>
+                  <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#4b5563" }}>
+                    ₹{filteredBookings.reduce((sum, b) => sum + (Number(b.advance) || 0), 0).toLocaleString()}
+                  </td>
+                  <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 800, fontSize: 15, color: "#111827" }}>
+                    ₹{filteredBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         </div>
       </div>
       </div>

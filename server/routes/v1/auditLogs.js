@@ -10,7 +10,7 @@ const { ROLES } = require("../../helpers/roles");
 // Only Owners and Managers can view activity logs
 router.use(auth, tenantScope, subscriptionGuard, planGate);
 
-router.get("/", requireRole(ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), auditLogController.getAll);
-router.delete("/clear", requireRole(ROLES.OWNER, ROLES.TESTER), auditLogController.clearAll);
+router.get("/", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MANAGER, ROLES.TESTER), auditLogController.getAll);
+router.delete("/clear", requireRole(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.TESTER), auditLogController.clearAll);
 
 module.exports = router;

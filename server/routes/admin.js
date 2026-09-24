@@ -1,6 +1,7 @@
 const express = require("express");
 const { Tenant, Subscription, User, Environment, Settings } = require("../models");
 const { auth, requireRole } = require("../middleware/auth");
+const { auditLog } = require("../middleware/audit");
 
 const router = express.Router();
 
@@ -23,9 +24,9 @@ router.get("/tenants", async (req, res) => {
 });
 
 // POST /api/admin/tenants — Create a new tenant (onboarding)
-router.post("/tenants", async (req, res) => {
+router.post("/tenants", auditLog("Create Tenant"), async (req, res) => {
   try {
-    const { name, slug, ownerName, email, phone, plan } = req.body;
+    const { name, slug, ownerName, email, phone, plan, customPrice } = req.body;
     if (!name || !slug || !email) return res.status(400).json({ error: "Name, slug, and email required" });
 
     // 1. Create Tenant
@@ -46,6 +47,7 @@ router.post("/tenants", async (req, res) => {
       status: "active",
       trialStartDate: today.toISOString().split("T")[0],
       trialEndDate: trialEnd.toISOString().split("T")[0],
+      customPrice: customPrice || null,
     });
 
     // 4. Create Owner User
@@ -77,9 +79,9 @@ router.post("/tenants", async (req, res) => {
 });
 
 // PUT /api/admin/tenants/:id/subscription — Update subscription status
-router.put("/tenants/:id/subscription", async (req, res) => {
+router.put("/tenants/:id/subscription", auditLog("Update Tenant Subscription"), async (req, res) => {
   try {
-    const { plan, status, trialEndDate, subscriptionEndDate } = req.body;
+    const { plan, status, trialEndDate, subscriptionEndDate, customPrice } = req.body;
     let subscription = await Subscription.findOne({
       where: { tenantId: req.params.id },
       order: [["id", "DESC"]]
@@ -93,6 +95,7 @@ router.put("/tenants/:id/subscription", async (req, res) => {
     if (status) subscription.status = status;
     if (trialEndDate !== undefined) subscription.trialEndDate = trialEndDate || null;
     if (subscriptionEndDate !== undefined) subscription.subscriptionEndDate = subscriptionEndDate || null;
+    if (customPrice !== undefined) subscription.customPrice = customPrice === "" ? null : customPrice;
 
     await subscription.save();
     res.json(subscription);
@@ -102,7 +105,7 @@ router.put("/tenants/:id/subscription", async (req, res) => {
 });
 
 // PATCH /api/admin/tenants/:id/toggle-sandbox — Toggle sandbox feature
-router.patch("/tenants/:id/toggle-sandbox", async (req, res) => {
+router.patch("/tenants/:id/toggle-sandbox", auditLog("Toggle Tenant Sandbox"), async (req, res) => {
   try {
     const tenant = await Tenant.findByPk(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
@@ -117,7 +120,7 @@ router.patch("/tenants/:id/toggle-sandbox", async (req, res) => {
 });
 
 // PATCH /api/admin/tenants/:id/status — Suspend/Activate tenant
-router.patch("/tenants/:id/status", async (req, res) => {
+router.patch("/tenants/:id/status", auditLog("Update Tenant Status"), async (req, res) => {
   try {
     const tenant = await Tenant.findByPk(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
@@ -132,7 +135,7 @@ router.patch("/tenants/:id/status", async (req, res) => {
 });
 
 // PUT /api/admin/tenants/:id — Update tenant details
-router.put("/tenants/:id", async (req, res) => {
+router.put("/tenants/:id", auditLog("Update Tenant Details"), async (req, res) => {
   try {
     const tenant = await Tenant.findByPk(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
@@ -151,6 +154,87 @@ router.put("/tenants/:id", async (req, res) => {
       return res.status(400).json({ error: "Slug or email already in use" });
     }
     res.status(500).json({ error: "Failed to update tenant details" });
+  }
+});
+
+// DELETE /api/admin/tenants/:id — Delete a tenant
+router.delete("/tenants/:id", auditLog("Delete Tenant"), async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    // Ensure we don't delete protected/system tenants if they exist (e.g. SuperAdmin)
+    if (tenant.slug === 'superadmin' || tenant.slug === 'ktconvention' || tenant.slug === 'laurel-garden') {
+       return res.status(403).json({ error: "Cannot delete protected system tenants." });
+    }
+
+    // Manually delete related data that might not have ON DELETE CASCADE at the DB level
+    const models = require("../models");
+    const tenantId = tenant.id;
+    
+    // Ordered deletion to respect potential internal foreign keys
+    const journalEntries = await models.JournalEntry.findAll({ where: { tenantId } });
+    const journalEntryIds = journalEntries.map(je => je.id);
+    if (journalEntryIds.length > 0) {
+      await models.JournalEntryLine.destroy({ where: { journalEntryId: journalEntryIds }, force: true });
+    }
+    await models.JournalEntry.destroy({ where: { tenantId }, force: true });
+    await models.Voucher.destroy({ where: { tenantId }, force: true });
+    await models.Receipt.destroy({ where: { tenantId }, force: true });
+    await models.Payment.destroy({ where: { tenantId }, force: true });
+    await models.VendorPayment.destroy({ where: { tenantId }, force: true });
+    await models.VendorBill.destroy({ where: { tenantId }, force: true });
+    await models.Expense.destroy({ where: { tenantId }, force: true });
+    
+    await models.JobChecklist.destroy({ where: { tenantId }, force: true });
+    await models.JobDocument.destroy({ where: { tenantId }, force: true });
+    await models.JobTimeline.destroy({ where: { tenantId }, force: true });
+    await models.JobVendor.destroy({ where: { tenantId }, force: true });
+    await models.JobStaff.destroy({ where: { tenantId }, force: true });
+    await models.Job.destroy({ where: { tenantId }, force: true });
+    
+    await models.AgreementVersion.destroy({ where: { tenantId }, force: true });
+    await models.Agreement.destroy({ where: { tenantId }, force: true });
+    await models.AgreementTemplate.destroy({ where: { tenantId }, force: true });
+    
+    await models.FollowUp.destroy({ where: { tenantId }, force: true });
+    await models.Booking.destroy({ where: { tenantId }, force: true });
+    await models.Enquiry.destroy({ where: { tenantId }, force: true });
+    await models.AccountStatement.destroy({ where: { tenantId }, force: true });
+    await models.CashBook.destroy({ where: { tenantId }, force: true });
+    await models.BankBook.destroy({ where: { tenantId }, force: true });
+    await models.ChartOfAccount.destroy({ where: { tenantId }, force: true });
+    
+    await models.Customer.destroy({ where: { tenantId }, force: true });
+    await models.Vendor.destroy({ where: { tenantId }, force: true });
+    await models.Inventory.destroy({ where: { tenantId }, force: true });
+    
+    await models.MasterHall.destroy({ where: { tenantId }, force: true });
+    await models.MasterPackage.destroy({ where: { tenantId }, force: true });
+    await models.MasterService.destroy({ where: { tenantId }, force: true });
+    await models.MasterEventType.destroy({ where: { tenantId }, force: true });
+    await models.MasterLeadSource.destroy({ where: { tenantId }, force: true });
+    await models.MasterPaymentMode.destroy({ where: { tenantId }, force: true });
+    await models.MasterBank.destroy({ where: { tenantId }, force: true });
+    await models.MasterExpenseCategory.destroy({ where: { tenantId }, force: true });
+    
+    await models.Feedback.destroy({ where: { tenantId }, force: true });
+    await models.FinancialPeriod.destroy({ where: { tenantId }, force: true });
+    await models.ComplianceDocument.destroy({ where: { tenantId }, force: true });
+    await models.LeaveRequest.destroy({ where: { tenantId }, force: true });
+    await models.Attendance.destroy({ where: { tenantId }, force: true });
+    
+    await models.AuditLog.destroy({ where: { tenantId }, force: true });
+    await models.Settings.destroy({ where: { tenantId }, force: true });
+    await models.Subscription.destroy({ where: { tenantId }, force: true });
+    await models.User.destroy({ where: { tenantId }, force: true });
+    await models.Environment.destroy({ where: { tenantId }, force: true });
+
+    await tenant.destroy({ force: true }); // Finally delete the tenant
+    res.json({ success: true, message: "Tenant deleted successfully" });
+  } catch (err) {
+    console.error("Failed to delete tenant:", err);
+    res.status(500).json({ error: "Failed to delete tenant. Check logs for details." });
   }
 });
 // POST /api/admin/tenants/:id/impersonate — SuperAdmin enters a tenant's ERP as their Owner

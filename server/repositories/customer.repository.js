@@ -10,9 +10,8 @@ class CustomerRepository extends BaseRepository {
 
   async findAllFiltered({ tenantId, environmentId, userRole, userId, search, type, query = {} }) {
     const where = {};
-    if (userRole === "Sales") {
-      where.createdBy = userId;
-    }
+    // Removed userRole restriction so Sales can see all customers
+
 
     if (type) where.customerType = type;
     if (search) {

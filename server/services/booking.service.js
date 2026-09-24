@@ -138,6 +138,7 @@ class BookingService {
       discount: Number(data.discount) || 0,
       taxes: Number(data.taxes) || 0,
       taxPercentage: Number(data.taxPercentage) || 0,
+      depositAmount: Number(data.depositAmount) || 0,
       createdBy: data.createdBy,
     });
 
@@ -237,12 +238,12 @@ class BookingService {
       "brideName", "brideFatherName", "brideMotherName", "bridePhone", "brideAddress", 
       "groomName", "groomFatherName", "groomMotherName", "groomPhone", "groomAddress", 
       "fatherName", "motherName", "email", "whatsapp", "decoration", "catering", 
-      "sound", "facilities", "specialInstructions", "package", "discount", "cancellationReason"
+      "sound", "facilities", "specialInstructions", "package", "discount", "cancellationReason", "depositAmount"
     ];
     const updateData = {};
     fields.forEach((f) => {
       if (data[f] !== undefined) {
-        updateData[f] = ["guests", "totalAmount", "taxes", "taxPercentage", "discount"].includes(f)
+        updateData[f] = ["guests", "totalAmount", "taxes", "taxPercentage", "discount", "depositAmount"].includes(f)
           ? Number(data[f]) || 0
           : data[f];
       }
@@ -310,7 +311,10 @@ class BookingService {
       await updated.save({ hooks: false });
     }
 
-    const bData = updated.toJSON ? updated.toJSON() : updated;
+    // Fetch the final state of the booking after payments update it
+    const finalBooking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
+
+    const bData = finalBooking.toJSON ? finalBooking.toJSON() : finalBooking;
     return {
       ...bData,
       id: bData.bookingId,

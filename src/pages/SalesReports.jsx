@@ -17,7 +17,8 @@ export default function SalesReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("All Time");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -57,16 +58,18 @@ export default function SalesReports() {
     const placeName = e.Customer?.city || e.place;
     if (filterPlace !== "All Locations" && placeName !== filterPlace) return false;
     
-    if (filterDate !== "All Time") {
+    if (startDate || endDate) {
       const eDate = new Date(e.createdAt);
-      const now = new Date();
-      if (filterDate === "This Month") {
-        if (eDate.getMonth() !== now.getMonth() || eDate.getFullYear() !== now.getFullYear()) return false;
-      } else if (filterDate === "Last Month") {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        if (eDate.getMonth() !== lastMonth.getMonth() || eDate.getFullYear() !== lastMonth.getFullYear()) return false;
-      } else if (filterDate === "This Year") {
-        if (eDate.getFullYear() !== now.getFullYear()) return false;
+      eDate.setHours(0, 0, 0, 0);
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        if (eDate < sDate) return false;
+      }
+      if (endDate) {
+        const endD = new Date(endDate);
+        endD.setHours(0, 0, 0, 0);
+        if (eDate > endD) return false;
       }
     }
     return true;
@@ -121,7 +124,8 @@ export default function SalesReports() {
     doc.text("Sales & CRM Report", 14, 22);
     doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterDate}`, 14, 30);
+    const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
+    doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterText}`, 14, 30);
     
     doc.setFontSize(10);
     doc.setTextColor(0);
@@ -129,19 +133,20 @@ export default function SalesReports() {
     doc.text(`Avg. Budgets: ${formattedAvgDeal}`, 80, 40);
     doc.text(`Top Source: ${topSource} (${topSourcePercent}%)`, 140, 40);
 
-    const tableColumn = ["Date", "Customer", "Phone", "Event", "Hall", "Status", "Executive", "Budget"];
+    const tableColumn = ["Date", "Customer", "Phone", "Location", "Event", "Hall", "Status", "Executive", "Budget"];
     const tableRows = [];
 
     filteredEnquiries.forEach(e => {
       const date = new Date(e.createdAt).toLocaleDateString();
       const name = e.Customer?.name || e.enquirerName || e.customerName || "N/A";
       const phone = e.Customer?.phone || e.enquirerPhone || e.phone || "N/A";
+      const location = e.Customer?.city || e.place || "N/A";
       const event = e.eventType || "N/A";
       const hall = e.hallPreference || e.hall || "N/A";
       const status = e.status || "N/A";
       const exec = e.SalesExecutive?.name || e.salesExecutiveName || "N/A";
       const budget = e.budget ? `Rs ${e.budget}` : "N/A";
-      tableRows.push([date, name, phone, event, hall, status, exec, budget]);
+      tableRows.push([date, name, phone, location, event, hall, status, exec, budget]);
     });
 
     autoTable(doc, {
@@ -154,6 +159,8 @@ export default function SalesReports() {
 
     doc.save(`Sales_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
+
+  const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
 
   return (
     <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
@@ -199,12 +206,15 @@ export default function SalesReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option value="All Time">Date: All Time</option>
-          <option value="This Month">Date: This Month</option>
-          <option value="Last Month">Date: Last Month</option>
-          <option value="This Year">Date: This Year</option>
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+          )}
+        </div>
         
         <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
@@ -232,14 +242,14 @@ export default function SalesReports() {
         {/* Title for Print Only */}
         <div style={{ display: "none" }} className="print-show">
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>Sales & CRM Reports</h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterDate}</p>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px 0" }}>Report Date: {new Date().toLocaleDateString()} | Filter: {filterText}</p>
         </div>
         <style>{`@media print { .print-show { display: block !important; } }`}</style>
         
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
           {[
-            { label: "Total Enquiries", value: totalEnquiries, sub: filterDate, icon: Users, color: "#1B4332", bg: "#f0faf4" },
+            { label: "Total Enquiries", value: totalEnquiries, sub: filterText, icon: Users, color: "#1B4332", bg: "#f0faf4" },
           { label: "Avg. Budgets", value: formattedAvgDeal, sub: "For confirmed leads", icon: TrendingUp, color: "#2563eb", bg: "#eff6ff" },
           { label: "Top Source", value: topSource, sub: `${topSourcePercent}% of leads`, icon: Trophy, color: "#7c3aed", bg: "#f5f3ff" },
         ].map(k => (
@@ -304,6 +314,87 @@ export default function SalesReports() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>No data</div>
             )}
           </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Enquiries Table */}
+      <div style={{ ...cardSt, marginTop: 24, padding: "20px 0 0 0", overflow: "hidden" }}>
+        <div style={{ padding: "0 20px 16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={sTitle}>Enquiry Details</p>
+          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>{filteredEnquiries.length} Records</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Date</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Customer</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Phone</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Location</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Event / Hall</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Executive</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600, textAlign: "right" }}>Budget</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredEnquiries.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ padding: "24px", textAlign: "center", color: "#9ca3af" }}>No enquiries found for this period</td>
+                </tr>
+              ) : (
+                filteredEnquiries.map((e, i) => {
+                  const date = new Date(e.createdAt).toLocaleDateString();
+                  const name = e.Customer?.name || e.enquirerName || e.customerName || "N/A";
+                  const phone = e.Customer?.phone || e.enquirerPhone || e.phone || "N/A";
+                  const location = e.Customer?.city || e.place || "N/A";
+                  const event = e.eventType || "N/A";
+                  const hall = e.hallPreference || e.hall || "N/A";
+                  const status = e.status || "N/A";
+                  const exec = e.SalesExecutive?.name || e.salesExecutiveName || "N/A";
+                  const budget = e.budget ? `₹${e.budget.toLocaleString()}` : "N/A";
+                  
+                  // Color coding for status
+                  let statusBg = "#f3f4f6";
+                  let statusColor = "#4b5563";
+                  if (status === "Booking Confirmed") { statusBg = "#dcfce7"; statusColor = "#059669"; }
+                  else if (status === "Closed Lost") { statusBg = "#fef2f2"; statusColor = "#dc2626"; }
+                  else if (status === "Negotiation") { statusBg = "#fffbeb"; statusColor = "#D4A017"; }
+                  else if (status === "Site Visit") { statusBg = "#eff6ff"; statusColor = "#2563eb"; }
+                  
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
+                      <td style={{ padding: "12px 20px", color: "#374151" }}>{date}</td>
+                      <td style={{ padding: "12px 20px", color: "#111827", fontWeight: 500 }}>{name}</td>
+                      <td style={{ padding: "12px 20px", color: "#4b5563" }}>{phone}</td>
+                      <td style={{ padding: "12px 20px", color: "#4b5563" }}>{location}</td>
+                      <td style={{ padding: "12px 20px", color: "#4b5563" }}>{event}<br/><span style={{ fontSize: 11, color: "#9ca3af" }}>{hall}</span></td>
+                      <td style={{ padding: "12px 20px" }}>
+                        <span style={{ padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: statusBg, color: statusColor }}>
+                          {status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 20px", color: "#4b5563" }}>{exec}</td>
+                      <td style={{ padding: "12px 20px", textAlign: "right", fontWeight: 600, color: "#374151" }}>{budget}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            {/* Table Footer with Totals */}
+            {filteredEnquiries.length > 0 && (
+              <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
+                <tr>
+                  <td colSpan="5" style={{ padding: "16px 20px" }}></td>
+                  <td style={{ padding: "16px 20px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
+                    Total Estimated Budget:
+                  </td>
+                  <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 800, fontSize: 15, color: "#111827" }}>
+                    ₹{filteredEnquiries.reduce((sum, e) => sum + (Number(e.budget) || 0), 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         </div>
       </div>
       </div>

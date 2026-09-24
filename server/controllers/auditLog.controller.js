@@ -11,8 +11,13 @@ exports.getAll = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const where = {};
-    if (tenantId) where.tenantId = tenantId;
-    if (environmentId) where.environmentId = environmentId;
+    
+    // If the user is a SuperAdmin and NOT explicitly impersonating, they see ALL logs globally.
+    // We assume if they hit the global SuperAdmin activity logs, they want to see everything.
+    if (req.user?.role !== "SuperAdmin") {
+      if (tenantId) where.tenantId = tenantId;
+      if (environmentId) where.environmentId = environmentId;
+    }
 
     const logs = await AuditLog.findAndCountAll({
       where,
@@ -54,10 +59,13 @@ exports.clearAll = async (req, res) => {
     const tenantId = req.tenantId || req.user?.tenantId || null;
     const environmentId = req.environmentId || null;
     
-    if (!tenantId) return res.status(400).json({ success: false, message: "Tenant ID required" });
-
-    const where = { tenantId };
-    if (environmentId) where.environmentId = environmentId;
+    const where = {};
+    
+    if (req.user?.role !== "SuperAdmin") {
+      if (!tenantId) return res.status(400).json({ success: false, message: "Tenant ID required" });
+      where.tenantId = tenantId;
+      if (environmentId) where.environmentId = environmentId;
+    }
 
     await AuditLog.destroy({ where });
 

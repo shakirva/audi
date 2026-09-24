@@ -41,7 +41,7 @@ export default function Calendar() {
     enquiriesAPI.getAll({ limit: 1000 })
       .then(res => {
         const mapped = (res.data.data || [])
-          .filter(e => e.status !== "Booking Confirmed" && e.status !== "Lost" && e.tentativeDate)
+          .filter(e => e.status !== "Booking Confirmed" && e.status !== "Lost" && e.status !== "Cancelled" && e.tentativeDate)
           .map(e => ({
             id: `enq-${e.id}`,
             date: e.tentativeDate,
@@ -288,9 +288,9 @@ export default function Calendar() {
                           {b.status}
                         </span>
                       </div>
-                      <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>💍 {b.eventType} · {b.hall}</p>
-                      <p style={{ fontSize: 10, color: "#6b7280", marginTop: 1, margin: 0 }}>🕐 {b.session} · {b.guests} guests</p>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "#1B4332", marginTop: 3, margin: 0 }}>₹{b.totalAmount.toLocaleString()}</p>
+                      <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>💍 {b.eventType || "Event"} · {b.hall || "Venue"}</p>
+                      <p style={{ fontSize: 10, color: "#6b7280", marginTop: 1, margin: 0 }}>🕐 {b.session || "Session"} · {b.guests || 0} guests</p>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#1B4332", marginTop: 3, margin: 0 }}>₹{Number(b.totalAmount || 0).toLocaleString()}</p>
                     </div>
                   );
                 })

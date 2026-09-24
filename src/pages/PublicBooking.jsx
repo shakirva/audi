@@ -48,7 +48,7 @@ const STATUS_COLORS = {
   blocked:   { bg: "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)", border: "#9ca3af", text: "#9ca3af", dot: "#9ca3af", label: "Blocked" },
 };
 
-const GALLERY_CATEGORIES = ["All", "Halls", "Events", "Decor", "Videos"];
+const GALLERY_CATEGORIES = ["All", "Halls", "Events", "Decor"];
 
 /* ── Lightbox ── */
 function Lightbox({ item, onClose, onPrev, onNext }) {
@@ -227,14 +227,88 @@ function GallerySection({ galleryItems, phone, venueName }) {
 }
 
 function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }) {
-  const defaultEvent = eventTypes?.[0] || "Wedding";
+  const defaultEvent = eventTypes?.[0] ? (typeof eventTypes[0] === 'string' ? eventTypes[0] : eventTypes[0].name) : "Wedding";
   const defaultSession = sessions?.find(s => s.name === "Full Day")?.name || sessions?.[0]?.name || "Morning";
   const defaultHall = halls?.[0]?.name || "";
   
   const [form, setForm] = useState({ name: "", phone: "", gender: "Male", place: "", address: "", eventType: defaultEvent, session: defaultSession, hallPreference: defaultHall, guests: "", budget: "", notes: "" });
+  const [userEditedBudget, setUserEditedBudget] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const iStyle = { width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, color: "#374151", background: "#fff", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" };
   const labelSt = { fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 };
+
+  // Auto-calculate budget logic
+  const getCalculatedPrice = () => {
+    const h = (halls || []).find(x => x.name === form.hallPreference);
+    if (!h) return 0;
+
+    if (h.pricingType === "slab" && h.slabs && h.slabs.length > 0) {
+      const g = Number(form.guests) || 0;
+      const sortedSlabs = [...h.slabs].sort((a, b) => a.guests - b.guests);
+      const matchedSlab = sortedSlabs.find(s => g <= s.guests);
+      if (matchedSlab) {
+        return matchedSlab.totalAmount;
+      } else {
+        return sortedSlabs[sortedSlabs.length - 1].totalAmount;
+      }
+    } else if (h.pricingType === "per_pax") {
+      const g = Number(form.guests) || 0;
+      return (h.pricePerPax || 0) * g;
+    } else {
+      return h.price || 0;
+    }
+  };
+
+  useEffect(() => {
+    const price = getCalculatedPrice();
+    if (price > 0 && !userEditedBudget) {
+      set("budget", price);
+    }
+  }, [form.hallPreference, form.guests, form.session, halls, userEditedBudget]);
+
+  // Calculate available sessions based on selected Hall and Event Type
+  const getAvailableSessions = () => {
+    let available = (sessions || []).map(s => s.name);
+    
+    // Filter by selected hall
+    const selectedHall = (halls || []).find(h => h.name === form.hallPreference);
+    if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
+      available = available.filter(s => selectedHall.allowedSessions.includes(s));
+    }
+    
+    // Filter by selected event type
+    const selectedEvent = (eventTypes || []).find(et => (typeof et === 'string' ? et : et.name) === form.eventType);
+    if (selectedEvent && typeof selectedEvent !== 'string' && selectedEvent.sessions && selectedEvent.sessions.length > 0) {
+      const eventSessionNames = selectedEvent.sessions.map(s => s.name);
+      available = available.filter(s => eventSessionNames.includes(s));
+    }
+    
+    return available;
+  };
+
+  const handleHallChange = (hallName) => {
+    set("hallPreference", hallName);
+    setUserEditedBudget(false);
+    const selectedHall = (halls || []).find(h => h.name === hallName);
+    if (selectedHall && selectedHall.allowedSessions && selectedHall.allowedSessions.length > 0) {
+      if (!selectedHall.allowedSessions.includes(form.session)) {
+        set("session", selectedHall.allowedSessions[0]);
+      }
+    }
+  };
+
+  const handleEventTypeChange = (e) => {
+    const newEventType = e.target.value;
+    set("eventType", newEventType);
+    
+    const selectedEvent = (eventTypes || []).find(et => (typeof et === 'string' ? et : et.name) === newEventType);
+    if (selectedEvent && typeof selectedEvent !== 'string' && selectedEvent.sessions && selectedEvent.sessions.length > 0) {
+      const eventSessionNames = selectedEvent.sessions.map(s => s.name);
+      if (!eventSessionNames.includes(form.session)) {
+        set("session", eventSessionNames[0]);
+      }
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -307,7 +381,7 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }
                   const t = themes[i % themes.length];
                   const isSelected = form.hallPreference === h.name;
                   return (
-                    <div key={h.name} onClick={() => set("hallPreference", h.name)} style={{ position: "relative", flex: 1, minWidth: 140, padding: "18px 12px", borderRadius: 12, border: `1.5px solid ${isSelected ? "#1B4332" : "#e5e7eb"}`, background: isSelected ? "#f0faf4" : t.bg, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div key={h.name} onClick={() => handleHallChange(h.name)} style={{ position: "relative", flex: 1, minWidth: 140, padding: "18px 12px", borderRadius: 12, border: `1.5px solid ${isSelected ? "#1B4332" : "#e5e7eb"}`, background: isSelected ? "#f0faf4" : t.bg, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                       <div style={{ fontSize: 24, marginBottom: 4 }}>{t.icon}</div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#111", textAlign: "center" }}>{h.name}</div>
                       {(Number(h.price) > 0 || Number(h.pricePerPax) > 0 || h.pricingType === "slab") && (
@@ -324,12 +398,18 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }
 
               <label style={labelSt}>SESSION *</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                {(sessions || []).map(s => (
-                  <div key={s.name} onClick={() => set("session", s.name)} style={{ flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`, background: form.session === s.name ? "#1B4332" : "#fff", color: form.session === s.name ? "#fff" : "#374151", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
-                    {s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>}
-                  </div>
-                ))}
+                {(() => {
+                  const availableSessions = getAvailableSessions();
+                  if (availableSessions.length === 0) {
+                    return <div style={{ fontSize: 13, color: "#ef4444", padding: "8px 0" }}>No sessions available for the selected Hall and Event Type combination.</div>;
+                  }
+                  return (sessions || []).filter(s => availableSessions.includes(s.name)).map(s => (
+                    <div key={s.name} onClick={() => set("session", s.name)} style={{ flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`, background: form.session === s.name ? "#1B4332" : "#fff", color: form.session === s.name ? "#fff" : "#374151", cursor: "pointer", textAlign: "center" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
+                      {s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>}
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 
@@ -341,9 +421,9 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label style={labelSt}>Event Type *</label>
-                  <select value={form.eventType} onChange={e => set("eventType", e.target.value)} required style={{ ...iStyle, cursor: "pointer" }} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
+                  <select value={form.eventType} onChange={handleEventTypeChange} required style={{ ...iStyle, cursor: "pointer" }} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"}>
                     <option value="" disabled>-- Select --</option>
-                    {(eventTypes || []).map(t => (typeof t === "string" ? t : t.name)).map(t => <option key={t}>{t}</option>)}
+                    {(eventTypes || []).map(t => (typeof t === "string" ? t : t.name)).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
@@ -361,12 +441,23 @@ function EnquiryForm({ dateStr, onClose, onSubmit, eventTypes, sessions, halls }
               <p style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <Users size={12} /> Details
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Est. Guests *</label>
                   <input type="number" value={form.guests} onChange={e => set("guests", e.target.value)} placeholder="e.g. 400" required style={iStyle} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
                 </div>
+                <div>
+                  <label style={labelSt}>Est. Budget (₹)</label>
+                  <input type="number" value={form.budget} onChange={e => { set("budget", e.target.value); setUserEditedBudget(true); }} placeholder="e.g. 150000" style={iStyle} onFocus={e => e.target.style.borderColor = "#1B4332"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+                </div>
               </div>
+              {getCalculatedPrice() > 0 && (
+                <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8, background: "#f0faf4", border: "1px solid #d1fae5", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, color: "#166534", fontWeight: 600 }}>
+                    💡 {form.hallPreference} — {form.session}: ₹{getCalculatedPrice().toLocaleString()} (auto-calculated)
+                  </span>
+                </div>
+              )}
             </div>
 
             <button type="submit" style={{ padding: "14px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #1B4332, #2D6A4F)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 16px rgba(27,67,50,0.35)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -447,7 +538,7 @@ function PublicBookingInner() {
     }
 
     const msg = encodeURIComponent(
-      `🏛️ *New Booking Enquiry*\n\n👤 Name: ${form.name}\n📞 Phone: ${form.phone}\n📅 Date: ${new Date(selectedDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}\n🎉 Event: ${form.eventType}\n🕐 Session: ${form.session}\n👥 Guests: ${form.guests || "Not specified"}\n📝 Notes: ${form.notes || "None"}\n\nPlease confirm availability. Thank you!`
+      `🏛️ *New Booking Enquiry*\n\n👤 Name: ${form.name}\n📞 Phone: ${form.phone}\n📅 Date: ${new Date(selectedDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}\n🎉 Event: ${form.eventType}\n🕐 Session: ${form.session}\n👥 Guests: ${form.guests || "Not specified"}\n💰 Budget: ${form.budget ? `₹${form.budget}` : "Not specified"}\n📝 Notes: ${form.notes || "None"}\n\nPlease confirm availability. Thank you!`
     );
     const formattedPhone = venueInfo.phone ? venueInfo.phone.replace(/\D/g, "") : "";
     window.open(`https://wa.me/${formattedPhone}?text=${msg}`, "_blank");
@@ -488,7 +579,7 @@ function PublicBookingInner() {
           <span style={{ color: "#D4A017" }}>Book Your Event</span>
         </h1>
         <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 12, maxWidth: 480, margin: "12px auto 0" }}>
-          Click any available date to send us an enquiry. We'll confirm within 2 hours.
+          Click any available date to send us an enquiry. We will confirm soon and update soon.
         </p>
       </div>
 
@@ -646,7 +737,7 @@ function PublicBookingInner() {
             <CheckCircle size={32} color="#D4A017" />
             <div>
               <p style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Enquiry Sent Successfully!</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>We've received your request. We'll confirm via WhatsApp within 2 hours.</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>We've received your request. We will confirm soon and update soon via WhatsApp.</p>
             </div>
             <button onClick={() => setSubmitted(false)} style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>
               <X size={16} />

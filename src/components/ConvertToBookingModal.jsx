@@ -266,6 +266,34 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
   const handleMoneyChange = (field, value, extraState = {}) => {
     let updated = { ...formData, [field]: value, ...extraState };
     
+    // Check if hall or guests changed and auto-update quotedAmount if applicable
+    if (field === "hall" || field === "guests") {
+      const h = settings.halls?.find(x => x.name === updated.hall);
+      if (h) {
+        let newPrice = 0;
+        if (h.pricingType === "slab" && h.slabs && h.slabs.length > 0) {
+          const g = Number(updated.guests) || 0;
+          const sortedSlabs = [...h.slabs].sort((a, b) => a.guests - b.guests);
+          const matchedSlab = sortedSlabs.find(s => g <= s.guests);
+          if (matchedSlab) {
+            newPrice = (matchedSlab.baseAmount || 0) + (g * (matchedSlab.perPerson || 0));
+          } else {
+            const highestSlab = sortedSlabs[sortedSlabs.length - 1];
+            newPrice = (highestSlab.baseAmount || 0) + (g * (highestSlab.perPerson || 0));
+          }
+        } else if (h.pricingType === "per_pax") {
+          const g = Number(updated.guests) || 0;
+          newPrice = (h.pricePerPax || 0) * g;
+        } else if (field === "hall") { // only update flat price if hall changes, not guests
+          newPrice = h.price || 0;
+        }
+        
+        if (newPrice > 0) {
+          updated.quotedAmount = newPrice;
+        }
+      }
+    }
+
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
     const baseAmount = Math.max(0, quoted - disc);
@@ -288,20 +316,18 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       });
     }
 
-    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
-      const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
-      let hallTax;
-      if (gstMode === "inclusive") {
-        // GST Inclusive: Tax = Amount × Rate / (100 + Rate)
-        hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
-        updated.totalAmount = baseAmount; // Total stays as quoted - discount
-      } else {
-        // GST Exclusive: Tax = Amount × Rate / 100, then add on top
-        hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
-        updated.totalAmount = baseAmount + Math.round(hallTax + facilitiesTax); // Total = base + all taxes
-      }
-      updated.taxes = Math.round(hallTax + facilitiesTax);
+    const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+    let hallTax;
+    if (gstMode === "inclusive") {
+      // GST Inclusive: Tax = Amount × Rate / (100 + Rate)
+      hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+      updated.totalAmount = baseAmount; // Total stays as quoted - discount
+    } else {
+      // GST Exclusive: Tax = Amount × Rate / 100, then add on top
+      hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+      updated.totalAmount = baseAmount + Math.round(hallTax + facilitiesTax); // Total = base + all taxes
     }
+    updated.taxes = Math.round(hallTax + facilitiesTax);
     
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
@@ -475,6 +501,23 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                   </select>
                 </div>
                 <div>
+                  <label style={labelSt}>Place / Area</label>
+                  <div style={{ position: "relative" }}>
+                    <input 
+                      value={formData.place || ""} 
+                      onChange={e => setFormData({ ...formData, place: e.target.value })} 
+                      style={iStyle} 
+                      onFocus={e => e.target.style.borderColor = "#1B4332"} 
+                      onBlur={e => e.target.style.borderColor = "#e5e7eb"} 
+                      placeholder="e.g. Kannur" 
+                      list="placesList"
+                    />
+                    <datalist id="placesList">
+                      {settings.places && settings.places.map((p, i) => <option key={i} value={p} />)}
+                    </datalist>
+                  </div>
+                </div>
+                <div>
                   <label style={labelSt}><MapPin size={10} /> Address</label>
                   {inp("address", { placeholder: "House / Building, Street, Town..." })}
                 </div>
@@ -519,7 +562,7 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={labelSt}>Hall</label>
-                  <select value={formData.hall} onChange={e => setFormData({ ...formData, hall: e.target.value })} style={iStyle}>
+                  <select value={formData.hall} onChange={e => handleMoneyChange("hall", e.target.value)} style={iStyle}>
                     <option value="">-- Select Hall --</option>
                     {(settings.halls || []).map(h => (
                       <option key={h.name} value={h.name}>{h.name}</option>
@@ -582,7 +625,16 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
                 </div>
                 <div>
                   <label style={labelSt}>No. of Guests</label>
-                  {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 500"
+                    value={formData.guests ?? ""}
+                    onChange={e => handleMoneyChange("guests", e.target.value)}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
                 </div>
               </div>
             </div>

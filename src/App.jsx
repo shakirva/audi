@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import SuperAdminSidebar from "./components/SuperAdminSidebar";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import CommandPalette from "./components/CommandPalette";
@@ -21,16 +22,17 @@ import AccountsReports from "./pages/AccountsReports";
 import SalesReports from "./pages/SalesReports";
 import BookingReports from "./pages/BookingReports";
 import CustomerReports from "./pages/CustomerReports";
+import CollectionReports from "./pages/CollectionReports";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
 import PublicBooking from "./pages/PublicBooking";
 import Login from "./pages/Login";
 import SuperAdminTenants from "./pages/SuperAdminTenants";
 import SuperAdminLeads from "./pages/SuperAdminLeads";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import CRM from "./pages/CRM";
 import Agreements from "./pages/Agreements";
 import Jobs from "./pages/Jobs";
-import Masters from "./pages/Masters";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
@@ -122,6 +124,7 @@ function AdminLayout() {
             <Route path="/reports/booking" element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
             <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
             <Route path="/reports/accounts" element={<ProtectedRoute permission="canViewReports"><AccountsReports /></ProtectedRoute>} />
+            <Route path="/reports/collection" element={<ProtectedRoute permission="canViewReports"><CollectionReports /></ProtectedRoute>} />
             <Route path="/reports/customer" element={<ProtectedRoute permission="canViewReports"><CustomerReports /></ProtectedRoute>} />
             <Route path="/settings"  element={<ProtectedRoute permission="canViewSettings"><Settings /></ProtectedRoute>} />
             <Route path="/system/activity-logs" element={<ProtectedRoute permission="canViewSettings"><ActivityLogs /></ProtectedRoute>} />
@@ -135,12 +138,12 @@ function AdminLayout() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/inventory" element={<Inventory />} />
-            <Route path="/masters" element={<ProtectedRoute permission="canViewSettings"><Masters /></ProtectedRoute>} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leaves" element={<LeaveRequests />} />
             <Route path="/compliance" element={<ProtectedRoute permission="canViewSettings"><Compliance /></ProtectedRoute>} />
+            <Route path="/*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
       </div>
@@ -149,10 +152,53 @@ function AdminLayout() {
   );
 }
 
+// SuperAdmin gets a completely separate layout — no tenant ERP pages
+function SuperAdminLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handleToggle = () => setSidebarOpen(true);
+    window.addEventListener('toggleSidebar', handleToggle);
+    return () => window.removeEventListener('toggleSidebar', handleToggle);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "#F0F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <SuperAdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <Header title="Platform Admin" onMenuClick={() => setSidebarOpen(true)} />
+        <main className="hm-main-content" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxWidth: "100vw" }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<SuperAdminDashboard />} />
+            <Route path="/tenants" element={<SuperAdminTenants />} />
+            <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
+            <Route path="/leads" element={<SuperAdminLeads />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/system/activity-logs" element={<ActivityLogs />} />
+            <Route path="/*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 // Gate: shows Login if not authenticated, otherwise shows the admin shell
 function AppGate() {
-  const { isLoggedIn } = useRole();
+  const { isLoggedIn, role } = useRole();
   if (!isLoggedIn) return <Login />;
+
+  // SuperAdmin gets a completely separate experience
+  if (role === "SuperAdmin") {
+    return (
+      <Routes>
+        <Route path="/book/:slug" element={<PublicBooking />} />
+        <Route path="/*" element={<SuperAdminLayout />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/book/:slug" element={<PublicBooking />} />

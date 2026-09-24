@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { adminAPI } from "../services/api";
 import { useToast } from "../components/Toast";
-import { Building, Play, Pause, Database, Key, CheckCircle, Clock, Plus, X, ArrowRight } from "lucide-react";
+import { Building, Play, Pause, Database, Key, CheckCircle, Clock, Plus, X, ArrowRight, Trash2, AlertTriangle } from "lucide-react";
 
 export default function SuperAdminTenants() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [newTenant, setNewTenant] = useState({ name: "", slug: "", ownerName: "", email: "", phone: "", plan: "trial" });
+  const [newTenant, setNewTenant] = useState({ name: "", slug: "", ownerName: "", email: "", phone: "", plan: "trial", customPrice: "" });
   const [editTenant, setEditTenant] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export default function SuperAdminTenants() {
       await adminAPI.createTenant(newTenant);
       addToast("Tenant created successfully! 🎉", "success");
       setShowAddModal(false);
-      setNewTenant({ name: "", slug: "", ownerName: "", email: "", phone: "", plan: "trial" });
+      setNewTenant({ name: "", slug: "", ownerName: "", email: "", phone: "", plan: "trial", customPrice: "" });
       fetchTenants();
     } catch (e) {
       addToast(e.response?.data?.error || "Failed to create tenant", "error");
@@ -91,7 +93,12 @@ export default function SuperAdminTenants() {
   };
 
   const handleEditClick = (tenant) => {
-    setEditTenant({ ...tenant });
+    setEditTenant({ 
+      ...tenant, 
+      plan: tenant.Subscriptions?.[0]?.plan || "trial",
+      customPrice: tenant.Subscriptions?.[0]?.customPrice || ""
+    });
+    setDeleteConfirmation("");
     setShowEditModal(true);
   };
 
@@ -105,12 +112,40 @@ export default function SuperAdminTenants() {
         email: editTenant.email,
         phone: editTenant.phone,
       });
+
+      // Update plan or customPrice if they were changed
+      if (editTenant.plan !== editTenant.Subscriptions?.[0]?.plan || editTenant.customPrice !== editTenant.Subscriptions?.[0]?.customPrice) {
+        await adminAPI.updateSubscription(editTenant.id, { 
+          plan: editTenant.plan,
+          customPrice: editTenant.customPrice 
+        });
+      }
+
       addToast("Tenant updated successfully! 🎉", "success");
       setShowEditModal(false);
       setEditTenant(null);
       fetchTenants();
     } catch (e) {
       addToast(e.response?.data?.error || "Failed to update tenant", "error");
+    }
+  };
+
+  const handleDeleteTenant = async () => {
+    if (deleteConfirmation !== editTenant.slug) {
+      addToast("Slug does not match.", "error");
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await adminAPI.removeTenant(editTenant.id);
+      addToast("Tenant permanently deleted.", "success");
+      setShowEditModal(false);
+      fetchTenants();
+    } catch (e) {
+      addToast(e.response?.data?.error || "Failed to delete tenant.", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -159,10 +194,10 @@ export default function SuperAdminTenants() {
                 <td style={{ padding: "16px" }}>
                   <span style={{ 
                     display: "inline-block", padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-                    background: t.Subscriptions?.[0]?.plan === "business" ? "#fef3c7" : t.Subscriptions?.[0]?.plan === "professional" ? "#e0e7ff" : t.Subscriptions?.[0]?.plan === "starter" ? "#dcfce7" : "#eff6ff",
-                    color: t.Subscriptions?.[0]?.plan === "business" ? "#b45309" : t.Subscriptions?.[0]?.plan === "professional" ? "#4338ca" : t.Subscriptions?.[0]?.plan === "starter" ? "#15803d" : "#1d4ed8"
+                    background: t.Subscriptions?.[0]?.plan === "lifetime" ? "#fef3c7" : t.Subscriptions?.[0]?.plan === "business" ? "#fef3c7" : t.Subscriptions?.[0]?.plan === "professional" ? "#e0e7ff" : t.Subscriptions?.[0]?.plan === "starter" ? "#dcfce7" : "#eff6ff",
+                    color: t.Subscriptions?.[0]?.plan === "lifetime" ? "#d97706" : t.Subscriptions?.[0]?.plan === "business" ? "#b45309" : t.Subscriptions?.[0]?.plan === "professional" ? "#4338ca" : t.Subscriptions?.[0]?.plan === "starter" ? "#15803d" : "#1d4ed8"
                   }}>
-                    {t.Subscriptions?.[0]?.plan || "Trial"}
+                    {t.Subscriptions?.[0]?.plan || "Trial"} {t.Subscriptions?.[0]?.customPrice ? "*" : ""}
                   </span>
                 </td>
                 <td style={{ padding: "16px" }}>
@@ -263,7 +298,12 @@ export default function SuperAdminTenants() {
                     <option value="starter">Starter — ₹999/month</option>
                     <option value="professional">Professional — ₹3,999/month</option>
                     <option value="business">Business — ₹6,999/month</option>
+                    <option value="lifetime">Lifetime</option>
                   </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Custom Rate (Optional)</label>
+                  <input type="number" placeholder="Override default price" value={newTenant.customPrice} onChange={e => setNewTenant({...newTenant, customPrice: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
                 </div>
               </div>
 
@@ -312,13 +352,63 @@ export default function SuperAdminTenants() {
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Phone</label>
                   <input type="text" value={editTenant.phone || ""} onChange={e => setEditTenant({...editTenant, phone: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
                 </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Subscription Plan</label>
+                  <select value={editTenant.plan} onChange={e => setEditTenant({...editTenant, plan: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box", background: "#fff" }}>
+                    <option value="trial">Trial (14 Days)</option>
+                    <option value="starter">Starter — ₹999/month</option>
+                    <option value="professional">Professional — ₹3,999/month</option>
+                    <option value="business">Business — ₹6,999/month</option>
+                    <option value="lifetime">Lifetime</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Custom Rate (Optional)</label>
+                  <input type="number" placeholder="Override default price" value={editTenant.customPrice || ""} onChange={e => setEditTenant({...editTenant, customPrice: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box" }} />
+                </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 24 }}>
                 <button type="button" onClick={() => setShowEditModal(false)} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontWeight: 600, color: "#374151" }}>Cancel</button>
                 <button type="submit" style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "#1B4332", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save Changes</button>
               </div>
             </form>
+
+            <hr style={{ border: 0, borderTop: "1px solid #e5e7eb", margin: "24px 0" }} />
+
+            {/* Danger Zone */}
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 16 }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <AlertTriangle color="#ef4444" size={20} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <h4 style={{ margin: "0 0 4px", fontSize: 14, color: "#991b1b", fontWeight: 700 }}>Danger Zone: Delete Tenant</h4>
+                  <p style={{ margin: "0 0 12px", fontSize: 12, color: "#b91c1c" }}>
+                    This action is irreversible. It will delete the tenant, all their data (bookings, customers, etc.), and their users immediately.
+                  </p>
+                  
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input 
+                      type="text" 
+                      placeholder={`Type "${editTenant.slug}" to confirm`} 
+                      value={deleteConfirmation}
+                      onChange={e => setDeleteConfirmation(e.target.value)}
+                      style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid #fca5a5", fontSize: 13 }}
+                    />
+                    <button 
+                      onClick={handleDeleteTenant}
+                      disabled={deleteConfirmation !== editTenant.slug || isDeleting}
+                      style={{ 
+                        padding: "8px 16px", borderRadius: 6, border: "none", background: "#ef4444", color: "#fff", 
+                        cursor: deleteConfirmation === editTenant.slug ? "pointer" : "not-allowed", 
+                        fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: deleteConfirmation === editTenant.slug && !isDeleting ? 1 : 0.5
+                      }}
+                    >
+                      <Trash2 size={14} /> {isDeleting ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

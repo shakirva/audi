@@ -52,6 +52,7 @@ export const BASE_NAVIGATION = [
       { path: "/reports/sales", label: "Sales Reports" },
       { path: "/reports/booking", label: "Booking Reports" },
       { path: "/reports/accounts", label: "Accounts Reports" },
+      { path: "/reports/collection", label: "Collection Reports" },
       { path: "/reports/hall", label: "Hall Reports" },
       { path: "/reports/customer", label: "Customer Reports" }
     ]
@@ -60,7 +61,7 @@ export const BASE_NAVIGATION = [
   { 
     type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
     children: [
-      { path: "/settings", label: "Masters Configuration" },
+      { path: "/settings", label: "Settings" },
       { path: "/system/activity-logs", label: "Activity Logs" }
     ]
   },

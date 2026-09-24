@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2 } from "lucide-react";
+import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
 import SmartDatePicker from "./SmartDatePicker";
@@ -40,6 +40,9 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
   
   // Custom confirmation popup state
   const [placeToConfirm, setPlaceToConfirm] = useState(null);
+  
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   
   // Event Type autocomplete
   const [eventTypeQuery, setEventTypeQuery] = useState("");
@@ -84,8 +87,8 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         name: editData.enquirerName || editData.Customer?.name || editData.name || "",
         phone: editData.enquirerPhone || editData.Customer?.phone || editData.phone || "",
         gender: editData.gender || editData.Customer?.gender || "",
-        address: editData.enquirerAddress || editData.Customer?.address || "",
-        place: editData.enquirerArea || editData.Customer?.city || "",
+        address: editData.enquirerAddress || editData.Customer?.address || editData.address || "",
+        place: editData.enquirerArea || editData.Customer?.city || editData.place || "",
         eventType: editData.eventType || "",
         tentativeDate: editData.tentativeDate ? editData.tentativeDate.split("T")[0] : "",
         session: editData.session || "",
@@ -97,7 +100,7 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         source: editData.source || "",
         salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
       });
-      setPlaceQuery(editData.enquirerArea || editData.Customer?.city || "");
+      setPlaceQuery(editData.enquirerArea || editData.Customer?.city || editData.place || "");
       setEventTypeQuery(editData.eventType || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
@@ -121,9 +124,10 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
       const sortedSlabs = [...h.slabs].sort((a, b) => a.guests - b.guests);
       const matchedSlab = sortedSlabs.find(s => g <= s.guests);
       if (matchedSlab) {
-        return matchedSlab.totalAmount;
+        return (matchedSlab.baseAmount || 0) + (g * (matchedSlab.perPerson || 0));
       } else {
-        return sortedSlabs[sortedSlabs.length - 1].totalAmount;
+        const highestSlab = sortedSlabs[sortedSlabs.length - 1];
+        return (highestSlab.baseAmount || 0) + (g * (highestSlab.perPerson || 0));
       }
     } else if (h.pricingType === "per_pax") {
       const g = Number(form.guestCount) || 0;
@@ -240,17 +244,21 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "budget") setUserEditedBudget(true); // Stop auto-calc if user manually edits
+    if (name === "budget") {
+      setUserEditedBudget(true); // Stop auto-calc if user manually edits
+    } else if (name === "hallPreference" || name === "guestCount" || name === "session") {
+      setUserEditedBudget(false); // Resume auto-calc if slab variables change
+    }
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const filteredPlaces = (places || []).filter(p => {
     if (typeof p !== 'string') return false;
-    return p.toLowerCase().includes((placeQuery || "").toLowerCase());
+    return p?.toLowerCase().includes((placeQuery || "").toLowerCase());
   });
 
   const filteredEventTypes = (settingsEventTypes.length > 0 ? settingsEventTypes.map(t => typeof t === "string" ? t : t.name) : EVENT_TYPES)
-    .filter(t => t.toLowerCase().includes((eventTypeQuery || "").toLowerCase()));
+    .filter(t => t && t.toLowerCase().includes((eventTypeQuery || "").toLowerCase()));
 
   const isFormValid = Boolean(
     form.name?.trim() &&
@@ -383,6 +391,26 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
 
         {/* Body */}
         <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
+          
+          {(editData && editData.source === "Public Website") && (
+            <div style={{ padding: "12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, marginBottom: 16, display: "flex", gap: 8 }}>
+              <AlertCircle size={16} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <strong style={{ fontSize: 12, color: "#92400e", display: "block", marginBottom: 2 }}>Public Enquiry Verification</strong>
+                <span style={{ fontSize: 11, color: "#b45309", lineHeight: 1.4 }}>
+                  This enquiry came from the website. Please review the customer's entries. 
+                  {form.place && form.eventType && (
+                    (!places.some(p => p?.toLowerCase() === form.place?.toLowerCase()) || 
+                     !(settingsEventTypes.length ? settingsEventTypes.map(t => typeof t === "string" ? t : t.name) : EVENT_TYPES).some(t => t?.toLowerCase() === form.eventType?.toLowerCase()))
+                  ) && (
+                    <span style={{ fontWeight: 800, display: "block", marginTop: 4 }}>
+                      ⚠️ The entered Place or Event Type is not in your official settings. If needed, please add them to the settings or correct them here.
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
           
           <form id="new-enquiry-form" noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             
@@ -825,6 +853,12 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
             </div>
           )}
           <div style={{ padding: "16px 24px", display: "flex", gap: 12 }}>
+            {editData && (
+              <button type="button" onClick={() => setDeleteConfirm(true)}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #fecaca", fontWeight: 700, cursor: "pointer", color: "#ef4444", fontSize: 14 }}>
+                Delete
+              </button>
+            )}
             <button type="button" onClick={onClose}
               style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "#fff", border: "1.5px solid #e5e7eb", fontWeight: 700, cursor: "pointer", color: "#555", fontSize: 14 }}>
               Cancel
@@ -837,6 +871,54 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         </div>
       </div>
       </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", backdropFilter: "blur(4px)",
+          zIndex: 99999, display: "flex", justifyContent: "center", alignItems: "center"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 400,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center" }}>
+              Delete Enquiry?
+            </h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              Are you sure you want to permanently delete <strong>{editData?.enquiryNumber || `ENQ${String(editData?.id).padStart(3,"0")}`}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                style={{ flex: 1, padding: "12px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await enquiriesAPI.remove(editData.id);
+                    addToast("Enquiry deleted successfully", "success");
+                    onSuccess();
+                  } catch(e) {
+                    addToast("Failed to delete enquiry", "error");
+                  }
+                }}
+                style={{ flex: 1, padding: "12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Custom Place Confirmation Modal ── */}
       {placeToConfirm && (

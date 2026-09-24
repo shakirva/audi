@@ -26,7 +26,7 @@ export default function Settings() {
   const { addToast } = useToast();
   const { role, tenant, activeEnvironment, setVenueInfo, moduleAccess, setModuleAccess } = useRole();
   const isOwner = role === "Owner";
-  const isAdminRole = role === "Owner" || role === "Manager";
+  const isAdminRole = ["Owner", "Manager", "SuperAdmin"].includes(role);
 
   // --- Tab Management ---
   const [activeTab, setActiveTab] = useState(() => {
@@ -44,7 +44,7 @@ export default function Settings() {
     { id: "booking", label: "Booking", show: isAdminRole },
     { id: "halls", label: "Halls & Pricing", show: isAdminRole },
     { id: "availability", label: "Availability", show: isAdminRole },
-    { id: "team", label: "Team & Access", show: isAdminRole }, // Actually, everyone can see their own profile, but team mgmt is admin
+    { id: "team", label: "Team & Access", show: isAdminRole },
     { id: "forms", label: "Forms & Options", show: isAdminRole },
     { id: "online", label: "Online Presence", show: isAdminRole },
   ].filter(t => t.show);
@@ -240,9 +240,10 @@ export default function Settings() {
 
         {activeTab === "online" && isAdminRole && (
           <OnlinePresenceTab 
-            settingsId={settingsId} galleryItems={galleryItems} setGalleryItems={setGalleryItems} addToast={addToast} 
+            settingsId={settingsId} galleryItems={galleryItems} setGalleryItems={setGalleryItems} addToast={addToast}
           />
         )}
+
       </div>
 
       {/* App Info Footer */}

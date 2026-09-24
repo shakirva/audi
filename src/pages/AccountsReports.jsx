@@ -17,9 +17,8 @@ export default function AccountsReports() {
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterDate, setFilterDate] = useState("All Time");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [filterHall, setFilterHall] = useState("All Halls");
   const [filterExecutive, setFilterExecutive] = useState("All Staff");
   const [filterPlace, setFilterPlace] = useState("All Locations");
@@ -74,36 +73,28 @@ export default function AccountsReports() {
     }
   };
 
-  const uniqueExecutives = Array.from(new Set(bookings.map(b => b.SalesExecutive?.name || b.salesExecutiveName).filter(Boolean)));
-  const uniquePlaces = Array.from(new Set(bookings.map(b => b.Customer?.city || b.place || b.address).filter(Boolean)));
+  const uniqueExecutives = Array.from(new Set(bookings.map(b => b.bookedBy || b.User?.name).filter(Boolean)));
+  const uniquePlaces = Array.from(new Set(bookings.map(b => b.address || b.Customer?.city).filter(Boolean)));
 
   // Helper to check if a date falls within the selected filter
   const isDateInFilter = (dateString) => {
-    if (filterDate === "All Time") return true;
+    if (!startDate && !endDate) return true;
     if (!dateString) return false;
     
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return false;
     
-    const now = new Date();
+    d.setHours(0, 0, 0, 0);
     
-    // Normalize to local YYYY-MM-DD for accurate comparison to custom start/end strings
-    const localYYYY = d.getFullYear();
-    const localMM = String(d.getMonth() + 1).padStart(2, '0');
-    const localDD = String(d.getDate()).padStart(2, '0');
-    const localDateStr = `${localYYYY}-${localMM}-${localDD}`;
-    
-    if (filterDate === "This Month") {
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    } else if (filterDate === "Last Month") {
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
-    } else if (filterDate === "This Year") {
-      return d.getFullYear() === now.getFullYear();
-    } else if (filterDate === "Custom Date") {
-      if (customStartDate && localDateStr < customStartDate) return false;
-      if (customEndDate && localDateStr > customEndDate) return false;
-      return true;
+    if (startDate) {
+      const sDate = new Date(startDate);
+      sDate.setHours(0, 0, 0, 0);
+      if (d < sDate) return false;
+    }
+    if (endDate) {
+      const eDate = new Date(endDate);
+      eDate.setHours(0, 0, 0, 0);
+      if (d > eDate) return false;
     }
     return true;
   };
@@ -121,12 +112,12 @@ export default function AccountsReports() {
     }
     
     if (filterExecutive !== "All Staff") {
-      const execName = booking.SalesExecutive?.name || booking.salesExecutiveName || "";
+      const execName = booking.bookedBy || booking.User?.name || "";
       if (execName.toLowerCase() !== filterExecutive.toLowerCase()) return false;
     }
     
     if (filterPlace !== "All Locations") {
-      const placeName = booking.Customer?.city || booking.place || booking.address || "";
+      const placeName = booking.address || booking.Customer?.city || "";
       if (placeName.toLowerCase() !== filterPlace.toLowerCase()) return false;
     }
     
@@ -196,27 +187,15 @@ export default function AccountsReports() {
     return absVal >= 100000 ? `${prefix}${(absVal / 100000).toFixed(1)}L` : `${prefix}${absVal.toLocaleString()}`;
   };
 
+  const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
+
   // Build dynamic chart data based on selected date filter
   const trendData = [];
   const now = new Date();
-  let monthsToGenerate = 6;
-  
-  if (filterDate === "This Month" || filterDate === "Last Month") {
-    monthsToGenerate = 1;
-    // For single month, we might still show a few months context or just the single month
-    // We will show 3 months context for better visual
-    monthsToGenerate = 3;
-  } else if (filterDate === "This Year") {
-    monthsToGenerate = 12;
-  }
+  const monthsToGenerate = 6;
 
   for (let i = monthsToGenerate - 1; i >= 0; i--) {
-    let d;
-    if (filterDate === "Last Month") {
-      d = new Date(now.getFullYear(), now.getMonth() - 1 - i, 1);
-    } else {
-      d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    }
+    let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthStr = d.toLocaleString('en-US', { month: 'short' });
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     trendData.push({ month: monthStr, key, revenue: 0, expense: 0, profit: 0 });
@@ -256,10 +235,7 @@ export default function AccountsReports() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(100);
-    const dateStr = filterDate === "Custom Date" 
-      ? `${customStartDate || 'Start'} to ${customEndDate || 'End'}`
-      : filterDate;
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} | Period: ${dateStr}`, 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} | Period: ${filterText}`, 14, 30);
     
     doc.setDrawColor(220);
     doc.line(14, 34, 196, 34);
@@ -369,21 +345,15 @@ export default function AccountsReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
-          <option value="All Time">Date: All Time</option>
-          <option value="This Month">Date: This Month</option>
-          <option value="Last Month">Date: Last Month</option>
-          <option value="This Year">Date: This Year</option>
-          <option value="Custom Date">Date: Custom Date</option>
-        </select>
-        
-        {filterDate === "Custom Date" && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
-            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>to</span>
-            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#fff" }} />
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+          )}
+        </div>
         
         <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
           <option value="All Halls">Hall: All Halls</option>
@@ -421,9 +391,9 @@ export default function AccountsReports() {
               <k.icon size={22} />
             </div>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{k.label}</p>
-              <p style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: "2px 0" }}>{k.value}</p>
-              <p style={{ fontSize: 11, color: k.color, fontWeight: 600, margin: 0 }}>{k.sub}</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{k.label}</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "4px 0" }}>{k.value}</p>
+              <p style={{ fontSize: 12, color: k.color, fontWeight: 700, margin: 0 }}>{k.sub}</p>
             </div>
           </div>
         ))}
@@ -464,6 +434,89 @@ export default function AccountsReports() {
           </div>
         </div>
       )}
+      {/* Transactions Table */}
+      <div style={{ ...cardSt, marginTop: 24, padding: "20px 0 0 0", overflow: "hidden" }}>
+        <div style={{ padding: "0 20px 16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={sTitle}>Transaction Details</p>
+          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>{filteredPayments.length + filteredExpenses.length} Records</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Date</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Type</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Ref / Mode</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Receipt/Bill No.</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Details</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600, textAlign: "right" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const rows = [];
+                filteredPayments.forEach(p => {
+                  const date = new Date(p.paymentDate || p.createdAt);
+                  const booking = bookings.find(b => String(b.id) === String(p.bookingId) || String(b._id) === String(p.bookingId));
+                  const name = p.Customer?.name || booking?.Customer?.name || booking?.customerName || "Customer Payment";
+                  const mode = p.paymentMode || "Transfer";
+                  const receiptNo = p.paymentNumber || p.referenceNumber || "-";
+                  const amount = p.amount || 0;
+                  rows.push({ dateObj: date, date: date.toLocaleDateString(), type: "Revenue", mode, receiptNo, details: name, amount, isRevenue: true });
+                });
+                filteredExpenses.forEach(e => {
+                  const date = new Date(e.date || e.createdAt);
+                  const category = e.category || "Expense";
+                  const desc = e.description || "N/A";
+                  const billNo = e.expenseNumber || e.billNumber || e.referenceNumber || "-";
+                  const amount = e.amount || 0;
+                  rows.push({ dateObj: date, date: date.toLocaleDateString(), type: "Expense", mode: category, receiptNo: billNo, details: desc, amount, isRevenue: false });
+                });
+                rows.sort((a, b) => a.dateObj - b.dateObj);
+                
+                if (rows.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "#9ca3af" }}>No transactions found for this period</td>
+                    </tr>
+                  );
+                }
+                
+                return rows.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
+                    <td style={{ padding: "12px 20px", color: "#374151" }}>{r.date}</td>
+                    <td style={{ padding: "12px 20px" }}>
+                      <span style={{ padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: r.isRevenue ? "#dcfce7" : "#fef2f2", color: r.isRevenue ? "#059669" : "#dc2626" }}>
+                        {r.type}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 20px", color: "#4b5563" }}>{r.mode}</td>
+                    <td style={{ padding: "12px 20px", color: "#4b5563" }}>{r.receiptNo}</td>
+                    <td style={{ padding: "12px 20px", color: "#111827", fontWeight: 500 }}>{r.details}</td>
+                    <td style={{ padding: "12px 20px", textAlign: "right", fontWeight: 700, color: r.isRevenue ? "#059669" : "#dc2626" }}>
+                      {r.isRevenue ? "+" : "-"} ₹{r.amount.toLocaleString()}
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+            {/* Table Footer with Totals */}
+            {filteredPayments.length > 0 || filteredExpenses.length > 0 ? (
+              <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
+                <tr>
+                  <td colSpan="4" style={{ padding: "16px 20px" }}></td>
+                  <td style={{ padding: "16px 20px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
+                    Total Net Profit:
+                  </td>
+                  <td style={{ padding: "16px 20px", textAlign: "right", fontWeight: 800, fontSize: 15, color: netProfit >= 0 ? "#059669" : "#dc2626" }}>
+                    {netProfit < 0 ? "-" : ""}₹{Math.abs(netProfit).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+        </div>
+      </div>
       </div>
     </div>
   );

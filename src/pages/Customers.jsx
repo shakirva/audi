@@ -44,7 +44,7 @@ export default function Customers() {
       const res = await customersAPI.getAll(params);
       let data = res.data.data || [];
       if (role === "Sales") {
-        data = data.filter(c => c.createdBy === user?.name || c.userId === user?.id || c.salesExecutiveId === user?.id || c.salesExecutiveName === user?.name);
+        data = data.filter(c => c.createdBy === user?.id || c.userId === user?.id || c.salesExecutiveId === user?.id || c.salesExecutiveName === user?.name);
       }
       setCustomers(data);
     } catch (err) {

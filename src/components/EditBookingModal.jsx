@@ -30,6 +30,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const [users, setUsers] = useState([]);
   const [settings, setSettings] = useState({});
   const [sendWhatsapp, setSendWhatsapp] = useState(false);
+  const [paymentsList, setPaymentsList] = useState([]);
 
   useEffect(() => {
     import("../services/api").then(({ mastersAPI, usersAPI, settingsAPI }) => {
@@ -38,8 +39,20 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       settingsAPI.get().then(res => setSettings(res.data?.data || {}));
     });
     // Fetch settings for venueName
-    settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
+    import("../services/api").then(({ settingsAPI }) => {
+      settingsAPI.get().then(res => setSettings(res.data?.data || {})).catch(() => {});
+    });
   }, []);
+
+  useEffect(() => {
+    if (open && booking?.id) {
+      import("../services/api").then(({ paymentsAPI }) => {
+        paymentsAPI.getAll({ bookingId: booking.id }).then(res => {
+          setPaymentsList(res.data?.data || []);
+        }).catch(() => {});
+      });
+    }
+  }, [open, booking?.id]);
 
   useEffect(() => {
     if (open && booking) {
@@ -139,11 +152,39 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
   const handleMoneyChange = (field, value, extraState = {}) => {
     let updated = { ...form, [field]: value, ...extraState };
     
+    // Check if hall or guests changed and auto-update quotedAmount if applicable
+    if (field === "hall" || field === "guests") {
+      const h = settings.halls?.find(x => x.name === updated.hall);
+      if (h) {
+        let newPrice = 0;
+        if (h.pricingType === "slab" && h.slabs && h.slabs.length > 0) {
+          const g = Number(updated.guests) || 0;
+          const sortedSlabs = [...h.slabs].sort((a, b) => a.guests - b.guests);
+          const matchedSlab = sortedSlabs.find(s => g <= s.guests);
+          if (matchedSlab) {
+            newPrice = (matchedSlab.baseAmount || 0) + (g * (matchedSlab.perPerson || 0));
+          } else {
+            const highestSlab = sortedSlabs[sortedSlabs.length - 1];
+            newPrice = (highestSlab.baseAmount || 0) + (g * (highestSlab.perPerson || 0));
+          }
+        } else if (h.pricingType === "per_pax") {
+          const g = Number(updated.guests) || 0;
+          newPrice = (h.pricePerPax || 0) * g;
+        } else if (field === "hall") { // only update flat price if hall changes, not guests
+          newPrice = h.price || 0;
+        }
+        
+        if (newPrice > 0) {
+          updated.quotedAmount = newPrice;
+        }
+      }
+    }
+
     const quoted = Number(updated.quotedAmount) || 0;
     const disc = Number(updated.discount) || 0;
     const baseAmount = Math.max(0, quoted - disc);
+    const gstMode = settings.gstMode || "inclusive";
 
-    // Auto-calculate GST (Exclusive): GST = Base × Rate / 100
     const pct = Number(updated.taxPercentage) || 0;
     
     let facilitiesTotal = 0;
@@ -161,12 +202,19 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
       });
     }
 
-    if (field === "quotedAmount" || field === "discount" || field === "taxPercentage") {
-      updated.totalAmount = baseAmount; // Total remains Quoted - Discount
-      const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
-      const hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
-      updated.taxes = Math.round(hallTax + facilitiesTax);
+    const hallTotal = Math.max(0, baseAmount - facilitiesTotal);
+    let hallTax;
+    let newTotalAmount = baseAmount;
+
+    if (gstMode === "inclusive") {
+      hallTax = pct > 0 ? (hallTotal * pct) / (100 + pct) : 0;
+      updated.totalAmount = baseAmount;
+    } else {
+      hallTax = pct > 0 ? (hallTotal * pct) / 100 : 0;
+      newTotalAmount = baseAmount + Math.round(hallTax + facilitiesTax);
+      updated.totalAmount = newTotalAmount;
     }
+    updated.taxes = Math.round(hallTax + facilitiesTax);
     
     const adv = Number(updated.advance) || 0;
     const dep = Number(updated.depositAmount) || 0;
@@ -332,7 +380,7 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                   <label style={labelSt}>Hall</label>
                   <select
                     value={form.hall || ""}
-                    onChange={e => setForm({ ...form, hall: e.target.value })}
+                    onChange={e => handleMoneyChange("hall", e.target.value)}
                     style={iStyle}
                     onFocus={e => e.target.style.borderColor = "#1B4332"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}
@@ -403,7 +451,16 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </div>
                 <div>
                   <label style={labelSt}><Users size={10} /> No. of Guests</label>
-                  {inp("guests", { type: "number", min: 0, placeholder: "e.g. 500" })}
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 500"
+                    value={form.guests ?? ""}
+                    onChange={e => handleMoneyChange("guests", e.target.value)}
+                    style={iStyle}
+                    onFocus={e => e.target.style.borderColor = "#1B4332"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
                 </div>
               </div>
               <div style={{ marginTop: 12 }}>
@@ -583,6 +640,43 @@ export default function EditBookingModal({ open, booking, onClose, onSaved }) {
                 </span>
               </div>
             </div>
+            {/* ── PAST PAYMENTS ── */}
+            {paymentsList.length > 0 && (
+              <div>
+                <p style={sectionHead}><Banknote size={14} /> Payment History</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {paymentsList.map(p => (
+                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>₹{Number(p.amount).toLocaleString()}</div>
+                        <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                          {new Date(p.paymentDate).toLocaleDateString()} • {p.paymentMode || "Cash"}
+                          {p.referenceNumber && ` • Ref: ${p.referenceNumber}`}
+                          {(() => {
+                            let collector = p.creator?.name || p.User?.name || "System";
+                            if (p.notes && p.notes.includes("Collected By:")) {
+                              const match = p.notes.match(/Collected By:\s*([^\n]+)/);
+                              if (match && match[1]) collector = match[1].trim();
+                            }
+                            return ` • Collected By: ${collector}`;
+                          })()}
+                        </div>
+                        {p.notes && (
+                          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4, whiteSpace: "pre-line" }}>
+                            {p.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 10, background: p.status === "Completed" ? "#dcfce7" : "#fef2f2", color: p.status === "Completed" ? "#166534" : "#991b1b" }}>
+                          {p.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ── PAYMENT ── */}
             <div>

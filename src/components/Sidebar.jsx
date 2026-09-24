@@ -291,13 +291,8 @@ export default function Sidebar({ open, onClose }) {
         
         {!collapsed && (
           <div style={{ display: "flex", gap: 8 }}>
-            <Link to="/settings" style={{ flex: 1, textDecoration: "none" }}>
-              <button style={{ width: "100%", padding: "8px", background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Settings size={14} /> Settings
-              </button>
-            </Link>
-            <button onClick={logout} style={{ padding: "8px", background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: 8, color: "#ef4444", cursor: "pointer" }}>
-              <LogOut size={14} />
+            <button onClick={logout} style={{ width: "100%", padding: "8px", background: "rgba(239, 68, 68, 0.1)", border: "none", borderRadius: 8, color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <LogOut size={14} /> Logout
             </button>
           </div>
         )}
