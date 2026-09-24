@@ -144,7 +144,7 @@ export default function CustomerReports() {
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
           {[
-            { label: "Total Customers", value: totalCustomers, sub: filterDate, icon: Users, color: "#1B4332", bg: "#f0faf4" },
+            { label: "Total Customers", value: totalCustomers, sub: filterText, icon: Users, color: "#1B4332", bg: "#f0faf4" },
             { label: "Weddings", value: weddings, sub: "Total Wedding Events", icon: Heart, color: "#dc2626", bg: "#fef2f2" },
             { label: "Completed Events", value: completed, sub: "Successfully Executed", icon: CheckCircle2, color: "#059669", bg: "#dcfce7" },
           ].map(k => (

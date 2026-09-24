@@ -381,7 +381,7 @@ export default function AccountsReports() {
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
         {[
-          { label: "Gross Revenue", value: formatLakhs(totalRev), sub: filterDate, icon: Wallet, color: "#1B4332", bg: "#f0faf4" },
+          { label: "Gross Revenue", value: formatLakhs(totalRev), sub: filterText, icon: Wallet, color: "#1B4332", bg: "#f0faf4" },
           { label: "Total Expenses", value: formatLakhs(totalExp), sub: "Operational costs", icon: CreditCard, color: "#dc2626", bg: "#fef2f2" },
           { label: "Net Profit", value: formatLakhs(netProfit), sub: `${margin}% Margin`, icon: PiggyBank, color: "#059669", bg: "#dcfce7" },
           { label: "Est. Cash in Hand", value: formatLakhs(cashInHand), sub: "Cash Received - Exp", icon: Banknote, color: "#D4A017", bg: "#fffbeb" },
