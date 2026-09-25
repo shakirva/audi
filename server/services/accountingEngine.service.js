@@ -671,11 +671,27 @@ class AccountingEngine {
       type: sequelize.QueryTypes.SELECT
     });
 
+    // Calculate Lifetime Collections directly from payments for accurate KPI
+    const lifetimeCollectionsQuery = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN "paymentMode" = 'Cash' THEN amount ELSE 0 END), 0) as "cashCollected",
+        COALESCE(SUM(CASE WHEN "paymentMode" IN ('UPI', 'Bank Transfer', 'Card') THEN amount ELSE 0 END), 0) as "bankCollected"
+      FROM "Payments"
+      WHERE "tenantId" = :tenantId AND "environmentId" = :environmentId AND status = 'Completed'
+    `;
+
+    const [{ cashCollected, bankCollected }] = await sequelize.query(lifetimeCollectionsQuery, {
+      replacements: { tenantId, environmentId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
     return {
       summary: {
         cashBalance,
         bankBalance,
         totalBalance: cashBalance + bankBalance,
+        cashCollected: parseFloat(cashCollected),
+        bankCollected: parseFloat(bankCollected),
         outstandingReceivables,
         totalRevenue,
         totalExpenses,

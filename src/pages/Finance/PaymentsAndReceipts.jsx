@@ -178,18 +178,18 @@ export default function PaymentsAndReceipts() {
             <Banknote size={18} color="#2563eb" />
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>
-            {dashboardData?.summary?.cashBalance !== undefined ? formatMoney(dashboardData.summary.cashBalance) : "—"}
+            {dashboardData?.summary?.cashCollected !== undefined ? formatMoney(dashboardData.summary.cashCollected) : "—"}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Cash Balance</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Cash Collected</div>
         </div>
         <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
           <div style={{ width: 36, height: 36, background: "#faf5ff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <CreditCard size={18} color="#9333ea" />
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>
-            {dashboardData?.summary?.bankBalance !== undefined ? formatMoney(dashboardData.summary.bankBalance) : "—"}
+            {dashboardData?.summary?.bankCollected !== undefined ? formatMoney(dashboardData.summary.bankCollected) : "—"}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Bank Balance</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>UPI & Bank Collected</div>
         </div>
       </div>
 
