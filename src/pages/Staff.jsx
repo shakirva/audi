@@ -40,7 +40,7 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
     }
   };
 
-  const roles = ["Owner", "Manager", "Sales", "Reception", "Coordinator", "Accountant", "Security", "Technician", "Cleaner", "Operations"];
+  const roles = ["Owner", "Manager", "Sales", "Reception", "Accounts", "Operations", "Coordinator", "Security", "Technician", "Cleaner", "Staff"];
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: 16 }}>
@@ -216,7 +216,7 @@ export default function Staff() {
     }
   };
 
-  const roles = ["All", "Owner", "Manager", "Sales", "Reception", "Coordinator", "Accountant", "Security", "Technician", "Cleaner"];
+  const roles = ["All", "Owner", "Manager", "Sales", "Reception", "Accounts", "Operations", "Coordinator", "Security", "Technician", "Cleaner", "Staff"];
 
   const filteredStaff = staffList.filter(s => {
     if (filterRole !== "All" && s.role !== filterRole) return false;
