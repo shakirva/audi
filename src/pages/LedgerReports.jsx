@@ -39,7 +39,15 @@ export default function LedgerReports() {
     while (hasMore) {
       try {
         const res = await api.get(url, { params: { ...params, page, limit: 100 } });
-        const items = res.data?.data || [];
+        
+        // Handle variations in API response wrapping (e.g. { data: [...] } vs { data: { data: [...] } })
+        let items = [];
+        if (Array.isArray(res.data?.data)) {
+          items = res.data.data;
+        } else if (Array.isArray(res.data?.data?.data)) {
+          items = res.data.data.data;
+        }
+
         allData = [...allData, ...items];
         if (items.length < 100) {
           hasMore = false;
