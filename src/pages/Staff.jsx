@@ -23,6 +23,13 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!editData && form.password.length < 6) {
+      return addToast("Password must be at least 6 characters", "error");
+    }
+    if (editData && form.password && form.password.length < 6) {
+      return addToast("Password must be at least 6 characters", "error");
+    }
+
     setLoading(true);
     try {
       if (editData) {
@@ -34,7 +41,11 @@ function StaffModal({ open, onClose, onSuccess, editData }) {
       }
       onSuccess();
     } catch (err) {
-      addToast(err.response?.data?.message || "Failed to save employee", "error");
+      let errMsg = err.response?.data?.message || "Failed to save employee";
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        errMsg = err.response.data.errors.map(e => e.message).join(", ");
+      }
+      addToast(errMsg, "error");
     } finally {
       setLoading(false);
     }
