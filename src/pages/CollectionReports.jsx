@@ -50,7 +50,8 @@ export default function CollectionReports() {
       await reportsAPI.checkAccess();
       
       const paymentsData = await fetchAllPages("/v1/payments");
-      const vendorPaymentsData = await fetchAllPages("/v1/vendors/all-payments");
+      const vendorRes = await api.get("/v1/vendors/all-payments");
+      const vendorPaymentsData = vendorRes.data?.data?.data || vendorRes.data?.data || [];
       
       const allPayments = [...paymentsData, ...vendorPaymentsData];
       setPayments(allPayments);
