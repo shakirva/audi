@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, ToggleRight, ToggleLeft } from "lucide-react";
 import { settingsAPI } from "../../services/api";
+import { useConfirm } from "../../components/ConfirmProvider";
 
 export default function BookingTab({
   venue,
@@ -13,8 +14,9 @@ export default function BookingTab({
   };
   const sectionTitle = {
     fontFamily: "'Playfair Display', serif", fontSize: 16,
-    fontWeight: 700, color: "#111827", marginBottom: 4, margin: 0,
+    fontWeight: 700, color: "#111827", margin: 0,
   };
+  const { confirm } = useConfirm();
 
   return (
     <div style={cardSt}>
@@ -41,6 +43,14 @@ export default function BookingTab({
         <button
           onClick={async () => {
             const newVal = !venue.allowPastDateBooking;
+            const ok = await confirm(
+              newVal 
+                ? "Are you sure you want to enable past date bookings? This is usually only done for backfilling old data."
+                : "Are you sure you want to disable past date bookings?",
+              { title: "Confirm Change", confirmText: newVal ? "Enable" : "Disable", isDanger: newVal }
+            );
+            if (!ok) return;
+
             try {
               await settingsAPI.update({ allowPastDateBooking: newVal });
               setVenue(prev => ({ ...prev, allowPastDateBooking: newVal }));
@@ -80,6 +90,14 @@ export default function BookingTab({
             <button
               key={mode}
               onClick={async () => {
+                if (venue.gstMode === mode) return;
+
+                const ok = await confirm(
+                  `Are you sure you want to change the global GST mode to ${mode === "inclusive" ? "Inclusive" : "Exclusive"}? This will permanently change how taxes are calculated on all new bookings moving forward.`,
+                  { title: "Change GST Mode", confirmText: "Yes, Change Mode", isDanger: true }
+                );
+                if (!ok) return;
+
                 try {
                   await settingsAPI.update({ gstMode: mode });
                   setVenue(prev => ({ ...prev, gstMode: mode }));
