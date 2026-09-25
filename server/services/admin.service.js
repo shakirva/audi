@@ -68,6 +68,11 @@ class AdminService {
       await Settings.create({ tenantId: tenant.id, environmentId: prodEnv.id, venueName: name, email, phone, halls: defaultHalls }, { transaction: t });
       await Settings.create({ tenantId: tenant.id, environmentId: sandboxEnv.id, venueName: name, email, phone, halls: defaultHalls }, { transaction: t });
 
+      // 6. Seed Chart of Accounts
+      const accountingEngine = require("./accountingEngine.service");
+      await accountingEngine.initializeTenantCOA(tenant.id, prodEnv.id, t);
+      await accountingEngine.initializeTenantCOA(tenant.id, sandboxEnv.id, t);
+
       await t.commit();
       return { tenant, defaultPassword: generatedPassword };
     } catch (error) {
