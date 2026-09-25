@@ -87,6 +87,8 @@ router.get("/all-payments", async (req, res) => {
       amount: p.amount,
       referenceNumber: p.referenceNumber,
       notes: p.description,
+      description: p.description,
+      status: p.status,
       createdAt: p.createdAt,
       isVendorPayment: true,
       vendorId: p.vendorId,
