@@ -694,12 +694,16 @@ class AccountingEngine {
   // ═══════════════════════════════════
   // GENERAL LEDGER
   // ═══════════════════════════════════
-  async getLedger({ tenantId, environmentId, accountCode, startDate, endDate, page = 1, limit = 50 }) {
+  async getLedger({ tenantId, environmentId, accountCode, customerId, startDate, endDate, page = 1, limit = 50 }) {
     const { sequelize } = require("../models");
     const where = { tenantId, environmentId, status: "Posted" };
 
     if (startDate && endDate) {
       where.date = { [Op.between]: [startDate, endDate] };
+    }
+    
+    if (customerId) {
+      where.customerId = customerId;
     }
 
     const includeConfig = [

@@ -19,11 +19,12 @@ class AccountsDashboardController {
 
   async getLedger(req, res, next) {
     try {
-      const { accountCode, startDate, endDate, page, limit } = req.query;
+      const { accountCode, customerId, startDate, endDate, page, limit } = req.query;
       const data = await accountingEngine.getLedger({
         tenantId: req.tenantId,
         environmentId: req.environmentId,
         accountCode,
+        customerId,
         startDate,
         endDate,
         page: Number(page) || 1,

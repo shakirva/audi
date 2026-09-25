@@ -52,6 +52,7 @@ export const BASE_NAVIGATION = [
       { path: "/reports/sales", label: "Sales Reports" },
       { path: "/reports/booking", label: "Booking Reports" },
       { path: "/reports/accounts", label: "Accounts Reports" },
+      { path: "/reports/ledger", label: "Ledger Reports" },
       { path: "/reports/collection", label: "Collection Reports" },
       { path: "/reports/hall", label: "Hall Reports" },
       { path: "/reports/customer", label: "Customer Reports" }
