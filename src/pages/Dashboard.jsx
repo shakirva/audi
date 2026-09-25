@@ -201,9 +201,10 @@ function ExecutiveCockpit() {
 
       if (statsRes.data?.data) {
         const ts = statsRes.data.data;
-        const healthScore = ts.totalBookings > 0 
-          ? Math.round((ts.confirmedCount / ts.totalBookings) * 100) 
-          : 100;
+        const totalLeads = ts.totalBookings + allEnquiries.length;
+        const healthScore = totalLeads > 0 
+          ? Math.round((ts.totalBookings / totalLeads) * 100) 
+          : 0;
         setStats({ ...ts, upcomingCount, pendingAmount, enquiryCount, healthScore });
       } else {
         // Fallback if stats API fails or is empty
