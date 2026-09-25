@@ -358,40 +358,35 @@ class AccountingEngine {
     const gstAmount = Number(booking.taxes) || 0;
     const netRevenue = (booking.totalAmount || 0) - gstAmount;
 
-    // 1. Customer owes us the full amount → recognize as revenue (net of GST)
-    await this.createEntry({
-      tenantId, environmentId,
+    const outstandingAcct = await ChartOfAccount.findOne({ where: { code: "1005", tenantId, environmentId }, transaction });
+    const revenueAcct = await ChartOfAccount.findOne({ where: { code: "3001", tenantId, environmentId }, transaction });
+    const taxesAcct = await ChartOfAccount.findOne({ where: { code: "2004", tenantId, environmentId }, transaction });
+
+    if (!outstandingAcct || !revenueAcct) {
+      throw new Error(`Chart of Account not found for Booking`);
+    }
+
+    const lines = [
+      { accountId: outstandingAcct.id, debit: booking.totalAmount, credit: 0 },
+      { accountId: revenueAcct.id, debit: 0, credit: netRevenue }
+    ];
+
+    if (gstAmount > 0 && taxesAcct) {
+      lines.push({ accountId: taxesAcct.id, debit: 0, credit: gstAmount });
+    }
+
+    await this.postJournal({
+      tenantId,
+      environmentId,
       date: new Date(),
       description: `Booking #${booking.bookingId} - ${booking.customerName}`,
-      debitCode: "1005",  // Customer Outstanding (Asset - they owe us)
-      creditCode: "3001", // Hall Booking Income (net revenue only)
-      amount: netRevenue,
-      voucherType: "JV",
+      lines,
       sourceModule: "Booking",
       sourceId: booking.id,
       bookingId: booking.id,
+      customerId: booking.customerId,
       createdBy,
-      transaction,
-    });
-
-    // 2. If GST exists, record GST portion as a liability (owed to government)
-    if (gstAmount > 0) {
-      await this.createEntry({
-        tenantId, environmentId,
-        date: new Date(),
-        description: `GST on Booking #${booking.bookingId} - ${booking.customerName}`,
-        debitCode: "1005",  // Customer Outstanding (they pay GST too)
-        creditCode: "2004", // Taxes Payable (GST liability to government)
-        amount: gstAmount,
-        voucherType: "JV",
-        sourceModule: "Booking",
-        sourceId: booking.id,
-        customerId: booking.customerId,
-        bookingId: booking.id,
-        createdBy,
-        transaction,
-      });
-    }
+    }, transaction);
   }
 
   /**
