@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, TrendingDown, RefreshCw, Wallet, ArrowDownRight, ArrowUpRight, CreditCard, Banknote, Building2, Smartphone, CircleDollarSign, AlertCircle, Lock } from "lucide-react";
-import { accountsAPI, isPlanRestriction } from "../../services/api";
+import { accountsAPI, settingsAPI, isPlanRestriction } from "../../services/api";
 import { useToast } from "../../components/Toast";
 import { useRole } from "../../context/RoleContext";
 
@@ -11,6 +11,7 @@ export default function FinanceReports() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("cash"); // "cash" | "accrual"
+  const [settings, setSettings] = useState({});
 
   useEffect(() => {
     fetchReport();
@@ -19,8 +20,12 @@ export default function FinanceReports() {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const res = await accountsAPI.getProfitLoss({});
+      const [res, settingsRes] = await Promise.all([
+        accountsAPI.getProfitLoss({}),
+        settingsAPI.get()
+      ]);
       setReport(res.data.data);
+      setSettings(settingsRes.data?.data || {});
     } catch (error) {
       if (!isPlanRestriction(error)) addToast("Failed to fetch profit & loss report", "error");
     } finally {
@@ -286,25 +291,50 @@ export default function FinanceReports() {
                       </div>
                     ))
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
-                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Contract Value (Gross)</span>
-                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
-                  </div>
-                  
-                  {/* Explicitly show GST as a deduction to arrive at Net Revenue */}
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
-                    <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>− GST & Taxes (Liability)</span>
-                    <span style={{ color: "#ef4444", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
-                  </div>
+                  {settings.gstMode === "exclusive" ? (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
+                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Net Earned Revenue</span>
+                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome)}</span>
+                      </div>
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
+                        <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>+ GST & Taxes (Liability)</span>
+                        <span style={{ color: "#64748b", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
+                      </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
-                    <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 15 }}>Net Earned Revenue</span>
-                    <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome)}</span>
-                  </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
+                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 15 }}>Total Contract Value (Gross)</span>
+                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
+                      </div>
 
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
-                    * GST is deducted from the gross contract value because it is owed to the government.
-                  </div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
+                        * GST is added on top of the net revenue because it is owed to the government.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
+                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Contract Value (Gross)</span>
+                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
+                      </div>
+                      
+                      {/* Explicitly show GST as a deduction to arrive at Net Revenue */}
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
+                        <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>− GST & Taxes (Liability)</span>
+                        <span style={{ color: "#ef4444", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
+                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 15 }}>Net Earned Revenue</span>
+                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome)}</span>
+                      </div>
+
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
+                        * GST is deducted from the gross contract value because it is owed to the government.
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
