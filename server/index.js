@@ -240,6 +240,15 @@ initDB()
       console.log("⚠️ ENUM migration:", e.message);
     }
 
+    // MIGRATION: Fix User email uniqueness constraint to ignore soft-deleted records
+    try {
+      await sequelize.query('DROP INDEX IF EXISTS "idx_users_email_tenant";');
+      await sequelize.query('CREATE UNIQUE INDEX "idx_users_email_tenant" ON "Users" ("email", "tenantId") WHERE "deletedAt" IS NULL;');
+      console.log("✅ Fixed User email uniqueness constraint");
+    } catch (e) {
+      console.log("⚠️ Could not fix User email uniqueness constraint:", e.message);
+    }
+
     app.listen(PORT, () => {
       console.log(`🚀 Venueza API running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);

@@ -39,7 +39,14 @@ const User = sequelize.define("User", {
     }
   },
   indexes: [
-    { unique: true, fields: ["email", "tenantId"], name: "idx_users_email_tenant" },
+    { 
+      unique: true, 
+      fields: ["email", "tenantId"], 
+      name: "idx_users_email_tenant",
+      where: {
+        deletedAt: null
+      }
+    },
     { fields: ["tenantId"], name: "idx_users_tenant" },
   ],
 });
