@@ -3,7 +3,7 @@ import { Store, Plus, Search, Star, Phone, MapPin, Mail, ChevronRight, CheckCirc
 import PageHeader from "../components/ui/PageHeader";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useRole } from "../context/RoleContext";
-import { vendorsAPI, isPlanRestriction } from "../services/api";
+import { vendorsAPI, usersAPI, isPlanRestriction } from "../services/api";
 
 
 
@@ -24,6 +24,7 @@ export default function Vendors() {
   const [payForm, setPayForm] = useState({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", collectedBy: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
   const [vendorBills, setVendorBills] = useState([]);
   const [vendorPayments, setVendorPayments] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const fetchAndMigrate = async () => {
@@ -32,6 +33,13 @@ export default function Vendors() {
         // 1. Fetch from API
         const { data } = await vendorsAPI.getAll();
         let serverVendors = data.data || [];
+        
+        try {
+          const userRes = await usersAPI.getAll();
+          setUsers(userRes.data?.data || []);
+        } catch (e) {
+          console.error("Failed to load staff list for collectedBy dropdown:", e);
+        }
         
         // 2. Check for migration from localStorage
         const localDataStr = localStorage.getItem(`hm_local_vendors_${tSlug}`);
@@ -597,7 +605,16 @@ export default function Vendors() {
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Collected By (Optional)</label>
-                <input type="text" value={payForm.collectedBy} onChange={e => setPayForm({...payForm, collectedBy: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="Name of person who collected" />
+                <select 
+                  value={payForm.collectedBy} 
+                  onChange={e => setPayForm({...payForm, collectedBy: e.target.value})} 
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", background: "#fff", cursor: "pointer" }}
+                >
+                  <option value="">-- Select Staff Member --</option>
+                  {users.map(u => (
+                    <option key={u.id || u._id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
