@@ -1047,7 +1047,7 @@ class AccountingEngine {
       WHERE j."tenantId" = :tenantId 
         AND j."environmentId" = :environmentId
         AND j.status = 'Posted'
-        AND c."type" IN ('Income', 'Expense')
+        AND c."type" IN ('Income', 'Expense', 'Liability')
         ${dateClause}
       GROUP BY c.code, c.name, c."type"
       ORDER BY c.code
@@ -1062,6 +1062,7 @@ class AccountingEngine {
     let totalIncome = 0;
     const expenseItems = [];
     let totalExpenses = 0;
+    let totalTaxes = 0;
 
     results.forEach(row => {
       const debit = parseFloat(row.totalDebit);
@@ -1078,6 +1079,11 @@ class AccountingEngine {
         if (balance !== 0) {
           expenseItems.push({ code: row.code, name: row.name, amount: balance });
           totalExpenses += balance;
+        }
+      } else if (row.type === 'Liability' && row.code === '2004') {
+        const balance = credit - debit;
+        if (balance !== 0) {
+          totalTaxes += balance;
         }
       }
     });
@@ -1162,6 +1168,7 @@ class AccountingEngine {
       // Accrual basis (journal ledgers)
       income: incomeItems,
       totalIncome,
+      totalTaxes,
       expenses: expenseItems,
       totalExpenses,
       netProfit: totalIncome - totalExpenses,

@@ -287,11 +287,23 @@ export default function FinanceReports() {
                     ))
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
-                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Revenue</span>
+                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Net Earned Revenue</span>
                     <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome)}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 8 }}>
-                    * This includes booked amounts — not all may be collected yet
+                  
+                  {/* Explicitly show GST so non-accountants understand why revenue < booked value */}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
+                    <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>+ GST & Taxes (Liability)</span>
+                    <span style={{ color: "#64748b", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
+                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 15 }}>Total Contract Value (Gross)</span>
+                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
+                  </div>
+
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
+                    * GST is money owed to the government, so it is excluded from your net earned revenue.
                   </div>
                 </div>
               </div>
