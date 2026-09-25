@@ -255,10 +255,13 @@ export default function FinanceReports() {
               {/* Net Cash Profit */}
               <div style={{ background: "#0f172a", borderRadius: 16, padding: "36px 32px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}>
                 <div>
-                  <p style={{ margin: "0 0 8px", color: "#94a3b8", fontSize: 15, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Net Cash Profit (Received − Expenses)</p>
+                  <p style={{ margin: "0 0 8px", color: "#94a3b8", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Net Cash In Hand (Total Received − Expenses)</p>
                   <h1 style={{ margin: 0, fontSize: 42, fontWeight: 800, color: (cash.netCashProfit || 0) >= 0 ? "#4ade80" : "#f87171" }}>
                     {(cash.netCashProfit || 0) >= 0 ? "+" : "−"} {fmt(Math.abs(cash.netCashProfit || 0))}
                   </h1>
+                  <p style={{ margin: "10px 0 0", color: "#cbd5e1", fontSize: 12, opacity: 0.8 }}>
+                    * This is raw physical cash in the bank. It does <b>not</b> deduct the GST owed to the government (switch to Accrual for pure Net Revenue).
+                  </p>
                 </div>
                 <div className="hidden md:block" style={{ background: "rgba(255,255,255,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
                   <BarChart3 size={48} color="#fff" style={{ opacity: 0.8 }} />
