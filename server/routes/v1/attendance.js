@@ -46,13 +46,14 @@ router.get("/", async (req, res) => {
 // POST /api/v1/attendance/check-in
 router.post("/check-in", async (req, res) => {
   try {
+    const body = req.body || {};
     const today = new Date().toISOString().split("T")[0];
-    const dateToUse = req.body.date || today;
+    const dateToUse = body.date || today;
     
     let targetUserId = req.user.id;
     // Allow Owner, SuperAdmin, Manager to specify a different user
-    if (req.body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
-      targetUserId = req.body.userId;
+    if (body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
+      targetUserId = body.userId;
     }
 
     // Check if already checked in today
@@ -64,7 +65,7 @@ router.post("/check-in", async (req, res) => {
       return res.status(400).json({ error: "Already checked in today" });
     }
 
-    const checkInTime = req.body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const checkInTime = body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
     
     let record;
     if (existing) {
@@ -94,12 +95,13 @@ router.post("/check-in", async (req, res) => {
 // POST /api/v1/attendance/check-out
 router.post("/check-out", async (req, res) => {
   try {
+    const body = req.body || {};
     const today = new Date().toISOString().split("T")[0];
-    const dateToUse = req.body.date || today;
+    const dateToUse = body.date || today;
     
     let targetUserId = req.user.id;
-    if (req.body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
-      targetUserId = req.body.userId;
+    if (body.userId && ["Owner", "SuperAdmin", "Manager"].includes(req.user.role)) {
+      targetUserId = body.userId;
     }
 
     const existing = await Attendance.findOne({
@@ -113,7 +115,7 @@ router.post("/check-out", async (req, res) => {
       return res.status(400).json({ error: "Already checked out today" });
     }
 
-    const checkOutTime = req.body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const checkOutTime = body.time || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
     await existing.update({ checkOut: checkOutTime, updatedBy: req.user.id });
 
     const updatedRecord = await Attendance.findByPk(existing.id, {
