@@ -21,7 +21,7 @@ export default function Vendors() {
   const [billModal, setBillModal] = useState(false);
   const [payModal, setPayModal] = useState(false);
   const [billForm, setBillForm] = useState({ description: "", amount: "", date: new Date().toISOString().split("T")[0], dueDate: "", notes: "" });
-  const [payForm, setPayForm] = useState({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
+  const [payForm, setPayForm] = useState({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", collectedBy: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
   const [vendorBills, setVendorBills] = useState([]);
   const [vendorPayments, setVendorPayments] = useState([]);
 
@@ -203,9 +203,16 @@ export default function Vendors() {
     e.preventDefault();
     if (!selectedVendor) return;
     try {
-      await vendorsAPI.createPayment(selectedVendor.id, { ...payForm, amount: Number(payForm.amount), vendorBillId: payForm.vendorBillId || null });
+      const finalDesc = payForm.collectedBy ? `Collected By: ${payForm.collectedBy}` : "";
+      
+      await vendorsAPI.createPayment(selectedVendor.id, { 
+        ...payForm, 
+        amount: Number(payForm.amount), 
+        description: finalDesc,
+        vendorBillId: payForm.vendorBillId || null 
+      });
       setPayModal(false);
-      setPayForm({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
+      setPayForm({ amount: "", paymentMode: "Cash", referenceNumber: "", description: "", collectedBy: "", date: new Date().toISOString().split("T")[0], vendorBillId: "" });
       await loadVendorFinance(selectedVendor.id);
       const { data } = await vendorsAPI.getAll();
       setLocalVendors(data.data || []);
@@ -587,6 +594,11 @@ export default function Vendors() {
                   <input type="text" value={payForm.referenceNumber} onChange={e => setPayForm({...payForm, referenceNumber: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder={payForm.paymentMode === "UPI" ? "UPI Txn ID" : payForm.paymentMode === "Cheque" ? "Cheque Number" : "NEFT/IMPS Ref"} />
                 </div>
               )}
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Collected By (Optional)</label>
+                <input type="text" value={payForm.collectedBy} onChange={e => setPayForm({...payForm, collectedBy: e.target.value})} style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box" }} placeholder="Name of person who collected" />
+              </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 6, display: "block" }}>Link to Bill (Optional)</label>

@@ -203,8 +203,8 @@ router.post("/:id/bills", async (req, res) => {
       return res.status(400).json({ success: false, error: "Description and valid amount are required" });
     }
 
-    // Ensure COA account 2005 exists (create if missing)
-    await ensureVendorPayableAccount(req.tenantId, req.environmentId, t);
+    // Ensure COA accounts exist (create if missing)
+    await ensureVendorAccounts(req.tenantId, req.environmentId, t);
 
     const bill = await VendorBill.create({
       tenantId: req.tenantId, environmentId: req.environmentId,
@@ -296,8 +296,8 @@ router.post("/:id/payments", async (req, res) => {
       return res.status(400).json({ success: false, error: `Payment mode is required. Must be one of: ${validModes.join(", ")}` });
     }
 
-    // Ensure COA account 2005 exists
-    await ensureVendorPayableAccount(req.tenantId, req.environmentId, t);
+    // Ensure COA accounts exist
+    await ensureVendorAccounts(req.tenantId, req.environmentId, t);
 
     const payment = await VendorPayment.create({
       tenantId: req.tenantId, environmentId: req.environmentId,
@@ -451,20 +451,33 @@ router.get("/:id/ledger", async (req, res) => {
 // HELPERS
 // ═══════════════════════════════════
 
-async function ensureVendorPayableAccount(tenantId, environmentId, transaction) {
-  const existing = await ChartOfAccount.findOne({
-    where: { code: "2005", tenantId, environmentId },
+async function ensureVendorAccounts(tenantId, environmentId, transaction) {
+  const existingReceivable = await ChartOfAccount.findOne({
+    where: { code: "1005", tenantId, environmentId },
     transaction,
   });
-  if (!existing) {
+  if (!existingReceivable) {
     await ChartOfAccount.create({
       tenantId, environmentId,
-      code: "2005", systemKey: "VENDOR_PAYABLE",
-      name: "Vendor Payable (Accounts Payable)",
-      type: "Liability", subType: "Current Liability",
+      code: "1005", systemKey: "VENDOR_RECEIVABLE",
+      name: "Vendor Receivable",
+      type: "Asset", subType: "Current Asset",
       isSystem: true, isActive: true, openingBalance: 0,
     }, { transaction });
-    console.log(`[Vendor] Created COA account 2005 (Vendor Payable) for tenant ${tenantId}`);
+  }
+
+  const existingIncome = await ChartOfAccount.findOne({
+    where: { code: "3006", tenantId, environmentId },
+    transaction,
+  });
+  if (!existingIncome) {
+    await ChartOfAccount.create({
+      tenantId, environmentId,
+      code: "3006", systemKey: "VENDOR_INCOME",
+      name: "Vendor Royalty & Commission",
+      type: "Income", subType: "Operating Income",
+      isSystem: true, isActive: true, openingBalance: 0,
+    }, { transaction });
   }
 }
 

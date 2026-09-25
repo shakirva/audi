@@ -522,21 +522,21 @@ class AccountingEngine {
   }
 
   // ═══════════════════════════════════
-  // VENDOR BILL (records expense + liability)
+  // VENDOR BILL (records vendor commission/royalty income)
   // ═══════════════════════════════════
   async onVendorBillCreated(bill, vendor, { tenantId, environmentId, createdBy, transaction }) {
     if (!bill.amount || bill.amount <= 0) return;
 
-    // Debit: Misc Expense (4008) — vendor cost is an expense
-    // Credit: Vendor Payable (2005) — we owe the vendor
+    // Debit: Vendor Receivable (1005) — vendor owes us
+    // Credit: Vendor Royalty & Commission (3006) — income
     await this.createEntry({
       tenantId, environmentId,
       date: bill.date || new Date(),
       description: `Vendor Bill #${bill.billNumber} — ${vendor.name}`,
-      debitCode: "4008",   // Miscellaneous Expense
-      creditCode: "2005",  // Vendor Payable (Accounts Payable)
+      debitCode: "1005",   // Vendor Receivable
+      creditCode: "3006",  // Vendor Royalty & Commission (Income)
       amount: parseFloat(bill.amount),
-      voucherType: "EV",   // Expense Voucher
+      voucherType: "EV",   // Keeping EV for now to maintain consistency, or we could change to BV/IV
       sourceModule: "VendorBill",
       sourceId: bill.id,
       createdBy,
@@ -545,23 +545,23 @@ class AccountingEngine {
   }
 
   // ═══════════════════════════════════
-  // VENDOR PAYMENT (reduces liability, money goes out)
+  // VENDOR PAYMENT (money received from vendor)
   // ═══════════════════════════════════
   async onVendorPaymentMade(payment, vendor, { tenantId, environmentId, createdBy, transaction }) {
     if (!payment.amount || payment.amount <= 0) return;
 
-    // paymentMode determines which account the money leaves from
+    // paymentMode determines which account the money arrives into
     const isCash = payment.paymentMode === "Cash";
-    const creditCode = isCash ? "1001" : "1002"; // Cash in Hand OR Bank Account
+    const debitCode = isCash ? "1001" : "1002"; // Cash in Hand OR Bank Account
 
-    // Debit: Vendor Payable (2005) — reduce what we owe the vendor
-    // Credit: Cash (1001) or Bank (1002) — money going out
+    // Debit: Cash (1001) or Bank (1002) — money coming in
+    // Credit: Vendor Receivable (1005) — reduce what vendor owes
     await this.createEntry({
       tenantId, environmentId,
       date: payment.date || new Date(),
-      description: `Vendor Payment #${payment.paymentNumber} — ${vendor.name} via ${payment.paymentMode}`,
-      debitCode: "2005",   // Vendor Payable
-      creditCode,          // Cash or Bank
+      description: `Vendor Payment Received #${payment.paymentNumber} — ${vendor.name} via ${payment.paymentMode}`,
+      debitCode,           // Cash or Bank
+      creditCode: "1005",  // Vendor Receivable
       amount: parseFloat(payment.amount),
       voucherType: "PV",   // Payment Voucher
       sourceModule: "VendorPayment",
