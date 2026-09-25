@@ -56,6 +56,8 @@ export default function CustomerReports() {
   const weddings = filteredBookings.filter(b => (b.eventType || "").toLowerCase().includes("wedding") || (b.eventType || "").toLowerCase().includes("nikkah")).length;
   const completed = filteredBookings.filter(b => b.status === "Completed").length;
 
+  const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
+
   const handleExportPDF = () => {
     addToast("Preparing report for export...", "success");
     
@@ -65,7 +67,6 @@ export default function CustomerReports() {
     doc.text("Customer & Event Details Report", 14, 22);
     doc.setFontSize(11);
     doc.setTextColor(100);
-    const filterText = (startDate || endDate) ? `${startDate || "..."} to ${endDate || "..."}` : "All Time";
     doc.text(`Report Date: ${new Date().toLocaleDateString()} | Filter: ${filterText}`, 14, 30);
     
     doc.setFontSize(10);
