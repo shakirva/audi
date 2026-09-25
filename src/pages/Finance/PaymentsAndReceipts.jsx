@@ -26,16 +26,44 @@ export default function PaymentsAndReceipts() {
     setLoading(true);
     try {
       // Fetching up to 100 recent bookings to show payments pending
-      const [bookingsRes, dashboardRes, settingsRes, vendorsRes] = await Promise.all([
+      const [bookingsRes, dashboardRes, settingsRes, vendorsRes, paymentsRes] = await Promise.all([
         bookingsAPI.getAll({ limit: 100 }),
         accountsAPI.getDashboard(),
         settingsAPI.get().catch(() => ({ data: { data: {} } })),
-        vendorsAPI.getAll().catch(() => ({ data: { data: [] } }))
+        vendorsAPI.getAll().catch(() => ({ data: { data: [] } })),
+        paymentsAPI.getAll({ limit: 1000 }).catch(() => ({ data: { data: [] } }))
       ]);
       setBookings(bookingsRes.data.data || []);
       setDashboardData(dashboardRes.data.data || null);
       setSettings(settingsRes.data?.data || {});
       setVendors(vendorsRes.data?.data || []);
+      
+      const allPayments = paymentsRes.data?.data || [];
+      
+      let calcCash = 0;
+      let calcBank = 0;
+      let calcTotal = 0;
+      
+      allPayments.forEach(p => {
+        if (p.status === "Completed") {
+          calcTotal += (Number(p.amount) || 0);
+          if (p.paymentMode === "Cash") {
+            calcCash += (Number(p.amount) || 0);
+          } else {
+            calcBank += (Number(p.amount) || 0);
+          }
+        }
+      });
+      
+      setDashboardData(prev => ({
+        ...prev,
+        summary: {
+          ...prev?.summary,
+          cashCollected: calcCash,
+          bankCollected: calcBank,
+          totalCollected: calcTotal
+        }
+      }));
     } catch (err) {
       if (!isPlanRestriction(err)) addToast("Failed to load data", "error");
     } finally {
@@ -114,7 +142,6 @@ export default function PaymentsAndReceipts() {
   }, [bookings, search]);
 
   // Aggregate metrics
-  const totalCollected = bookings.reduce((sum, b) => sum + (Number(b.advance) || 0) + (Number(b.depositAmount) || 0), 0);
   const totalOutstanding = bookings.reduce((sum, b) => {
     const total = Number(b.totalAmount) || 0;
     const paid = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
@@ -163,7 +190,9 @@ export default function PaymentsAndReceipts() {
           <div style={{ width: 36, height: 36, background: "#f0fdf4", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
             <ArrowUpRight size={18} color="#16a34a" />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{formatMoney(totalCollected)}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>
+            {dashboardData?.summary?.totalCollected !== undefined ? formatMoney(dashboardData.summary.totalCollected) : "—"}
+          </div>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Total Collected</div>
         </div>
         <div style={{ background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
