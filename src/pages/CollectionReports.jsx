@@ -50,7 +50,10 @@ export default function CollectionReports() {
       await reportsAPI.checkAccess();
       
       const paymentsData = await fetchAllPages("/v1/payments");
-      setPayments(paymentsData);
+      const vendorPaymentsData = await fetchAllPages("/v1/vendors/all-payments");
+      
+      const allPayments = [...paymentsData, ...vendorPaymentsData];
+      setPayments(allPayments);
     } catch (err) {
       console.error(err);
       if (!isPlanRestriction(err)) addToast("Failed to load collections data", "error");
@@ -60,6 +63,14 @@ export default function CollectionReports() {
   };
 
   const extractCollector = (p) => {
+    if (p.isVendorPayment) {
+      if (p.description && p.description.includes("Collected By:")) {
+        const match = p.description.match(/Collected By:\s*([^\n]+)/);
+        if (match && match[1]) return match[1].trim();
+      }
+      return p.Vendor?.name || "Vendor";
+    }
+    
     let collector = p.creator?.name || p.User?.name || "System";
     if (p.notes && p.notes.includes("Collected By:")) {
       const match = p.notes.match(/Collected By:\s*([^\n]+)/);
@@ -176,7 +187,7 @@ export default function CollectionReports() {
       const mode = p.paymentMode || "Transfer";
       const receiptNo = p.paymentNumber || "-";
       const refDetails = p.referenceNumber || "-";
-      const notes = p.notes || "-";
+      const notes = (p.isVendorPayment ? p.description : p.notes) || "-";
       const amount = `+ ${p.amount.toLocaleString()}`;
       tableRows.push([date, receiptNo, name, collector, mode, refDetails, notes, amount]);
     });
@@ -311,12 +322,12 @@ export default function CollectionReports() {
               <tbody>
                 {filteredPayments.map((p, i) => {
                   const date = new Date(p.paymentDate || p.createdAt).toLocaleDateString();
-                  const name = p.Customer?.name || "Customer";
+                  const name = (p.isVendorPayment && p.Vendor) ? `Vendor: ${p.Vendor.name}` : (p.Customer?.name || "Customer");
                   const collector = extractCollector(p);
                   const mode = p.paymentMode || "Transfer";
                   const receiptNo = p.paymentNumber || "-";
                   const refDetails = p.referenceNumber || "-";
-                  const notes = p.notes || "-";
+                  const notes = (p.isVendorPayment ? p.description : p.notes) || "-";
                   const amount = p.amount || 0;
                   
                   return (

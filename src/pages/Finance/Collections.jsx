@@ -71,14 +71,23 @@ export default function Collections() {
     }
   };
 
-  const uniqueModes = Array.from(new Set(payments.map(p => p.paymentMode).filter(Boolean)));
-  const uniqueCollectors = Array.from(new Set(payments.map(p => {
+  const getCollector = (p) => {
+    if (p.isVendorPayment) {
+      if (p.description && p.description.includes("Collected By:")) {
+        const match = p.description.match(/Collected By:\s*([^\n]+)/);
+        if (match && match[1]) return match[1].trim();
+      }
+      return p.Vendor?.name || "Vendor";
+    }
     if (p.notes && p.notes.includes("Collected By:")) {
       const match = p.notes.match(/Collected By:\s*([^\n]+)/);
       if (match && match[1]) return match[1].trim();
     }
     return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
-  }).filter(Boolean)));
+  };
+
+  const uniqueModes = Array.from(new Set(payments.map(p => p.paymentMode).filter(Boolean)));
+  const uniqueCollectors = Array.from(new Set(payments.map(p => getCollector(p)).filter(Boolean)));
 
   const filtered = payments.filter(p => {
     const sTerm = searchTerm.toLowerCase();
@@ -97,11 +106,7 @@ export default function Collections() {
 
     // 3. Collected By filter
     if (filterCollectedBy !== "All Staff") {
-      let collector = p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
-      if (p.notes && p.notes.includes("Collected By:")) {
-        const match = p.notes.match(/Collected By:\s*([^\n]+)/);
-        if (match && match[1]) collector = match[1].trim();
-      }
+      const collector = getCollector(p);
       if (collector !== filterCollectedBy) return false;
     }
 
@@ -249,14 +254,7 @@ export default function Collections() {
                     </td>
                     <td style={{ padding: "16px 24px", color: "#475569" }}>
                       <span style={{ background: "#f8fafc", padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "1px solid #e2e8f0" }}>
-                        {(() => {
-                          if (p.isVendorPayment) return p.Vendor?.name || "Vendor";
-                          if (p.notes && p.notes.includes("Collected By:")) {
-                            const match = p.notes.match(/Collected By:\s*([^\n]+)/);
-                            if (match && match[1]) return match[1].trim();
-                          }
-                          return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
-                        })()}
+                        {getCollector(p)}
                       </span>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
@@ -291,14 +289,7 @@ export default function Collections() {
           <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No collections found.</div>
         ) : (
           filtered.map((p) => {
-            const collector = (() => {
-              if (p.isVendorPayment) return p.Vendor?.name || "Vendor";
-              if (p.notes && p.notes.includes("Collected By:")) {
-                const match = p.notes.match(/Collected By:\s*([^\n]+)/);
-                if (match && match[1]) return match[1].trim();
-              }
-              return p.Booking?.receivedBy || p.creator?.name || p.User?.name || "System";
-            })();
+            const collector = getCollector(p);
             
             return (
               <div key={p.id} style={{ background: p.isVendorPayment ? "#fffbeb" : "#fff", borderRadius: 12, border: `1px solid ${p.isVendorPayment ? "#fed7aa" : "#e2e8f0"}`, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
