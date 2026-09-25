@@ -291,50 +291,25 @@ export default function FinanceReports() {
                       </div>
                     ))
                   )}
-                  {settings.gstMode === "exclusive" ? (
-                    <>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
-                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Net Earned Revenue</span>
-                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome)}</span>
-                      </div>
-                      
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
-                        <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>+ GST & Taxes (Liability)</span>
-                        <span style={{ color: "#64748b", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
-                      </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
+                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Contract Value (Gross)</span>
+                    <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
+                  </div>
+                  
+                  {/* Explicitly show GST as a deduction to arrive at Net Revenue */}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
+                    <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>− GST & Taxes (Liability)</span>
+                    <span style={{ color: "#ef4444", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
+                  </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
-                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 15 }}>Total Contract Value (Gross)</span>
-                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
-                      </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
+                    <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 15 }}>Net Earned Revenue</span>
+                    <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome)}</span>
+                  </div>
 
-                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
-                        * GST is added on top of the net revenue because it is owed to the government.
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 0", marginTop: 12 }}>
-                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>Total Contract Value (Gross)</span>
-                        <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 18 }}>{fmt(report.totalIncome + (report.totalTaxes || 0))}</span>
-                      </div>
-                      
-                      {/* Explicitly show GST as a deduction to arrive at Net Revenue */}
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "2px solid #e2e8f0" }}>
-                        <span style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>− GST & Taxes (Liability)</span>
-                        <span style={{ color: "#ef4444", fontWeight: 600, fontSize: 14 }}>{fmt(report.totalTaxes || 0)}</span>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
-                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 15 }}>Net Earned Revenue</span>
-                        <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 16 }}>{fmt(report.totalIncome)}</span>
-                      </div>
-
-                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
-                        * GST is deducted from the gross contract value because it is owed to the government.
-                      </div>
-                    </>
-                  )}
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 12 }}>
+                    * GST is deducted from the gross contract value because it is owed to the government.
+                  </div>
                 </div>
               </div>
 
