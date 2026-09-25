@@ -130,10 +130,11 @@ export default function CollectionReports() {
   let otherCollections = 0;
 
   filteredPayments.forEach(p => {
-    totalCollections += (p.amount || 0);
-    if (p.paymentMode === "Cash") cashCollections += (p.amount || 0);
-    else if (p.paymentMode === "UPI") upiCollections += (p.amount || 0);
-    else otherCollections += (p.amount || 0);
+    const amt = Number(p.amount) || 0;
+    totalCollections += amt;
+    if (p.paymentMode === "Cash") cashCollections += amt;
+    else if (p.paymentMode === "UPI") upiCollections += amt;
+    else otherCollections += amt;
   });
 
   // Formatting helper with negative support
@@ -329,7 +330,7 @@ export default function CollectionReports() {
                   const receiptNo = p.paymentNumber || "-";
                   const refDetails = p.referenceNumber || "-";
                   const notes = (p.isVendorPayment ? p.description : p.notes) || "-";
-                  const amount = p.amount || 0;
+                  const amount = Number(p.amount) || 0;
                   
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
