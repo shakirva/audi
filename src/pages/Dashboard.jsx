@@ -201,9 +201,11 @@ function ExecutiveCockpit() {
 
       if (statsRes.data?.data) {
         const ts = statsRes.data.data;
-        const totalLeads = ts.totalBookings + allEnquiries.length;
-        const healthScore = totalLeads > 0 
-          ? Math.round((ts.totalBookings / totalLeads) * 100) 
+        // enquiryCount already includes converted leads (since they are not Lost/Cancelled)
+        // If bookings were created without enquiries, ensure we don't go over 100%
+        const denominator = Math.max(ts.totalBookings, enquiryCount);
+        const healthScore = denominator > 0 
+          ? Math.round((ts.totalBookings / denominator) * 100) 
           : 0;
         setStats({ ...ts, upcomingCount, pendingAmount, enquiryCount, healthScore });
       } else {
