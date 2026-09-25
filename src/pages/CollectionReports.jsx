@@ -301,7 +301,6 @@ export default function CollectionReports() {
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>
-                  <th style={{ padding: "12px 20px", fontWeight: 600 }}>Date</th>
                   <th style={{ padding: "12px 20px", fontWeight: 600 }}>Customer / Receipt</th>
                   <th style={{ padding: "12px 20px", fontWeight: 600 }}>Collected By</th>
                   <th style={{ padding: "12px 20px", fontWeight: 600 }}>Mode & Reference (UPI/Bank)</th>
@@ -322,10 +321,11 @@ export default function CollectionReports() {
                   
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
-                      <td style={{ padding: "12px 20px", color: "#374151" }}>{date}</td>
                       <td style={{ padding: "12px 20px", color: "#111827", fontWeight: 500 }}>
                         {name}<br/>
                         <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400 }}>{receiptNo}</span>
+                        <br/>
+                        <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400 }}>{date}</span>
                       </td>
                       <td style={{ padding: "12px 20px" }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#4b5563" }}>
@@ -336,7 +336,7 @@ export default function CollectionReports() {
                         <span style={{ fontWeight: 600 }}>{mode}</span><br/>
                         <span style={{ fontSize: 11, color: "#6b7280" }}>Ref: {refDetails}</span>
                       </td>
-                      <td style={{ padding: "12px 20px", color: "#6b7280" }}>{notes}</td>
+                      <td style={{ padding: "12px 20px", color: "#6b7280", maxWidth: 200, wordBreak: "break-word" }}>{notes}</td>
                       <td style={{ padding: "12px 20px", textAlign: "right", fontWeight: 700, color: "#059669" }}>
                         + ₹{amount.toLocaleString()}
                       </td>
@@ -347,7 +347,7 @@ export default function CollectionReports() {
               {/* Table Footer with Totals */}
               <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
                 <tr>
-                  <td colSpan="4" style={{ padding: "16px 20px" }}></td>
+                  <td colSpan="3" style={{ padding: "16px 20px" }}></td>
                   <td style={{ padding: "16px 20px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
                     Total Collections:
                   </td>
