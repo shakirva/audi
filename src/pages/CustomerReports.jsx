@@ -20,12 +20,34 @@ export default function CustomerReports() {
     loadData();
   }, []);
 
+  const fetchAllPages = async (params = {}) => {
+    let allData = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      try {
+        const res = await bookingsAPI.getAll({ ...params, page, limit: 100 });
+        const items = res.data?.data || [];
+        allData = [...allData, ...items];
+        if (items.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } catch (err) {
+        console.error(`Failed to fetch bookings page ${page}`, err);
+        hasMore = false;
+      }
+    }
+    return allData;
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
       await reportsAPI.checkAccess();
-      const res = await bookingsAPI.getAll();
-      setBookings(res.data?.data || []);
+      const allBookings = await fetchAllPages();
+      setBookings(allBookings);
     } catch (err) {
       console.error(err);
       if (!isPlanRestriction(err)) addToast("Failed to load customer data", "error");

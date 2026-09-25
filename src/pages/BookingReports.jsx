@@ -28,15 +28,37 @@ export default function BookingReports() {
     loadData();
   }, []);
 
+  const fetchAllPages = async (params = {}) => {
+    let allData = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      try {
+        const res = await bookingsAPI.getAll({ ...params, page, limit: 100 });
+        const items = res.data?.data || [];
+        allData = [...allData, ...items];
+        if (items.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } catch (err) {
+        console.error(`Failed to fetch bookings page ${page}`, err);
+        hasMore = false;
+      }
+    }
+    return allData;
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
       await reportsAPI.checkAccess();
-      const [res, settingsRes] = await Promise.all([
-        bookingsAPI.getAll(),
+      const [allBookings, settingsRes] = await Promise.all([
+        fetchAllPages(),
         settingsAPI.get().catch(() => ({ data: { data: { halls: [] } } }))
       ]);
-      setBookings(res.data?.data || []);
+      setBookings(allBookings);
       setHalls(settingsRes.data?.data?.halls || []);
     } catch (err) {
       console.error(err);
