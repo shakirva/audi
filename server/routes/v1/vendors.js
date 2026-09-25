@@ -71,7 +71,10 @@ router.get("/all-payments", async (req, res) => {
   try {
     const payments = await VendorPayment.findAll({
       where: { tenantId: req.tenantId, environmentId: req.environmentId, status: "Completed" },
-      include: [{ model: Vendor, attributes: ["id", "name", "phone"] }],
+      include: [
+        { model: Vendor, attributes: ["id", "name", "phone"] },
+        { model: sequelize.models.User, as: "creator", attributes: ["id", "name"] }
+      ],
       order: [["date", "DESC"], ["createdAt", "DESC"]],
     });
 
@@ -90,6 +93,7 @@ router.get("/all-payments", async (req, res) => {
       Vendor: p.Vendor,
       Customer: p.Vendor ? { name: p.Vendor.name } : null,
       Booking: null,
+      creator: p.creator,
     }));
 
     res.json({ success: true, data: { data: formatted, total: formatted.length } });

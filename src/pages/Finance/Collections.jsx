@@ -77,7 +77,7 @@ export default function Collections() {
         const match = p.description.match(/Collected By:\s*([^\n]+)/);
         if (match && match[1]) return match[1].trim();
       }
-      return p.Vendor?.name || "Vendor";
+      return p.creator?.name || p.Vendor?.name || "Vendor";
     }
     if (p.notes && p.notes.includes("Collected By:")) {
       const match = p.notes.match(/Collected By:\s*([^\n]+)/);

@@ -68,7 +68,7 @@ export default function CollectionReports() {
         const match = p.description.match(/Collected By:\s*([^\n]+)/);
         if (match && match[1]) return match[1].trim();
       }
-      return p.Vendor?.name || "Vendor";
+      return p.creator?.name || p.Vendor?.name || "Vendor";
     }
     
     let collector = p.creator?.name || p.User?.name || "System";
