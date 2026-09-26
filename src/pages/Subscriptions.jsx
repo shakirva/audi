@@ -32,7 +32,6 @@ const PLANS_CONFIG = {
       { name: "Advanced Accounting & Ledgers", included: false },
       { name: "Reports Center", included: false },
       { name: "Compliance & Documents", included: false },
-      { name: "API & Data Export", included: false },
     ],
     tier: 1
   },
@@ -56,22 +55,20 @@ const PLANS_CONFIG = {
       { name: "Advanced Accounting & Ledgers", included: true },
       { name: "Reports Center (All Reports)", included: true },
       { name: "Compliance & Documents", included: true },
-      { name: "API & Data Export", included: false },
     ],
     tier: 2
   },
   business: {
     key: "business",
     name: "Business",
-    price: "₹6,999",
+    price: "₹7,999",
     billingCycle: "/ month",
     limits: { halls: 99, users: 999 },
     limitsText: { halls: "Unlimited", users: "Unlimited" },
     features: [
-      { name: "Everything in Professional", included: true },
+      { name: "Everything in Professional plan", included: true },
       { name: "Unlimited Halls & Users", included: true },
       { name: "White-label & Custom Branding", included: true },
-      { name: "API Access & Data Export", included: true },
       { name: "Custom Features & Development", included: true },
       { name: "Advanced Configuration & Workflows", included: true },
       { name: "Dedicated Onboarding Assistance", included: true },
@@ -89,7 +86,6 @@ const PLANS_CONFIG = {
     features: [
       { name: "Full ERP Access (All Modules)", included: true },
       { name: "Unlimited Halls & Users", included: true },
-      { name: "API & Data Export", included: true },
       { name: "White-label & Custom Features", included: true },
       { name: "Priority Support", included: true },
     ],
