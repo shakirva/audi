@@ -137,7 +137,7 @@ const PLANS = {
       revenue_privacy: false,
       custom_branding: false,
       sandbox: false,
-      audit_logs: false,
+      audit_logs: true,
       operations: false,
       compliance: false,
       staff_hr: false,
