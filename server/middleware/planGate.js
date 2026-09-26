@@ -100,9 +100,8 @@ const requireFeature = (featureKey) => (req, res, next) => {
  */
 const checkUserLimit = async (req, res, next) => {
   try {
-    if (req.user && req.user.role === "SuperAdmin") {
-      return next();
-    }
+    // We no longer bypass for SuperAdmin because tenant limits should apply regardless
+    // of who is performing the action on behalf of the tenant.
 
     if (!req.subscription || !req.user) {
       return res.status(403).json({ error: "No subscription found" });
@@ -141,9 +140,8 @@ const checkUserLimit = async (req, res, next) => {
  */
 const checkHallLimit = async (req, res, next) => {
   try {
-    if (req.user && req.user.role === "SuperAdmin") {
-      return next();
-    }
+    // We no longer bypass for SuperAdmin because tenant limits should apply regardless
+    // of who is performing the action on behalf of the tenant.
 
     if (!req.subscription) {
       return res.status(403).json({ error: "No subscription found" });
