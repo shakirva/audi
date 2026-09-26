@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CreditCard, Calendar, CheckCircle2, ShieldCheck, Users, Store, ArrowRight, Check, X, AlertTriangle } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle2, ShieldCheck, Users, Store, ArrowRight, Check, X, AlertTriangle, FileText, Lock } from "lucide-react";
 import { useRole } from "../context/RoleContext";
 import { settingsAPI, usersAPI } from "../services/api";
 
@@ -15,36 +15,48 @@ const PLANS_CONFIG = {
   starter: {
     key: "starter",
     name: "Starter",
-    price: "₹999",
+    price: "₹1,999",
     billingCycle: "/ month",
-    limits: { halls: 1, users: 3 },
+    limits: { halls: 1, users: 2 },
     features: [
-      { name: "Core CRM & Operations", included: true },
+      { name: "Dashboard & CRM", included: true },
       { name: "Enquiries & Bookings", included: true },
       { name: "Calendar & Availability", included: true },
-      { name: "Accounting & Ledgers", included: false },
-      { name: "Staff & HR", included: false },
-      { name: "Jobs & Inventory", included: false },
-      { name: "Advanced Reports & Analytics", included: false },
-      { name: "API & Data Exports", included: false },
+      { name: "Agreements & Documents", included: true },
+      { name: "Quotations, Invoices & Receipts", included: true },
+      { name: "PDF View & Download", included: true },
+      { name: "Basic Booking Finance", included: true },
+      { name: "Online Presence & Public Website", included: true },
+      { name: "Operations (Vendors & Inventory)", included: false },
+      { name: "Staff & HR Management", included: false },
+      { name: "Advanced Accounting & Ledgers", included: false },
+      { name: "Reports Center", included: false },
+      { name: "Compliance & Documents", included: false },
+      { name: "API & Data Export", included: false },
     ],
     tier: 1
   },
   professional: {
     key: "professional",
     name: "Professional",
-    price: "₹3,999",
+    price: "₹4,999",
     billingCycle: "/ month",
-    limits: { halls: 5, users: 10 },
+    limits: { halls: 3, users: 10 },
     features: [
-      { name: "Core CRM & Operations", included: true },
+      { name: "Dashboard & CRM", included: true },
       { name: "Enquiries & Bookings", included: true },
       { name: "Calendar & Availability", included: true },
-      { name: "Accounting & Ledgers", included: true },
-      { name: "Staff & HR", included: true },
-      { name: "Jobs & Inventory", included: true },
-      { name: "Advanced Reports & Analytics", included: true },
-      { name: "API & Data Exports", included: false },
+      { name: "Agreements & Documents", included: true },
+      { name: "Quotations, Invoices & Receipts", included: true },
+      { name: "PDF View & Download", included: true },
+      { name: "Complete Finance & Accounting", included: true },
+      { name: "Online Presence & Public Website", included: true },
+      { name: "Operations (Vendors & Inventory)", included: true },
+      { name: "Staff & HR Management", included: true },
+      { name: "Advanced Accounting & Ledgers", included: true },
+      { name: "Reports Center (All Reports)", included: true },
+      { name: "Compliance & Documents", included: true },
+      { name: "API & Data Export", included: false },
     ],
     tier: 2
   },
@@ -56,14 +68,14 @@ const PLANS_CONFIG = {
     limits: { halls: 99, users: 999 },
     limitsText: { halls: "Unlimited", users: "Unlimited" },
     features: [
-      { name: "Core CRM & Operations", included: true },
-      { name: "Enquiries & Bookings", included: true },
-      { name: "Calendar & Availability", included: true },
-      { name: "Accounting & Ledgers", included: true },
-      { name: "Staff & HR", included: true },
-      { name: "Jobs & Inventory", included: true },
-      { name: "Advanced Reports & Analytics", included: true },
-      { name: "API & Data Exports", included: true },
+      { name: "Everything in Professional", included: true },
+      { name: "Unlimited Halls & Users", included: true },
+      { name: "White-label & Custom Branding", included: true },
+      { name: "API Access & Data Export", included: true },
+      { name: "Custom Features & Development", included: true },
+      { name: "Advanced Configuration & Workflows", included: true },
+      { name: "Dedicated Onboarding Assistance", included: true },
+      { name: "Priority Support", included: true },
     ],
     tier: 3
   },
@@ -75,14 +87,11 @@ const PLANS_CONFIG = {
     limits: { halls: 99, users: 999 },
     limitsText: { halls: "Unlimited", users: "Unlimited" },
     features: [
-      { name: "Core CRM & Operations", included: true },
-      { name: "Enquiries & Bookings", included: true },
-      { name: "Calendar & Availability", included: true },
-      { name: "Accounting & Ledgers", included: true },
-      { name: "Staff & HR", included: true },
-      { name: "Jobs & Inventory", included: true },
-      { name: "Advanced Reports & Analytics", included: true },
-      { name: "API & Data Exports", included: true },
+      { name: "Full ERP Access (All Modules)", included: true },
+      { name: "Unlimited Halls & Users", included: true },
+      { name: "API & Data Export", included: true },
+      { name: "White-label & Custom Features", included: true },
+      { name: "Priority Support", included: true },
     ],
     tier: 99
   }
@@ -128,7 +137,7 @@ export default function Subscriptions() {
   const getHallLimitMessage = () => {
     if (currentPlanConfig.limits.halls > 50) return null;
     if (usage.halls >= currentPlanConfig.limits.halls) {
-      if (currentPlanKey === "starter") return "You have reached your Hall limit on the Starter plan. Upgrade to Professional for up to 5 halls.";
+      if (currentPlanKey === "starter") return "You have reached your Hall limit on the Starter plan. Upgrade to Professional for up to 3 halls.";
       if (currentPlanKey === "professional") return "You have reached your Hall limit on the Professional plan. Upgrade to Business for unlimited halls.";
     }
     return null;
@@ -257,18 +266,31 @@ export default function Subscriptions() {
             const isLower = pConfig.tier < planTier;
             const isHigher = pConfig.tier > planTier;
             
+            const borderColor = planKey === "professional" ? "#2563eb" : planKey === "business" ? "#111827" : "#0D2418";
+            
             return (
-              <div key={planKey} style={{ background: "#fff", borderRadius: 16, border: isCurrent ? "2px solid #0D2418" : "1px solid #e5e7eb", padding: 24, display: "flex", flexDirection: "column", position: "relative" }}>
+              <div key={planKey} style={{ background: "#fff", borderRadius: 16, border: isCurrent ? `2px solid ${borderColor}` : "1px solid #e5e7eb", padding: 24, display: "flex", flexDirection: "column", position: "relative" }}>
                 {isCurrent && (
-                  <div style={{ position: "absolute", top: -12, left: 24, background: "#0D2418", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: 1 }}>
+                  <div style={{ position: "absolute", top: -12, left: 24, background: borderColor, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: 1 }}>
                     Current Plan
                   </div>
                 )}
                 
+                {planKey === "professional" && !isCurrent && (
+                  <div style={{ position: "absolute", top: -12, right: 24, background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: 1 }}>
+                    Most Popular
+                  </div>
+                )}
+                
                 <h3 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "12px 0 8px" }}>{pConfig.name}</h3>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#111827", marginBottom: 24 }}>
-                  {pConfig.price} <span style={{ fontSize: 14, color: "#6b7280", fontWeight: 600 }}>{pConfig.billingCycle}</span>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#111827", marginBottom: 4 }}>
+                  {planKey === "business" ? "From " : ""}{pConfig.price} <span style={{ fontSize: 14, color: "#6b7280", fontWeight: 600 }}>{pConfig.billingCycle}</span>
                 </div>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 20px", lineHeight: 1.5 }}>
+                  {planKey === "starter" && "For small/single-hall auditoriums getting started with Venueza."}
+                  {planKey === "professional" && "The complete ERP for established auditoriums."}
+                  {planKey === "business" && "For large convention centres & enterprise customers."}
+                </p>
                 
                 <div style={{ background: "#f9fafb", padding: 16, borderRadius: 12, marginBottom: 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
@@ -311,6 +333,29 @@ export default function Subscriptions() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ALL PLANS INCLUDE SECTION */}
+      <div style={{ background: "#f9fafb", borderRadius: 16, padding: 32, marginBottom: 40 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+          <FileText size={20} /> All Plans Include Standard Documents
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          {[
+            "Booking Quotations",
+            "Booking Agreements", 
+            "Proforma Invoices",
+            "Final Invoices",
+            "Payment Receipts",
+            "Receipt Summary",
+            "Consolidated Bills",
+            "PDF View & Download"
+          ].map((doc, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#374151", fontWeight: 600 }}>
+              <CheckCircle2 size={16} color="#16a34a" /> {doc}
+            </div>
+          ))}
         </div>
       </div>
     </div>

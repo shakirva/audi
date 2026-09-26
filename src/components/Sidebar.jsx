@@ -4,7 +4,7 @@ import { useRole } from "../context/RoleContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { settingsAPI, complianceAPI } from "../services/api";
-import { BASE_NAVIGATION } from "../constants/navigation";
+import { BASE_NAVIGATION, PLAN_TIERS, PLAN_DISPLAY_NAMES } from "../constants/navigation";
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
@@ -37,6 +37,24 @@ export default function Sidebar({ open, onClose }) {
 
   const PRIMARY_COLOR = "#0D2418";
   const ACCENT_COLOR = "#D4A017";
+
+  // ── Plan-based locking helper ──
+  const currentPlan = subscription?.plan || "starter";
+  const currentTier = PLAN_TIERS[currentPlan] ?? 1;
+
+  /**
+   * Check if a navigation item or child is locked based on the tenant's plan.
+   * SuperAdmin always bypasses. Lifetime (tier 99) bypasses everything.
+   * Returns { locked: boolean, requiredPlan: string | null }
+   */
+  const getPlanLockState = (item) => {
+    if (role === "SuperAdmin") return { locked: false, requiredPlan: null };
+    if (!item.planRequired) return { locked: false, requiredPlan: null };
+    
+    const requiredTier = PLAN_TIERS[item.planRequired] ?? 0;
+    const locked = currentTier < requiredTier;
+    return { locked, requiredPlan: locked ? PLAN_DISPLAY_NAMES[item.planRequired] : null };
+  };
 
   const getFilteredNavigation = () => {
     const roleAccess = moduleAccess && moduleAccess[role] ? moduleAccess[role] : null;
@@ -78,6 +96,14 @@ export default function Sidebar({ open, onClose }) {
   };
 
   const NAVIGATION = getFilteredNavigation();
+
+  const fireUpgradeEvent = (feature, requiredPlan) => {
+    window.dispatchEvent(
+      new CustomEvent("plan-upgrade-required", {
+        detail: { feature, requiredPlan }
+      })
+    );
+  };
 
   return (
     <>
@@ -137,6 +163,32 @@ export default function Sidebar({ open, onClose }) {
         {NAVIGATION.map(item => {
           if (item.type === "link") {
             const isActive = location.pathname === item.path;
+            const { locked, requiredPlan } = getPlanLockState(item);
+
+            if (locked) {
+              return (
+                <div key={item.path} onClick={() => fireUpgradeEvent(item.label, requiredPlan)} style={{ cursor: "pointer" }}>
+                  <motion.div 
+                    whileHover={{ background: "rgba(255,255,255,0.05)" }}
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", borderRadius: 12,
+                      background: "transparent",
+                      color: "rgba(255,255,255,0.4)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <item.icon size={20} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
+                    {!collapsed && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 15, fontWeight: 500 }}>{item.label}</span>
+                        <Lock size={14} color="rgba(255,255,255,0.3)" />
+                      </div>
+                    )}
+                  </motion.div>
+                </div>
+              );
+            }
+
             return (
               <Link key={item.path} to={item.path} style={{ textDecoration: "none" }}>
                 <motion.div 
@@ -177,24 +229,19 @@ export default function Sidebar({ open, onClose }) {
           if (item.type === "group") {
             const hasActiveChild = item.children.some(c => location.pathname === c.path);
             
-            const isReportsGroup = item.id === "reports";
-            const isStarter = subscription?.plan === "starter";
-            const isLocked = isReportsGroup && isStarter;
+            // Check if the ENTIRE group is plan-locked
+            const { locked: groupLocked, requiredPlan: groupRequiredPlan } = getPlanLockState(item);
             
             // Open if explicitly selected, OR (has active child AND hasn't been explicitly closed)
-            const isOpen = !isLocked && (openGroup === item.id || (openGroup === "" && hasActiveChild));
+            const isOpen = !groupLocked && (openGroup === item.id || (openGroup === "" && hasActiveChild));
 
             return (
               <div key={item.id}>
                 <motion.div 
                   whileHover={{ background: "rgba(255,255,255,0.05)" }}
                   onClick={() => { 
-                    if (isLocked) {
-                      window.dispatchEvent(
-                        new CustomEvent("plan-upgrade-required", {
-                          detail: { feature: "Reports Center", requiredPlan: "Professional" }
-                        })
-                      );
+                    if (groupLocked) {
+                      fireUpgradeEvent(item.label, groupRequiredPlan);
                       return;
                     }
                     if (!collapsed) {
@@ -203,16 +250,16 @@ export default function Sidebar({ open, onClose }) {
                   }}
                   style={{ 
                     display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
-                    color: hasActiveChild && !isLocked ? "#fff" : "rgba(255,255,255,0.7)",
+                    color: hasActiveChild && !groupLocked ? "#fff" : "rgba(255,255,255,0.7)",
                     marginBottom: 2
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <item.icon size={20} color={hasActiveChild && !isLocked ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0, opacity: isLocked ? 0.5 : 1 }} />
-                    {!collapsed && <span style={{ fontSize: 15, fontWeight: hasActiveChild && !isLocked ? 700 : 500, opacity: isLocked ? 0.5 : 1 }}>{item.label}</span>}
+                    <item.icon size={20} color={hasActiveChild && !groupLocked ? ACCENT_COLOR : "rgba(255,255,255,0.7)"} style={{ flexShrink: 0, opacity: groupLocked ? 0.5 : 1 }} />
+                    {!collapsed && <span style={{ fontSize: 15, fontWeight: hasActiveChild && !groupLocked ? 700 : 500, opacity: groupLocked ? 0.5 : 1 }}>{item.label}</span>}
                   </div>
                   {!collapsed && (
-                    isLocked ? (
+                    groupLocked ? (
                       <Lock size={14} color="rgba(255,255,255,0.4)" />
                     ) : (
                       <motion.div animate={{ rotate: isOpen ? 90 : 0 }}><ChevronRight size={16} /></motion.div>
@@ -226,19 +273,15 @@ export default function Sidebar({ open, onClose }) {
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 44, paddingBottom: 8 }}>
                         {item.children.map(child => {
                           const isChildActive = location.pathname === child.path;
-                          const isChildLocked = child.isAdvanced && isStarter;
+                          const { locked: childLocked, requiredPlan: childRequiredPlan } = getPlanLockState(child);
                           
                           return (
                             <div key={child.path} onClick={() => {
-                              if (isChildLocked) {
-                                window.dispatchEvent(
-                                  new CustomEvent("plan-upgrade-required", {
-                                    detail: { feature: child.label, requiredPlan: "Professional" }
-                                  })
-                                );
+                              if (childLocked) {
+                                fireUpgradeEvent(child.label, childRequiredPlan);
                               }
                             }} style={{ cursor: "pointer" }}>
-                              {isChildLocked ? (
+                              {childLocked ? (
                                 <div style={{ 
                                   padding: "8px 12px", borderRadius: 8, fontSize: 14, 
                                   color: "rgba(255,255,255,0.4)",

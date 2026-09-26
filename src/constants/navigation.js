@@ -14,6 +14,7 @@ export const BASE_NAVIGATION = [
   },
   { 
     type: "group", label: "Operations", icon: Briefcase, id: "ops", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Sales", "Operations"],
+    planRequired: "professional",
     children: [
       { path: "/vendors", label: "Vendor Management" },
       { path: "/inventory", label: "Inventory Management" }
@@ -23,15 +24,16 @@ export const BASE_NAVIGATION = [
     type: "group", label: "Finance", icon: CreditCard, id: "finance", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Accounts"],
     children: [
       { path: "/finance/payments", label: "Payments & Receipts" },
-      { path: "/finance/booking-accounts", label: "Booking Accounts", isAdvanced: true },
+      { path: "/finance/booking-accounts", label: "Booking Accounts", planRequired: "professional" },
       { path: "/finance/collections", label: "Collections" },
-      { path: "/finance/expenses", label: "Purchases & Expenses" },
-      { path: "/finance/reports", label: "Financial Statements" },
-      { path: "/finance/advanced", label: "Advanced Accounting", isAdvanced: true }
+      { path: "/finance/expenses", label: "Purchases & Expenses", planRequired: "professional" },
+      { path: "/finance/reports", label: "Financial Statements", planRequired: "professional" },
+      { path: "/finance/advanced", label: "Advanced Accounting", planRequired: "professional" }
     ]
   },
   { 
     type: "group", label: "Staff & HR", icon: UsersRound, id: "external", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
+    planRequired: "professional",
     children: [
       { path: "/staff", label: "Staff Management" },
       { path: "/attendance", label: "Attendance" },
@@ -40,6 +42,7 @@ export const BASE_NAVIGATION = [
   },
   { 
     type: "group", label: "Attendance & Leaves", icon: CheckSquare, id: "staff-actions", roles: ["Sales", "Operations", "Reception", "Accounts", "Staff"],
+    planRequired: "professional",
     children: [
       { path: "/attendance", label: "My Attendance" },
       { path: "/leaves", label: "Leave Requests" }
@@ -47,6 +50,7 @@ export const BASE_NAVIGATION = [
   },
   { 
     type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Accounts"],
+    planRequired: "professional",
     children: [
       { path: "/reports", label: "Report Dashboard" },
       { path: "/reports/sales", label: "Sales Reports" },
@@ -58,7 +62,7 @@ export const BASE_NAVIGATION = [
       { path: "/reports/customer", label: "Customer Reports" }
     ]
   },
-  { type: "link", path: "/compliance", icon: ShieldCheck, label: "Compliance & Documents", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"] },
+  { type: "link", path: "/compliance", icon: ShieldCheck, label: "Compliance & Documents", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"], planRequired: "professional" },
   { 
     type: "group", label: "System", icon: Settings, id: "system", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester"],
     children: [
@@ -76,3 +80,26 @@ export const BASE_NAVIGATION = [
     ]
   }
 ];
+
+/**
+ * Plan tier levels used for comparison.
+ * A nav item with planRequired: "professional" means tier >= 2 needed.
+ */
+export const PLAN_TIERS = {
+  trial: 0,
+  starter: 1,
+  professional: 2,
+  business: 3,
+  lifetime: 99,
+};
+
+/**
+ * Human-readable plan names for upgrade messages
+ */
+export const PLAN_DISPLAY_NAMES = {
+  starter: "Starter",
+  professional: "Professional",
+  business: "Business",
+  lifetime: "Lifetime",
+  trial: "Trial",
+};

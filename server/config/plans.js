@@ -67,23 +67,29 @@ const PLANS = {
       custom_branding: true,
       sandbox: true,
       audit_logs: true,
+      operations: true,
+      compliance: true,
+      staff_hr: true,
 
       // Business features — NOT available during trial
       data_export: false,
       api_access: false,
       multi_branch: false,
+      white_label: false,
+      priority_support: false,
+      custom_features: false,
     },
     trialDays: 14,
   },
 
   starter: {
     name: "Starter",
-    displayName: "Starter — ₹999/mo",
+    displayName: "Starter — ₹1,999/mo",
     tier: 1,
-    monthlyPrice: 999,
-    annualPrice: 9999,
+    monthlyPrice: 1999,
+    annualPrice: 19999,
     limits: {
-      maxUsers: 3,
+      maxUsers: 2,
       maxHalls: 1,
       maxBranches: 1,
     },
@@ -102,7 +108,7 @@ const PLANS = {
       basic_reports: false,
       masters: true,
       availability: true,
-      expenses: true,
+      expenses: false,
 
       // Professional features — NOT available on Starter
       booking_accounts: false,
@@ -120,36 +126,42 @@ const PLANS = {
       vendor_statements: false,
       financial_periods: false,
       tax_invoices: false,
-      finance_reports: true,
+      finance_reports: false,
       staff_management: false,
       attendance: false,
       leave_management: false,
       jobs: false,
       vendors: false,
-      inventory: true,
+      inventory: false,
       advanced_reports: false,
       role_access: false,
       revenue_privacy: false,
       custom_branding: false,
       sandbox: false,
       audit_logs: false,
+      operations: false,
+      compliance: false,
+      staff_hr: false,
 
       // Business features — NOT available
       data_export: false,
       api_access: false,
       multi_branch: false,
+      white_label: false,
+      priority_support: false,
+      custom_features: false,
     },
   },
 
   professional: {
     name: "Professional",
-    displayName: "Professional — ₹3,999/mo",
+    displayName: "Professional — ₹4,999/mo",
     tier: 2,
-    monthlyPrice: 3999,
-    annualPrice: 39999,
+    monthlyPrice: 4999,
+    annualPrice: 49999,
     limits: {
       maxUsers: 10,
-      maxHalls: 5,
+      maxHalls: 3,
       maxBranches: 1,
     },
     features: {
@@ -198,11 +210,17 @@ const PLANS = {
       custom_branding: true,
       sandbox: true,
       audit_logs: true,
+      operations: true,
+      compliance: true,
+      staff_hr: true,
 
       // Business features — NOT available
       data_export: false,
       api_access: false,
       multi_branch: false,
+      white_label: false,
+      priority_support: false,
+      custom_features: false,
     },
   },
 
@@ -261,10 +279,16 @@ const PLANS = {
       custom_branding: true,
       sandbox: true,
       audit_logs: true,
+      operations: true,
+      compliance: true,
+      staff_hr: true,
 
       data_export: true,
       api_access: true,
       multi_branch: true,
+      white_label: true,
+      priority_support: true,
+      custom_features: true,
     },
   },
 
@@ -291,13 +315,23 @@ const PLANS = {
       attendance: true, leave_management: true, jobs: true, vendors: true,
       inventory: true, advanced_reports: true, role_access: true,
       revenue_privacy: true, custom_branding: true, sandbox: true, audit_logs: true,
+      operations: true, compliance: true, staff_hr: true,
       data_export: true, api_access: true, multi_branch: true,
+      white_label: true, priority_support: true, custom_features: true,
     },
   },
 };
 
 // Valid plan keys for database ENUM
 const PLAN_KEYS = Object.keys(PLANS);
+
+/**
+ * Plan tier lookup — used by frontend to compare plan levels.
+ */
+const PLAN_TIERS = {};
+for (const [key, plan] of Object.entries(PLANS)) {
+  PLAN_TIERS[key] = plan.tier;
+}
 
 /**
  * Get plan configuration by key
@@ -345,16 +379,18 @@ const ROUTE_FEATURE_MAP = {
   "/attendance": "attendance",
   "/leaves": "leave_management",
   "/jobs": "jobs",
-  "/inventory": "inventory",
-  "/vendors": "vendors",
+  "/inventory": "operations",
+  "/vendors": "operations",
   "/audit-logs": "audit_logs",
   "/api-access": "api_access",
-  "/reports": "basic_reports",
+  "/reports": "advanced_reports",
+  "/compliance": "compliance",
 };
 
 module.exports = {
   PLANS,
   PLAN_KEYS,
+  PLAN_TIERS,
   getPlan,
   checkFeature,
   checkLimit,

@@ -30,6 +30,7 @@ function clearAuthStorage() {
   localStorage.removeItem("hm_venue");
   localStorage.removeItem("hm_logged_in");
   localStorage.removeItem("hm_role");
+  localStorage.removeItem("hm_subscription");
   sessionStorage.removeItem("hm_environment");
 }
 
@@ -55,6 +56,12 @@ export function RoleProvider({ children }) {
   });
   const [activeEnvironment, setActiveEnvironmentState] = useState(() => {
     return sessionStorage.getItem("hm_environment") || "production";
+  });
+  const [subscription, setSubscriptionState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("hm_subscription");
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
   });
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("hm_token"));
 
@@ -118,6 +125,10 @@ export function RoleProvider({ children }) {
               }
             }
           }
+          if (payload.subscription) {
+            setSubscriptionState(payload.subscription);
+            localStorage.setItem("hm_subscription", JSON.stringify(payload.subscription));
+          }
         })
         .catch(() => {
           clearAuthStorage();
@@ -151,6 +162,10 @@ export function RoleProvider({ children }) {
       setUser(payload.user);
       setTenant(payload.tenant);
       setActiveEnvironmentState(defaultEnv);
+      if (payload.subscription) {
+        setSubscriptionState(payload.subscription);
+        localStorage.setItem("hm_subscription", JSON.stringify(payload.subscription));
+      }
       setIsLoggedIn(true);
       return { ok: true, user: payload.user };
     } catch (err) {
@@ -228,6 +243,7 @@ export function RoleProvider({ children }) {
       moduleAccess,
       setModuleAccess,
       setUser,
+      subscription,
     }}>
       {children}
     </RoleContext.Provider>

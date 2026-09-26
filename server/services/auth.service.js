@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const userRepository = require("../repositories/user.repository");
-const { Tenant } = require("../models"); // using direct models for cross-tenant logic if needed
+const { Tenant, Subscription } = require("../models"); // using direct models for cross-tenant logic if needed
 const { UnauthorizedError, NotFoundError, ConflictError, BadRequestError } = require("../helpers/errors");
 const { ROLES } = require("../helpers/roles");
 
@@ -45,6 +45,12 @@ class AuthService {
 
     const tenant = await Tenant.findByPk(user.tenantId);
 
+    // Fetch subscription for plan-based access control
+    const subscription = await Subscription.findOne({
+      where: { tenantId: user.tenantId },
+      order: [["id", "DESC"]]
+    });
+
     return {
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone },
@@ -54,6 +60,12 @@ class AuthService {
         sandboxEnabled: tenant.sandboxEnabled, 
         allowEnvironmentSwitch: tenant.allowEnvironmentSwitch 
       } : null,
+      subscription: subscription ? {
+        plan: subscription.plan,
+        status: subscription.status,
+        trialEndDate: subscription.trialEndDate,
+        subscriptionEndDate: subscription.subscriptionEndDate,
+      } : null,
     };
   }
 
@@ -62,6 +74,12 @@ class AuthService {
     if (!user) throw new NotFoundError("User");
 
     const tenant = await Tenant.findByPk(tenantId);
+
+    // Fetch subscription for plan-based access control
+    const subscription = await Subscription.findOne({
+      where: { tenantId },
+      order: [["id", "DESC"]]
+    });
     
     return {
       user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone },
@@ -70,6 +88,12 @@ class AuthService {
         slug: tenant.slug, 
         sandboxEnabled: tenant.sandboxEnabled, 
         allowEnvironmentSwitch: tenant.allowEnvironmentSwitch 
+      } : null,
+      subscription: subscription ? {
+        plan: subscription.plan,
+        status: subscription.status,
+        trialEndDate: subscription.trialEndDate,
+        subscriptionEndDate: subscription.subscriptionEndDate,
       } : null,
     };
   }
