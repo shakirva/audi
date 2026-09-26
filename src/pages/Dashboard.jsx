@@ -137,7 +137,7 @@ function ExecutiveCockpit() {
         bookingsAPI.getStats(),
         bookingsAPI.getAll({ limit: 1000 }),
         enquiriesAPI.getAll({ limit: 1000 }),
-        complianceAPI.getSummary().catch(() => null),
+        complianceAPI.getSummary({ hideUpgradeModal: true }).catch(() => null),
         settingsAPI.get().catch(() => null)
       ]);
 

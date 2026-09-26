@@ -30,7 +30,7 @@ export default function Collections() {
       setLoading(true);
       const [custRes, vendorRes] = await Promise.all([
         paymentsAPI.getAll({ limit: 100 }),
-        vendorsAPI.getAllPayments().catch(() => ({ data: { data: { data: [] } } }))
+        vendorsAPI.getAllPayments({ hideUpgradeModal: true }).catch(() => ({ data: { data: { data: [] } } }))
       ]);
       const custPayments = custRes.data.data?.data || custRes.data.data || [];
       const vendorPayments = vendorRes.data.data?.data || vendorRes.data.data || [];

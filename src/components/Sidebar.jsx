@@ -29,7 +29,7 @@ export default function Sidebar({ open, onClose }) {
       }).catch(() => {});
     }
     // Fetch compliance badge counts
-    complianceAPI.getSummary().then(res => {
+    complianceAPI.getSummary({ hideUpgradeModal: true }).then(res => {
       const s = res.data?.data;
       if (s) setComplianceBadge({ expired: s.expired || 0, expiringSoon: s.expiringSoon || 0 });
     }).catch(() => {});

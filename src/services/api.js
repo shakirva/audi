@@ -36,9 +36,8 @@ api.interceptors.response.use(
       }
     }
     if (error.response?.status === 403 && (error.response?.data?.code === "PLAN_UPGRADE_REQUIRED" || error.response?.data?.code === "LIMIT_EXCEEDED")) {
-      // Only pop the global modal for actions (POST/PUT/DELETE) or explicit limit exceeded.
-      // Background GET requests should just fail gracefully in the component without locking the screen.
-      if (error.config?.method !== 'get' || error.response?.data?.code === "LIMIT_EXCEEDED") {
+      // Dispatch global modal unless the request explicitly asked to suppress it (e.g., background fetches)
+      if (!error.config?.hideUpgradeModal) {
         window.dispatchEvent(new CustomEvent("plan-upgrade-required", { detail: error.response.data }));
       }
     }
@@ -192,7 +191,7 @@ export const jobsAPI = {
 // MASTERS (Halls, Event Types, etc.)
 // ═══════════════════════════════════
 export const vendorsAPI = {
-  getAll: (params) => api.get("/v1/vendors", { params }),
+  getAll: (params, config = {}) => api.get("/v1/vendors", { params, ...config }),
   create: (data) => api.post("/v1/vendors", data),
   update: (id, data) => api.put(`/v1/vendors/${id}`, data),
   remove: (id) => api.delete(`/v1/vendors/${id}`),
@@ -202,7 +201,7 @@ export const vendorsAPI = {
   deleteBill: (vendorId, billId) => api.delete(`/v1/vendors/${vendorId}/bills/${billId}`),
   // Payments
   getPayments: (vendorId) => api.get(`/v1/vendors/${vendorId}/payments`),
-  getAllPayments: () => api.get("/v1/vendors/all-payments"),
+  getAllPayments: (config = {}) => api.get("/v1/vendors/all-payments", config),
   createPayment: (vendorId, data) => api.post(`/v1/vendors/${vendorId}/payments`, data),
   updatePayment: (vendorId, paymentId, data) => api.put(`/v1/vendors/${vendorId}/payments/${paymentId}`, data),
   deletePayment: (vendorId, paymentId) => api.delete(`/v1/vendors/${vendorId}/payments/${paymentId}`),
@@ -297,7 +296,7 @@ export const leavesAPI = {
 export const complianceAPI = {
   getAll: (params) => api.get("/v1/compliance", { params }),
   get: (id) => api.get(`/v1/compliance/${id}`),
-  getSummary: () => api.get("/v1/compliance/summary"),
+  getSummary: (config = {}) => api.get("/v1/compliance/summary", config),
   getDefaultTypes: () => api.get("/v1/compliance/types/defaults"),
   create: (data) => api.post("/v1/compliance", data),
   update: (id, data) => api.put(`/v1/compliance/${id}`, data),

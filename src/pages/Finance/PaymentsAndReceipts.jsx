@@ -30,7 +30,7 @@ export default function PaymentsAndReceipts() {
         bookingsAPI.getAll({ limit: 100 }),
         accountsAPI.getDashboard(),
         settingsAPI.get().catch(() => ({ data: { data: {} } })),
-        vendorsAPI.getAll().catch(() => ({ data: { data: [] } })),
+        vendorsAPI.getAll(undefined, { hideUpgradeModal: true }).catch(() => ({ data: { data: [] } })),
         paymentsAPI.getAll({ limit: 1000 }).catch(() => ({ data: { data: [] } }))
       ]);
       setBookings(bookingsRes.data.data || []);
