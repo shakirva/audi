@@ -295,9 +295,9 @@ export default function SuperAdminTenants() {
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Plan</label>
                   <select value={newTenant.plan} onChange={e => setNewTenant({...newTenant, plan: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box", background: "#fff" }}>
                     <option value="trial">Trial (14 Days)</option>
-                    <option value="starter">Starter — ₹999/month</option>
-                    <option value="professional">Professional — ₹3,999/month</option>
-                    <option value="business">Business — ₹6,999/month</option>
+                    <option value="starter">Starter — ₹1,999/month</option>
+                    <option value="professional">Professional — ₹4,999/month</option>
+                    <option value="business">Business — ₹7,999/month</option>
                     <option value="lifetime">Lifetime</option>
                   </select>
                 </div>
@@ -356,9 +356,9 @@ export default function SuperAdminTenants() {
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Subscription Plan</label>
                   <select value={editTenant.plan} onChange={e => setEditTenant({...editTenant, plan: e.target.value})} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, boxSizing: "border-box", background: "#fff" }}>
                     <option value="trial">Trial (14 Days)</option>
-                    <option value="starter">Starter — ₹999/month</option>
-                    <option value="professional">Professional — ₹3,999/month</option>
-                    <option value="business">Business — ₹6,999/month</option>
+                    <option value="starter">Starter — ₹1,999/month</option>
+                    <option value="professional">Professional — ₹4,999/month</option>
+                    <option value="business">Business — ₹7,999/month</option>
                     <option value="lifetime">Lifetime</option>
                   </select>
                 </div>
