@@ -38,6 +38,12 @@ const subscriptionGuard = async (req, res, next) => {
       return res.status(403).json({ error: "Subscription expired." });
     }
 
+    // Lifetime plans NEVER expire — skip all date checks
+    if (subscription.plan === "lifetime") {
+      req.subscription = subscription;
+      return next();
+    }
+
     // If plan is trial, check trialEndDate
     if (subscription.plan === "trial") {
       if (subscription.trialEndDate && subscription.trialEndDate < today) {

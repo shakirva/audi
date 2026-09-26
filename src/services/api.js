@@ -36,7 +36,11 @@ api.interceptors.response.use(
       }
     }
     if (error.response?.status === 403 && (error.response?.data?.code === "PLAN_UPGRADE_REQUIRED" || error.response?.data?.code === "LIMIT_EXCEEDED")) {
-      window.dispatchEvent(new CustomEvent("plan-upgrade-required", { detail: error.response.data }));
+      // Only pop the global modal for actions (POST/PUT/DELETE) or explicit limit exceeded.
+      // Background GET requests should just fail gracefully in the component without locking the screen.
+      if (error.config?.method !== 'get' || error.response?.data?.code === "LIMIT_EXCEEDED") {
+        window.dispatchEvent(new CustomEvent("plan-upgrade-required", { detail: error.response.data }));
+      }
     }
     
     return Promise.reject(error);

@@ -108,25 +108,24 @@ const PLANS = {
       basic_reports: false,
       masters: true,
       availability: true,
-      expenses: false,
-
-      // Professional features — NOT available on Starter
-      booking_accounts: false,
-      advanced_accounting: false,
-      chart_of_accounts: false,
-      vouchers: false,
-      journal_entries: false,
-      general_ledger: false,
-      trial_balance: false,
-      profit_loss: false,
-      balance_sheet: false,
-      cash_book: false,
-      bank_book: false,
+      // Finance & Accounting features — newly unlocked for Starter based on feedback
+      expenses: true,
+      booking_accounts: true,
+      advanced_accounting: true,
+      chart_of_accounts: true,
+      vouchers: true,
+      journal_entries: true,
+      general_ledger: true,
+      trial_balance: true,
+      profit_loss: true,
+      balance_sheet: true,
+      cash_book: true,
+      bank_book: true,
       customer_statements: false,
       vendor_statements: false,
       financial_periods: false,
-      tax_invoices: false,
-      finance_reports: false,
+      tax_invoices: true,
+      finance_reports: true,
       staff_management: false,
       attendance: false,
       leave_management: false,
@@ -341,12 +340,23 @@ function getPlan(planKey) {
 }
 
 /**
- * Check if a plan has access to a specific feature
+ * Check if a plan has access to a specific feature.
+ * Safety net: If a feature key is not explicitly listed in the plan's features,
+ * plans with tier >= 2 (Professional+) default to ALLOWED.
+ * Only Starter (tier 1) and Trial (tier 0) will be blocked by missing keys.
  */
 function checkFeature(planKey, featureKey) {
   const plan = PLANS[planKey];
   if (!plan) return false;
-  return plan.features[featureKey] === true;
+  
+  // If the feature is explicitly defined, use it
+  if (featureKey in plan.features) {
+    return plan.features[featureKey] === true;
+  }
+  
+  // Safety net: Professional (tier 2) and above get access to unlisted features
+  // This prevents accidental lockouts from missing feature keys
+  return plan.tier >= 2;
 }
 
 /**
