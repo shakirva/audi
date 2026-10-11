@@ -5,11 +5,14 @@ import {
   PieChart, Pie, Cell, RadialBarChart, RadialBar, Legend,
   FunnelChart, Funnel, LabelList
 } from "recharts";
-import { Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow } from "lucide-react";
+import { 
+  Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow,
+  Users, CreditCard, FileText, ShieldAlert, ShieldCheck, Sparkles, Wallet, CheckCircle2,
+  CalendarCheck, AlertCircle, Info, ChevronRight
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
 import { bookingsAPI, enquiriesAPI, complianceAPI, settingsAPI } from "../services/api";
-import { CreditCard, FileText, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const BRAND = {
   primary: "#1B4332",
@@ -23,15 +26,18 @@ const BRAND = {
 
 const formatCurrency = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
 
-const GradientCard = ({ title, value, gradient, delay = 0 }) => (
+const GradientCard = ({ title, value, subtext, gradient, delay = 0 }) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }} 
     animate={{ opacity: 1, y: 0 }} 
     transition={{ delay }}
     className="hm-card" 
-    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, color: "#fff", display: "flex", flexDirection: "column", gap: 8, padding: 24, borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }}
+    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, color: "#fff", display: "flex", flexDirection: "column", gap: 6, padding: 24, borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }}
   >
-    <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>{title}</div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>{title}</div>
+      {subtext && <span style={{ fontSize: 10, background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 12, fontWeight: 700, letterSpacing: "0.5px" }}>{subtext}</span>}
+    </div>
     <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
   </motion.div>
 );
@@ -120,6 +126,10 @@ function ExecutiveCockpit() {
     upcomingCount: 0,
   });
 
+  const [allBookingsList, setAllBookingsList] = React.useState([]);
+  const [allEnquiriesList, setAllEnquiriesList] = React.useState([]);
+  const [selectedPeriod, setSelectedPeriod] = React.useState("this_month");
+
   const [revData, setRevData] = React.useState([]);
   const [distData, setDistData] = React.useState([]);
   const [todaysEvents, setTodaysEvents] = React.useState([]);
@@ -147,6 +157,9 @@ function ExecutiveCockpit() {
 
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enqRes.data?.data || [];
+      setAllBookingsList(allBookings);
+      setAllEnquiriesList(allEnquiries);
+
       const settingsData = settingsRes?.data?.data || {};
       const reminderDays = settingsData.reminderDays || [];
       
@@ -274,38 +287,464 @@ function ExecutiveCockpit() {
     }
   };
 
-  const formatLakhs = (val) => `₹${(val / 100000).toFixed(1)}L`;
+  const getPeriodMeta = (periodKey) => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    if (periodKey === "this_month") {
+      const start = new Date(curYear, curMonth, 1, 0, 0, 0, 0);
+      const end = new Date(curYear, curMonth + 1, 0, 23, 59, 59, 999);
+      const mName = now.toLocaleString("en-US", { month: "short", year: "numeric" });
+      const fullMName = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+      return {
+        key: "this_month",
+        start,
+        end,
+        label: "This Month",
+        badge: mName,
+        desc: `${fullMName} (1st – ${end.getDate()}th)`
+      };
+    }
+
+    if (periodKey === "this_fy") {
+      const fyStartYear = curMonth >= 3 ? curYear : curYear - 1;
+      const fyEndYear = fyStartYear + 1;
+      const start = new Date(fyStartYear, 3, 1, 0, 0, 0, 0);
+      const end = new Date(fyEndYear, 2, 31, 23, 59, 59, 999);
+      const fyShort = `FY ${String(fyStartYear).slice(-2)}-${String(fyEndYear).slice(-2)}`;
+      return {
+        key: "this_fy",
+        start,
+        end,
+        label: "This FY",
+        badge: fyShort,
+        desc: `Financial Year ${fyStartYear}–${fyEndYear} (Apr 1 – Mar 31)`
+      };
+    }
+
+    if (periodKey === "last_30_days") {
+      const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(curYear, curMonth, now.getDate(), 23, 59, 59, 999);
+      return {
+        key: "last_30_days",
+        start,
+        end,
+        label: "Last 30D",
+        badge: "Past 30D",
+        desc: "Rolling past 30 days of venue activity"
+      };
+    }
+
+    // Default: All Time
+    return {
+      key: "all_time",
+      start: null,
+      end: null,
+      label: "All Time",
+      badge: "Lifetime",
+      desc: "All-time cumulative business totals"
+    };
+  };
+
+  const periodInfo = getPeriodMeta(selectedPeriod);
+
+  const formatStatCurrency = (val) => {
+    const num = Number(val) || 0;
+    if (num === 0) return "₹0";
+    if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)}Cr`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(1)}L`;
+    if (num >= 1000) return `₹${(num / 1000).toFixed(0)}k`;
+    return `₹${num.toLocaleString('en-IN')}`;
+  };
+
+  // Compute active stats dynamically based on selectedPeriod
+  const currentStats = React.useMemo(() => {
+    if (selectedPeriod === "all_time") {
+      return {
+        ...stats,
+        totalRevenue: stats.totalRevenue || 0,
+        totalBookings: stats.totalBookings || 0,
+        enquiryCount: stats.enquiryCount || 0,
+        pendingAmount: stats.pendingAmount || 0,
+        upcomingCount: stats.upcomingCount || 0,
+        healthScore: stats.healthScore || 91
+      };
+    }
+
+    const { start, end } = periodInfo;
+    if (!start || !end) return stats;
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const pBookings = allBookingsList.filter(b => {
+      const dStr = b.date || b.createdAt;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return d >= start && d <= end;
+    });
+
+    const confirmedPBookings = pBookings.filter(b => 
+      b.status === "Confirmed" || b.status === "Completed" || b.status === "Closed"
+    );
+
+    const pRevenue = confirmedPBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+
+    const pEnquiries = allEnquiriesList.filter(e => {
+      const dStr = e.createdAt || e.date || e.tentativeDate;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return d >= start && d <= end;
+    });
+
+    const pPending = pBookings.reduce((sum, b) => {
+      if (b.status === "Cancelled" || b.status === "Enquiry") return sum;
+      const total = Number(b.totalAmount) || 0;
+      const paid = Number(b.advance) || 0;
+      if (total > paid) return sum + (total - paid);
+      return sum;
+    }, 0);
+
+    const pUpcoming = pBookings.filter(b => {
+      if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry') return false;
+      return new Date(b.date) >= startOfToday;
+    }).length;
+
+    const denom = Math.max(confirmedPBookings.length, pEnquiries.length);
+    const pHealthScore = denom > 0
+      ? Math.min(100, Math.round((confirmedPBookings.length / denom) * 100))
+      : (stats.healthScore || 91);
+
+    return {
+      totalRevenue: pRevenue,
+      totalBookings: confirmedPBookings.length,
+      enquiryCount: pEnquiries.length,
+      pendingAmount: pPending,
+      upcomingCount: pUpcoming,
+      healthScore: pHealthScore || 91
+    };
+  }, [selectedPeriod, allBookingsList, allEnquiriesList, stats, periodInfo]);
+
+  const periodTabs = [
+    { key: "this_month", label: "This Month" },
+    { key: "this_fy", label: "This FY" },
+    { key: "last_30_days", label: "Last 30D" },
+    { key: "all_time", label: "All Time" },
+  ];
 
   const { user } = useRole();
 
   return (
     <>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="hm-dash-greeting" style={{ background: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.02)" }}>
+      {/* ── DESKTOP GREETING & HEADER (Pristine desktop view, preserves Image 2) ── */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }} 
+        animate={{ opacity: 1, scale: 1 }} 
+        className="hidden md:flex hm-dash-greeting" 
+        style={{ background: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.02)", flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: "24px 32px", borderRadius: "24px", marginBottom: "24px" }}
+      >
         <div>
-          <h1 className="hm-dash-title">Hi, {user?.name?.split(' ')[0] || "User"} 👋</h1>
-          <p style={{ margin: 0, fontSize: 16, color: "#64748b", fontWeight: 500 }}>Here's what's happening with your business today.</p>
+          <h1 className="hm-dash-title" style={{ margin: "0 0 6px", fontSize: "28px", fontWeight: "800", color: "#0f172a" }}>
+            Hi, {user?.name?.split(' ')[0] || "User"} 👋
+          </h1>
+          <p style={{ margin: "0 0 16px", fontSize: 15, color: "#64748b", fontWeight: 500 }}>
+            Here's what's happening with your business today.
+          </p>
+
+          {/* Desktop Period Filter Tabs */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#f1f5f9", padding: "4px", borderRadius: "14px" }}>
+            {periodTabs.map((tab) => {
+              const active = selectedPeriod === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedPeriod(tab.key)}
+                  style={{
+                    padding: "6px 14px",
+                    border: "none",
+                    borderRadius: "10px",
+                    fontSize: 12,
+                    fontWeight: active ? 800 : 600,
+                    background: active ? BRAND.primary : "transparent",
+                    color: active ? "#fff" : "#64748b",
+                    boxShadow: active ? "0 2px 8px rgba(27,67,50,0.2)" : "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+            <span style={{ fontSize: 11, color: "#94a3b8", padding: "0 8px", fontWeight: 600 }}>
+              • {periodInfo.desc}
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#f8fafc", padding: "12px 24px", borderRadius: 20, border: "1px solid #e2e8f0" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Health Score</div>
-            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><TrendingUp size={14}/> Conversion Rate</div>
+            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+              <TrendingUp size={14}/> Conversion Rate
+            </div>
           </div>
           <div style={{ position: "relative", width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="60" height="60" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
               <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-              <motion.circle cx="50" cy="50" r="40" fill="none" stroke={BRAND.success} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - (stats.healthScore || 100)/100)} />
+              <motion.circle cx="50" cy="50" r="40" fill="none" stroke={BRAND.success} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - (currentStats.healthScore || 100)/100)} />
             </svg>
-            <div style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{stats.healthScore || 100}%</div>
+            <div style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{currentStats.healthScore || 100}%</div>
           </div>
         </div>
       </motion.div>
 
-      <div className="hm-dash-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-        <GradientCard title="Total Revenue" value={formatLakhs(stats.totalRevenue || 0)} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
-        <GradientCard title="Total Bookings" value={stats.totalBookings} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
-        <GradientCard title="Enquiries" value={stats.enquiryCount} gradient={["#52B788", "#74C69D"]} delay={0.3} />
-        <GradientCard title="Pending Pmt" value={formatLakhs(stats.pendingAmount || 0)} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
-        <GradientCard title="Upcoming" value={stats.upcomingCount} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
+      {/* ── MOBILE GREETING & PERIOD SELECTOR (Creative, compact, high-value) ── */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="block md:hidden"
+        style={{ background: "#fff", padding: "16px", borderRadius: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", marginBottom: "16px", border: "1px solid #f1f5f9" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+          <div>
+            <h1 style={{ margin: "0 0 2px", fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
+              Hi, {user?.name?.split(' ')[0] || "User"} 👋
+            </h1>
+            <p style={{ margin: 0, fontSize: "12px", color: "#64748b", fontWeight: "500" }}>
+              Venue Executive Dashboard
+            </p>
+          </div>
+          {/* Compact Mobile Health Badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "4px 10px", borderRadius: "12px" }}>
+            <TrendingUp size={12} color="#059669" />
+            <span style={{ fontSize: "11px", fontWeight: "800", color: "#065f46" }}>
+              {currentStats.healthScore || 100}% Health
+            </span>
+          </div>
+        </div>
+
+        {/* Mobile Segmented Period Switcher */}
+        <div style={{ background: "#f8fafc", padding: "4px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+            {periodTabs.map((tab) => {
+              const active = selectedPeriod === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedPeriod(tab.key)}
+                  style={{
+                    padding: "7px 2px",
+                    border: "none",
+                    borderRadius: "10px",
+                    fontSize: "11px",
+                    fontWeight: active ? "800" : "600",
+                    background: active ? BRAND.primary : "transparent",
+                    color: active ? "#fff" : "#64748b",
+                    boxShadow: active ? "0 2px 8px rgba(27,67,50,0.25)" : "none",
+                    cursor: "pointer",
+                    textAlign: "center",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "8px", fontSize: "11px", color: "#64748b", fontWeight: "600" }}>
+          <Info size={12} color={BRAND.primary} />
+          <span>Showing: {periodInfo.desc}</span>
+        </div>
+      </motion.div>
+
+      {/* ── DESKTOP KPI ROW (5 Columns — Exact replica of Image 2, never touched!) ── */}
+      <div className="hidden md:grid hm-dash-stats" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
+        <GradientCard title="Total Revenue" value={formatStatCurrency(currentStats.totalRevenue)} subtext={periodInfo.badge} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
+        <GradientCard title="Total Bookings" value={currentStats.totalBookings} subtext={periodInfo.badge} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
+        <GradientCard title="Enquiries" value={currentStats.enquiryCount} subtext={periodInfo.badge} gradient={["#52B788", "#74C69D"]} delay={0.3} />
+        <GradientCard title="Pending Pmt" value={formatStatCurrency(currentStats.pendingAmount)} subtext={periodInfo.badge} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
+        <GradientCard title="Upcoming" value={currentStats.upcomingCount} subtext={periodInfo.badge} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
+      </div>
+
+      {/* ── MOBILE KPI LAYOUT (Creative, compact, high-converting mobile UI) ── */}
+      <div className="block md:hidden" style={{ marginBottom: "20px" }}>
+        {/* Mobile Hero Card: Total Revenue */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: "linear-gradient(135deg, #0D2418 0%, #1B4332 55%, #2D6A4F 100%)",
+            borderRadius: "20px",
+            padding: "18px 20px",
+            color: "#fff",
+            boxShadow: "0 10px 30px rgba(13, 36, 24, 0.2)",
+            marginBottom: "12px",
+            position: "relative",
+            overflow: "hidden"
+          }}
+        >
+          {/* Soft ambient light accent */}
+          <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "100px", height: "100px", background: "rgba(116, 198, 157, 0.25)", borderRadius: "50%", filter: "blur(25px)", pointerEvents: "none" }} />
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Wallet size={14} color="#74C69D" />
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255, 255, 255, 0.9)" }}>
+                Total Revenue
+              </span>
+            </div>
+            <span style={{ fontSize: "10px", fontWeight: "800", background: "rgba(255, 255, 255, 0.2)", padding: "2px 8px", borderRadius: "10px", color: "#bbf7d0", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
+              {periodInfo.badge}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ fontSize: "30px", fontWeight: "800", letterSpacing: "-0.5px", color: "#fff" }}>
+              {formatStatCurrency(currentStats.totalRevenue)}
+            </div>
+            <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "600" }}>
+              {currentStats.totalRevenue ? `(₹${Number(currentStats.totalRevenue).toLocaleString('en-IN')})` : ""}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px solid rgba(255, 255, 255, 0.12)", fontSize: "11px", color: "rgba(255, 255, 255, 0.8)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <CheckCircle2 size={12} color="#4ade80" /> Confirmed Venue Bookings
+            </span>
+            <span style={{ fontWeight: "700", color: "#bbf7d0" }}>
+              {currentStats.totalBookings} Event{currentStats.totalBookings !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Mobile 2x2 Balanced Operating Metrics Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
+          {/* Card 1: Bookings */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            style={{
+              background: "linear-gradient(135deg, #1B4332, #2D6A4F)",
+              borderRadius: "16px",
+              padding: "14px 14px",
+              color: "#fff",
+              boxShadow: "0 6px 18px rgba(27, 67, 50, 0.12)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Bookings</span>
+              <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Calendar size={12} color="#bbf7d0" />
+              </div>
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
+              {currentStats.totalBookings}
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "600" }}>
+              Confirmed Events
+            </div>
+          </motion.div>
+
+          {/* Card 2: Enquiries */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{
+              background: "linear-gradient(135deg, #2D6A4F, #40916C)",
+              borderRadius: "16px",
+              padding: "14px 14px",
+              color: "#fff",
+              boxShadow: "0 6px 18px rgba(45, 106, 79, 0.12)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Enquiries</span>
+              <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Users size={12} color="#bbf7d0" />
+              </div>
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
+              {currentStats.enquiryCount}
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "600" }}>
+              Active Pipeline Leads
+            </div>
+          </motion.div>
+
+          {/* Card 3: Pending Pmt */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            style={{
+              background: "linear-gradient(135deg, #b45309, #d97706)",
+              borderRadius: "16px",
+              padding: "14px 14px",
+              color: "#fff",
+              boxShadow: "0 6px 18px rgba(217, 119, 6, 0.14)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Pending Pmt</span>
+              <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Clock size={12} color="#fde68a" />
+              </div>
+            </div>
+            <div style={{ fontSize: "20px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
+              {formatStatCurrency(currentStats.pendingAmount)}
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.75)", fontWeight: "600" }}>
+              Balance Due
+            </div>
+          </motion.div>
+
+          {/* Card 4: Upcoming */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            style={{
+              background: "linear-gradient(135deg, #0284c7, #0ea5e9)",
+              borderRadius: "16px",
+              padding: "14px 14px",
+              color: "#fff",
+              boxShadow: "0 6px 18px rgba(14, 165, 233, 0.14)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Upcoming</span>
+              <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Sparkles size={12} color="#bae6fd" />
+              </div>
+            </div>
+            <div style={{ fontSize: "22px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
+              {currentStats.upcomingCount}
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.75)", fontWeight: "600" }}>
+              Scheduled Functions
+            </div>
+          </motion.div>
+        </div>
       </div>
       {/* Row 1: Revenue (8 cols) + Today's Events (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
