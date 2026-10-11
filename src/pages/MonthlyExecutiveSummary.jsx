@@ -97,8 +97,14 @@ export default function MonthlyExecutiveSummary() {
   const venueTitle = getVenueName();
 
   // ──────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // PROFESSIONAL DIRECT PDF EXPORT ENGINE (jsPDF + autoTable)
   // ──────────────────────────────────────────────────────────────────────────
+  const formatPDFCurrency = (amount) => {
+    const num = Math.round(Number(amount) || 0);
+    return `Rs. ${num.toLocaleString('en-IN')}`;
+  };
+
   const handleExportPDF = async () => {
     try {
       setIsExporting(true);
@@ -128,7 +134,7 @@ export default function MonthlyExecutiveSummary() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(212, 230, 220);
       doc.text('EXECUTIVE MONTHLY FINANCIAL & PERFORMANCE AUDIT REPORT', 14, 18);
-      doc.text(`Reporting Period: ${monthName} ${selectedYear}  |  Currency: INR (₹)`, 14, 24);
+      doc.text(`Reporting Period: ${monthName} ${selectedYear}  |  Currency: Indian Rupee (INR)`, 14, 24);
 
       // Top Right Meta in Header
       doc.setFontSize(8);
@@ -142,11 +148,11 @@ export default function MonthlyExecutiveSummary() {
 
       doc.setTextColor(...slateDark);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.text('1. FINANCIAL EXECUTIVE SUMMARY', 14, curY);
       curY += 5;
 
-      const kpiBoxWidth = (pageWidth - 28 - 9) / 4;
+      const kpiBoxWidth = 42.5;
       const kpiBoxHeight = 22;
 
       // KPI 1: Revenue
@@ -156,63 +162,63 @@ export default function MonthlyExecutiveSummary() {
       doc.setFontSize(7.5);
       doc.setTextColor(...textMuted);
       doc.setFont('helvetica', 'bold');
-      doc.text('GROSS REVENUE', 18, curY + 6);
-      doc.setFontSize(11);
+      doc.text('GROSS REVENUE', 17, curY + 6);
+      doc.setFontSize(11.5);
       doc.setTextColor(27, 67, 50);
-      doc.text(formatCurrency(totalRevenue), 18, curY + 14);
+      doc.text(formatPDFCurrency(totalRevenue), 17, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${totalBookings} Confirmed Events`, 18, curY + 19);
+      doc.text(`${totalBookings} Confirmed Events`, 17, curY + 19);
 
       // KPI 2: Expenses
-      const kpi2X = 14 + kpiBoxWidth + 3;
+      const kpi2X = 14 + kpiBoxWidth + 4;
       doc.setFillColor(248, 250, 252);
       doc.roundedRect(kpi2X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
       doc.setFontSize(7.5);
       doc.setTextColor(...textMuted);
-      doc.text('TOTAL EXPENSES', kpi2X + 4, curY + 6);
-      doc.setFontSize(11);
+      doc.text('TOTAL EXPENSES', kpi2X + 3, curY + 6);
+      doc.setFontSize(11.5);
       doc.setTextColor(190, 18, 60);
-      doc.text(formatCurrency(totalExpenses), kpi2X + 4, curY + 14);
+      doc.text(formatPDFCurrency(totalExpenses), kpi2X + 3, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${expenseRatio}% of Revenue`, kpi2X + 4, curY + 19);
+      doc.text(`${expenseRatio}% of Revenue`, kpi2X + 3, curY + 19);
 
       // KPI 3: Net Operating Balance
-      const kpi3X = kpi2X + kpiBoxWidth + 3;
+      const kpi3X = kpi2X + kpiBoxWidth + 4;
       doc.setFillColor(240, 253, 244);
       doc.setDrawColor(167, 243, 208);
       doc.roundedRect(kpi3X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
       doc.setFontSize(7.5);
       doc.setTextColor(...textMuted);
-      doc.text('NET OPERATING BALANCE', kpi3X + 4, curY + 6);
-      doc.setFontSize(11);
+      doc.text('NET OPERATING BALANCE', kpi3X + 3, curY + 6);
+      doc.setFontSize(11.5);
       doc.setTextColor(netBalance >= 0 ? 5 : 220, netBalance >= 0 ? 150 : 38, netBalance >= 0 ? 105 : 38);
-      doc.text(formatCurrency(netBalance), kpi3X + 4, curY + 14);
+      doc.text(formatPDFCurrency(netBalance), kpi3X + 3, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${operatingMargin}% Margin`, kpi3X + 4, curY + 19);
+      doc.text(`${operatingMargin}% Margin`, kpi3X + 3, curY + 19);
 
       // KPI 4: Operating Health
-      const kpi4X = kpi3X + kpiBoxWidth + 3;
+      const kpi4X = kpi3X + kpiBoxWidth + 4;
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
       doc.roundedRect(kpi4X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
       doc.setFontSize(7.5);
       doc.setTextColor(...textMuted);
-      doc.text('LEAD CONVERSION', kpi4X + 4, curY + 6);
-      doc.setFontSize(11);
+      doc.text('LEAD CONVERSION', kpi4X + 3, curY + 6);
+      doc.setFontSize(11.5);
       doc.setTextColor(37, 99, 235);
-      doc.text(`${conversionRate}%`, kpi4X + 4, curY + 14);
+      doc.text(`${conversionRate}%`, kpi4X + 3, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${totalBookings} / ${totalEnquiries} Enquiries`, kpi4X + 4, curY + 19);
+      doc.text(`${totalBookings} / ${totalEnquiries} Enquiries`, kpi4X + 3, curY + 19);
 
       curY += kpiBoxHeight + 8;
 
       // ── SECTION 2: OPERATIONS OVERVIEW ROW ──
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(...slateDark);
       doc.text('2. OPERATIONAL SUMMARY', 14, curY);
       curY += 5;
@@ -223,7 +229,7 @@ export default function MonthlyExecutiveSummary() {
         String(totalEnquiries),
         String(data?.operations?.newCustomers || 0),
         String(data?.operations?.cancelledBookings || 0),
-        formatCurrency(avgBookingValue)
+        formatPDFCurrency(avgBookingValue)
       ]];
 
       autoTable(doc, {
@@ -232,7 +238,7 @@ export default function MonthlyExecutiveSummary() {
         body: opsData,
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'center' },
-        bodyStyles: { fontSize: 8.5, halign: 'center', textColor: [15, 23, 42] },
+        bodyStyles: { fontSize: 8.5, halign: 'center', textColor: [15, 23, 42], font: 'helvetica' },
         styles: { cellPadding: 3 }
       });
 
@@ -240,7 +246,7 @@ export default function MonthlyExecutiveSummary() {
 
       // ── SECTION 3: RECENT BOOKINGS TABLE ──
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(...slateDark);
       doc.text('3. CONFIRMED BOOKINGS BREAKDOWN', 14, curY);
       curY += 4;
@@ -250,8 +256,8 @@ export default function MonthlyExecutiveSummary() {
         formatDate(b.date),
         b.customerName || 'Customer',
         b.hall || 'Main Hall',
-        formatCurrency(b.totalAmount),
-        formatCurrency(b.balanceAmount),
+        formatPDFCurrency(b.totalAmount),
+        formatPDFCurrency(b.balanceAmount),
         b.status || 'Confirmed'
       ]);
 
@@ -265,17 +271,21 @@ export default function MonthlyExecutiveSummary() {
         body: bookingRows,
         foot: recentBookings.length > 0 ? [[
           { content: 'Total Confirmed Bookings Value:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: formatCurrency(totalRenderedBookingRevenue), styles: { halign: 'right', fontStyle: 'bold', textColor: [27, 67, 50] } },
-          { content: formatCurrency(totalRenderedBookingBalance), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } },
+          { content: formatPDFCurrency(totalRenderedBookingRevenue), styles: { halign: 'right', fontStyle: 'bold', textColor: [27, 67, 50] } },
+          { content: formatPDFCurrency(totalRenderedBookingBalance), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } },
           ''
         ]] : undefined,
         theme: 'striped',
         headStyles: { fillColor: [27, 67, 50], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59], font: 'helvetica' },
         columnStyles: {
-          4: { halign: 'right', fontStyle: 'bold' },
-          5: { halign: 'right', fontStyle: 'bold' },
-          6: { halign: 'center' }
+          0: { cellWidth: 26 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 38 },
+          3: { cellWidth: 28 },
+          4: { halign: 'right', fontStyle: 'bold', cellWidth: 28 },
+          5: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+          6: { halign: 'center', cellWidth: 16 }
         },
         styles: { cellPadding: 2.5 }
       });
@@ -290,7 +300,7 @@ export default function MonthlyExecutiveSummary() {
 
       // ── SECTION 4: EXPENSES BREAKDOWN ──
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(...slateDark);
       doc.text('4. OPERATIONAL EXPENSES BREAKDOWN', 14, curY);
       curY += 4;
@@ -299,7 +309,7 @@ export default function MonthlyExecutiveSummary() {
         formatDate(e.date),
         e.category || 'General',
         e.description || '-',
-        formatCurrency(e.amount)
+        formatPDFCurrency(e.amount)
       ]);
 
       if (expenseRows.length === 0) {
@@ -312,13 +322,16 @@ export default function MonthlyExecutiveSummary() {
         body: expenseRows,
         foot: recentExpenses.length > 0 ? [[
           { content: 'Total Operational Expenses:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: formatCurrency(totalRenderedExpenses), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } }
+          { content: formatPDFCurrency(totalRenderedExpenses), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } }
         ]] : undefined,
         theme: 'striped',
         headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59], font: 'helvetica' },
         columnStyles: {
-          3: { halign: 'right', fontStyle: 'bold' }
+          0: { cellWidth: 28 },
+          1: { cellWidth: 36 },
+          2: { cellWidth: 80 },
+          3: { halign: 'right', fontStyle: 'bold', cellWidth: 38 }
         },
         styles: { cellPadding: 2.5 }
       });
@@ -333,7 +346,7 @@ export default function MonthlyExecutiveSummary() {
 
       // ── SECTION 5: COLLECTIONS / PAYMENTS ──
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(...slateDark);
       doc.text('5. CASH & BANK COLLECTIONS', 14, curY);
       curY += 4;
@@ -342,7 +355,7 @@ export default function MonthlyExecutiveSummary() {
         p.paymentNumber || `REC-${i+1}`,
         formatDate(p.paymentDate),
         p.method || 'Direct',
-        formatCurrency(p.amount)
+        formatPDFCurrency(p.amount)
       ]);
 
       if (paymentRows.length === 0) {
@@ -355,13 +368,16 @@ export default function MonthlyExecutiveSummary() {
         body: paymentRows,
         foot: recentPayments.length > 0 ? [[
           { content: 'Total Realized Collections:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: formatCurrency(totalRenderedPayments), styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] } }
+          { content: formatPDFCurrency(totalRenderedPayments), styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] } }
         ]] : undefined,
         theme: 'striped',
         headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59], font: 'helvetica' },
         columnStyles: {
-          3: { halign: 'right', fontStyle: 'bold' }
+          0: { cellWidth: 36 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 60 },
+          3: { halign: 'right', fontStyle: 'bold', cellWidth: 56 }
         },
         styles: { cellPadding: 2.5 }
       });
