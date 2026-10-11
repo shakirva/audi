@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -6,7 +6,7 @@ import {
   Printer, TrendingUp, TrendingDown, Wallet, Calendar, Users, 
   HelpCircle, AlertCircle, FileSpreadsheet, ArrowUpRight, 
   CheckCircle2, DollarSign, Layers, ChevronDown, Filter, ShieldCheck,
-  ChevronLeft, ChevronRight, Download, Receipt
+  ChevronLeft, ChevronRight, Download, Receipt, Sparkles, Clock
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -16,16 +16,42 @@ import api from '../services/api';
 const COLORS = ['#1B4332', '#D4A017', '#2563eb', '#7c3aed', '#db2777', '#059669'];
 
 export default function MonthlyExecutiveSummary() {
+  const [periodType, setPeriodType] = useState('month_wise'); // 'this_month' | 'this_fy' | 'month_wise' | 'all_time' | 'custom'
   const [selectedMonth, setSelectedMonth] = useState(dayjs().month() + 1);
   const [selectedYear, setSelectedYear] = useState(dayjs().year());
+  const [customStart, setCustomStart] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
+  const [customEnd, setCustomEnd] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'bookings' | 'expenses' | 'payments'
+  const [bookingFilter, setBookingFilter] = useState('all'); // 'all' | 'confirmed' | 'cancelled'
   const [isExporting, setIsExporting] = useState(false);
 
+  const queryParams = useMemo(() => {
+    if (periodType === 'this_month') {
+      const curM = dayjs().month() + 1;
+      const curY = dayjs().year();
+      return { month: curM, year: curY };
+    }
+    if (periodType === 'this_fy') {
+      const now = dayjs();
+      const curMonth = now.month();
+      const fyStartYear = curMonth >= 3 ? now.year() : now.year() - 1;
+      const fyEndYear = fyStartYear + 1;
+      return { start: `${fyStartYear}-04-01`, end: `${fyEndYear}-03-31` };
+    }
+    if (periodType === 'all_time') {
+      return { allTime: 'true' };
+    }
+    if (periodType === 'custom') {
+      return { start: customStart, end: customEnd };
+    }
+    return { month: selectedMonth, year: selectedYear };
+  }, [periodType, selectedMonth, selectedYear, customStart, customEnd]);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['monthly-summary', selectedMonth, selectedYear],
+    queryKey: ['monthly-summary', queryParams],
     queryFn: async () => {
       const res = await api.get(`/v1/reports/monthly-summary`, {
-        params: { month: selectedMonth, year: selectedYear }
+        params: queryParams
       });
       return res.data.data;
     }
@@ -85,8 +111,15 @@ export default function MonthlyExecutiveSummary() {
   const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
 
   const recentBookings = data?.details?.recentBookings || [];
+  const cancelledBookingsList = data?.details?.cancelledBookingsList || [];
   const recentExpenses = data?.details?.recentExpenses || [];
   const recentPayments = data?.details?.recentPayments || [];
+
+  const displayedBookings = useMemo(() => {
+    if (bookingFilter === 'confirmed') return recentBookings;
+    if (bookingFilter === 'cancelled') return cancelledBookingsList;
+    return [...recentBookings, ...cancelledBookingsList];
+  }, [bookingFilter, recentBookings, cancelledBookingsList]);
 
   const totalRenderedExpenses = recentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalRenderedPayments = recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -95,6 +128,34 @@ export default function MonthlyExecutiveSummary() {
 
   const monthName = dayjs().month(selectedMonth - 1).format('MMMM');
   const venueTitle = getVenueName();
+
+  const periodLabel = useMemo(() => {
+    if (periodType === 'this_month') {
+      return `This Month (${dayjs().format('MMMM YYYY')})`;
+    }
+    if (periodType === 'this_fy') {
+      const now = dayjs();
+      const curMonth = now.month();
+      const fyStartYear = curMonth >= 3 ? now.year() : now.year() - 1;
+      const fyEndYear = fyStartYear + 1;
+      return `FY ${String(fyStartYear).slice(-2)}-${String(fyEndYear).slice(-2)} (01 Apr ${fyStartYear} – 31 Mar ${fyEndYear})`;
+    }
+    if (periodType === 'all_time') {
+      return 'All Time (Lifetime Summary)';
+    }
+    if (periodType === 'custom') {
+      return `${dayjs(customStart).format('DD MMM YYYY')} – ${dayjs(customEnd).format('DD MMM YYYY')}`;
+    }
+    return `${dayjs().month(selectedMonth - 1).format('MMMM')} ${selectedYear}`;
+  }, [periodType, selectedMonth, selectedYear, customStart, customEnd]);
+
+  const PERIOD_TABS = [
+    { key: 'this_month', label: 'This Month' },
+    { key: 'this_fy', label: 'Financial Year' },
+    { key: 'month_wise', label: 'Month Wise' },
+    { key: 'all_time', label: 'All Time' },
+    { key: 'custom', label: 'Custom Date' },
+  ];
 
   // ──────────────────────────────────────────────────────────────────────────
   // ──────────────────────────────────────────────────────────────────────────
@@ -133,8 +194,8 @@ export default function MonthlyExecutiveSummary() {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(212, 230, 220);
-      doc.text('EXECUTIVE MONTHLY FINANCIAL & PERFORMANCE AUDIT REPORT', 14, 18);
-      doc.text(`Reporting Period: ${monthName} ${selectedYear}  |  Currency: Indian Rupee (INR)`, 14, 24);
+      doc.text('EXECUTIVE FINANCIAL & PERFORMANCE AUDIT REPORT', 14, 18);
+      doc.text(`Reporting Period: ${periodLabel}  |  Currency: Indian Rupee (INR)`, 14, 24);
 
       // Top Right Meta in Header
       doc.setFontSize(8);
@@ -395,7 +456,7 @@ export default function MonthlyExecutiveSummary() {
       doc.text('Authorized Signature: ___________________________', pageWidth - 14, footerY + 5, { align: 'right' });
 
       // Trigger robust browser download
-      const safeFilename = `Executive_Summary_${monthName}_${selectedYear}.pdf`;
+      const safeFilename = `Executive_Summary_${periodLabel.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
       robustDownloadPDF(doc, safeFilename);
       setIsExporting(false);
     } catch (err) {
@@ -441,9 +502,9 @@ export default function MonthlyExecutiveSummary() {
       }}>
         
         {/* Top Venue Badge & Title */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: 8, border: '1px solid #a7f3d0' }}>
                 Executive Cockpit
               </span>
@@ -451,7 +512,7 @@ export default function MonthlyExecutiveSummary() {
               <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>{venueTitle}</span>
             </div>
             <h1 style={{ margin: 0, fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
-              Monthly Executive Summary
+              Executive Performance Summary
             </h1>
           </div>
 
@@ -481,62 +542,166 @@ export default function MonthlyExecutiveSummary() {
           </button>
         </div>
 
-        {/* Date Selector Row with Quick Month Changers */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          background: '#f8fafc', 
-          padding: '8px 12px', 
-          borderRadius: 14, 
-          border: '1px solid #e2e8f0',
-          gap: 8,
-          flexWrap: 'wrap'
-        }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button 
-              onClick={handlePrevMonth}
-              style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Previous Month"
-            >
-              <ChevronLeft size={16} color="#475569" />
-            </button>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', minWidth: 110, textAlign: 'center' }}>
-              {monthName} {selectedYear}
-            </span>
-            <button 
-              onClick={handleNextMonth}
-              style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Next Month"
-            >
-              <ChevronRight size={16} color="#475569" />
-            </button>
+        {/* ── CREATIVE EXECUTIVE PERIOD SWITCHER ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Segmented Switcher Tabs */}
+          <div style={{
+            background: '#f8fafc',
+            padding: 4,
+            borderRadius: 14,
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 4
+          }}>
+            {PERIOD_TABS.map((tab) => {
+              const active = periodType === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setPeriodType(tab.key)}
+                  style={{
+                    flex: '1 1 auto',
+                    minWidth: 80,
+                    padding: '8px 12px',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: active ? 800 : 600,
+                    background: active ? '#1B4332' : 'transparent',
+                    color: active ? '#fff' : '#64748b',
+                    boxShadow: active ? '0 2px 8px rgba(27,67,50,0.25)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  {tab.key === 'this_month' && <Clock size={13} />}
+                  {tab.key === 'this_fy' && <Sparkles size={13} />}
+                  {tab.key === 'month_wise' && <Calendar size={13} />}
+                  {tab.key === 'all_time' && <Layers size={13} />}
+                  {tab.key === 'custom' && <Filter size={13} />}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '5px 8px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-            >
-              {Array.from({ length: 12 }).map((_, i) => (
-                <option key={i+1} value={i+1}>{dayjs().month(i).format('MMMM')}</option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '5px 8px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-            >
-              {[2024, 2025, 2026, 2027].map(yr => (
-                <option key={yr} value={yr}>{yr}</option>
-              ))}
-            </select>
-          </div>
+          {/* Sub-bar: Dynamic Controls for Active Period */}
+          {periodType === 'month_wise' && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              background: '#f8fafc', 
+              padding: '8px 12px', 
+              borderRadius: 14, 
+              border: '1px solid #e2e8f0',
+              gap: 8,
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button 
+                  onClick={handlePrevMonth}
+                  style={{ width: 32, height: 32, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  title="Previous Month"
+                >
+                  <ChevronLeft size={16} color="#475569" />
+                </button>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', minWidth: 120, textAlign: 'center' }}>
+                  {monthName} {selectedYear}
+                </span>
+                <button 
+                  onClick={handleNextMonth}
+                  style={{ width: 32, height: 32, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  title="Next Month"
+                >
+                  <ChevronRight size={16} color="#475569" />
+                </button>
+              </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+                >
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <option key={i+1} value={i+1}>{dayjs().month(i).format('MMMM')}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+                >
+                  {[2024, 2025, 2026, 2027, 2028].map(yr => (
+                    <option key={yr} value={yr}>{yr}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {periodType === 'custom' && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc',
+              padding: '8px 12px',
+              borderRadius: 14,
+              border: '1px solid #e2e8f0',
+              gap: 10,
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 180px' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>From</span>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  style={{ flex: 1, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#0f172a' }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 180px' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>To</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  style={{ flex: 1, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#0f172a' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {(periodType === 'this_month' || periodType === 'this_fy' || periodType === 'all_time') && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc',
+              padding: '8px 14px',
+              borderRadius: 14,
+              border: '1px solid #e2e8f0',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#334155'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar size={14} color="#1B4332" />
+                <span>Active Period: <strong style={{ color: '#1B4332' }}>{periodLabel}</strong></span>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 800, background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: 8, border: '1px solid #a7f3d0' }}>
+                Live Summary
+              </span>
+            </div>
+          )}
         </div>
-
       </div>
 
       {/* ──────────────────────────────────────────────────────────────────────────
@@ -673,15 +838,30 @@ export default function MonthlyExecutiveSummary() {
         </div>
 
         {/* Cancellations */}
-        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+        <div 
+          onClick={() => { setActiveTab('bookings'); setBookingFilter('cancelled'); }}
+          style={{ 
+            background: '#fff', 
+            padding: '12px 14px', 
+            borderRadius: 16, 
+            border: '1px solid #e2e8f0', 
+            boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          title="Click to view cancellations"
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Cancellations</span>
             <AlertCircle size={14} color="#e11d48" />
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#e11d48' }}>{data?.operations?.cancelledBookings || 0}</div>
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#e11d48', background: '#fff1f2', padding: '1px 6px', borderRadius: 6 }}>
-            Dropped Events
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#e11d48', background: '#fff1f2', padding: '1px 6px', borderRadius: 6 }}>
+              Dropped Events
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b' }}>View List →</span>
+          </div>
         </div>
 
       </div>
@@ -701,7 +881,7 @@ export default function MonthlyExecutiveSummary() {
       }}>
         {[
           { key: 'overview', label: 'Summary' },
-          { key: 'bookings', label: `Bookings (${recentBookings.length})` },
+          { key: 'bookings', label: `Bookings (${recentBookings.length + cancelledBookingsList.length})` },
           { key: 'expenses', label: `Expenses (${recentExpenses.length})` },
           { key: 'payments', label: `Collections (${recentPayments.length})` }
         ].map(t => {
@@ -790,44 +970,92 @@ export default function MonthlyExecutiveSummary() {
       {/* TAB 2: BOOKINGS LIST */}
       {activeTab === 'bookings' && (
         <div style={{ background: '#fff', borderRadius: 20, padding: 18, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
-                Confirmed Bookings
+                Bookings & Events Schedule
               </h3>
-              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Total Value: {formatCurrency(totalRenderedBookingRevenue)}</p>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Active Contract Value: {formatCurrency(totalRenderedBookingRevenue)}</p>
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#1B4332', background: '#ecfdf5', padding: '2px 8px', borderRadius: 8 }}>
-              {recentBookings.length} Records
-            </span>
+            
+            {/* Filter pills: All / Confirmed / Cancelled */}
+            <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 10 }}>
+              {[
+                { key: 'all', label: `All (${recentBookings.length + cancelledBookingsList.length})` },
+                { key: 'confirmed', label: `Confirmed (${recentBookings.length})` },
+                { key: 'cancelled', label: `Cancelled (${cancelledBookingsList.length})` },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setBookingFilter(f.key)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: bookingFilter === f.key ? 800 : 600,
+                    background: bookingFilter === f.key ? '#fff' : 'transparent',
+                    color: bookingFilter === f.key ? (f.key === 'cancelled' ? '#e11d48' : '#1B4332') : '#64748b',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: bookingFilter === f.key ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {recentBookings.length === 0 ? (
-            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No bookings recorded for this month.</div>
+          {displayedBookings.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No bookings recorded for this period.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {recentBookings.map((b, i) => (
-                <div key={i} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{b.customerName || 'Customer'}</div>
-                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{b.bookingId} • {b.hall || 'Main Hall'}</div>
+              {displayedBookings.map((b, i) => {
+                const isCancelled = !!b.deletedAt || b.status === 'Cancelled';
+                return (
+                  <div key={i} style={{ 
+                    background: isCancelled ? '#fff5f5' : '#f8fafc', 
+                    padding: '12px 14px', 
+                    borderRadius: 14, 
+                    border: `1px solid ${isCancelled ? '#fecaca' : '#e2e8f0'}` 
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{b.customerName || 'Customer'}</div>
+                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{b.bookingId} • {b.hall || 'Main Hall'}</div>
+                      </div>
+                      <span style={{ 
+                        fontSize: 10, 
+                        fontWeight: 800, 
+                        background: isCancelled ? '#fee2e2' : '#e2e8f0', 
+                        color: isCancelled ? '#b91c1c' : '#334155', 
+                        padding: '2px 8px', 
+                        borderRadius: 6,
+                        border: isCancelled ? '1px solid #fca5a5' : 'none'
+                      }}>
+                        {isCancelled ? 'Cancelled' : (b.status || 'Confirmed')}
+                      </span>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 800, background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: 6 }}>
-                      {b.status || 'Confirmed'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 8, paddingTop: 6, borderTop: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>📅 {formatDate(b.date)}</div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#1B4332' }}>{formatCurrency(b.totalAmount)}</div>
-                      {Number(b.balanceAmount) > 0 && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#e11d48' }}>Bal: {formatCurrency(b.balanceAmount)}</div>
-                      )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 8, paddingTop: 6, borderTop: `1px solid ${isCancelled ? '#fee2e2' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        📅 {formatDate(b.date)}
+                        {isCancelled && b.reason && (
+                          <span style={{ marginLeft: 8, color: '#e11d48', fontWeight: 600 }}>({b.reason})</span>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: isCancelled ? '#94a3b8' : '#1B4332', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                          {formatCurrency(b.totalAmount)}
+                        </div>
+                        {Number(b.balanceAmount) > 0 && !isCancelled && (
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#e11d48' }}>Bal: {formatCurrency(b.balanceAmount)}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

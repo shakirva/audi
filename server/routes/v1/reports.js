@@ -17,68 +17,118 @@ router.get("/access", (req, res) => {
 // GET /api/v1/reports/monthly-summary
 router.get("/monthly-summary", async (req, res) => {
   try {
-    const { month, year, start, end } = req.query;
+    const { month, year, start, end, allTime } = req.query;
     const tenantId = req.tenantId; // from tenantScope middleware
     
-    let startDate, endDate;
-    if (start && end) {
-      startDate = new Date(start);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(end);
-      endDate.setHours(23, 59, 59, 999);
-    } else {
-      const m = parseInt(month) || (new Date().getMonth() + 1);
-      const y = parseInt(year) || new Date().getFullYear();
-      startDate = new Date(y, m - 1, 1);
-      endDate = new Date(y, m, 0, 23, 59, 59, 999);
+    const isAllTime = allTime === "true" || allTime === true;
+    let startDate, endDate, startStr, endStr;
+    
+    if (!isAllTime) {
+      if (start && end) {
+        startStr = String(start).slice(0, 10);
+        endStr = String(end).slice(0, 10);
+        startDate = new Date(`${startStr}T00:00:00.000Z`);
+        endDate = new Date(`${endStr}T23:59:59.999Z`);
+      } else {
+        const m = parseInt(month) || (new Date().getMonth() + 1);
+        const y = parseInt(year) || new Date().getFullYear();
+        const mStr = String(m).padStart(2, "0");
+        const lastDay = new Date(y, m, 0).getDate();
+        startStr = `${y}-${mStr}-01`;
+        endStr = `${y}-${mStr}-${String(lastDay).padStart(2, "0")}`;
+        startDate = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
+        endDate = new Date(Date.UTC(y, m - 1, lastDay, 23, 59, 59, 999));
+      }
     }
     
-    const dateQuery = {
+    const generalDateQuery = {
       tenantId,
-      createdAt: { [Op.between]: [startDate, endDate] }
+      ...(isAllTime ? {} : {
+        createdAt: { [Op.between]: [startDate, endDate] }
+      })
     };
 
     const bookingDateQuery = {
       tenantId,
-      date: { [Op.between]: [startDate, endDate] } // Assuming 'date' is the event date
+      ...(isAllTime ? {} : {
+        [Op.or]: [
+          { date: { [Op.between]: [startStr, endStr] } },
+          { deletedAt: { [Op.between]: [startDate, endDate] } }
+        ]
+      })
+    };
+
+    const paymentDateQuery = {
+      tenantId,
+      ...(isAllTime ? {} : {
+        [Op.or]: [
+          { paymentDate: { [Op.between]: [startStr, endStr] } },
+          { createdAt: { [Op.between]: [startDate, endDate] } }
+        ]
+      })
+    };
+
+    const expenseDateQuery = {
+      tenantId,
+      ...(isAllTime ? {} : {
+        [Op.or]: [
+          { date: { [Op.between]: [startStr, endStr] } },
+          { createdAt: { [Op.between]: [startDate, endDate] } }
+        ]
+      })
     };
 
     // 1. Financials
-    const payments = await Payment.findAll({ where: dateQuery, raw: true });
-    const expenses = await Expense.findAll({ where: dateQuery, raw: true });
+    const payments = await Payment.findAll({ where: paymentDateQuery, raw: true });
+    const expenses = await Expense.findAll({ where: expenseDateQuery, raw: true });
     
     const totalRevenue = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
     const netBalance = totalRevenue - totalExpenses;
 
     const upiCollected = payments
-      .filter(p => p.method && p.method.toLowerCase() === 'upi')
+      .filter(p => {
+        const m = (p.paymentMode || p.method || "").toLowerCase();
+        return m === "upi";
+      })
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       
     const bankCollected = payments
-      .filter(p => p.method && p.method.toLowerCase().includes('bank'))
+      .filter(p => {
+        const m = (p.paymentMode || p.method || "").toLowerCase();
+        return m.includes("bank") || m.includes("transfer") || m.includes("card") || m.includes("cheque");
+      })
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
-    // 2. Operational KPIs
-    const bookings = await Booking.findAll({ where: bookingDateQuery, raw: true });
+    const cashCollected = payments
+      .filter(p => {
+        const m = (p.paymentMode || p.method || "").toLowerCase();
+        return m === "cash";
+      })
+      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+    // 2. Operational KPIs — include paranoid:false to capture soft-deleted bookings as cancellations
+    const bookings = await Booking.findAll({ where: bookingDateQuery, paranoid: false, raw: true });
     
-    const totalBookings = bookings.filter(b => b.status !== 'Cancelled').length;
-    const cancelledBookings = bookings.filter(b => b.status === 'Cancelled').length;
+    const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== "Cancelled");
+    const cancelledBookingsList = bookings.filter(b => !!b.deletedAt || b.status === "Cancelled");
+    const totalBookings = activeBookings.length;
+    const cancelledBookings = cancelledBookingsList.length;
     
-    const totalEnquiries = await Enquiry.count({ where: dateQuery });
-    const newCustomers = await Customer.count({ where: dateQuery });
+    const totalEnquiries = await Enquiry.count({ where: generalDateQuery });
+    const newCustomers = await Customer.count({ where: generalDateQuery });
 
     // 3. Analytical Breakdowns
     const hallMap = {};
-    bookings.filter(b => b.status !== 'Cancelled').forEach(b => {
-      const hall = b.hallName || b.hallId || 'Main Hall'; 
+    activeBookings.forEach(b => {
+      const hall = b.hallName || b.hallId || b.hall || "Main Hall"; 
       hallMap[hall] = (hallMap[hall] || 0) + 1;
     });
     const hallData = Object.keys(hallMap).map(name => ({ name, value: hallMap[name] }));
 
     const eventTypeMap = {};
-    bookings.filter(b => b.status !== 'Cancelled').forEach(b => {
-      const type = b.eventType || 'Other';
+    activeBookings.forEach(b => {
+      const type = b.eventType || "Other";
       eventTypeMap[type] = (eventTypeMap[type] || 0) + 1;
     });
     const eventTypeData = Object.keys(eventTypeMap).map(name => ({ name, value: eventTypeMap[name] }));
@@ -87,11 +137,11 @@ router.get("/monthly-summary", async (req, res) => {
       success: true,
       data: {
         financials: { totalRevenue, totalExpenses, netBalance },
-        collections: { upi: upiCollected, bank: bankCollected },
+        collections: { upi: upiCollected, bank: bankCollected, cash: cashCollected },
         operations: { totalBookings, cancelledBookings, totalEnquiries, newCustomers },
         analytics: { halls: hallData, eventTypes: eventTypeData },
         details: {
-          recentBookings: bookings.filter(b => b.status !== 'Cancelled').slice(0, 15).map(b => {
+          recentBookings: activeBookings.slice(0, 20).map(b => {
             const total = parseFloat(b.totalAmount) || 0;
             const advance = parseFloat(b.advance) || 0;
             return {
@@ -99,25 +149,42 @@ router.get("/monthly-summary", async (req, res) => {
               bookingId: b.bookingId,
               date: b.date,
               customerName: b.customerName,
-              hall: b.hallName || b.hall || 'Main Hall',
-              status: b.status,
+              hall: b.hallName || b.hall || "Main Hall",
+              status: b.status || "Confirmed",
               totalAmount: total,
               advance: advance,
               balanceAmount: total - advance
             };
           }),
-          recentExpenses: expenses.slice(0, 15).map(e => ({
+          cancelledBookingsList: cancelledBookingsList.slice(0, 20).map(b => {
+            const total = parseFloat(b.totalAmount) || 0;
+            const advance = parseFloat(b.advance) || 0;
+            return {
+              id: b.id,
+              bookingId: b.bookingId,
+              date: b.date,
+              customerName: b.customerName,
+              hall: b.hallName || b.hall || "Main Hall",
+              status: b.deletedAt ? "Cancelled" : (b.status || "Cancelled"),
+              totalAmount: total,
+              advance: advance,
+              balanceAmount: total - advance,
+              deletedAt: b.deletedAt,
+              reason: b.cancellationReason || "Booking cancelled"
+            };
+          }),
+          recentExpenses: expenses.slice(0, 20).map(e => ({
             id: e.id,
             date: e.date,
             category: e.category,
             description: e.description,
             amount: e.amount
           })),
-          recentPayments: payments.slice(0, 15).map(p => ({
+          recentPayments: payments.slice(0, 20).map(p => ({
             id: p.id,
             paymentNumber: p.paymentNumber,
             paymentDate: p.paymentDate,
-            method: p.method,
+            method: p.paymentMode || p.method || "Payment",
             amount: p.amount
           }))
         }
