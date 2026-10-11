@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles, TrendingUp, X } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles, TrendingUp, X, MessageSquare } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -83,7 +83,6 @@ export default function CRM() {
   const total = enquiries.length;
   const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0;
   const waitlistedCount = enquiries.filter(e => e.isWaitlisted).length;
-  const dateReleasedCount = enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === "Date Released").length;
 
   const handleStatusChange = async (enquiryId, newStatus) => {
     try {
@@ -124,12 +123,11 @@ export default function CRM() {
     return enq.phone || "";
   };
 
-  const getConflictStatus = useCallback((enq) => {
-    if (["Booking Confirmed", "Lost", "Cancelled"].includes(enq.status)) return false;
-    if (enq.isWaitlisted) return false;
+  // Checks if a date/session has an active confirmed booking or confirmed enquiry
+  const hasActiveBookingConflict = useCallback((enq) => {
     if (!enq.tentativeDate) return false;
     
-    // Check against confirmed enquiries
+    // Check against confirmed enquiries (excluding itself)
     const hasEnqConflict = enquiries.some(e => {
       if (e.id === enq.id) return false;
       if (e.status !== "Booking Confirmed") return false;
@@ -153,17 +151,47 @@ export default function CRM() {
     return hasBookingConflict;
   }, [enquiries, bookings]);
 
+  const getConflictStatus = useCallback((enq) => {
+    if (["Booking Confirmed", "Lost", "Cancelled"].includes(enq.status)) return false;
+    if (enq.isWaitlisted) return false;
+    return hasActiveBookingConflict(enq);
+  }, [hasActiveBookingConflict]);
+
+  // For a waitlisted enquiry: returns true if the previously booked slot is now CANCELLED / FREE!
+  const isWaitlistSlotFree = useCallback((enq) => {
+    if (!enq.isWaitlisted) return false;
+    if (["Booking Confirmed", "Lost", "Cancelled"].includes(enq.status)) return false;
+    if (enq.waitlistStatus === "Date Released") return true;
+    // Real-time check: if date is set and there is NO active confirmed booking on that slot anymore!
+    if (enq.tentativeDate && !hasActiveBookingConflict(enq)) return true;
+    return false;
+  }, [hasActiveBookingConflict]);
+
+  const handleNotifyReleasedClient = (enq) => {
+    const phone = getEnquiryPhone(enq);
+    const name = getEnquiryName(enq);
+    if (!phone) {
+      addToast("Client phone number not available", "error");
+      return;
+    }
+    const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+    const msg = `Dear ${name},\n\n🎉 Great news from our auditorium!\n\nThe date you previously enquired about — *${enq.tentativeDate}*${enq.session ? ` (${enq.session})` : ""}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""} — has just become AVAILABLE due to a recent cancellation!\n\nSince you were on our Priority VIP Waitlist, you have first preference to confirm this date. Please reply or call us immediately to lock in your booking before it opens to public!`;
+    window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+    addToast("WhatsApp opened with Date Release notification! 💬", "success");
+  };
+
   const clashedCount = enquiries.filter(e => getConflictStatus(e)).length;
+  const dateReleasedCount = enquiries.filter(e => isWaitlistSlotFree(e)).length;
 
   const filteredEnquiries = useMemo(() => {
     return enquiries.filter(e => {
       if (waitlistFilter === "clashed") return getConflictStatus(e);
       if (waitlistFilter === "waitlist") return e.isWaitlisted;
-      if (waitlistFilter === "date_released") return e.isWaitlisted && e.waitlistStatus === "Date Released";
+      if (waitlistFilter === "date_released") return isWaitlistSlotFree(e);
       if (waitlistFilter === "standard") return !e.isWaitlisted && !getConflictStatus(e);
       return true;
     });
-  }, [enquiries, waitlistFilter, getConflictStatus]);
+  }, [enquiries, waitlistFilter, getConflictStatus, isWaitlistSlotFree]);
 
   const handleMoveToWaitlistWithWhatsApp = async (enq) => {
     try {
@@ -332,7 +360,7 @@ export default function CRM() {
               { id: "all", label: "All Leads", count: total },
               { id: "waitlist", label: "VIP Waitlist", count: waitlistedCount, icon: Clock, accent: "#d97706", bgActive: "#d97706", badgeActive: "#fef3c7" },
               { id: "clashed", label: "Slot Clashes", count: clashedCount, icon: AlertCircle, accent: "#dc2626", bgActive: "#dc2626", badgeActive: "#fee2e2", alert: clashedCount > 0 },
-              { id: "date_released", label: "Date Released", count: enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === 'Date Released').length, icon: Sparkles, accent: "#10b981", bgActive: "#10b981", badgeActive: "#dcfce7" },
+              { id: "date_released", label: "Date Released", count: dateReleasedCount, icon: Sparkles, accent: "#10b981", bgActive: "#10b981", badgeActive: "#dcfce7", highlight: dateReleasedCount > 0 },
             ].map((tab) => {
               const active = waitlistFilter === tab.id;
               const TabIcon = tab.icon;
@@ -487,19 +515,19 @@ export default function CRM() {
                           onMouseEnter={() => setHoveredEnq(enq.id)}
                           onMouseLeave={() => setHoveredEnq(null)}
                           style={{
-                            background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : getConflictStatus(enq) ? "#fef2f2" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
-                            padding: "14px", borderRadius: 8, 
-                            border: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "2px solid #22c55e" : enq.isWaitlisted ? "1px solid #fde68a" : getConflictStatus(enq) ? "2px solid #ef4444" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
-                            boxShadow: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "0 4px 12px rgba(34,197,94,0.15)" : getConflictStatus(enq) ? "0 4px 14px rgba(239,68,68,0.18)" : "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
+                            background: isWaitlistSlotFree(enq) ? "#f0fdf4" : getConflictStatus(enq) ? "#fef2f2" : isPublic && !enq.SalesExecutive ? "#fef8ff" : enq.isWaitlisted ? "#fffdf5" : "#fff", 
+                            padding: "14px", borderRadius: 10, 
+                            border: isWaitlistSlotFree(enq) ? "2px solid #22c55e" : enq.isWaitlisted ? "1.5px solid #fde68a" : getConflictStatus(enq) ? "2px solid #ef4444" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
+                            boxShadow: isWaitlistSlotFree(enq) ? "0 4px 14px rgba(34,197,94,0.2)" : getConflictStatus(enq) ? "0 4px 14px rgba(239,68,68,0.18)" : "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s, box-shadow 0.1s",
                             transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none",
                             position: "relative"
                           }}>
                           {isPublic && !enq.SalesExecutive && (
                              <div style={{ position: "absolute", top: -8, right: -8, background: "#d946ef", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 12, boxShadow: "0 2px 4px rgba(217,70,239,0.3)" }}>NEW WEB LEAD</div>
                           )}
-                          {enq.isWaitlisted && enq.waitlistStatus === "Date Released" && (
-                            <div style={{ position: "absolute", top: -8, right: -8, background: "#10b981", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 12, boxShadow: "0 2px 8px rgba(16,185,129,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
-                              🟢 DATE RELEASED!
+                          {isWaitlistSlotFree(enq) && (
+                            <div style={{ position: "absolute", top: -9, right: 10, background: "#16a34a", color: "#fff", fontSize: 9, fontWeight: 900, padding: "3px 10px", borderRadius: 12, boxShadow: "0 2px 8px rgba(22,163,74,0.4)", display: "flex", alignItems: "center", gap: 4, letterSpacing: 0.3, zIndex: 5 }}>
+                              <Sparkles size={11} /> DATE RELEASED — RECOVER NOW!
                             </div>
                           )}
                           {getConflictStatus(enq) && !enq.isWaitlisted && (
@@ -513,8 +541,13 @@ export default function CRM() {
                             </span>
                             <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                               {enq.isWaitlisted && (
-                                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: enq.waitlistStatus === "Date Released" ? "#dcfce7" : "#fef3c7", color: enq.waitlistStatus === "Date Released" ? "#166534" : "#b45309" }}>
-                                  ⏳ {enq.waitlistStatus || "Waitlist"}
+                                <span style={{
+                                  fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4,
+                                  background: isWaitlistSlotFree(enq) ? "#dcfce7" : "#fef3c7",
+                                  color: isWaitlistSlotFree(enq) ? "#166534" : "#b45309",
+                                  border: `1px solid ${isWaitlistSlotFree(enq) ? "#86efac" : "#fde68a"}`
+                                }}>
+                                  {isWaitlistSlotFree(enq) ? "🟢 Slot Available!" : "⏳ In Waitlist"}
                                 </span>
                               )}
                               <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: lss.bg, color: lss.color }}>
@@ -526,6 +559,34 @@ export default function CRM() {
                           <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666" }}>
                             {enq.eventType}{enq.session ? ` (${enq.session})` : ""}
                           </p>
+
+                          {/* Date Released Recovery Alert & Confirmation Box */}
+                          {isWaitlistSlotFree(enq) && (
+                            <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 8, padding: "8px 10px", margin: "10px 0", display: "flex", flexDirection: "column", gap: 6, boxShadow: "0 2px 6px rgba(22,163,74,0.08)" }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: "#15803d", display: "flex", alignItems: "center", gap: 5 }}>
+                                <Sparkles size={13} color="#16a34a" /> <span>Slot Released! Date is now Free:</span>
+                              </div>
+                              <div style={{ fontSize: 10, color: "#166534", fontWeight: 600 }}>
+                                Previous booking on {enq.tentativeDate || "this date"} was cancelled. Ready to book or confirm with client!
+                              </div>
+                              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleNotifyReleasedClient(enq); }}
+                                  style={{ flex: 1, background: "#25D366", color: "#fff", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 1px 4px rgba(37,211,102,0.3)" }}
+                                  title="Send WhatsApp confirmation to client offering this released date"
+                                >
+                                  <MessageSquare size={11} /> Confirm via WhatsApp
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                  style={{ flex: 1, background: "#166534", color: "#fff", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 1px 4px rgba(22,101,52,0.3)" }}
+                                  title="Convert to Confirmed Booking immediately"
+                                >
+                                  <CheckCircle2 size={11} /> Convert Now
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Slot Clash Prompt & Fast Action Bar */}
                           {getConflictStatus(enq) && !enq.isWaitlisted && (
@@ -588,6 +649,11 @@ export default function CRM() {
                                   ⚠️ SLOT TAKEN
                                 </span>
                               )}
+                              {isWaitlistSlotFree(enq) && (
+                                <span style={{ marginLeft: 4, background: "#dcfce7", color: "#166534", padding: "2px 4px", borderRadius: 4, fontSize: 9, fontWeight: 800, border: "1px solid #86efac" }} title="Slot is open and available for booking!">
+                                  🟢 OPEN
+                                </span>
+                              )}
                             </div>
                             
                             {/* Action Buttons Container */}
@@ -645,10 +711,10 @@ export default function CRM() {
                                       >
                                         <CheckCircle2 size={11}/> Convert
                                       </button>
-                                    ) : enq.waitlistStatus === "Date Released" ? (
+                                    ) : isWaitlistSlotFree(enq) ? (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                                        style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
+                                        style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
                                         title="Slot released! Convert to confirmed booking"
                                       >
                                         <Sparkles size={11}/> Convert
@@ -722,9 +788,9 @@ export default function CRM() {
               ) : filteredEnquiries.map((enq, i) => {
                 const lss = LEAD_SCORE_STYLE[enq.leadScore] || LEAD_SCORE_STYLE.Warm;
                 return (
-                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s", background: getConflictStatus(enq) ? "#fef2f2" : enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent" }}
-                    onMouseEnter={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fee2e2" : "#f8f9fa"}
-                    onMouseLeave={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fef2f2" : enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent"}>
+                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s", background: getConflictStatus(enq) ? "#fef2f2" : isWaitlistSlotFree(enq) ? "#f0fdf4" : "transparent" }}
+                    onMouseEnter={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fee2e2" : isWaitlistSlotFree(enq) ? "#dcfce7" : "#f8f9fa"}
+                    onMouseLeave={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fef2f2" : isWaitlistSlotFree(enq) ? "#f0fdf4" : "transparent"}>
                     <td style={{ padding: "12px 16px", fontWeight: 700, color: "#1B4332" }}>
                       <div>{enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}</div>
                       {getConflictStatus(enq) && !enq.isWaitlisted ? (
@@ -732,8 +798,8 @@ export default function CRM() {
                           🚨 SLOT CLASH
                         </span>
                       ) : enq.isWaitlisted ? (
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: enq.waitlistStatus === "Date Released" ? "#dcfce7" : "#fef3c7", color: enq.waitlistStatus === "Date Released" ? "#166534" : "#b45309", display: "inline-block", marginTop: 2 }}>
-                          {enq.waitlistStatus === "Date Released" ? "🟢 RELEASED" : "⏳ WAITLIST"}
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: isWaitlistSlotFree(enq) ? "#dcfce7" : "#fef3c7", color: isWaitlistSlotFree(enq) ? "#166534" : "#b45309", display: "inline-block", marginTop: 2, border: isWaitlistSlotFree(enq) ? "1px solid #86efac" : "none" }}>
+                          {isWaitlistSlotFree(enq) ? "🟢 RELEASED" : "⏳ WAITLIST"}
                         </span>
                       ) : null}
                     </td>
@@ -745,6 +811,11 @@ export default function CRM() {
                         {getConflictStatus(enq) && !enq.isWaitlisted && (
                           <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed booking">
                             ⚠️ SLOT TAKEN
+                          </span>
+                        )}
+                        {isWaitlistSlotFree(enq) && (
+                          <span style={{ background: "#dcfce7", color: "#166534", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800, border: "1px solid #86efac" }} title="Date is now free! Previous booking cancelled">
+                            ✨ FREE
                           </span>
                         )}
                       </div>
@@ -775,7 +846,7 @@ export default function CRM() {
                     </td>
                     <td style={{ padding: "12px 16px" }}>
                       {enq.status !== "Booking Confirmed" ? (
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           {getConflictStatus(enq) && !enq.isWaitlisted ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <label
@@ -821,14 +892,23 @@ export default function CRM() {
                                 >
                                   <CheckCircle2 size={11}/> Convert
                                 </button>
-                              ) : enq.waitlistStatus === "Date Released" ? (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                                  style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
-                                  title="Slot released! Convert to confirmed booking"
-                                >
-                                  <Sparkles size={11}/> Convert
-                                </button>
+                              ) : isWaitlistSlotFree(enq) ? (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleNotifyReleasedClient(enq); }}
+                                    style={{ background: "#25D366", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    title="Send WhatsApp recovery message to client"
+                                  >
+                                    <Send size={11}/> WhatsApp
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                    style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
+                                    title="Slot released! Convert to confirmed booking"
+                                  >
+                                    <Sparkles size={11}/> Convert
+                                  </button>
+                                </>
                               ) : (
                                 <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", background: "#fef3c7", border: "1px solid #fde68a", padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
                                   <Clock size={11}/> Waitlisted
