@@ -86,7 +86,11 @@ export default function CRM() {
 
   const handleStatusChange = async (enquiryId, newStatus) => {
     try {
-      await enquiriesAPI.updateStatus(enquiryId, newStatus);
+      if (newStatus === "Lost") {
+        await enquiriesAPI.update(enquiryId, { status: "Lost", lostReason: "Closed / Lost" });
+      } else {
+        await enquiriesAPI.updateStatus(enquiryId, newStatus);
+      }
       setEnquiries(prev => prev.map(e => e.id === enquiryId ? { ...e, status: newStatus } : e));
       addToast(`Moved to ${newStatus}`, "success");
     } catch (err) {
@@ -220,7 +224,10 @@ export default function CRM() {
 
   const handleInformAndClose = async (enq) => {
     try {
-      await enquiriesAPI.updateStatus(enq.id, "Lost");
+      await enquiriesAPI.update(enq.id, {
+        status: "Lost",
+        lostReason: "Date confirmed by another booking / Slot Clash",
+      });
       setEnquiries(prev => prev.map(e => e.id === enq.id ? { ...e, status: "Lost" } : e));
       addToast("Enquiry marked as Lost ❌", "info");
 

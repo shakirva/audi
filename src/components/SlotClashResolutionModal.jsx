@@ -59,7 +59,10 @@ export default function SlotClashResolutionModal({
   const handleMarkLost = async (lead) => {
     setProcessingId(lead.id);
     try {
-      await enquiriesAPI.updateStatus(lead.id, "Lost");
+      await enquiriesAPI.update(lead.id, {
+        status: "Lost",
+        lostReason: "Date confirmed by another booking / Slot Clash",
+      });
       setLeads((prev) =>
         prev.map((l) =>
           l.id === lead.id

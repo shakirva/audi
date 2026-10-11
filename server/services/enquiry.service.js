@@ -56,7 +56,7 @@ class EnquiryService {
     if (!enquiry) throw new NotFoundError("Enquiry");
 
     if (data.status === "Lost" && !data.lostReason) {
-      throw new BadRequestError("Lost reason is required when status is Lost");
+      data.lostReason = "Date already booked / Closed";
     }
 
     const isWaitlisted = data.isWaitlisted !== undefined ? data.isWaitlisted : enquiry.isWaitlisted;
