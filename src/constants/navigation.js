@@ -53,6 +53,7 @@ export const BASE_NAVIGATION = [
     planRequired: "professional",
     children: [
       { path: "/reports", label: "Report Dashboard" },
+      { path: "/reports/monthly-executive", label: "Monthly Executive Summary" },
       { path: "/reports/sales", label: "Sales Reports" },
       { path: "/reports/booking", label: "Booking Reports" },
       { path: "/reports/accounts", label: "Accounts Reports" },

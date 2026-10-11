@@ -17,6 +17,7 @@ import PurchasesAndExpenses from "./pages/Finance/PurchasesAndExpenses";
 import FinanceReports from "./pages/Finance/FinanceReports";
 import AdvancedAccounting from "./pages/Finance/AdvancedAccounting";
 import Reports from "./pages/Reports";
+import MonthlyExecutiveSummary from "./pages/MonthlyExecutiveSummary";
 import HallReports from "./pages/HallReports";
 import AccountsReports from "./pages/AccountsReports";
 import SalesReports from "./pages/SalesReports";
@@ -121,6 +122,7 @@ function AdminLayout() {
             
             {/* Keeping non-finance routes below */}
             <Route path="/reports"         element={<ProtectedRoute permission="canViewReports"><Reports /></ProtectedRoute>} />
+            <Route path="/reports/monthly-executive" element={<ProtectedRoute permission="canViewReports"><MonthlyExecutiveSummary /></ProtectedRoute>} />
             <Route path="/reports/sales"   element={<ProtectedRoute permission="canViewReports"><SalesReports /></ProtectedRoute>} />
             <Route path="/reports/booking" element={<ProtectedRoute permission="canViewReports"><BookingReports /></ProtectedRoute>} />
             <Route path="/reports/hall"    element={<ProtectedRoute permission="canViewReports"><HallReports /></ProtectedRoute>} />
