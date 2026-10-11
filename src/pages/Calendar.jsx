@@ -137,7 +137,7 @@ export default function Calendar() {
   const availColor = (day) => {
     const dateStr = getDayDateStr(day);
     if (blackoutDates.includes(dateStr)) {
-      return { bg: "#f3f4f6", border: "#d1d5db", label: "Blocked", badgeBg: "#e5e7eb", badgeColor: "#6b7280", pill: "Blocked" };
+      return { bg: "#f3f4f6", border: "#d1d5db", label: "Blocked", badgeBg: "#e5e7eb", badgeColor: "#6b7280", pill: null };
     }
     const dayItems = visibleCalendarData.filter(b => b.date === dateStr);
     const activeBookings = dayItems.filter(b => b.status !== "Enquiry" && b.status !== "Cancelled");
@@ -157,7 +157,7 @@ export default function Calendar() {
     
     const uniqueHalls = new Set(activeBookings.map(b => b.hall)).size;
     
-    // 0 halls booked → Vibrant green (fully open)
+    // 0 halls booked → Vibrant green (fully open, no text pill needed)
     if (uniqueHalls === 0) {
       return { 
         bg: "#dcfce7", 
@@ -165,32 +165,31 @@ export default function Calendar() {
         label: "Available", 
         badgeBg: "#bbf7d0", 
         badgeColor: "#15803d",
-        pill: "Available"
+        pill: null
       };
     }
     
     // Partial halls booked → Warm yellow / amber
+    // Color tells it is partial; only show pill if an enquiry also exists on that date
     if (uniqueHalls < totalHallsCount) {
-      const enqSuffix = activeEnquiries.length > 0 ? ` +${activeEnquiries.length}E` : "";
       return { 
         bg: "#fef9c3", 
         border: "#eab308", 
         label: "Partial", 
         badgeBg: "#fef08a", 
         badgeColor: "#a16207",
-        pill: `${uniqueHalls}/${totalHallsCount}${enqSuffix}`
+        pill: activeEnquiries.length > 0 ? `${activeEnquiries.length} Enq` : null
       };
     }
     
     // All halls booked → Soft Red (full)
-    const enqFullSuffix = activeEnquiries.length > 0 ? ` +${activeEnquiries.length}E` : "";
     return { 
       bg: "#fee2e2", 
       border: "#ef4444", 
       label: "Full", 
       badgeBg: "#fecaca", 
       badgeColor: "#b91c1c",
-      pill: `Full${enqFullSuffix}`
+      pill: activeEnquiries.length > 0 ? `${activeEnquiries.length} Enq` : "Full"
     };
   };
 
@@ -205,22 +204,32 @@ export default function Calendar() {
         
         {/* Month Navigation & Controls Bar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={prev} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" }}>
-              <ChevronLeft size={16} />
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 4px 0 0" }}>
+              {MONTHS[month]} {year}
+            </h2>
+            <div style={{ display: "inline-flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", overflow: "hidden" }}>
+              <button 
+                onClick={prev} 
+                title="Previous Month"
+                style={{ width: 32, height: 32, border: "none", borderRight: "1px solid #e2e8f0", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                onClick={next} 
+                title="Next Month"
+                style={{ width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
             <button 
               onClick={goToToday}
-              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8fafc", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#1B4332" }}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#1B4332", marginLeft: 4 }}
             >
               Today
             </button>
-            <button onClick={next} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" }}>
-              <ChevronRight size={16} />
-            </button>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 0 0 6px" }}>
-              {MONTHS[month]} {year}
-            </h2>
           </div>
 
           {/* Hall Filter Select */}
@@ -295,8 +304,8 @@ export default function Calendar() {
                 onClick={() => { if (!isDisabled) setSelected(day === selected ? null : day); }}
                 style={{
                   borderRadius: 8,
-                  padding: "6px 5px",
-                  minHeight: 48,
+                  padding: "5px 4px",
+                  minHeight: 42,
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   background: isBlocked ? "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)"
                     : isSelected ? "#1B4332" 
@@ -317,10 +326,10 @@ export default function Calendar() {
                 onMouseEnter={e => { if (!isSelected && !isDisabled) e.currentTarget.style.transform = "translateY(-1px)"; }}
                 onMouseLeave={e => { if (!isSelected && !isDisabled) e.currentTarget.style.transform = "translateY(0)"; }}
               >
-                {/* Top row: day number & status pill */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 2 }}>
+                {/* Day number & optional status pill */}
+                <div style={{ display: "flex", justifyContent: avail.pill ? "space-between" : "center", alignItems: "center", width: "100%", gap: 2 }}>
                   <span style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: isToday ? 900 : 700,
                     color: isBlocked ? "#9ca3af"
                       : isSelected ? "#fff" 
@@ -333,12 +342,12 @@ export default function Calendar() {
                     {day}
                   </span>
 
-                  {/* Status chip pill */}
-                  {!isBlocked && (
+                  {/* Status chip pill (only when there is an enquiry or full booking) */}
+                  {!isBlocked && avail.pill && (
                     <span style={{
-                      fontSize: 7.5,
+                      fontSize: 8,
                       fontWeight: 800,
-                      padding: "1px 3px",
+                      padding: "1px 4px",
                       borderRadius: 4,
                       background: isSelected ? "rgba(255,255,255,0.2)" : avail.badgeBg,
                       color: isSelected ? "#fff" : avail.badgeColor,
@@ -346,7 +355,7 @@ export default function Calendar() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      maxWidth: "72%",
+                      maxWidth: "75%",
                       textAlign: "center"
                     }}>
                       {avail.pill}

@@ -12,6 +12,7 @@ export default function PaymentsAndReceipts() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'outstanding' | 'completed'
   const [dashboardData, setDashboardData] = useState(null);
   const [settings, setSettings] = useState({});
   
@@ -131,6 +132,13 @@ export default function PaymentsAndReceipts() {
 
   const filtered = useMemo(() => {
     return bookings.filter(b => {
+      const total = Number(b.totalAmount) || 0;
+      const collected = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+      const outstanding = Math.max(0, total - collected);
+
+      if (filterStatus === "outstanding" && outstanding <= 0) return false;
+      if (filterStatus === "completed" && outstanding > 0) return false;
+
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -139,7 +147,7 @@ export default function PaymentsAndReceipts() {
         (b.bookingNumber || "").toLowerCase().includes(q)
       );
     });
-  }, [bookings, search]);
+  }, [bookings, search, filterStatus]);
 
   // Aggregate metrics
   const totalOutstanding = bookings.reduce((sum, b) => {
@@ -226,22 +234,50 @@ export default function PaymentsAndReceipts() {
 
         {/* Toolbar */}
         <div className="hm-payments-toolbar" style={{ order: window.innerWidth < 768 ? 1 : 2 }}>
-          <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 12, flex: 1, justifyContent: "flex-end" }}>
-          <div style={{ position: "relative", width: "100%", maxWidth: 350 }}>
-            <Search size={18} style={{ position: "absolute", left: 16, top: 12, color: "#94a3b8" }} />
-            <input 
-              type="text" 
-              placeholder="Search booking, customer..." 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: "100%", padding: "10px 16px 10px 42px", borderRadius: 10, border: "1px solid #e2e8f0", outline: "none", fontSize: 14, fontWeight: 500, boxSizing: "border-box" }}
-            />
-          </div>
-          <button style={{ background: "#fff", border: "1px solid #e2e8f0", padding: "0 16px", borderRadius: 10, display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-            <Filter size={16} /> Filter
-          </button>
-        </div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 24, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+            {/* Quick Status Filter Tabs */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {[
+                { id: "all", label: "All Bookings" },
+                { id: "outstanding", label: "⚠️ Outstanding Balance" },
+                { id: "completed", label: "✅ Fully Paid" },
+              ].map(tab => {
+                const isActive = filterStatus === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFilterStatus(tab.id)}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: isActive ? 700 : 500,
+                      background: isActive ? "#0f172a" : "#fff",
+                      color: isActive ? "#fff" : "#64748b",
+                      border: isActive ? "1px solid #0f172a" : "1px solid #e2e8f0",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      boxShadow: isActive ? "0 2px 6px rgba(15,23,42,0.15)" : "none"
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flex: "1 1 280px", maxWidth: 420, justifyContent: "flex-end" }}>
+              <div style={{ position: "relative", width: "100%" }}>
+                <Search size={18} style={{ position: "absolute", left: 16, top: 12, color: "#94a3b8" }} />
+                <input 
+                  type="text" 
+                  placeholder="Search booking, customer..." 
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ width: "100%", padding: "10px 16px 10px 42px", borderRadius: 10, border: "1px solid #e2e8f0", outline: "none", fontSize: 14, fontWeight: 500, boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
