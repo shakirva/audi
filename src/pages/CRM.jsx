@@ -46,6 +46,7 @@ export default function CRM() {
   const [waitlistFilter, setWaitlistFilter] = useState("all"); // 'all' | 'clashed' | 'waitlist' | 'date_released' | 'standard'
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const [clashModalData, setClashModalData] = useState(null); // { open, bookedDate, hall, competingLeads }
+  const [cardWhatsAppNotify, setCardWhatsAppNotify] = useState({});
 
   // API state
   const [enquiries, setEnquiries] = useState([]);
@@ -174,12 +175,15 @@ export default function CRM() {
       setEnquiries(prev => prev.map(e => e.id === enq.id ? { ...e, isWaitlisted: true, waitlistStatus: "Waiting" } : e));
       addToast("Moved to VIP Waitlist! ⏳", "success");
 
-      const phone = getEnquiryPhone(enq);
-      const name = getEnquiryName(enq);
-      if (phone) {
-        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
-        const msg = `Dear ${name},\n\nThank you for choosing us for your event on ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nThis specific date has just been confirmed by another booking. We have placed you as our Priority #1 on our VIP Date Waitlist! If this booking gets released or cancelled, we will notify you immediately.\n\nWould you also like to explore an alternate date with us? Let us know!`;
-        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      const shouldSend = cardWhatsAppNotify[enq.id] ?? true;
+      if (shouldSend) {
+        const phone = getEnquiryPhone(enq);
+        const name = getEnquiryName(enq);
+        if (phone) {
+          const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+          const msg = `Dear ${name},\n\nThank you for choosing us for your event on ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nThis specific date has just been confirmed by another booking. We have placed you as our Priority #1 on our VIP Date Waitlist! If this booking gets released or cancelled, we will notify you immediately.\n\nWould you also like to explore an alternate date with us? Let us know!`;
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
     } catch (err) {
       addToast("Failed to move to waitlist", "error");
@@ -192,12 +196,15 @@ export default function CRM() {
       setEnquiries(prev => prev.map(e => e.id === enq.id ? { ...e, status: "Lost" } : e));
       addToast("Enquiry marked as Lost ❌", "info");
 
-      const phone = getEnquiryPhone(enq);
-      const name = getEnquiryName(enq);
-      if (phone) {
-        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
-        const msg = `Dear ${name},\n\nThank you for reaching out to us for ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nUnfortunately this date has been reserved for another booking. We apologize for the inconvenience and hope to host your future events!`;
-        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      const shouldSend = cardWhatsAppNotify[enq.id] ?? true;
+      if (shouldSend) {
+        const phone = getEnquiryPhone(enq);
+        const name = getEnquiryName(enq);
+        if (phone) {
+          const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+          const msg = `Dear ${name},\n\nThank you for reaching out to us for ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nUnfortunately this date has been reserved for another booking. We apologize for the inconvenience and hope to host your future events!`;
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
     } catch (err) {
       addToast("Failed to update status", "error");
@@ -398,6 +405,27 @@ export default function CRM() {
                               <div style={{ fontSize: 11, fontWeight: 700, color: "#991b1b" }}>
                                 ⚠️ Slot booked for another client:
                               </div>
+                              <label
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  cursor: "pointer",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: (cardWhatsAppNotify[enq.id] ?? true) ? "#15803d" : "#64748b",
+                                  userSelect: "none",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={cardWhatsAppNotify[enq.id] ?? true}
+                                  onChange={(e) => setCardWhatsAppNotify((prev) => ({ ...prev, [enq.id]: e.target.checked }))}
+                                  style={{ accentColor: "#16a34a", cursor: "pointer" }}
+                                />
+                                <span>💬 Send WhatsApp message</span>
+                              </label>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleMoveToWaitlistWithWhatsApp(enq); }}
@@ -604,22 +632,35 @@ export default function CRM() {
                       {enq.status !== "Booking Confirmed" ? (
                         <div style={{ display: "flex", gap: 6 }}>
                           {getConflictStatus(enq) && !enq.isWaitlisted ? (
-                            <>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <label
+                                style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer", fontSize: 11, fontWeight: 700, color: (cardWhatsAppNotify[enq.id] ?? true) ? "#15803d" : "#94a3b8" }}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Tick to send WhatsApp, untick to skip"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={cardWhatsAppNotify[enq.id] ?? true}
+                                  onChange={(e) => setCardWhatsAppNotify((prev) => ({ ...prev, [enq.id]: e.target.checked }))}
+                                  style={{ accentColor: "#16a34a", cursor: "pointer" }}
+                                />
+                                <span>WhatsApp</span>
+                              </label>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMoveToWaitlistWithWhatsApp(enq); }}
                                 style={{ background: "#d97706", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                title="Move to VIP Waitlist & Notify via WhatsApp"
+                                title="Move to VIP Waitlist"
                               >
                                 <Clock size={11}/> To Waitlist
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleInformAndClose(enq); }}
                                 style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                title="Close Lead & Inform via WhatsApp"
+                                title="Close Lead"
                               >
                                 <XCircle size={11}/> Close Lead
                               </button>
-                            </>
+                            </div>
                           ) : (
                             <>
                               <button

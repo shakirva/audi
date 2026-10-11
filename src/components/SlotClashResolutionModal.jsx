@@ -13,6 +13,7 @@ export default function SlotClashResolutionModal({
 }) {
   const [leads, setLeads] = useState(competingLeads);
   const [processingId, setProcessingId] = useState(null);
+  const [sendWhatsApp, setSendWhatsApp] = useState({});
 
   React.useEffect(() => {
     setLeads(competingLeads);
@@ -37,13 +38,16 @@ export default function SlotClashResolutionModal({
       );
       addToast?.("Moved to VIP Waitlist! ⏳", "success");
 
-      // Prompt WhatsApp
-      const phone = lead.enquirerPhone || lead.Customer?.phone || lead.phone;
-      const name = lead.enquirerName || lead.Customer?.name || lead.customerName || "Customer";
-      if (phone) {
-        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
-        const msg = `Dear ${name},\n\nThank you for reaching out regarding your event on ${bookedDate}${hall ? ` at ${hall}` : ""}.\n\nThis slot has just been confirmed for another booking. We have prioritized you on our VIP Date Waitlist! If this date is released or cancelled, we will notify you immediately.\n\nWould you also like to consider an alternate date? Let us know!`;
-        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      // Check if WhatsApp notification should be sent
+      const shouldSend = sendWhatsApp[lead.id] ?? true;
+      if (shouldSend) {
+        const phone = lead.enquirerPhone || lead.Customer?.phone || lead.phone;
+        const name = lead.enquirerName || lead.Customer?.name || lead.customerName || "Customer";
+        if (phone) {
+          const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+          const msg = `Dear ${name},\n\nThank you for reaching out regarding your event on ${bookedDate}${hall ? ` at ${hall}` : ""}.\n\nThis slot has just been confirmed for another booking. We have prioritized you on our VIP Date Waitlist! If this date is released or cancelled, we will notify you immediately.\n\nWould you also like to consider an alternate date? Let us know!`;
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
     } catch (err) {
       addToast?.("Failed to move to waitlist", "error");
@@ -65,13 +69,16 @@ export default function SlotClashResolutionModal({
       );
       addToast?.("Enquiry marked as Lost ❌", "info");
 
-      // Optional polite inform
-      const phone = lead.enquirerPhone || lead.Customer?.phone || lead.phone;
-      const name = lead.enquirerName || lead.Customer?.name || lead.customerName || "Customer";
-      if (phone) {
-        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
-        const msg = `Dear ${name},\n\nThank you for your enquiry for ${bookedDate}${hall ? ` at ${hall}` : ""}.\nUnfortunately, this slot has been booked by another party. We apologize for any inconvenience and look forward to hosting your future events!`;
-        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      // Check if WhatsApp notification should be sent
+      const shouldSend = sendWhatsApp[lead.id] ?? true;
+      if (shouldSend) {
+        const phone = lead.enquirerPhone || lead.Customer?.phone || lead.phone;
+        const name = lead.enquirerName || lead.Customer?.name || lead.customerName || "Customer";
+        if (phone) {
+          const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+          const msg = `Dear ${name},\n\nThank you for your enquiry for ${bookedDate}${hall ? ` at ${hall}` : ""}.\nUnfortunately, this slot has been booked by another party. We apologize for any inconvenience and look forward to hosting your future events!`;
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
     } catch (err) {
       addToast?.("Failed to update status", "error");
@@ -242,19 +249,46 @@ export default function SlotClashResolutionModal({
                 </div>
 
                 {!lead.resolvedAction && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      marginTop: 12,
-                      paddingTop: 12,
-                      borderTop: "1px solid #f1f5f9",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <button
-                      disabled={isProcessing}
-                      onClick={() => handleMoveToWaitlist(lead)}
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
+                    {/* Send WhatsApp Checkbox Toggle */}
+                    <div style={{ marginBottom: 10 }}>
+                      <label
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: (sendWhatsApp[lead.id] ?? true) ? "#15803d" : "#64748b",
+                          background: (sendWhatsApp[lead.id] ?? true) ? "#f0fdf4" : "#f8fafc",
+                          border: `1.5px solid ${(sendWhatsApp[lead.id] ?? true) ? "#86efac" : "#e2e8f0"}`,
+                          borderRadius: 8,
+                          padding: "6px 12px",
+                          userSelect: "none",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={sendWhatsApp[lead.id] ?? true}
+                          onChange={(e) => setSendWhatsApp((prev) => ({ ...prev, [lead.id]: e.target.checked }))}
+                          style={{ width: 16, height: 16, accentColor: "#16a34a", cursor: "pointer" }}
+                        />
+                        <span>💬 Send WhatsApp notification to client</span>
+                      </label>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        disabled={isProcessing}
+                        onClick={() => handleMoveToWaitlist(lead)}
                       style={{
                         flex: 1,
                         minWidth: 160,
@@ -296,6 +330,7 @@ export default function SlotClashResolutionModal({
                     >
                       <Ban size={14} /> Close / Lost
                     </button>
+                    </div>
                   </div>
                 )}
               </div>
