@@ -8,11 +8,11 @@ import {
 import { 
   Clock, TrendingUp, Calendar, Plus, MessageCircle, MapPin, CheckSquare, Truck, Workflow,
   Users, CreditCard, FileText, ShieldAlert, ShieldCheck, Sparkles, Wallet, CheckCircle2,
-  CalendarCheck, AlertCircle, Info, ChevronRight
+  CalendarCheck, AlertCircle, Info, ChevronRight, Receipt, TrendingDown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../context/RoleContext";
-import { bookingsAPI, enquiriesAPI, complianceAPI, settingsAPI } from "../services/api";
+import { bookingsAPI, enquiriesAPI, complianceAPI, settingsAPI, expensesAPI } from "../services/api";
 
 const BRAND = {
   primary: "#1B4332",
@@ -128,6 +128,7 @@ function ExecutiveCockpit() {
 
   const [allBookingsList, setAllBookingsList] = React.useState([]);
   const [allEnquiriesList, setAllEnquiriesList] = React.useState([]);
+  const [allExpensesList, setAllExpensesList] = React.useState([]);
   const [selectedPeriod, setSelectedPeriod] = React.useState("this_month");
 
   const [revData, setRevData] = React.useState([]);
@@ -143,12 +144,13 @@ function ExecutiveCockpit() {
 
   const loadDashboard = async () => {
     try {
-      const [statsRes, bookingsRes, enqRes, compRes, settingsRes] = await Promise.all([
+      const [statsRes, bookingsRes, enqRes, compRes, settingsRes, expensesRes] = await Promise.all([
         bookingsAPI.getStats(),
         bookingsAPI.getAll({ limit: 1000 }),
         enquiriesAPI.getAll({ limit: 1000 }),
         complianceAPI.getSummary({ hideUpgradeModal: true }).catch(() => null),
-        settingsAPI.get().catch(() => null)
+        settingsAPI.get().catch(() => null),
+        expensesAPI.getAll({ limit: 1000 }).catch(() => ({ data: { data: [] } }))
       ]);
 
       if (compRes?.data?.data) {
@@ -157,8 +159,10 @@ function ExecutiveCockpit() {
 
       const allBookings = bookingsRes.data?.data || [];
       const allEnquiries = enqRes.data?.data || [];
+      const allExpenses = expensesRes.data?.data || [];
       setAllBookingsList(allBookings);
       setAllEnquiriesList(allEnquiries);
+      setAllExpensesList(allExpenses);
 
       const settingsData = settingsRes?.data?.data || {};
       const reminderDays = settingsData.reminderDays || [];
@@ -361,6 +365,9 @@ function ExecutiveCockpit() {
 
   // Compute active stats dynamically based on selectedPeriod
   const currentStats = React.useMemo(() => {
+    // Total expenses across all recorded expenses
+    const allTimeExpenses = allExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
     if (selectedPeriod === "all_time") {
       return {
         ...stats,
@@ -368,16 +375,13 @@ function ExecutiveCockpit() {
         totalBookings: stats.totalBookings || 0,
         enquiryCount: stats.enquiryCount || 0,
         pendingAmount: stats.pendingAmount || 0,
-        upcomingCount: stats.upcomingCount || 0,
+        totalExpenses: allTimeExpenses,
         healthScore: stats.healthScore || 91
       };
     }
 
     const { start, end } = periodInfo;
-    if (!start || !end) return stats;
-
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (!start || !end) return { ...stats, totalExpenses: allTimeExpenses };
 
     const pBookings = allBookingsList.filter(b => {
       const dStr = b.date || b.createdAt;
@@ -407,10 +411,14 @@ function ExecutiveCockpit() {
       return sum;
     }, 0);
 
-    const pUpcoming = pBookings.filter(b => {
-      if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry') return false;
-      return new Date(b.date) >= startOfToday;
-    }).length;
+    // Filter expenses in period
+    const pExpenses = allExpensesList.filter(e => {
+      const dStr = e.date || e.createdAt;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return d >= start && d <= end;
+    });
+    const pExpensesTotal = pExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
     const denom = Math.max(confirmedPBookings.length, pEnquiries.length);
     const pHealthScore = denom > 0
@@ -422,10 +430,10 @@ function ExecutiveCockpit() {
       totalBookings: confirmedPBookings.length,
       enquiryCount: pEnquiries.length,
       pendingAmount: pPending,
-      upcomingCount: pUpcoming,
+      totalExpenses: pExpensesTotal,
       healthScore: pHealthScore || 91
     };
-  }, [selectedPeriod, allBookingsList, allEnquiriesList, stats, periodInfo]);
+  }, [selectedPeriod, allBookingsList, allEnquiriesList, allExpensesList, stats, periodInfo]);
 
   const periodTabs = [
     { key: "this_month", label: "This Month" },
@@ -566,8 +574,8 @@ function ExecutiveCockpit() {
         <GradientCard title="Total Revenue" value={formatStatCurrency(currentStats.totalRevenue)} subtext={periodInfo.badge} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={currentStats.totalBookings} subtext={periodInfo.badge} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
         <GradientCard title="Enquiries" value={currentStats.enquiryCount} subtext={periodInfo.badge} gradient={["#52B788", "#74C69D"]} delay={0.3} />
-        <GradientCard title="Pending Pmt" value={formatStatCurrency(currentStats.pendingAmount)} subtext={periodInfo.badge} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
-        <GradientCard title="Upcoming" value={currentStats.upcomingCount} subtext={periodInfo.badge} gradient={["#0ea5e9", "#38bdf8"]} delay={0.5} />
+        <GradientCard title="Balance Amount" value={formatStatCurrency(currentStats.pendingAmount)} subtext={periodInfo.badge} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
+        <GradientCard title="Total Expenses" value={formatStatCurrency(currentStats.totalExpenses)} subtext={periodInfo.badge} gradient={["#9f1239", "#e11d48"]} delay={0.5} />
       </div>
 
       {/* ── MOBILE KPI LAYOUT (Creative, compact, high-converting mobile UI) ── */}
@@ -685,7 +693,7 @@ function ExecutiveCockpit() {
             </div>
           </motion.div>
 
-          {/* Card 3: Pending Pmt */}
+          {/* Card 3: Balance Amount */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -702,7 +710,7 @@ function ExecutiveCockpit() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Pending Pmt</span>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Balance Amount</span>
               <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Clock size={12} color="#fde68a" />
               </div>
@@ -711,37 +719,37 @@ function ExecutiveCockpit() {
               {formatStatCurrency(currentStats.pendingAmount)}
             </div>
             <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.75)", fontWeight: "600" }}>
-              Balance Due
+              Pending Collection
             </div>
           </motion.div>
 
-          {/* Card 4: Upcoming */}
+          {/* Card 4: Total Expenses */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             style={{
-              background: "linear-gradient(135deg, #0284c7, #0ea5e9)",
+              background: "linear-gradient(135deg, #9f1239, #e11d48)",
               borderRadius: "16px",
               padding: "14px 14px",
               color: "#fff",
-              boxShadow: "0 6px 18px rgba(14, 165, 233, 0.14)",
+              boxShadow: "0 6px 18px rgba(225, 29, 72, 0.15)",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between"
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Upcoming</span>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255, 255, 255, 0.85)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Expenses</span>
               <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Sparkles size={12} color="#bae6fd" />
+                <Receipt size={12} color="#fecdd3" />
               </div>
             </div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
-              {currentStats.upcomingCount}
+            <div style={{ fontSize: "20px", fontWeight: "800", color: "#fff", marginBottom: "1px" }}>
+              {formatStatCurrency(currentStats.totalExpenses)}
             </div>
             <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.75)", fontWeight: "600" }}>
-              Scheduled Functions
+              Recorded Spend
             </div>
           </motion.div>
         </div>
