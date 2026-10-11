@@ -137,20 +137,21 @@ export default function Calendar() {
   const availColor = (day) => {
     const dateStr = getDayDateStr(day);
     if (blackoutDates.includes(dateStr)) {
-      return { bg: "#f3f4f6", border: "#d1d5db", label: "Blocked", badgeBg: "#e5e7eb", badgeColor: "#6b7280" };
+      return { bg: "#f3f4f6", border: "#d1d5db", label: "Blocked", badgeBg: "#e5e7eb", badgeColor: "#6b7280", pill: "Blocked" };
     }
-    const dayBookings = allCalendarData.filter(b => b.date === dateStr);
-    const activeBookings = dayBookings.filter(b => b.status !== "Enquiry" && b.status !== "Cancelled");
+    const dayItems = visibleCalendarData.filter(b => b.date === dateStr);
+    const activeBookings = dayItems.filter(b => b.status !== "Enquiry" && b.status !== "Cancelled");
+    const activeEnquiries = dayItems.filter(b => b.status === "Enquiry");
     
     // Only enquiries → Beautiful sky blue
-    if (dayBookings.length > 0 && activeBookings.length === 0) {
+    if (activeBookings.length === 0 && activeEnquiries.length > 0) {
       return { 
         bg: "#dbeafe", 
         border: "#93c5fd", 
         label: "Enquiry", 
         badgeBg: "#bfdbfe", 
         badgeColor: "#1d4ed8",
-        pill: `${dayBookings.length} Enquiry`
+        pill: `${activeEnquiries.length} Enq`
       };
     }
     
@@ -170,24 +171,26 @@ export default function Calendar() {
     
     // Partial halls booked → Warm yellow / amber
     if (uniqueHalls < totalHallsCount) {
+      const enqSuffix = activeEnquiries.length > 0 ? ` +${activeEnquiries.length}E` : "";
       return { 
         bg: "#fef9c3", 
         border: "#eab308", 
         label: "Partial", 
         badgeBg: "#fef08a", 
         badgeColor: "#a16207",
-        pill: `${uniqueHalls}/${totalHallsCount} Booked`
+        pill: `${uniqueHalls}/${totalHallsCount}${enqSuffix}`
       };
     }
     
     // All halls booked → Soft Red (full)
+    const enqFullSuffix = activeEnquiries.length > 0 ? ` +${activeEnquiries.length}E` : "";
     return { 
       bg: "#fee2e2", 
       border: "#ef4444", 
       label: "Full", 
       badgeBg: "#fecaca", 
       badgeColor: "#b91c1c",
-      pill: "Full"
+      pill: `Full${enqFullSuffix}`
     };
   };
 
@@ -315,9 +318,9 @@ export default function Calendar() {
                 onMouseLeave={e => { if (!isSelected && !isDisabled) e.currentTarget.style.transform = "translateY(0)"; }}
               >
                 {/* Top row: day number & status pill */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 2 }}>
                   <span style={{
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: isToday ? 900 : 700,
                     color: isBlocked ? "#9ca3af"
                       : isSelected ? "#fff" 
@@ -325,6 +328,7 @@ export default function Calendar() {
                       : isToday ? "#1B4332" 
                       : isWeekend ? "#dc2626" 
                       : "#1e293b",
+                    flexShrink: 0
                   }}>
                     {day}
                   </span>
@@ -332,13 +336,18 @@ export default function Calendar() {
                   {/* Status chip pill */}
                   {!isBlocked && (
                     <span style={{
-                      fontSize: 8,
+                      fontSize: 7.5,
                       fontWeight: 800,
-                      padding: "1px 4px",
+                      padding: "1px 3px",
                       borderRadius: 4,
                       background: isSelected ? "rgba(255,255,255,0.2)" : avail.badgeBg,
                       color: isSelected ? "#fff" : avail.badgeColor,
-                      lineHeight: 1.2,
+                      lineHeight: 1.1,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "72%",
+                      textAlign: "center"
                     }}>
                       {avail.pill}
                     </span>

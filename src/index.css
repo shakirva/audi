@@ -231,10 +231,21 @@ button, input, select, textarea {
   grid-template-columns: 1fr;
   gap: 16px;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
 }
 @media (min-width: 1024px) {
   .hm-calendar-layout {
     grid-template-columns: 1fr 340px;
+  }
+}
+@media (max-width: 767px) {
+  .hm-calendar-layout {
+    gap: 12px;
+  }
+  .hm-calendar-grid {
+    padding: 4px 4px 10px !important;
+    gap: 3px !important;
   }
 }
 
