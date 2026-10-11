@@ -185,38 +185,54 @@ export default function HallsTab({
           </button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {halls.map((hall, idx) => (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50">
-              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
-                <span className="text-2xl shrink-0">{hall.icon}</span>
-                <div className="min-w-0">
-                  <h4 className="text-sm sm:text-base font-bold text-slate-900 m-0 mb-1 truncate">{hall.name}</h4>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                    <span>👥 {hall.capacity || "0"} Guests</span>
-                    <span>•</span>
-                    <span className="capitalize">{hall.pricingType ? hall.pricingType.replace("_", " ") : "Fixed"} Pricing</span>
-                    <span>•</span>
-                    <span>{hall.gstRate || 0}% GST</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                <button onClick={() => handleEditHall(idx)} className="bg-sky-100 hover:bg-sky-200 border-0 rounded-lg cursor-pointer px-3 py-1.5 flex items-center gap-1.5 text-sky-800 font-semibold text-xs transition-colors">
-                  <Edit size={14} /> Edit
-                </button>
-                <button onClick={() => handleDeleteHall(idx)} className="bg-rose-50 hover:bg-rose-100 border-0 rounded-lg cursor-pointer px-3 py-1.5 flex items-center gap-1.5 text-rose-600 font-semibold text-xs transition-colors">
-                  <Trash2 size={14} /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          {halls.length === 0 && (
-            <div style={{ padding: "32px", textAlign: "center", background: "#f8fafc", borderRadius: 12, border: "1px dashed #cbd5e1", color: "#64748b", fontSize: 14 }}>
-              No halls configured yet. Click "Add New Hall" to get started.
-            </div>
-          )}
-        </div>
+        {halls.length === 0 ? (
+          <div style={{ padding: "32px", textAlign: "center", background: "#f8fafc", borderRadius: 12, border: "1px dashed #cbd5e1", color: "#64748b", fontSize: 14 }}>
+            No halls configured yet. Click "Add New Hall" to get started.
+          </div>
+        ) : (
+          <div style={{ background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9", color: "#475569", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <th style={{ padding: "12px 16px" }}>Hall Name</th>
+                  <th style={{ padding: "12px 16px" }}>Capacity</th>
+                  <th style={{ padding: "12px 16px" }}>Pricing Model</th>
+                  <th style={{ padding: "12px 16px" }}>GST Rate</th>
+                  <th style={{ padding: "12px 16px", width: 140, textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {halls.map((hall, idx) => (
+                  <tr key={idx} style={{ borderTop: "1px solid #e2e8f0", background: "#fff" }}>
+                    <td style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 22 }}>{hall.icon}</span>
+                        <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{hall.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span style={{ color: "#334155", fontWeight: 600 }}>👥 {hall.capacity || "0"} Guests</span>
+                    </td>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span style={{ color: "#475569", background: "#f1f5f9", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, textTransform: "capitalize" }}>
+                        {hall.pricingType ? hall.pricingType.replace("_", " ") : "Fixed"}
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span style={{ color: "#475569", fontWeight: 600 }}>{hall.gstRate || 0}%</span>
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", gap: 6 }}>
+                        <button onClick={() => handleEditHall(idx)} style={{ padding: "6px 12px", background: "#e0f2fe", border: "none", borderRadius: 6, cursor: "pointer", color: "#0369a1", fontSize: 12, fontWeight: 700 }}>Edit</button>
+                        <button onClick={() => handleDeleteHall(idx)} style={{ padding: "6px 12px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div style={cardSt}>

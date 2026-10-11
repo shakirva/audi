@@ -343,27 +343,51 @@ export default function FormsTab({
             <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Create time slots such as Morning, Afternoon or Evening for your venue.</p>
           </div>
         ) : (
-          <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
-            {sessions.map((sess, idx) => {
-              const isIncomplete = !sess.startTime || !sess.endTime;
-              return (
-                <div key={idx} style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: idx < sessions.length - 1 ? "1px solid #e2e8f0" : "none", background: isIncomplete ? "#fef2f2" : "#fff" }}>
-                  <div>
-                    <h4 style={{ margin: "0 0 4px 0", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
-                      {sess.name}
-                      {isIncomplete && <span style={{ fontSize: 10, background: "#fecaca", color: "#991b1b", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>Incomplete</span>}
-                    </h4>
-                    <p style={{ margin: 0, fontSize: 13, color: "#64748b", fontFamily: "monospace" }}>
-                      {sess.time ? sess.time : "--:-- – --:--"}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => openSessionModal(idx)} style={{ padding: "6px 12px", background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#334155", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                    <button onClick={() => handleDeleteSession(idx)} style={{ padding: "6px 12px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Delete</button>
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9", color: "#475569", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <th style={{ padding: "12px 16px" }}>Session Name</th>
+                  <th style={{ padding: "12px 16px" }}>Time Window</th>
+                  <th style={{ padding: "12px 16px" }}>Status</th>
+                  <th style={{ padding: "12px 16px", width: 140, textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((sess, idx) => {
+                  const isIncomplete = !sess.startTime || !sess.endTime;
+                  return (
+                    <tr key={idx} style={{ borderTop: "1px solid #e2e8f0", background: "#fff" }}>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{sess.name}</span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{ color: "#475569", fontFamily: "monospace", fontSize: 13, background: "#f1f5f9", padding: "3px 8px", borderRadius: 6 }}>
+                          {sess.time ? sess.time : "--:-- – --:--"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        {isIncomplete ? (
+                          <span style={{ fontSize: 11, background: "#fef2f2", color: "#b91c1c", padding: "3px 8px", borderRadius: 20, fontWeight: 700, border: "1px solid #fecaca" }}>
+                            Incomplete
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, background: "#f0fdf4", color: "#166534", padding: "3px 8px", borderRadius: 20, fontWeight: 700, border: "1px solid #bbf7d0" }}>
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: 6 }}>
+                          <button onClick={() => openSessionModal(idx)} style={{ padding: "6px 12px", background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#334155", fontSize: 12, fontWeight: 700 }}>Edit</button>
+                          <button onClick={() => handleDeleteSession(idx)} style={{ padding: "6px 12px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -391,27 +415,54 @@ export default function FormsTab({
             <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Create event categories used during booking (e.g. Wedding, Reception).</p>
           </div>
         ) : (
-          <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
-            {eventTypes.map((et, idx) => {
-              const name = typeof et === 'string' ? et : et.name;
-              const sessionCount = et.sessions ? et.sessions.length : 0;
-              return (
-                <div key={idx} className="p-3 sm:px-4 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 last:border-b-0 bg-white">
-                  <div className="flex-1 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    <h4 className="m-0 text-sm font-bold text-slate-900 min-w-[120px]">{name}</h4>
-                    <span className="text-xs text-slate-500">{sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
-                    <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: sessionCount > 0 ? "#059669" : "#94a3b8" }}>
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: sessionCount > 0 ? "#10b981" : "#cbd5e1" }}></div>
-                      {sessionCount > 0 ? "Configured" : "Not configured"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                    <button onClick={() => openEditEventModal(idx)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border-0 rounded-md cursor-pointer text-slate-700 text-xs font-bold transition-colors">Edit</button>
-                    <button onClick={() => handleDeleteEventType(idx)} className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border-0 rounded-md cursor-pointer text-rose-600 text-xs font-bold transition-colors">Delete</button>
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9", color: "#475569", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <th style={{ padding: "12px 16px" }}>Event Type</th>
+                  <th style={{ padding: "12px 16px" }}>Assigned Sessions</th>
+                  <th style={{ padding: "12px 16px" }}>Configuration Status</th>
+                  <th style={{ padding: "12px 16px", width: 140, textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventTypes.map((et, idx) => {
+                  const name = typeof et === 'string' ? et : et.name;
+                  const sessionCount = et.sessions ? et.sessions.length : 0;
+                  return (
+                    <tr key={idx} style={{ borderTop: "1px solid #e2e8f0", background: "#fff" }}>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{name}</span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{ color: "#475569", fontSize: 13 }}>
+                          {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        {sessionCount > 0 ? (
+                          <span style={{ fontSize: 11, background: "#f0fdf4", color: "#166534", padding: "3px 10px", borderRadius: 20, fontWeight: 700, border: "1px solid #bbf7d0", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }}></span>
+                            Configured
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, background: "#f8fafc", color: "#64748b", padding: "3px 10px", borderRadius: 20, fontWeight: 600, border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#cbd5e1" }}></span>
+                            Not configured
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: 6 }}>
+                          <button onClick={() => openEditEventModal(idx)} style={{ padding: "6px 12px", background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#334155", fontSize: 12, fontWeight: 700 }}>Edit</button>
+                          <button onClick={() => handleDeleteEventType(idx)} style={{ padding: "6px 12px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

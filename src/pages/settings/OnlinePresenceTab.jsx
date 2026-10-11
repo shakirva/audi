@@ -112,48 +112,73 @@ export default function OnlinePresenceTab({
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: 16, border: "1px solid #e2e8f0", padding: "32px 20px" }}>
-          
-          <div style={{ padding: 12, background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${publicBookingUrl}&bgcolor=ffffff&color=1B4332&margin=10`}
-              alt="QR Code for booking page"
-              style={{ width: 140, height: 140, display: "block" }} 
-            />
-          </div>
-
-          <div className="w-full max-w-lg flex flex-col items-center gap-3">
-            <div className="w-full flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden">
-              <span className="px-3 py-2 text-xs sm:text-sm text-slate-600 flex-1 font-mono truncate">
-                {publicBookingUrl}
+        <div style={{ background: "#f8fafc", borderRadius: 16, border: "1px solid #e2e8f0", padding: "28px 24px" }}>
+          <div className="flex flex-col md:flex-row items-center gap-8 max-w-3xl mx-auto">
+            {/* QR Code Frame */}
+            <div style={{ 
+              padding: 14, background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", 
+              boxShadow: "0 4px 14px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, shrink: 0
+            }}>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${publicBookingUrl}&bgcolor=ffffff&color=1B4332&margin=10`}
+                alt="QR Code for booking page"
+                style={{ width: 130, height: 130, display: "block" }} 
+              />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Scan to Open
               </span>
-              <button 
-                onClick={() => { navigator.clipboard.writeText(publicBookingUrl); addToast("Link copied!", "success"); }}
-                className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 border-0 border-l border-slate-300 cursor-pointer flex items-center gap-1.5 text-slate-700 font-semibold text-xs transition-colors shrink-0"
-              >
-                <Copy size={14} /> Copy
-              </button>
             </div>
-            
-            <div className="w-full flex flex-wrap sm:flex-nowrap gap-2 justify-center">
-              <a 
-                href={publicBookingUrl} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="flex-1 min-w-[120px] text-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs sm:text-sm font-bold no-underline transition-colors"
-              >
-                Open Form
-              </a>
 
-              <button 
-                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Book your event at our venue 🏛️\n" + publicBookingUrl)}`, "_blank")}
-                className="flex-1 min-w-[140px] px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white border-0 rounded-lg text-xs sm:text-sm font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
-              >
-                Share on WhatsApp
-              </button>
+            {/* Action controls */}
+            <div className="flex-1 w-full flex flex-col gap-4">
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                  Direct Booking Page URL
+                </label>
+                <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <span style={{ padding: "10px 14px", fontSize: 13, color: "#1e293b", flex: 1, fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {publicBookingUrl}
+                  </span>
+                  <button 
+                    onClick={() => { navigator.clipboard.writeText(publicBookingUrl); addToast("Link copied to clipboard!", "success"); }}
+                    style={{ 
+                      padding: "10px 16px", background: "#f8fafc", border: "none", borderLeft: "1px solid #cbd5e1", 
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#1B4332", fontWeight: 700, fontSize: 12,
+                      transition: "background 0.2s"
+                    }}
+                  >
+                    <Copy size={14} /> Copy Link
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap sm:flex-nowrap gap-3">
+                <a 
+                  href={publicBookingUrl} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  style={{ 
+                    flex: 1, textAlign: "center", padding: "10px 20px", background: "#0f172a", color: "#fff", 
+                    borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", display: "inline-flex", 
+                    alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.2s" 
+                  }}
+                >
+                  Preview Form ↗
+                </a>
+
+                <button 
+                  onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Book your event at our venue 🏛️\n" + publicBookingUrl)}`, "_blank")}
+                  style={{ 
+                    flex: 1, padding: "10px 20px", background: "#25D366", color: "#fff", border: "none", 
+                    borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", 
+                    alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.2s" 
+                  }}
+                >
+                  Share on WhatsApp
+                </button>
+              </div>
             </div>
           </div>
-
         </div>
       </div>
 

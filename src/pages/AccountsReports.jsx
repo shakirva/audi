@@ -340,40 +340,40 @@ export default function AccountsReports() {
       </div>
 
       {/* Advanced Filter Bar */}
-      <div className="print-hide flex flex-col sm:flex-row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "14px 16px", background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+      <div className="print-hide flex flex-col sm:flex-row items-stretch sm:items-center" style={{ flexWrap: "wrap", gap: 10, marginBottom: 24, padding: "12px 16px", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
         <div className="hidden sm:flex" style={{ alignItems: "center", gap: 8, color: "#1B4332", fontWeight: 700, fontSize: 13, paddingRight: 10, borderRight: "1px solid #e5e7eb" }}>
           <Filter size={16} /> Filters
         </div>
         
         <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
-          <div className="flex-1 min-w-[130px] flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>From:</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-700 outline-none" style={{ minWidth: 0 }} />
+          <div className="flex-1 min-w-[130px] flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5" style={{ height: 36, boxSizing: "border-box" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>From:</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-800 outline-none font-medium" style={{ minWidth: 0 }} />
           </div>
-          <div className="flex-1 min-w-[130px] flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>To:</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-700 outline-none" style={{ minWidth: 0 }} />
+          <div className="flex-1 min-w-[130px] flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5" style={{ height: 36, boxSizing: "border-box" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>To:</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-800 outline-none font-medium" style={{ minWidth: 0 }} />
           </div>
           {(startDate || endDate) && (
-            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ padding: "0 12px", height: 36, fontSize: 12, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#64748b", fontWeight: 600 }}>Clear</button>
           )}
         </div>
         
-        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterHall} onChange={(e) => setFilterHall(e.target.value)} className="w-full sm:w-auto" style={{ height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb", fontWeight: 500 }}>
           <option value="All Halls">Hall: All Halls</option>
           {halls.map((h, i) => (
             <option key={i} value={h.name}>{h.name}</option>
           ))}
         </select>
         
-        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)} className="w-full sm:w-auto" style={{ height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb", fontWeight: 500 }}>
           <option value="All Staff">Executive: All Staff</option>
           {uniqueExecutives.map((exec, i) => (
             <option key={i} value={exec}>{exec}</option>
           ))}
         </select>
         
-        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} className="w-full sm:w-auto" style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb" }}>
+        <select value={filterPlace} onChange={(e) => setFilterPlace(e.target.value)} className="w-full sm:w-auto" style={{ height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: "#374151", outline: "none", cursor: "pointer", background: "#f9fafb", fontWeight: 500 }}>
           <option value="All Locations">Place: All Locations</option>
           {uniquePlaces.map((place, i) => (
             <option key={i} value={place}>{place}</option>
