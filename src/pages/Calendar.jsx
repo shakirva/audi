@@ -266,9 +266,17 @@ export default function Calendar() {
         </div>
 
         {/* Day cells with Beautiful Full-Card Colored Backgrounds */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "8px 10px 14px", gap: 6 }}>
+        <div 
+          className="hm-calendar-grid"
+          style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(7,1fr)", 
+            padding: "6px 8px 12px", 
+            gap: 4 
+          }}
+        >
           {cells.map((day, i) => {
-            if (!day) return <div key={`empty-${i}`} style={{ minHeight: 64 }} />;
+            if (!day) return <div key={`empty-${i}`} style={{ minHeight: 46 }} />;
             const dateStr = getDayDateStr(day);
             const isToday      = dateStr === todayStr;
             const isSelected   = day === selected;
@@ -283,25 +291,25 @@ export default function Calendar() {
               <div key={`day-${day}`}
                 onClick={() => { if (!isDisabled) setSelected(day === selected ? null : day); }}
                 style={{
-                  borderRadius: 10,
-                  padding: "6px 5px 6px",
-                  minHeight: 68,
+                  borderRadius: 8,
+                  padding: "5px 4px 5px",
+                  minHeight: 52,
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   background: isBlocked ? "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)"
                     : isSelected ? "#1B4332" 
                     : isPast ? "#f8fafc" 
                     : avail.bg,
-                  border: isBlocked ? "2px solid #9ca3af"
+                  border: isBlocked ? "1.5px solid #9ca3af"
                     : isSelected ? "2px solid #1B4332" 
                     : isToday ? `2.5px solid #1B4332` 
-                    : isPast ? "1.5px solid #e2e8f0" 
-                    : `2px solid ${avail.border}`,
+                    : isPast ? "1px solid #e2e8f0" 
+                    : `1.5px solid ${avail.border}`,
                   transition: "all 0.15s ease",
                   opacity: isBlocked ? 0.65 : isPast ? 0.55 : 1,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  boxShadow: isSelected ? "0 4px 14px rgba(27,67,50,0.3)" : "none",
+                  boxShadow: isSelected ? "0 4px 12px rgba(27,67,50,0.25)" : "none",
                 }}
                 onMouseEnter={e => { if (!isSelected && !isDisabled) e.currentTarget.style.transform = "translateY(-1px)"; }}
                 onMouseLeave={e => { if (!isSelected && !isDisabled) e.currentTarget.style.transform = "translateY(0)"; }}
@@ -340,39 +348,37 @@ export default function Calendar() {
                   )}
                 </div>
 
-                {/* Day content: Preview of booked client name or dots */}
+                {/* Day content: Clean indicator dots / event count without text clutter */}
                 {!isBlocked && (
-                  <div style={{ marginTop: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 12, marginTop: 2 }}>
                     {dayBookings.length > 0 ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {dayBookings.slice(0, 1).map((b, bi) => (
-                          <div 
-                            key={bi} 
-                            style={{ 
-                              fontSize: 9, 
-                              fontWeight: 700, 
-                              color: isSelected ? "#fff" : "#1e293b",
-                              whiteSpace: "nowrap", 
-                              overflow: "hidden", 
-                              textOverflow: "ellipsis",
-                              lineHeight: 1.2,
-                              background: isSelected ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.6)",
-                              padding: "1px 3px",
-                              borderRadius: 3,
-                            }}
-                            title={`${b.customerName} (${b.status})`}
-                          >
-                            {b.status === "Confirmed" ? "👑" : "💬"} {b.customerName}
-                          </div>
-                        ))}
-                        {dayBookings.length > 1 && (
-                          <span style={{ fontSize: 8, fontWeight: 800, color: isSelected ? "rgba(255,255,255,0.8)" : "#64748b", lineHeight: 1 }}>
-                            +{dayBookings.length - 1} more
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        {dayBookings.slice(0, 3).map((b, bi) => {
+                          const dotColor = b.status === "Confirmed" ? (isSelected ? "#fff" : "#16a34a")
+                            : b.status === "Pending Payment" ? (isSelected ? "#fef08a" : "#d97706")
+                            : (isSelected ? "#bae6fd" : "#2563eb");
+                          return (
+                            <span 
+                              key={bi} 
+                              style={{ 
+                                width: 5, 
+                                height: 5, 
+                                borderRadius: "50%", 
+                                background: dotColor,
+                                display: "inline-block"
+                              }} 
+                              title={`${b.customerName} (${b.status})`}
+                            />
+                          );
+                        })}
+                        {dayBookings.length > 3 && (
+                          <span style={{ fontSize: 7, fontWeight: 800, color: isSelected ? "rgba(255,255,255,0.8)" : "#64748b" }}>
+                            +{dayBookings.length - 3}
                           </span>
                         )}
                       </div>
                     ) : (
-                      <div style={{ height: 12 }} />
+                      <div style={{ height: 6 }} />
                     )}
                   </div>
                 )}
@@ -382,24 +388,24 @@ export default function Calendar() {
         </div>
 
         {/* Legend Footer */}
-        <div style={{ padding: "12px 18px", borderTop: "1px solid #f3f4f6", display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", background: "#fafcfb" }}>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ padding: "10px 14px", borderTop: "1px solid #f3f4f6", display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", background: "#fafcfb" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             {[
-              { color: "#22c55e", bg: "#dcfce7",  label: "Available (Free)" },
-              { color: "#eab308", bg: "#fef9c3",  label: "Partial (Some halls free)" },
-              { color: "#ef4444", bg: "#fee2e2",  label: "Full (All booked)" },
-              { color: "#93c5fd", bg: "#dbeafe",  label: "Enquiry only" },
+              { color: "#22c55e", bg: "#dcfce7",  label: "Available" },
+              { color: "#eab308", bg: "#fef9c3",  label: "Partial" },
+              { color: "#ef4444", bg: "#fee2e2",  label: "Full" },
+              { color: "#93c5fd", bg: "#dbeafe",  label: "Enquiry" },
               { color: "#9ca3af", bg: "#f3f4f6",  label: "Blocked" },
             ].map(item => (
-              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 3, background: item.bg, border: `1.5px solid ${item.color}` }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>{item.label}</span>
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: item.bg, border: `1.5px solid ${item.color}` }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#475569" }}>{item.label}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ fontSize: 11, color: "#64748b" }}>
-            Click any colored date to inspect details or book.
+          <div style={{ fontSize: 10, color: "#64748b" }}>
+            Tap any date to inspect details.
           </div>
         </div>
 
@@ -409,7 +415,7 @@ export default function Calendar() {
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
         {/* Selected Date Details Card */}
-        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.06)", padding: 18, border: "1px solid #e2e8f0" }}>
+        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.06)", padding: 16, border: "1px solid #e2e8f0" }}>
           {selected ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 8, borderBottom: "1px solid #f1f5f9", paddingBottom: 10 }}>
@@ -425,20 +431,20 @@ export default function Calendar() {
                   onClick={() => setShowModal(true)}
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: "0 2px 6px rgba(27,67,50,0.25)" }}
                 >
-                  <Plus size={13} /> New Enquiry
+                  <Plus size={13} /> Add Enquiry
                 </button>
               </div>
 
               {selectedDayItems.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "24px 0", background: "#f8fafc", borderRadius: 10, border: "1px dashed #cbd5e1" }}>
+                <div style={{ textAlign: "center", padding: "20px 0", background: "#f8fafc", borderRadius: 10, border: "1px dashed #cbd5e1" }}>
                   <CalendarIcon size={24} color="#94a3b8" style={{ margin: "0 auto 6px" }} />
                   <p style={{ fontSize: 13, fontWeight: 700, color: "#334155", margin: 0 }}>Date is Available!</p>
                   <p style={{ fontSize: 11, color: "#64748b", margin: "4px 0 10px" }}>Ready for new bookings.</p>
                   <button
                     onClick={() => setShowModal(true)}
-                    style={{ background: "#fff", border: "1px solid #1B4332", color: "#1B4332", fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 6, cursor: "pointer" }}
+                    style={{ background: "#fff", border: "1px solid #1B4332", color: "#1B4332", fontSize: 11, fontWeight: 700, padding: "6px 14px", borderRadius: 6, cursor: "pointer" }}
                   >
-                    Add Booking / Enquiry
+                    Add Enquiry
                   </button>
                 </div>
               ) : (
