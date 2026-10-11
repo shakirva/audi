@@ -19,6 +19,14 @@ class ExpenseRepository extends BaseRepository {
 
     if (month) where.date = { [Op.like]: `${month}%` };
     if (category && category !== "All") where.category = category;
+    
+    if (query.startDate && query.endDate) {
+      where.date = { [Op.between]: [query.startDate, query.endDate] };
+    } else if (query.startDate) {
+      where.date = { [Op.gte]: query.startDate };
+    } else if (query.endDate) {
+      where.date = { [Op.lte]: query.endDate };
+    }
 
     return this.findAll({
       tenantId,

@@ -11,17 +11,19 @@ export default function PurchasesAndExpenses() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editExpense, setEditExpense] = useState(null);
 
   useEffect(() => {
     fetchExpenses();
-  }, []);
+  }, [startDate, endDate]);
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const res = await expensesAPI.getAll({ limit: 100 });
+      const res = await expensesAPI.getAll({ limit: 100, startDate, endDate });
       setExpenses(res.data.data?.data || res.data.data || []);
     } catch (error) {
       if (!isPlanRestriction(error)) addToast("Failed to fetch expenses", "error");
@@ -56,7 +58,25 @@ export default function PurchasesAndExpenses() {
         </div>
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto" style={{ gap: 12, alignItems: "stretch" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input 
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#f8fafc", outline: "none", color: "#475569" }}
+              title="Start Date"
+            />
+            <span style={{color: "#94a3b8", fontSize: 12}}>to</span>
+            <input 
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#f8fafc", outline: "none", color: "#475569" }}
+              title="End Date"
+            />
+          </div>
           <div style={{ position: "relative", flex: 1 }}>
+            <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 

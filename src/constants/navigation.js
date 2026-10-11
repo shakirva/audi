@@ -52,7 +52,6 @@ export const BASE_NAVIGATION = [
     type: "group", label: "Reports Center", icon: BarChart3, id: "reports", roles: ["SuperAdmin", "Admin", "Owner", "Manager", "Tester", "Accounts"],
     planRequired: "professional",
     children: [
-      { path: "/reports", label: "Report Dashboard" },
       { path: "/reports/monthly-executive", label: "Monthly Executive Summary" },
       { path: "/reports/sales", label: "Sales Reports" },
       { path: "/reports/booking", label: "Booking Reports" },

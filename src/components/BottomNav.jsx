@@ -7,7 +7,7 @@ const allItems = [
   { to: "/crm",       icon: Users,           label: "CRM",      permission: null },
   { to: "/calendar",  icon: CalendarDays,    label: "Calendar", permission: null },
   { to: "/finance/payments",  icon: CreditCard, label: "Finance", permission: "canViewPayments" },
-  { to: "/reports",   icon: BarChart3,       label: "Reports",  permission: "canViewReports" },
+  { to: "/reports/monthly-executive",   icon: BarChart3,       label: "Reports",  permission: "canViewReports" },
 ];
 
 export default function BottomNav() {
