@@ -450,7 +450,7 @@ function ExecutiveCockpit() {
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }} 
         animate={{ opacity: 1, scale: 1 }} 
-        className="hidden md:flex hm-dash-greeting" 
+        className="hm-dash-desktop-only hm-dash-greeting" 
         style={{ background: "#fff", boxShadow: "0 10px 40px rgba(0,0,0,0.02)", flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: "24px 32px", borderRadius: "24px", marginBottom: "24px" }}
       >
         <div>
@@ -513,7 +513,7 @@ function ExecutiveCockpit() {
       <motion.div 
         initial={{ opacity: 0, y: -10 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="block md:hidden"
+        className="hm-dash-mobile-only"
         style={{ background: "#fff", padding: "16px", borderRadius: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", marginBottom: "16px", border: "1px solid #f1f5f9" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
@@ -570,7 +570,7 @@ function ExecutiveCockpit() {
       </motion.div>
 
       {/* ── DESKTOP KPI ROW (5 Columns — Exact replica of Image 2, never touched!) ── */}
-      <div className="hidden md:grid hm-dash-stats" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
+      <div className="hm-dash-desktop-only hm-dash-stats" style={{ gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
         <GradientCard title="Total Revenue" value={formatStatCurrency(currentStats.totalRevenue)} subtext={periodInfo.badge} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
         <GradientCard title="Total Bookings" value={currentStats.totalBookings} subtext={periodInfo.badge} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
         <GradientCard title="Enquiries" value={currentStats.enquiryCount} subtext={periodInfo.badge} gradient={["#52B788", "#74C69D"]} delay={0.3} />
@@ -579,7 +579,7 @@ function ExecutiveCockpit() {
       </div>
 
       {/* ── MOBILE KPI LAYOUT (Creative, compact, high-converting mobile UI) ── */}
-      <div className="block md:hidden" style={{ marginBottom: "20px" }}>
+      <div className="hm-dash-mobile-only" style={{ marginBottom: "20px" }}>
         {/* Mobile Hero Card: Total Revenue */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}

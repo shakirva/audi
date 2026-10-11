@@ -438,6 +438,18 @@ button, input, select, textarea {
   }
 }
 
+/* Dashboard Responsive Strict Isolation */
+@media (max-width: 767px) {
+  .hm-dash-desktop-only {
+    display: none !important;
+  }
+}
+@media (min-width: 768px) {
+  .hm-dash-mobile-only {
+    display: none !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════
    PHASE 1 — DASHBOARD RESPONSIVE FIXES
    ═══════════════════════════════════════════════════════ */
