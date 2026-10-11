@@ -6,7 +6,9 @@ import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
 import ConvertToBookingModal from "../components/ConvertToBookingModal";
 import SafeDeleteModal from "../components/SafeDeleteModal";
+import SlotClashResolutionModal from "../components/SlotClashResolutionModal";
 import { useRole } from "../context/RoleContext";
+import { useBookings } from "../context/BookingsContext";
 
 const pipelineStages = [
   "New Enquiry", "Contacted", "Follow-up", "Interested", "Customer Visit", 
@@ -30,6 +32,7 @@ function KPISkeleton() {
 
 export default function CRM() {
   const { user, role } = useRole();
+  const { bookings } = useBookings?.() || { bookings: [] };
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState("board");
@@ -40,8 +43,9 @@ export default function CRM() {
   const [hoveredEnq, setHoveredEnq] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [waitlistFilter, setWaitlistFilter] = useState("all"); // 'all' | 'waitlist' | 'date_released' | 'standard'
+  const [waitlistFilter, setWaitlistFilter] = useState("all"); // 'all' | 'clashed' | 'waitlist' | 'date_released' | 'standard'
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
+  const [clashModalData, setClashModalData] = useState(null); // { open, bookedDate, hall, competingLeads }
 
   // API state
   const [enquiries, setEnquiries] = useState([]);
@@ -79,15 +83,6 @@ export default function CRM() {
   const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0;
   const waitlistedCount = enquiries.filter(e => e.isWaitlisted).length;
   const dateReleasedCount = enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === "Date Released").length;
-
-  const filteredEnquiries = useMemo(() => {
-    return enquiries.filter(e => {
-      if (waitlistFilter === "waitlist") return e.isWaitlisted;
-      if (waitlistFilter === "date_released") return e.isWaitlisted && e.waitlistStatus === "Date Released";
-      if (waitlistFilter === "standard") return !e.isWaitlisted;
-      return true;
-    });
-  }, [enquiries, waitlistFilter]);
 
   const handleStatusChange = async (enquiryId, newStatus) => {
     try {
@@ -130,25 +125,84 @@ export default function CRM() {
 
   const getConflictStatus = useCallback((enq) => {
     if (["Booking Confirmed", "Lost", "Cancelled"].includes(enq.status)) return false;
+    if (enq.isWaitlisted) return false;
     if (!enq.tentativeDate) return false;
     
-    return enquiries.some(e => {
+    // Check against confirmed enquiries
+    const hasEnqConflict = enquiries.some(e => {
+      if (e.id === enq.id) return false;
       if (e.status !== "Booking Confirmed") return false;
       if (e.tentativeDate !== enq.tentativeDate) return false;
-      
-      // If sessions are specified and they don't overlap, no conflict
-      if (e.session && enq.session && e.session !== enq.session && e.session !== "Full Day" && enq.session !== "Full Day") {
-        return false;
-      }
-      
-      // If halls are specified and different, no conflict
-      if (e.hallPreference && enq.hallPreference && e.hallPreference !== enq.hallPreference) {
-        return false;
-      }
-      
+      if (e.session && enq.session && e.session !== enq.session && e.session !== "Full Day" && enq.session !== "Full Day") return false;
+      if (e.hallPreference && enq.hallPreference && e.hallPreference !== enq.hallPreference) return false;
       return true;
     });
-  }, [enquiries]);
+    if (hasEnqConflict) return true;
+
+    // Check against confirmed bookings in database
+    const hasBookingConflict = (bookings || []).some(b => {
+      if (b.status === "Cancelled") return false;
+      const bDate = b.date ? (typeof b.date === "string" ? b.date.split("T")[0] : new Date(b.date).toISOString().split("T")[0]) : null;
+      if (!bDate || bDate !== enq.tentativeDate) return false;
+      if (b.session && enq.session && b.session !== enq.session && b.session !== "Full Day" && enq.session !== "Full Day") return false;
+      if (b.hall && enq.hallPreference && b.hall !== enq.hallPreference) return false;
+      return true;
+    });
+
+    return hasBookingConflict;
+  }, [enquiries, bookings]);
+
+  const clashedCount = enquiries.filter(e => getConflictStatus(e)).length;
+
+  const filteredEnquiries = useMemo(() => {
+    return enquiries.filter(e => {
+      if (waitlistFilter === "clashed") return getConflictStatus(e);
+      if (waitlistFilter === "waitlist") return e.isWaitlisted;
+      if (waitlistFilter === "date_released") return e.isWaitlisted && e.waitlistStatus === "Date Released";
+      if (waitlistFilter === "standard") return !e.isWaitlisted && !getConflictStatus(e);
+      return true;
+    });
+  }, [enquiries, waitlistFilter, getConflictStatus]);
+
+  const handleMoveToWaitlistWithWhatsApp = async (enq) => {
+    try {
+      await enquiriesAPI.update(enq.id, {
+        isWaitlisted: true,
+        waitlistStatus: "Waiting",
+        waitlistNotes: `Moved to VIP Waitlist because slot on ${enq.tentativeDate} was confirmed by another booking.`,
+      });
+      setEnquiries(prev => prev.map(e => e.id === enq.id ? { ...e, isWaitlisted: true, waitlistStatus: "Waiting" } : e));
+      addToast("Moved to VIP Waitlist! ⏳", "success");
+
+      const phone = getEnquiryPhone(enq);
+      const name = getEnquiryName(enq);
+      if (phone) {
+        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+        const msg = `Dear ${name},\n\nThank you for choosing us for your event on ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nThis specific date has just been confirmed by another booking. We have placed you as our Priority #1 on our VIP Date Waitlist! If this booking gets released or cancelled, we will notify you immediately.\n\nWould you also like to explore an alternate date with us? Let us know!`;
+        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      }
+    } catch (err) {
+      addToast("Failed to move to waitlist", "error");
+    }
+  };
+
+  const handleInformAndClose = async (enq) => {
+    try {
+      await enquiriesAPI.updateStatus(enq.id, "Lost");
+      setEnquiries(prev => prev.map(e => e.id === enq.id ? { ...e, status: "Lost" } : e));
+      addToast("Enquiry marked as Lost ❌", "info");
+
+      const phone = getEnquiryPhone(enq);
+      const name = getEnquiryName(enq);
+      if (phone) {
+        const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+        const msg = `Dear ${name},\n\nThank you for reaching out to us for ${enq.tentativeDate || "your requested date"}${enq.hallPreference ? ` at ${enq.hallPreference}` : ""}.\n\nUnfortunately this date has been reserved for another booking. We apologize for the inconvenience and hope to host your future events!`;
+        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+      }
+    } catch (err) {
+      addToast("Failed to update status", "error");
+    }
+  };
 
   return (
     <div className="hm-crm-wrapper">
@@ -166,17 +220,18 @@ export default function CRM() {
       {/* KPI Cards */}
       <div className="hm-crm-kpis">
         {loading ? (
-          [1,2,3,4,5].map(i => <KPISkeleton key={i} />)
+          [1,2,3,4,5,6].map(i => <KPISkeleton key={i} />)
         ) : (
           [
             { label: "Active Enquiries", value: activeEnquiries, color: "#0284c7", bg: "#e0f2fe" },
             { label: "Total Enquiries", value: total, color: "#a16207", bg: "#fef08a" },
             { label: "VIP Waitlisted", value: waitlistedCount, color: "#d97706", bg: "#fef3c7" },
+            { label: "Slot Clashes", value: clashedCount, color: "#dc2626", bg: "#fee2e2" },
             { label: "Converted (All Time)", value: converted, color: "#166534", bg: "#dcfce7" },
             { label: "Conversion Rate", value: `${conversionRate}%`, color: "#6b21a8", bg: "#f3e8ff" },
           ].map((kpi, i) => (
             <div key={i} style={{
-              flex: 1, background: "#fff", border: "1px solid #eaeaea", borderRadius: 12,
+              flex: 1, background: "#fff", border: kpi.label === "Slot Clashes" && clashedCount > 0 ? "2px solid #fecaca" : "1px solid #eaeaea", borderRadius: 12,
               padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 8 }}>{kpi.label}</div>
@@ -209,6 +264,7 @@ export default function CRM() {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           {[
             { id: "all", label: "All Leads" },
+            { id: "clashed", label: `🚨 Slot Clashed (${clashedCount})` },
             { id: "waitlist", label: `⏳ VIP Waitlist (${waitlistedCount})` },
             { id: "date_released", label: `🟢 Date Released (${enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === 'Date Released').length})` },
             { id: "standard", label: "Standard Leads" },
@@ -224,8 +280,8 @@ export default function CRM() {
                 fontWeight: 700,
                 cursor: "pointer",
                 transition: "all 0.15s",
-                background: waitlistFilter === tab.id ? (tab.id === 'date_released' ? '#10b981' : tab.id === 'waitlist' ? '#d97706' : '#1B4332') : '#f1f5f9',
-                color: waitlistFilter === tab.id ? '#fff' : '#475569',
+                background: waitlistFilter === tab.id ? (tab.id === 'clashed' ? '#dc2626' : tab.id === 'date_released' ? '#10b981' : tab.id === 'waitlist' ? '#d97706' : '#1B4332') : '#f1f5f9',
+                color: waitlistFilter === tab.id ? '#fff' : (tab.id === 'clashed' && clashedCount > 0 ? '#dc2626' : '#475569'),
               }}
             >
               {tab.label}
@@ -296,10 +352,10 @@ export default function CRM() {
                           onMouseEnter={() => setHoveredEnq(enq.id)}
                           onMouseLeave={() => setHoveredEnq(null)}
                           style={{
-                            background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : getConflictStatus(enq) ? "#fffafa" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
+                            background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : getConflictStatus(enq) ? "#fef2f2" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
                             padding: "14px", borderRadius: 8, 
-                            border: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "2px solid #22c55e" : enq.isWaitlisted ? "1px solid #fde68a" : getConflictStatus(enq) ? "1px solid #fecaca" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
-                            boxShadow: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "0 4px 12px rgba(34,197,94,0.15)" : "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
+                            border: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "2px solid #22c55e" : enq.isWaitlisted ? "1px solid #fde68a" : getConflictStatus(enq) ? "2px solid #ef4444" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
+                            boxShadow: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "0 4px 12px rgba(34,197,94,0.15)" : getConflictStatus(enq) ? "0 4px 14px rgba(239,68,68,0.18)" : "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
                             transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none",
                             position: "relative"
                           }}>
@@ -309,6 +365,11 @@ export default function CRM() {
                           {enq.isWaitlisted && enq.waitlistStatus === "Date Released" && (
                             <div style={{ position: "absolute", top: -8, right: -8, background: "#10b981", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 12, boxShadow: "0 2px 8px rgba(16,185,129,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
                               🟢 DATE RELEASED!
+                            </div>
+                          )}
+                          {getConflictStatus(enq) && !enq.isWaitlisted && (
+                            <div style={{ position: "absolute", top: -8, right: -8, background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 12, boxShadow: "0 2px 8px rgba(220,38,38,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
+                              🚨 SLOT BOOKED — ACTION NEEDED
                             </div>
                           )}
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -330,12 +391,45 @@ export default function CRM() {
                           <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666" }}>
                             {enq.eventType}{enq.session ? ` (${enq.session})` : ""}
                           </p>
+
+                          {/* Slot Clash Prompt & Fast Action Bar */}
+                          {getConflictStatus(enq) && !enq.isWaitlisted && (
+                            <div style={{ background: "#fff", border: "1.5px solid #fca5a5", borderRadius: 8, padding: "8px 10px", margin: "10px 0", display: "flex", flexDirection: "column", gap: 6 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "#991b1b" }}>
+                                ⚠️ Slot booked for another client:
+                              </div>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleMoveToWaitlistWithWhatsApp(enq); }}
+                                  style={{ flex: 1, background: "#d97706", color: "#fff", border: "none", borderRadius: 6, padding: "5px 6px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+                                  title="Move to VIP Waitlist & Notify via WhatsApp"
+                                >
+                                  <Clock size={11} /> To Waitlist
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleInformAndClose(enq); }}
+                                  style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 6, padding: "5px 6px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+                                  title="Close Lead & Inform via WhatsApp"
+                                >
+                                  <XCircle size={11} /> Close Lead
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                  style={{ background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 6px", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+                                  title="Propose Alternate Date"
+                                >
+                                  <Calendar size={11} /> Date
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#999" }}>
                               <Calendar size={11} /> {enq.tentativeDate || "TBD"}
                               {getConflictStatus(enq) && !enq.isWaitlisted && (
                                 <span style={{ marginLeft: 4, background: "#fee2e2", color: "#dc2626", padding: "2px 4px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
-                                  ⚠️ UNAVAILABLE
+                                  ⚠️ SLOT TAKEN
                                 </span>
                               )}
                             </div>
@@ -455,16 +549,20 @@ export default function CRM() {
               ) : filteredEnquiries.map((enq, i) => {
                 const lss = LEAD_SCORE_STYLE[enq.leadScore] || LEAD_SCORE_STYLE.Warm;
                 return (
-                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s", background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
-                    onMouseLeave={e => e.currentTarget.style.background = enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent"}>
+                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s", background: getConflictStatus(enq) ? "#fef2f2" : enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent" }}
+                    onMouseEnter={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fee2e2" : "#f8f9fa"}
+                    onMouseLeave={e => e.currentTarget.style.background = getConflictStatus(enq) ? "#fef2f2" : enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent"}>
                     <td style={{ padding: "12px 16px", fontWeight: 700, color: "#1B4332" }}>
                       <div>{enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}</div>
-                      {enq.isWaitlisted && (
+                      {getConflictStatus(enq) && !enq.isWaitlisted ? (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#fee2e2", color: "#dc2626", display: "inline-block", marginTop: 2, border: "1px solid #fca5a5" }}>
+                          🚨 SLOT CLASH
+                        </span>
+                      ) : enq.isWaitlisted ? (
                         <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: enq.waitlistStatus === "Date Released" ? "#dcfce7" : "#fef3c7", color: enq.waitlistStatus === "Date Released" ? "#166534" : "#b45309", display: "inline-block", marginTop: 2 }}>
                           {enq.waitlistStatus === "Date Released" ? "🟢 RELEASED" : "⏳ WAITLIST"}
                         </span>
-                      )}
+                      ) : null}
                     </td>
                     <td style={{ padding: "12px 16px", fontWeight: 600 }}>{getEnquiryName(enq)}</td>
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.eventType}</td>
@@ -472,8 +570,8 @@ export default function CRM() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {enq.tentativeDate || "TBD"}
                         {getConflictStatus(enq) && !enq.isWaitlisted && (
-                          <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
-                            ⚠️ UNAVAILABLE
+                          <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed booking">
+                            ⚠️ SLOT TAKEN
                           </span>
                         )}
                       </div>
@@ -504,24 +602,45 @@ export default function CRM() {
                     </td>
                     <td style={{ padding: "12px 16px" }}>
                       {enq.status !== "Booking Confirmed" ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
-                            style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                          >
-                            <Edit2 size={12}/> Edit
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                            style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                          >
-                            <CheckCircle2 size={12}/> Convert
-                          </button>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {getConflictStatus(enq) && !enq.isWaitlisted ? (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMoveToWaitlistWithWhatsApp(enq); }}
+                                style={{ background: "#d97706", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                title="Move to VIP Waitlist & Notify via WhatsApp"
+                              >
+                                <Clock size={11}/> To Waitlist
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleInformAndClose(enq); }}
+                                style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                title="Close Lead & Inform via WhatsApp"
+                              >
+                                <XCircle size={11}/> Close Lead
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setEditEnquiry(enq); setShowEnquiryModal(true); }}
+                                style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                              >
+                                <Edit2 size={11}/> Edit
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                              >
+                                <CheckCircle2 size={11}/> Convert
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
-                            style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                            style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                           >
-                            <Trash2 size={12}/> Delete
+                            <Trash2 size={11}/> Delete
                           </button>
                         </div>
                       ) : (
@@ -543,7 +662,30 @@ export default function CRM() {
       )}
 
       <NewEnquiryModal open={showEnquiryModal} onClose={() => { setShowEnquiryModal(false); setEditEnquiry(null); }} onSuccess={handleEnquiryCreated} editData={editEnquiry} />
-      <ConvertToBookingModal open={showConvertModal} enquiry={convertEnquiry} onClose={() => { setShowConvertModal(false); fetchEnquiries(); }} />
+      <ConvertToBookingModal 
+        open={showConvertModal} 
+        enquiry={convertEnquiry} 
+        onClose={() => { setShowConvertModal(false); fetchEnquiries(); }} 
+        onConverted={(convData) => {
+          setShowConvertModal(false);
+          fetchEnquiries();
+          const competing = enquiries.filter(e => 
+            e.id !== convData.enquiryId && 
+            e.tentativeDate === convData.date && 
+            !e.isWaitlisted && 
+            !["Booking Confirmed", "Lost", "Cancelled"].includes(e.status) &&
+            (!convData.hall || !e.hallPreference || e.hallPreference === convData.hall)
+          );
+          if (competing.length > 0) {
+            setClashModalData({
+              open: true,
+              bookedDate: convData.date,
+              hall: convData.hall,
+              competingLeads: competing
+            });
+          }
+        }}
+      />
       <SafeDeleteModal
         type="enquiry"
         id={deleteTarget?.id}
@@ -553,6 +695,20 @@ export default function CRM() {
         onDeleted={() => { setDeleteTarget(null); fetchEnquiries(); }}
         addToast={addToast}
       />
+
+      {clashModalData?.open && (
+        <SlotClashResolutionModal
+          open={clashModalData.open}
+          bookedDate={clashModalData.bookedDate}
+          hall={clashModalData.hall}
+          competingLeads={clashModalData.competingLeads}
+          onClose={() => setClashModalData(null)}
+          onResolved={() => {
+            fetchEnquiries();
+          }}
+          addToast={addToast}
+        />
+      )}
     </div>
   );
 }

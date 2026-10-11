@@ -29,7 +29,7 @@ const readonlyPill = {
 
 const PAYMENT_METHODS = ["Cash", "UPI", "Bank Transfer", "Cheque"];
 
-export default function ConvertToBookingModal({ open, enquiry, onClose }) {
+export default function ConvertToBookingModal({ open, enquiry, onClose, onConverted }) {
   const { addToast } = useToast();
   const { addBooking } = useBookings();
   const [loading, setLoading] = useState(false);
@@ -389,6 +389,12 @@ export default function ConvertToBookingModal({ open, enquiry, onClose }) {
       }
 
       addToast("Successfully converted to Booking! 🎉", "success");
+      onConverted?.({
+        date: formData.date,
+        hall: formData.hall,
+        session: formData.session,
+        enquiryId: enquiry?.id,
+      });
       onClose();
       
       if (sendWhatsapp) {
