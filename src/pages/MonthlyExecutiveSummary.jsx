@@ -5,16 +5,21 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { 
   Printer, TrendingUp, TrendingDown, Wallet, Calendar, Users, 
   HelpCircle, AlertCircle, FileSpreadsheet, ArrowUpRight, 
-  CheckCircle2, DollarSign, Layers, ChevronDown, Filter, ShieldCheck
+  CheckCircle2, DollarSign, Layers, ChevronDown, Filter, ShieldCheck,
+  ChevronLeft, ChevronRight, Download, Receipt
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { robustDownloadPDF } from '../utils/pdfDownloadService';
 import api from '../services/api';
 
-const COLORS = ['#059669', '#d97706', '#2563eb', '#7c3aed', '#db2777', '#475569'];
+const COLORS = ['#1B4332', '#D4A017', '#2563eb', '#7c3aed', '#db2777', '#059669'];
 
 export default function MonthlyExecutiveSummary() {
   const [selectedMonth, setSelectedMonth] = useState(dayjs().month() + 1);
   const [selectedYear, setSelectedYear] = useState(dayjs().year());
-  const [activeMobileTab, setActiveMobileTab] = useState('all'); // 'all' | 'bookings' | 'expenses' | 'payments'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'bookings' | 'expenses' | 'payments'
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['monthly-summary', selectedMonth, selectedYear],
@@ -25,10 +30,6 @@ export default function MonthlyExecutiveSummary() {
       return res.data.data;
     }
   });
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
@@ -49,44 +50,43 @@ export default function MonthlyExecutiveSummary() {
       if (u?.venueName) return u.venueName;
       if (u?.tenantName) return u.tenantName;
     } catch (e) {}
-    return 'Auditorium & Convention Centre';
+    return "KT's Convention Centre";
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-slate-500">
-        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold tracking-wide">Compiling Executive Summary...</p>
-      </div>
-    );
-  }
+  // Month navigation helpers
+  const handlePrevMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
 
-  if (error || !data) {
-    return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 text-center">
-        <AlertCircle className="w-12 h-12 text-rose-500 mb-3" />
-        <h2 className="text-lg font-bold text-slate-800">Unable to Load Executive Summary</h2>
-        <p className="text-sm text-slate-500 mt-1 max-w-sm">Please verify your connection or select a different reporting period.</p>
-      </div>
-    );
-  }
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
 
   // Key Calculations
-  const totalRevenue = data.financials?.totalRevenue || 0;
-  const totalExpenses = data.financials?.totalExpenses || 0;
-  const netBalance = data.financials?.netBalance || 0;
+  const totalRevenue = data?.financials?.totalRevenue || 0;
+  const totalExpenses = data?.financials?.totalExpenses || 0;
+  const netBalance = data?.financials?.netBalance || 0;
   const operatingMargin = totalRevenue > 0 ? ((netBalance / totalRevenue) * 100).toFixed(1) : '0.0';
   const expenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0.0';
   
-  const totalBookings = data.operations?.totalBookings || 0;
-  const totalEnquiries = data.operations?.totalEnquiries || 0;
+  const totalBookings = data?.operations?.totalBookings || 0;
+  const totalEnquiries = data?.operations?.totalEnquiries || 0;
   const conversionRate = totalEnquiries > 0 ? ((totalBookings / totalEnquiries) * 100).toFixed(1) : '0.0';
   const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
 
-  // Table Footers
-  const recentBookings = data.details?.recentBookings || [];
-  const recentExpenses = data.details?.recentExpenses || [];
-  const recentPayments = data.details?.recentPayments || [];
+  const recentBookings = data?.details?.recentBookings || [];
+  const recentExpenses = data?.details?.recentExpenses || [];
+  const recentPayments = data?.details?.recentPayments || [];
 
   const totalRenderedExpenses = recentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalRenderedPayments = recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -96,603 +96,807 @@ export default function MonthlyExecutiveSummary() {
   const monthName = dayjs().month(selectedMonth - 1).format('MMMM');
   const venueTitle = getVenueName();
 
-  return (
-    <div className="w-full max-w-7xl mx-auto px-3 sm:px-5 md:px-8 py-4 sm:py-6 text-slate-800 font-sans">
-      <style>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 10mm 12mm;
-          }
-          body {
-            background: #fff !important;
-            color: #0f172a !important;
-            font-size: 11px !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #executive-summary-content, #executive-summary-content * {
-            visibility: visible;
-          }
-          #executive-summary-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          .print-hide {
-            display: none !important;
-          }
-          .print-only {
-            display: block !important;
-          }
-          .print-break-inside-avoid {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          .print-table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            page-break-inside: avoid !important;
-          }
-          .print-table th {
-            background-color: #1e293b !important;
-            color: #ffffff !important;
-            font-size: 10px !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-            padding: 7px 10px !important;
-            border: 1px solid #0f172a !important;
-          }
-          .print-table td {
-            font-size: 10px !important;
-            padding: 6px 10px !important;
-            border: 1px solid #cbd5e1 !important;
-          }
-          .print-table tr:nth-child(even) td {
-            background-color: #f8fafc !important;
-          }
-          .print-kpi-card {
-            border: 1.5px solid #cbd5e1 !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
-            padding: 12px 14px !important;
-            border-radius: 6px !important;
-          }
-          .print-header-bar {
-            border-bottom: 2px solid #0f172a !important;
-            padding-bottom: 12px !important;
-            margin-bottom: 18px !important;
-          }
-        }
-      `}</style>
+  // ──────────────────────────────────────────────────────────────────────────
+  // PROFESSIONAL DIRECT PDF EXPORT ENGINE (jsPDF + autoTable)
+  // ──────────────────────────────────────────────────────────────────────────
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
 
+      // Primary Brand Colors
+      const brandDark = [27, 67, 50];       // #1B4332 Deep Forest Emerald
+      const brandGold = [212, 160, 23];     // #D4A017 Gold
+      const slateDark = [15, 23, 42];       // #0F172A Slate 900
+      const textMuted = [100, 116, 139];    // Slate 500
+
+      // ── TOP HEADER LETTERHEAD ──
+      doc.setFillColor(...brandDark);
+      doc.rect(0, 0, pageWidth, 28, 'F');
+
+      doc.setFillColor(...brandGold);
+      doc.rect(0, 28, pageWidth, 2, 'F');
+
+      // Venue Title & Subtitle in Header
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text(venueTitle.toUpperCase(), 14, 12);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(212, 230, 220);
+      doc.text('EXECUTIVE MONTHLY FINANCIAL & PERFORMANCE AUDIT REPORT', 14, 18);
+      doc.text(`Reporting Period: ${monthName} ${selectedYear}  |  Currency: INR (₹)`, 14, 24);
+
+      // Top Right Meta in Header
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Doc Ref: EXC-${selectedYear}${String(selectedMonth).padStart(2, '0')}`, pageWidth - 14, 12, { align: 'right' });
+      doc.text(`Generated: ${dayjs().format('DD/MM/YYYY, hh:mm A')}`, pageWidth - 14, 18, { align: 'right' });
+      doc.text('Venueza Cloud Verified', pageWidth - 14, 24, { align: 'right' });
+
+      // ── FINANCIAL EXECUTIVE KPI MATRIX ──
+      let curY = 38;
+
+      doc.setTextColor(...slateDark);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('1. FINANCIAL EXECUTIVE SUMMARY', 14, curY);
+      curY += 5;
+
+      const kpiBoxWidth = (pageWidth - 28 - 9) / 4;
+      const kpiBoxHeight = 22;
+
+      // KPI 1: Revenue
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...textMuted);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GROSS REVENUE', 18, curY + 6);
+      doc.setFontSize(11);
+      doc.setTextColor(27, 67, 50);
+      doc.text(formatCurrency(totalRevenue), 18, curY + 14);
+      doc.setFontSize(7);
+      doc.setTextColor(...textMuted);
+      doc.text(`${totalBookings} Confirmed Events`, 18, curY + 19);
+
+      // KPI 2: Expenses
+      const kpi2X = 14 + kpiBoxWidth + 3;
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(kpi2X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...textMuted);
+      doc.text('TOTAL EXPENSES', kpi2X + 4, curY + 6);
+      doc.setFontSize(11);
+      doc.setTextColor(190, 18, 60);
+      doc.text(formatCurrency(totalExpenses), kpi2X + 4, curY + 14);
+      doc.setFontSize(7);
+      doc.setTextColor(...textMuted);
+      doc.text(`${expenseRatio}% of Revenue`, kpi2X + 4, curY + 19);
+
+      // KPI 3: Net Operating Balance
+      const kpi3X = kpi2X + kpiBoxWidth + 3;
+      doc.setFillColor(240, 253, 244);
+      doc.setDrawColor(167, 243, 208);
+      doc.roundedRect(kpi3X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...textMuted);
+      doc.text('NET OPERATING BALANCE', kpi3X + 4, curY + 6);
+      doc.setFontSize(11);
+      doc.setTextColor(netBalance >= 0 ? 5 : 220, netBalance >= 0 ? 150 : 38, netBalance >= 0 ? 105 : 38);
+      doc.text(formatCurrency(netBalance), kpi3X + 4, curY + 14);
+      doc.setFontSize(7);
+      doc.setTextColor(...textMuted);
+      doc.text(`${operatingMargin}% Margin`, kpi3X + 4, curY + 19);
+
+      // KPI 4: Operating Health
+      const kpi4X = kpi3X + kpiBoxWidth + 3;
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(kpi4X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...textMuted);
+      doc.text('LEAD CONVERSION', kpi4X + 4, curY + 6);
+      doc.setFontSize(11);
+      doc.setTextColor(37, 99, 235);
+      doc.text(`${conversionRate}%`, kpi4X + 4, curY + 14);
+      doc.setFontSize(7);
+      doc.setTextColor(...textMuted);
+      doc.text(`${totalBookings} / ${totalEnquiries} Enquiries`, kpi4X + 4, curY + 19);
+
+      curY += kpiBoxHeight + 8;
+
+      // ── SECTION 2: OPERATIONS OVERVIEW ROW ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...slateDark);
+      doc.text('2. OPERATIONAL SUMMARY', 14, curY);
+      curY += 5;
+
+      const opsHeaders = [['Confirmed Bookings', 'Total Enquiries', 'New Customers', 'Cancellations', 'Avg. Booking Value']];
+      const opsData = [[
+        String(totalBookings),
+        String(totalEnquiries),
+        String(data?.operations?.newCustomers || 0),
+        String(data?.operations?.cancelledBookings || 0),
+        formatCurrency(avgBookingValue)
+      ]];
+
+      autoTable(doc, {
+        startY: curY,
+        head: opsHeaders,
+        body: opsData,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'center' },
+        bodyStyles: { fontSize: 8.5, halign: 'center', textColor: [15, 23, 42] },
+        styles: { cellPadding: 3 }
+      });
+
+      curY = doc.lastAutoTable.finalY + 8;
+
+      // ── SECTION 3: RECENT BOOKINGS TABLE ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...slateDark);
+      doc.text('3. CONFIRMED BOOKINGS BREAKDOWN', 14, curY);
+      curY += 4;
+
+      const bookingRows = recentBookings.map(b => [
+        b.bookingId || '-',
+        formatDate(b.date),
+        b.customerName || 'Customer',
+        b.hall || 'Main Hall',
+        formatCurrency(b.totalAmount),
+        formatCurrency(b.balanceAmount),
+        b.status || 'Confirmed'
+      ]);
+
+      if (bookingRows.length === 0) {
+        bookingRows.push(['-', '-', 'No bookings recorded for this month', '-', '-', '-', '-']);
+      }
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Booking Ref', 'Date', 'Customer Name', 'Hall Space', 'Total Contract', 'Balance Due', 'Status']],
+        body: bookingRows,
+        foot: recentBookings.length > 0 ? [[
+          { content: 'Total Confirmed Bookings Value:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: formatCurrency(totalRenderedBookingRevenue), styles: { halign: 'right', fontStyle: 'bold', textColor: [27, 67, 50] } },
+          { content: formatCurrency(totalRenderedBookingBalance), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } },
+          ''
+        ]] : undefined,
+        theme: 'striped',
+        headStyles: { fillColor: [27, 67, 50], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        columnStyles: {
+          4: { halign: 'right', fontStyle: 'bold' },
+          5: { halign: 'right', fontStyle: 'bold' },
+          6: { halign: 'center' }
+        },
+        styles: { cellPadding: 2.5 }
+      });
+
+      curY = doc.lastAutoTable.finalY + 8;
+
+      // Check if page break is needed before expenses
+      if (curY > 210) {
+        doc.addPage();
+        curY = 20;
+      }
+
+      // ── SECTION 4: EXPENSES BREAKDOWN ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...slateDark);
+      doc.text('4. OPERATIONAL EXPENSES BREAKDOWN', 14, curY);
+      curY += 4;
+
+      const expenseRows = recentExpenses.map(e => [
+        formatDate(e.date),
+        e.category || 'General',
+        e.description || '-',
+        formatCurrency(e.amount)
+      ]);
+
+      if (expenseRows.length === 0) {
+        expenseRows.push(['-', 'No expenses recorded for this month', '-', '-']);
+      }
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Expense Date', 'Category', 'Description / Vendor', 'Amount Paid']],
+        body: expenseRows,
+        foot: recentExpenses.length > 0 ? [[
+          { content: 'Total Operational Expenses:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: formatCurrency(totalRenderedExpenses), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } }
+        ]] : undefined,
+        theme: 'striped',
+        headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        columnStyles: {
+          3: { halign: 'right', fontStyle: 'bold' }
+        },
+        styles: { cellPadding: 2.5 }
+      });
+
+      curY = doc.lastAutoTable.finalY + 8;
+
+      // Check if page break is needed before collections
+      if (curY > 220) {
+        doc.addPage();
+        curY = 20;
+      }
+
+      // ── SECTION 5: COLLECTIONS / PAYMENTS ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...slateDark);
+      doc.text('5. CASH & BANK COLLECTIONS', 14, curY);
+      curY += 4;
+
+      const paymentRows = recentPayments.map((p, i) => [
+        p.paymentNumber || `REC-${i+1}`,
+        formatDate(p.paymentDate),
+        p.method || 'Direct',
+        formatCurrency(p.amount)
+      ]);
+
+      if (paymentRows.length === 0) {
+        paymentRows.push(['-', 'No payment collections recorded for this month', '-', '-']);
+      }
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Receipt Number', 'Payment Date', 'Payment Channel', 'Amount Collected']],
+        body: paymentRows,
+        foot: recentPayments.length > 0 ? [[
+          { content: 'Total Realized Collections:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: formatCurrency(totalRenderedPayments), styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] } }
+        ]] : undefined,
+        theme: 'striped',
+        headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+        columnStyles: {
+          3: { halign: 'right', fontStyle: 'bold' }
+        },
+        styles: { cellPadding: 2.5 }
+      });
+
+      // ── FORMAL AUDIT FOOTER ──
+      const finalY = doc.lastAutoTable.finalY + 12;
+      const footerY = Math.min(finalY, 280);
+
+      doc.setDrawColor(203, 213, 225);
+      doc.line(14, footerY, pageWidth - 14, footerY);
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(...textMuted);
+      doc.text(`Confidential Executive Document • Generated by Venueza Cloud ERP for ${venueTitle}`, 14, footerY + 5);
+      doc.text('Authorized Signature: ___________________________', pageWidth - 14, footerY + 5, { align: 'right' });
+
+      // Trigger robust browser download
+      const safeFilename = `Executive_Summary_${monthName}_${selectedYear}.pdf`;
+      robustDownloadPDF(doc, safeFilename);
+      setIsExporting(false);
+    } catch (err) {
+      console.error('PDF Export Error:', err);
+      setIsExporting(false);
+      // Fallback to browser print
+      window.print();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, color: '#64748b' }}>
+        <div style={{ width: 36, height: 36, border: '3px solid #1B4332', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: 12 }} />
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#1B4332' }}>Generating Executive Performance Summary...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ minHeight: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+        <AlertCircle size={40} color="#ef4444" style={{ marginBottom: 12 }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Unable to Load Executive Summary</h2>
+        <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Please verify your connection or choose another month.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 14px 40px', fontFamily: "'DM Sans', sans-serif", color: '#0f172a' }}>
+      
       {/* ──────────────────────────────────────────────────────────────────────────
-          SCREEN CONTROLS HEADER (HIDDEN ON PRINT)
+          1. LUXURY EXECUTIVE HEADER & DATE BAR (MOBILE + DESKTOP)
       ────────────────────────────────────────────────────────────────────────── */}
-      <header className="print-hide bg-white/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 mb-5 transition-all">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          
-          {/* Title & Badge */}
-          <div className="flex items-start justify-between sm:justify-start gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Executive Report
-                </span>
-                <span className="text-xs text-slate-400 font-medium hidden sm:inline">•</span>
-                <span className="text-xs text-slate-500 font-medium">
-                  {venueTitle}
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1 font-serif">
-                Monthly Executive Summary
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal">
-                Financial performance, booking dynamics, and cash flow for <strong className="text-slate-700">{monthName} {selectedYear}</strong>
-              </p>
+      <div style={{ 
+        background: '#fff', 
+        borderRadius: 20, 
+        padding: '16px 18px', 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.03)', 
+        border: '1px solid #e2e8f0', 
+        marginBottom: 14 
+      }}>
+        
+        {/* Top Venue Badge & Title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: 8, border: '1px solid #a7f3d0' }}>
+                Executive Cockpit
+              </span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>•</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>{venueTitle}</span>
             </div>
+            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
+              Monthly Executive Summary
+            </h1>
           </div>
 
-          {/* Controls: Month, Year, and PDF Action */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 sm:flex-none">
-                <select 
-                  value={selectedMonth} 
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="w-full sm:w-auto appearance-none bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold pl-3 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer"
-                >
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <option key={i+1} value={i+1}>{dayjs().month(i).format('MMMM')}</option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+          {/* Direct 1-Click PDF Action */}
+          <button
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              background: 'linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: 14,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(27,67,50,0.25)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Download size={14} color="#D4A017" />
+            <span>{isExporting ? 'Generating PDF...' : 'Download PDF Report'}</span>
+          </button>
+        </div>
 
-              <div className="relative flex-1 sm:flex-none">
-                <select 
-                  value={selectedYear} 
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="w-full sm:w-auto appearance-none bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold pl-3 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer"
-                >
-                  {[2024, 2025, 2026, 2027].map(yr => (
-                    <option key={yr} value={yr}>{yr}</option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-
+        {/* Date Selector Row with Quick Month Changers */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          background: '#f8fafc', 
+          padding: '8px 12px', 
+          borderRadius: 14, 
+          border: '1px solid #e2e8f0',
+          gap: 8,
+          flexWrap: 'wrap'
+        }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button 
-              onClick={handlePrint}
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all cursor-pointer"
-              title="Print or export to PDF"
+              onClick={handlePrevMonth}
+              style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              title="Previous Month"
             >
-              <Printer className="w-4 h-4" />
-              <span>Export Executive PDF</span>
+              <ChevronLeft size={16} color="#475569" />
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', minWidth: 110, textAlign: 'center' }}>
+              {monthName} {selectedYear}
+            </span>
+            <button 
+              onClick={handleNextMonth}
+              style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              title="Next Month"
+            >
+              <ChevronRight size={16} color="#475569" />
             </button>
           </div>
 
-        </div>
-      </header>
-
-      {/* ──────────────────────────────────────────────────────────────────────────
-          MAIN PRINTABLE & SCREEN CONTENT
-      ────────────────────────────────────────────────────────────────────────── */}
-      <div id="executive-summary-content" className="w-full">
-
-        {/* PRINT ONLY: FORMAL EXECUTIVE LETTERHEAD HEADER */}
-        <div className="hidden print-only print-header-bar">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="text-[18px] font-black tracking-tight text-slate-900 font-serif uppercase">
-                {venueTitle}
-              </div>
-              <div className="text-[12px] font-bold text-emerald-800 tracking-wide mt-0.5">
-                EXECUTIVE PERFORMANCE & FINANCIAL AUDIT REPORT
-              </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                Reporting Period: <strong className="text-slate-800">{monthName} {selectedYear}</strong> • Currency: INR (₹)
-              </div>
-            </div>
-            <div className="text-right text-[9px] text-slate-500">
-              <div>Document ID: <strong>EXC-{selectedYear}{String(selectedMonth).padStart(2, '0')}</strong></div>
-              <div>Generated: <strong>{dayjs().format('DD MMM YYYY, hh:mm A')}</strong></div>
-              <div className="text-emerald-700 font-bold mt-1">Venueza ERP Certified</div>
-            </div>
-          </div>
-        </div>
-
-        {/* ──────────────────────────────────────────────────────────────────────────
-            SECTION 1: FINANCIAL HIGHLIGHTS MATRIX
-        ────────────────────────────────────────────────────────────────────────── */}
-        <section className="mb-5 sm:mb-6 print-break-inside-avoid">
-          {/* Mobile / Screen Layout: Hero Net Profit Card + 2 Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            
-            {/* NET OPERATING BALANCE (HERO CARD) */}
-            <div className="sm:col-span-2 lg:col-span-1 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white shadow-md relative overflow-hidden border border-emerald-800/40 print-kpi-card">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300/90 flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5 text-emerald-400" />
-                  Net Operating Balance
-                </span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${Number(netBalance) >= 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
-                  {Number(operatingMargin) >= 0 ? `+${operatingMargin}% Margin` : `${operatingMargin}% Deficit`}
-                </span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 mb-1 text-white">
-                {formatCurrency(netBalance)}
-              </div>
-              <p className="text-[11px] text-emerald-200/70 font-medium">
-                {Number(netBalance) >= 0 ? 'Operational surplus after all recorded expenses' : 'Operational deficit for this reporting cycle'}
-              </p>
-            </div>
-
-            {/* TOTAL REVENUE */}
-            <div className="rounded-2xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm relative overflow-hidden print-kpi-card">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                  Total Revenue
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Gross Inflow
-                </span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 mb-1">
-                {formatCurrency(totalRevenue)}
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Avg. {formatCurrency(avgBookingValue)} per booking
-              </p>
-            </div>
-
-            {/* TOTAL EXPENSES */}
-            <div className="rounded-2xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm relative overflow-hidden print-kpi-card">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
-                  Total Expenses
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                  {expenseRatio}% of Rev
-                </span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 mb-1">
-                {formatCurrency(totalExpenses)}
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Total operating & vendor outflows recorded
-              </p>
-            </div>
-
-          </div>
-        </section>
-
-        {/* ──────────────────────────────────────────────────────────────────────────
-            SECTION 2: OPERATIONS & EVENT DISTRIBUTION (SIDE-BY-SIDE / STACKED)
-        ────────────────────────────────────────────────────────────────────────── */}
-        <section className="mb-5 sm:mb-6 grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 print-break-inside-avoid">
-          
-          {/* OPERATIONAL OVERVIEW (7 Cols on desktop) */}
-          <div className="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm print-kpi-card">
-            <div className="flex items-center justify-between mb-3.5">
-              <div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 font-serif">
-                  Operational Performance
-                </h3>
-                <p className="text-[11px] text-slate-500">Bookings volume and lead pipeline velocity</p>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                {conversionRate}% Conversion
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-              
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1 text-[11px] font-bold text-slate-500 mb-1">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Bookings</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900">
-                  {totalBookings}
-                </div>
-                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Confirmed</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1 text-[11px] font-bold text-slate-500 mb-1">
-                  <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Enquiries</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900">
-                  {totalEnquiries}
-                </div>
-                <div className="text-[10px] text-blue-600 font-semibold mt-0.5">Total Inquiries</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1 text-[11px] font-bold text-slate-500 mb-1">
-                  <Users className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Customers</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900">
-                  {data.operations?.newCustomers || 0}
-                </div>
-                <div className="text-[10px] text-purple-600 font-semibold mt-0.5">New Profiles</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1 text-[11px] font-bold text-slate-500 mb-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Cancelled</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-rose-600">
-                  {data.operations?.cancelledBookings || 0}
-                </div>
-                <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Cancellations</div>
-              </div>
-
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '5px 8px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+            >
+              {Array.from({ length: 12 }).map((_, i) => (
+                <option key={i+1} value={i+1}>{dayjs().month(i).format('MMMM')}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: 10, padding: '5px 8px', fontSize: 12, fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+            >
+              {[2024, 2025, 2026, 2027].map(yr => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
           </div>
 
-          {/* EVENT TYPE DISTRIBUTION (5 Cols on desktop) */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm print-kpi-card">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 font-serif">
-                Event Type Distribution
-              </h3>
-              <span className="text-[10px] font-bold text-slate-400">
-                {data.analytics?.eventTypes?.length || 0} Categories
-              </span>
-            </div>
-
-            {data.analytics?.eventTypes?.length > 0 ? (
-              <div className="h-44 sm:h-48 w-full flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie 
-                      data={data.analytics.eventTypes} 
-                      cx="50%" 
-                      cy="46%" 
-                      innerRadius={36} 
-                      outerRadius={58} 
-                      paddingAngle={4} 
-                      dataKey="value"
-                    >
-                      {data.analytics.eventTypes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(val, name) => [`${val} events`, name]}
-                      contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 600 }} 
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={28} 
-                      iconType="circle" 
-                      wrapperStyle={{ fontSize: '10px', color: '#475569', paddingTop: '4px' }} 
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-40 flex items-center justify-center text-xs text-slate-400">
-                No events recorded this month
-              </div>
-            )}
-          </div>
-
-        </section>
-
-        {/* ──────────────────────────────────────────────────────────────────────────
-            SECTION 3: GRANULAR BREAKDOWNS (TABLES)
-            MOBILE VIEW: INTERACTIVE TAB SELECTOR FOR QUICK FILTERING
-        ────────────────────────────────────────────────────────────────────────── */}
-        
-        {/* Mobile Filter Tabs (Hidden on Desktop & Print) */}
-        <div className="print-hide flex md:hidden items-center gap-1.5 p-1 bg-slate-100 rounded-xl mb-4 overflow-x-auto text-xs font-bold text-slate-600">
-          <button
-            onClick={() => setActiveMobileTab('all')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeMobileTab === 'all' ? 'bg-white text-emerald-800 shadow-sm' : 'hover:text-slate-900'}`}
-          >
-            All Sections
-          </button>
-          <button
-            onClick={() => setActiveMobileTab('bookings')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeMobileTab === 'bookings' ? 'bg-white text-emerald-800 shadow-sm' : 'hover:text-slate-900'}`}
-          >
-            Bookings ({recentBookings.length})
-          </button>
-          <button
-            onClick={() => setActiveMobileTab('expenses')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeMobileTab === 'expenses' ? 'bg-white text-emerald-800 shadow-sm' : 'hover:text-slate-900'}`}
-          >
-            Expenses ({recentExpenses.length})
-          </button>
-          <button
-            onClick={() => setActiveMobileTab('payments')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${activeMobileTab === 'payments' ? 'bg-white text-emerald-800 shadow-sm' : 'hover:text-slate-900'}`}
-          >
-            Collections ({recentPayments.length})
-          </button>
-        </div>
-
-        {/* TABLE 1: RECENT BOOKINGS */}
-        {(activeMobileTab === 'all' || activeMobileTab === 'bookings') && (
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm mb-5 print-break-inside-avoid print-kpi-card">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 font-serif">
-                  Recent Bookings & Contracts
-                </h3>
-                <p className="text-[11px] text-slate-500">Confirmed hall reservations for {monthName}</p>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {recentBookings.length} Records
-              </span>
-            </div>
-
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <table className="w-full border-collapse text-left text-xs print-table min-w-[560px]">
-                <thead>
-                  <tr className="bg-slate-50 border-y border-slate-200 text-slate-600 font-bold">
-                    <th className="py-2.5 px-3">Booking ID</th>
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Customer</th>
-                    <th className="py-2.5 px-3">Hall</th>
-                    <th className="py-2.5 px-3 text-right">Total Amt</th>
-                    <th className="py-2.5 px-3 text-right">Balance</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentBookings.length > 0 ? (
-                    recentBookings.map((b, i) => (
-                      <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-3 font-semibold text-emerald-700">{b.bookingId || '-'}</td>
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{formatDate(b.date)}</td>
-                        <td className="py-2.5 px-3 font-medium text-slate-900">{b.customerName || 'Customer'}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{b.hall || 'Main Hall'}</td>
-                        <td className="py-2.5 px-3 text-right font-semibold text-slate-900">
-                          {formatCurrency(b.totalAmount)}
-                        </td>
-                        <td className={`py-2.5 px-3 text-right font-bold ${Number(b.balanceAmount) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {formatCurrency(b.balanceAmount)}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                            {b.status || 'Confirmed'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="py-8 text-center text-slate-400">
-                        No bookings recorded for this month
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {recentBookings.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900">
-                      <td colSpan="4" className="py-2.5 px-3 text-right">Total Confirmed Value:</td>
-                      <td className="py-2.5 px-3 text-right text-emerald-700">{formatCurrency(totalRenderedBookingRevenue)}</td>
-                      <td className="py-2.5 px-3 text-right text-rose-600">{formatCurrency(totalRenderedBookingBalance)}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TABLE 2: RECENT EXPENSES */}
-        {(activeMobileTab === 'all' || activeMobileTab === 'expenses') && (
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm mb-5 print-break-inside-avoid print-kpi-card">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 font-serif">
-                  Operational Expenses Breakdown
-                </h3>
-                <p className="text-[11px] text-slate-500">Expenditures, maintenance & vendor disbursements</p>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
-                {recentExpenses.length} Records
-              </span>
-            </div>
-
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <table className="w-full border-collapse text-left text-xs print-table min-w-[500px]">
-                <thead>
-                  <tr className="bg-slate-50 border-y border-slate-200 text-slate-600 font-bold">
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Description</th>
-                    <th className="py-2.5 px-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentExpenses.length > 0 ? (
-                    recentExpenses.map((e, i) => (
-                      <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{formatDate(e.date)}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">{e.category || 'General'}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{e.description || '-'}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-rose-600">
-                          {formatCurrency(e.amount)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="py-8 text-center text-slate-400">
-                        No expenses recorded for this month
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {recentExpenses.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900">
-                      <td colSpan="3" className="py-2.5 px-3 text-right">Total Recorded Expenses:</td>
-                      <td className="py-2.5 px-3 text-right text-rose-600">{formatCurrency(totalRenderedExpenses)}</td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TABLE 3: RECENT COLLECTIONS & PAYMENTS */}
-        {(activeMobileTab === 'all' || activeMobileTab === 'payments') && (
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm mb-5 print-break-inside-avoid print-kpi-card">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 font-serif">
-                  Collections & Payment Receipts
-                </h3>
-                <p className="text-[11px] text-slate-500">Realized advances and final settlements</p>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {recentPayments.length} Records
-              </span>
-            </div>
-
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <table className="w-full border-collapse text-left text-xs print-table min-w-[500px]">
-                <thead>
-                  <tr className="bg-slate-50 border-y border-slate-200 text-slate-600 font-bold">
-                    <th className="py-2.5 px-3">Receipt / Ref</th>
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Payment Method</th>
-                    <th className="py-2.5 px-3 text-right">Amount Received</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentPayments.length > 0 ? (
-                    recentPayments.map((p, i) => (
-                      <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">{p.paymentNumber || `REC-${i+1}`}</td>
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{formatDate(p.paymentDate)}</td>
-                        <td className="py-2.5 px-3 text-slate-600">
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                            {p.method || 'Direct'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-emerald-600">
-                          {formatCurrency(p.amount)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="py-8 text-center text-slate-400">
-                        No payments recorded for this month
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {recentPayments.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900">
-                      <td colSpan="3" className="py-2.5 px-3 text-right">Total Cash Collections:</td>
-                      <td className="py-2.5 px-3 text-right text-emerald-600">{formatCurrency(totalRenderedPayments)}</td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* PRINT ONLY: FORMAL EXECUTIVE SIGN-OFF & AUDIT FOOTER */}
-        <div className="hidden print-only mt-8 pt-4 border-t border-slate-300 text-[9px] text-slate-500">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-semibold text-slate-700">Confidential Executive Document • For Venue Management & Audit Only</p>
-              <p>Generated automatically via Venueza Cloud ERP ({venueTitle})</p>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-slate-800">Authorized Signature: _______________________</p>
-              <p className="mt-1">Date: {dayjs().format('DD/MM/YYYY')}</p>
-            </div>
-          </div>
         </div>
 
       </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          2. HERO FINANCIAL COMMAND CENTER (ULTRA-CREATIVE LUXURY CARD)
+      ────────────────────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #091910 0%, #133324 50%, #1B4332 100%)',
+        borderRadius: 22,
+        padding: '20px 22px',
+        color: '#fff',
+        boxShadow: '0 12px 36px rgba(9, 25, 16, 0.28)',
+        marginBottom: 14,
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid rgba(212, 160, 23, 0.25)'
+      }}>
+        
+        {/* Soft Golden Ambient Light */}
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, background: 'rgba(212, 160, 23, 0.15)', borderRadius: '50%', filter: 'blur(30px)', pointerEvents: 'none' }} />
+
+        {/* Card Header Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wallet size={15} color="#D4A017" />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)' }}>
+              Net Operating Balance
+            </span>
+          </div>
+          <span style={{ 
+            fontSize: 10, 
+            fontWeight: 800, 
+            background: Number(netBalance) >= 0 ? 'rgba(74, 222, 128, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+            color: Number(netBalance) >= 0 ? '#86efac' : '#fda4af', 
+            padding: '3px 9px', 
+            borderRadius: 12,
+            border: Number(netBalance) >= 0 ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)'
+          }}>
+            {Number(operatingMargin) >= 0 ? `+${operatingMargin}% Margin` : `${operatingMargin}% Deficit`}
+          </span>
+        </div>
+
+        {/* Huge Net Balance Figure */}
+        <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: 800, letterSpacing: '-0.5px', color: '#fff', marginBottom: 16 }}>
+          {formatCurrency(netBalance)}
+        </div>
+
+        {/* Integrated Dual Metric Bar (Inflow vs Outflow) */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 12,
+          paddingTop: 14,
+          borderTop: '1px solid rgba(255,255,255,0.12)'
+        }}>
+          
+          {/* Revenue */}
+          <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px 12px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <TrendingUp size={13} color="#4ade80" />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>Total Revenue</span>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
+              {formatCurrency(totalRevenue)}
+            </div>
+            <div style={{ fontSize: 10, color: '#86efac', fontWeight: 600, marginTop: 2 }}>
+              {totalBookings} Bookings (Avg {formatCurrency(avgBookingValue)})
+            </div>
+          </div>
+
+          {/* Expenses */}
+          <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px 12px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <TrendingDown size={13} color="#f87171" />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>Total Expenses</span>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
+              {formatCurrency(totalExpenses)}
+            </div>
+            <div style={{ fontSize: 10, color: '#fca5a5', fontWeight: 600, marginTop: 2 }}>
+              {expenseRatio}% of Gross Revenue
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          3. OPERATIONAL KPI MATRIX (2x2 GRID)
+      ────────────────────────────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 10,
+        marginBottom: 14
+      }}>
+        
+        {/* Bookings */}
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Confirmed</span>
+            <Calendar size={14} color="#1B4332" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{totalBookings}</div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#1B4332', background: '#ecfdf5', padding: '1px 6px', borderRadius: 6 }}>
+            {conversionRate}% Conversion
+          </span>
+        </div>
+
+        {/* Enquiries */}
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Total Enquiries</span>
+            <HelpCircle size={14} color="#2563eb" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{totalEnquiries}</div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: 6 }}>
+            Customer Pipeline
+          </span>
+        </div>
+
+        {/* New Customers */}
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>New Customers</span>
+            <Users size={14} color="#7c3aed" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{data?.operations?.newCustomers || 0}</div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '1px 6px', borderRadius: 6 }}>
+            Client Profiles
+          </span>
+        </div>
+
+        {/* Cancellations */}
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Cancellations</span>
+            <AlertCircle size={14} color="#e11d48" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#e11d48' }}>{data?.operations?.cancelledBookings || 0}</div>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#e11d48', background: '#fff1f2', padding: '1px 6px', borderRadius: 6 }}>
+            Dropped Events
+          </span>
+        </div>
+
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          4. INTERACTIVE TAB NAVIGATION (CREATIVE, INSTANT JUMP)
+      ────────────────────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: '#fff',
+        padding: 4,
+        borderRadius: 16,
+        border: '1px solid #e2e8f0',
+        marginBottom: 14,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 4
+      }}>
+        {[
+          { key: 'overview', label: 'Summary' },
+          { key: 'bookings', label: `Bookings (${recentBookings.length})` },
+          { key: 'expenses', label: `Expenses (${recentExpenses.length})` },
+          { key: 'payments', label: `Collections (${recentPayments.length})` }
+        ].map(t => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: '9px 4px',
+                borderRadius: 12,
+                border: 'none',
+                background: active ? '#1B4332' : 'transparent',
+                color: active ? '#fff' : '#64748b',
+                fontSize: 11,
+                fontWeight: active ? 800 : 600,
+                cursor: 'pointer',
+                textAlign: 'center',
+                boxShadow: active ? '0 2px 8px rgba(27,67,50,0.2)' : 'none',
+                transition: 'all 0.15s'
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          5. TAB CONTENT PANELS
+      ────────────────────────────────────────────────────────────────────────── */}
+
+      {/* TAB 1: OVERVIEW & EVENT DISTRIBUTION */}
+      {activeTab === 'overview' && (
+        <div style={{ background: '#fff', borderRadius: 20, padding: 18, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
+                Event Type Distribution
+              </h3>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Categorical share of bookings in {monthName}</p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#1B4332', background: '#ecfdf5', padding: '2px 8px', borderRadius: 8 }}>
+              {data?.analytics?.eventTypes?.length || 0} Categories
+            </span>
+          </div>
+
+          {data?.analytics?.eventTypes?.length > 0 ? (
+            <div style={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={data.analytics.eventTypes} 
+                    cx="50%" 
+                    cy="46%" 
+                    innerRadius={42} 
+                    outerRadius={68} 
+                    paddingAngle={4} 
+                    dataKey="value"
+                  >
+                    {data.analytics.eventTypes.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(val, name) => [`${val} events`, name]}
+                    contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 700 }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={30} 
+                    iconType="circle" 
+                    wrapperStyle={{ fontSize: 11, color: '#475569', paddingTop: 6 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+              No event type data found for this month.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: BOOKINGS LIST */}
+      {activeTab === 'bookings' && (
+        <div style={{ background: '#fff', borderRadius: 20, padding: 18, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
+                Confirmed Bookings
+              </h3>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Total Value: {formatCurrency(totalRenderedBookingRevenue)}</p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#1B4332', background: '#ecfdf5', padding: '2px 8px', borderRadius: 8 }}>
+              {recentBookings.length} Records
+            </span>
+          </div>
+
+          {recentBookings.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No bookings recorded for this month.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentBookings.map((b, i) => (
+                <div key={i} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{b.customerName || 'Customer'}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{b.bookingId} • {b.hall || 'Main Hall'}</div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: 6 }}>
+                      {b.status || 'Confirmed'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 8, paddingTop: 6, borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>📅 {formatDate(b.date)}</div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#1B4332' }}>{formatCurrency(b.totalAmount)}</div>
+                      {Number(b.balanceAmount) > 0 && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#e11d48' }}>Bal: {formatCurrency(b.balanceAmount)}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: EXPENSES LIST */}
+      {activeTab === 'expenses' && (
+        <div style={{ background: '#fff', borderRadius: 20, padding: 18, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
+                Operational Expenses
+              </h3>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Total Outflow: {formatCurrency(totalRenderedExpenses)}</p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#e11d48', background: '#fff1f2', padding: '2px 8px', borderRadius: 8 }}>
+              {recentExpenses.length} Records
+            </span>
+          </div>
+
+          {recentExpenses.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No expenses recorded for this month.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentExpenses.map((e, i) => (
+                <div key={i} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{e.category || 'General'}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{e.description || 'No description'}</div>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#e11d48' }}>
+                      {formatCurrency(e.amount)}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 6 }}>
+                    📅 {formatDate(e.date)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: COLLECTIONS / PAYMENTS */}
+      {activeTab === 'payments' && (
+        <div style={{ background: '#fff', borderRadius: 20, padding: 18, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: "'Playfair Display', serif" }}>
+                Collections & Receipts
+              </h3>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Total Inflow: {formatCurrency(totalRenderedPayments)}</p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: 8 }}>
+              {recentPayments.length} Records
+            </span>
+          </div>
+
+          {recentPayments.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No payment receipts recorded for this month.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentPayments.map((p, i) => (
+                <div key={i} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{p.paymentNumber || `REC-${i+1}`}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Method: {p.method || 'Direct'}</div>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>
+                      {formatCurrency(p.amount)}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 6 }}>
+                    📅 {formatDate(p.paymentDate)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
