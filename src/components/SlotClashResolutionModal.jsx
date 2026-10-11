@@ -14,6 +14,7 @@ export default function SlotClashResolutionModal({
   const [leads, setLeads] = useState(competingLeads);
   const [processingId, setProcessingId] = useState(null);
   const [sendWhatsApp, setSendWhatsApp] = useState({});
+  const [confirmCloseLead, setConfirmCloseLead] = useState(null); // Lead awaiting confirmation to close
 
   React.useEffect(() => {
     setLeads(competingLeads);
@@ -315,7 +316,7 @@ export default function SlotClashResolutionModal({
 
                     <button
                       disabled={isProcessing}
-                      onClick={() => handleMarkLost(lead)}
+                      onClick={() => setConfirmCloseLead(lead)}
                       style={{
                         background: "#fef2f2",
                         color: "#dc2626",
@@ -375,6 +376,108 @@ export default function SlotClashResolutionModal({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for Closing Lead */}
+      {confirmCloseLead && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmCloseLead(null);
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              width: "100%",
+              maxWidth: 440,
+              borderRadius: 18,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+              overflow: "hidden",
+              animation: "scaleUp 0.15s ease-out",
+            }}
+          >
+            <div style={{ padding: "22px 24px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626" }}>
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Close This Enquiry?</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>
+                  {confirmCloseLead.enquiryNumber || `ENQ#${confirmCloseLead.id}`} — {confirmCloseLead.enquirerName || confirmCloseLead.Customer?.name || confirmCloseLead.customerName || "Customer"}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 24px", fontSize: 13, color: "#334155", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 12px" }}>
+                Are you sure you want to mark this enquiry as <strong>Lost</strong>?
+              </p>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#475569" }}>
+                <div><strong>Event Date:</strong> {bookedDate}</div>
+                <div><strong>Client:</strong> {confirmCloseLead.enquirerName || confirmCloseLead.Customer?.name || confirmCloseLead.customerName || "Customer"} ({confirmCloseLead.enquirerPhone || confirmCloseLead.Customer?.phone || confirmCloseLead.phone || "No phone"})</div>
+                {(sendWhatsApp[confirmCloseLead.id] ?? true) && (
+                  <div style={{ marginTop: 6, color: "#16a34a", fontWeight: 700 }}>
+                    💬 WhatsApp notification will be sent to the client.
+                  </div>
+                )}
+              </div>
+              <p style={{ margin: "12px 0 0", fontSize: 11, color: "#94a3b8" }}>
+                💡 Tip: If you prefer keeping them as a potential customer, choose <strong>Move to VIP Waitlist</strong> instead.
+              </p>
+            </div>
+
+            <div style={{ padding: "14px 24px", background: "#f8fafc", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmCloseLead(null)}
+                style={{
+                  background: "#fff",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const leadToClose = confirmCloseLead;
+                  setConfirmCloseLead(null);
+                  handleMarkLost(leadToClose);
+                }}
+                style={{
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(220,38,38,0.3)",
+                }}
+              >
+                Yes, Close Enquiry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
