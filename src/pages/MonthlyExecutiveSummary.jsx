@@ -353,17 +353,69 @@ export default function MonthlyExecutiveSummary() {
 
       curY = doc.lastAutoTable.finalY + 8;
 
+      // ── SECTION 4: CANCELLED / DROPPED BOOKINGS BREAKDOWN ──
+      if (curY > 210) {
+        doc.addPage();
+        curY = 20;
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...slateDark);
+      doc.text('4. CANCELLED / DROPPED BOOKINGS BREAKDOWN', 14, curY);
+      curY += 4;
+
+      const totalRenderedCancelledRevenue = cancelledBookingsList.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+      const cancelledRows = cancelledBookingsList.map(b => [
+        b.bookingId || '-',
+        formatDate(b.date),
+        b.customerName || 'Customer',
+        b.hall || 'Main Hall',
+        formatPDFCurrency(b.totalAmount),
+        b.reason || 'Cancelled'
+      ]);
+
+      if (cancelledRows.length === 0) {
+        cancelledRows.push(['-', '-', 'No cancellations recorded for this period', '-', '-', 'None']);
+      }
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Booking Ref', 'Event Date', 'Customer Name', 'Hall Space', 'Original Contract', 'Cancellation Status']],
+        body: cancelledRows,
+        foot: cancelledBookingsList.length > 0 ? [[
+          { content: 'Total Cancelled Contract Value:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: formatPDFCurrency(totalRenderedCancelledRevenue), styles: { halign: 'right', fontStyle: 'bold', textColor: [190, 18, 60] } },
+          ''
+        ]] : undefined,
+        theme: 'striped',
+        headStyles: { fillColor: [159, 18, 57], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59], font: 'helvetica' },
+        columnStyles: {
+          0: { cellWidth: 26 },
+          1: { cellWidth: 24 },
+          2: { cellWidth: 42 },
+          3: { cellWidth: 30 },
+          4: { halign: 'right', fontStyle: 'bold', cellWidth: 32 },
+          5: { halign: 'center', cellWidth: 26, textColor: [190, 18, 60], fontStyle: 'bold' }
+        },
+        styles: { cellPadding: 2.5 }
+      });
+
+      curY = doc.lastAutoTable.finalY + 8;
+
       // Check if page break is needed before expenses
       if (curY > 210) {
         doc.addPage();
         curY = 20;
       }
 
-      // ── SECTION 4: EXPENSES BREAKDOWN ──
+      // ── SECTION 5: EXPENSES BREAKDOWN ──
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...slateDark);
-      doc.text('4. OPERATIONAL EXPENSES BREAKDOWN', 14, curY);
+      doc.text('5. OPERATIONAL EXPENSES BREAKDOWN', 14, curY);
       curY += 4;
 
       const expenseRows = recentExpenses.map(e => [
@@ -374,7 +426,7 @@ export default function MonthlyExecutiveSummary() {
       ]);
 
       if (expenseRows.length === 0) {
-        expenseRows.push(['-', 'No expenses recorded for this month', '-', '-']);
+        expenseRows.push(['-', 'No expenses recorded for this period', '-', '-']);
       }
 
       autoTable(doc, {
@@ -405,11 +457,11 @@ export default function MonthlyExecutiveSummary() {
         curY = 20;
       }
 
-      // ── SECTION 5: COLLECTIONS / PAYMENTS ──
+      // ── SECTION 6: COLLECTIONS / PAYMENTS ──
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...slateDark);
-      doc.text('5. CASH & BANK COLLECTIONS', 14, curY);
+      doc.text('6. CASH & BANK COLLECTIONS', 14, curY);
       curY += 4;
 
       const paymentRows = recentPayments.map((p, i) => [
@@ -420,7 +472,7 @@ export default function MonthlyExecutiveSummary() {
       ]);
 
       if (paymentRows.length === 0) {
-        paymentRows.push(['-', 'No payment collections recorded for this month', '-', '-']);
+        paymentRows.push(['-', 'No payment collections recorded for this period', '-', '-']);
       }
 
       autoTable(doc, {
