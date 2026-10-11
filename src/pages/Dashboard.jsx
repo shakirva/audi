@@ -26,19 +26,55 @@ const BRAND = {
 
 const formatCurrency = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
 
-const GradientCard = ({ title, value, subtext, gradient, delay = 0 }) => (
+const GradientCard = ({ title, value, subtext, gradient, icon: Icon, delay = 0, caption }) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }} 
     animate={{ opacity: 1, y: 0 }} 
     transition={{ delay }}
     className="hm-card" 
-    style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, color: "#fff", display: "flex", flexDirection: "column", gap: 6, padding: 24, borderRadius: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.1)" }}
+    style={{ 
+      background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, 
+      color: "#fff", 
+      display: "flex", 
+      flexDirection: "column", 
+      justifyContent: "space-between",
+      padding: "20px 22px", 
+      borderRadius: 20, 
+      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+      position: "relative",
+      overflow: "hidden",
+      minHeight: 125
+    }}
   >
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>{title}</div>
-      {subtext && <span style={{ fontSize: 10, background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 12, fontWeight: 700, letterSpacing: "0.5px" }}>{subtext}</span>}
+    {/* Soft ambient light glow in top-right */}
+    <div style={{ position: "absolute", top: "-15px", right: "-15px", width: "80px", height: "80px", background: "rgba(255, 255, 255, 0.12)", borderRadius: "50%", filter: "blur(20px)", pointerEvents: "none" }} />
+
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {Icon && (
+          <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(255, 255, 255, 0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon size={13} color="#fff" />
+          </div>
+        )}
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "rgba(255,255,255,0.9)" }}>
+          {title}
+        </div>
+      </div>
+      {subtext && (
+        <span style={{ fontSize: 10, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 10, fontWeight: 700, letterSpacing: "0.5px" }}>
+          {subtext}
+        </span>
+      )}
     </div>
-    <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
+
+    <div style={{ position: "relative", zIndex: 1, marginTop: 8 }}>
+      <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", lineHeight: 1.15 }}>{value}</div>
+      {caption && (
+        <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.72)", fontWeight: 600, marginTop: 4 }}>
+          {caption}
+        </div>
+      )}
+    </div>
   </motion.div>
 );
 
@@ -569,13 +605,53 @@ function ExecutiveCockpit() {
         </div>
       </motion.div>
 
-      {/* ── DESKTOP KPI ROW (5 Columns — Exact replica of Image 2, never touched!) ── */}
+      {/* ── DESKTOP KPI ROW (5 Columns — Matching Mobile Vibrant Luxury Gradients & Icons) ── */}
       <div className="hm-dash-desktop-only hm-dash-stats" style={{ gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        <GradientCard title="Total Revenue" value={formatStatCurrency(currentStats.totalRevenue)} subtext={periodInfo.badge} gradient={["#1B4332", "#2D6A4F"]} delay={0.1} />
-        <GradientCard title="Total Bookings" value={currentStats.totalBookings} subtext={periodInfo.badge} gradient={["#2D6A4F", "#40916C"]} delay={0.2} />
-        <GradientCard title="Enquiries" value={currentStats.enquiryCount} subtext={periodInfo.badge} gradient={["#52B788", "#74C69D"]} delay={0.3} />
-        <GradientCard title="Balance Amount" value={formatStatCurrency(currentStats.pendingAmount)} subtext={periodInfo.badge} gradient={["#d97706", "#f59e0b"]} delay={0.4} />
-        <GradientCard title="Total Expenses" value={formatStatCurrency(currentStats.totalExpenses)} subtext={periodInfo.badge} gradient={["#9f1239", "#e11d48"]} delay={0.5} />
+        <GradientCard 
+          title="Total Revenue" 
+          value={formatStatCurrency(currentStats.totalRevenue)} 
+          subtext={periodInfo.badge} 
+          gradient={["#0D2418", "#1B4332"]} 
+          icon={Wallet}
+          caption={currentStats.totalRevenue ? `₹${Number(currentStats.totalRevenue).toLocaleString('en-IN')}` : "Confirmed Bookings"}
+          delay={0.1} 
+        />
+        <GradientCard 
+          title="Total Bookings" 
+          value={currentStats.totalBookings} 
+          subtext={periodInfo.badge} 
+          gradient={["#1B4332", "#2D6A4F"]} 
+          icon={Calendar}
+          caption="Confirmed Events"
+          delay={0.2} 
+        />
+        <GradientCard 
+          title="Enquiries" 
+          value={currentStats.enquiryCount} 
+          subtext={periodInfo.badge} 
+          gradient={["#2D6A4F", "#40916C"]} 
+          icon={Users}
+          caption="Active Pipeline Leads"
+          delay={0.3} 
+        />
+        <GradientCard 
+          title="Balance Amount" 
+          value={formatStatCurrency(currentStats.pendingAmount)} 
+          subtext={periodInfo.badge} 
+          gradient={["#b45309", "#d97706"]} 
+          icon={Clock}
+          caption="Pending Collection"
+          delay={0.4} 
+        />
+        <GradientCard 
+          title="Total Expenses" 
+          value={formatStatCurrency(currentStats.totalExpenses)} 
+          subtext={periodInfo.badge} 
+          gradient={["#9f1239", "#e11d48"]} 
+          icon={CreditCard}
+          caption="Recorded Spend"
+          delay={0.5} 
+        />
       </div>
 
       {/* ── MOBILE KPI LAYOUT (Creative, compact, high-converting mobile UI) ── */}
