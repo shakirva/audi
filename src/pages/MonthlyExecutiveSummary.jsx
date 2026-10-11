@@ -98,6 +98,17 @@ export default function MonthlyExecutiveSummary() {
     }
   };
 
+  // Extracted raw details
+  const recentBookings = data?.details?.recentBookings || [];
+  const cancelledBookingsList = data?.details?.cancelledBookingsList || [];
+  const recentExpenses = data?.details?.recentExpenses || [];
+  const recentPayments = data?.details?.recentPayments || [];
+
+  const totalRenderedExpenses = recentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalRenderedPayments = recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const totalRenderedBookingRevenue = recentBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const totalRenderedBookingBalance = recentBookings.reduce((sum, b) => sum + (b.balanceAmount || 0), 0);
+
   // Key Calculations
   const totalRevenue = data?.financials?.totalRevenue || 0;
   const totalExpenses = data?.financials?.totalExpenses || 0;
@@ -114,21 +125,11 @@ export default function MonthlyExecutiveSummary() {
   const conversionRate = totalEnquiries > 0 ? ((totalBookings / totalEnquiries) * 100).toFixed(1) : '0.0';
   const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
 
-  const recentBookings = data?.details?.recentBookings || [];
-  const cancelledBookingsList = data?.details?.cancelledBookingsList || [];
-  const recentExpenses = data?.details?.recentExpenses || [];
-  const recentPayments = data?.details?.recentPayments || [];
-
   const displayedBookings = useMemo(() => {
     if (bookingFilter === 'confirmed') return recentBookings;
     if (bookingFilter === 'cancelled') return cancelledBookingsList;
     return [...recentBookings, ...cancelledBookingsList];
   }, [bookingFilter, recentBookings, cancelledBookingsList]);
-
-  const totalRenderedExpenses = recentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalRenderedPayments = recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  const totalRenderedBookingRevenue = recentBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-  const totalRenderedBookingBalance = recentBookings.reduce((sum, b) => sum + (b.balanceAmount || 0), 0);
 
   const monthName = dayjs().month(selectedMonth - 1).format('MMMM');
   const venueTitle = getVenueName();
