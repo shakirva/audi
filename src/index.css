@@ -437,6 +437,12 @@ button, input, select, textarea {
     padding-right: 0 !important;
   }
 
+  /* Make settings cards and report filter bars use snug mobile padding */
+  .hm-settings-container > div[style*="padding: 24px"],
+  .hm-settings-container > div[style*="padding:24px"] {
+    padding: 16px 14px !important;
+  }
+
   .hm-main-content input,
   .hm-main-content select,
   .hm-main-content textarea,
