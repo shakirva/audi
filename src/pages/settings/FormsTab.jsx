@@ -396,18 +396,18 @@ export default function FormsTab({
               const name = typeof et === 'string' ? et : et.name;
               const sessionCount = et.sessions ? et.sessions.length : 0;
               return (
-                <div key={idx} style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: idx < eventTypes.length - 1 ? "1px solid #e2e8f0" : "none", background: "#fff" }}>
-                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", alignItems: "center", gap: 16 }}>
-                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{name}</h4>
-                    <span style={{ fontSize: 13, color: "#64748b" }}>{sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: sessionCount > 0 ? "#059669" : "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: sessionCount > 0 ? "#10b981" : "#cbd5e1" }}></div>
+                <div key={idx} className="p-3 sm:px-4 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 last:border-b-0 bg-white">
+                  <div className="flex-1 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    <h4 className="m-0 text-sm font-bold text-slate-900 min-w-[120px]">{name}</h4>
+                    <span className="text-xs text-slate-500">{sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
+                    <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: sessionCount > 0 ? "#059669" : "#94a3b8" }}>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: sessionCount > 0 ? "#10b981" : "#cbd5e1" }}></div>
                       {sessionCount > 0 ? "Configured" : "Not configured"}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => openEditEventModal(idx)} style={{ padding: "6px 12px", background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#334155", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                    <button onClick={() => handleDeleteEventType(idx)} style={{ padding: "6px 12px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", fontSize: 12, fontWeight: 700 }}>Delete</button>
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <button onClick={() => openEditEventModal(idx)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border-0 rounded-md cursor-pointer text-slate-700 text-xs font-bold transition-colors">Edit</button>
+                    <button onClick={() => handleDeleteEventType(idx)} className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border-0 rounded-md cursor-pointer text-rose-600 text-xs font-bold transition-colors">Delete</button>
                   </div>
                 </div>
               );

@@ -122,29 +122,36 @@ export default function OnlinePresenceTab({
             />
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden", minWidth: 280 }}>
-              <span style={{ padding: "10px 16px", fontSize: 13, color: "#475569", flex: 1, fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div className="w-full max-w-lg flex flex-col items-center gap-3">
+            <div className="w-full flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden">
+              <span className="px-3 py-2 text-xs sm:text-sm text-slate-600 flex-1 font-mono truncate">
                 {publicBookingUrl}
               </span>
               <button 
                 onClick={() => { navigator.clipboard.writeText(publicBookingUrl); addToast("Link copied!", "success"); }}
-                style={{ padding: "10px 16px", background: "#f1f5f9", border: "none", borderLeft: "1px solid #cbd5e1", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#334155", fontWeight: 600, fontSize: 12 }}
+                className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 border-0 border-l border-slate-300 cursor-pointer flex items-center gap-1.5 text-slate-700 font-semibold text-xs transition-colors shrink-0"
               >
                 <Copy size={14} /> Copy
               </button>
             </div>
             
-            <a href={publicBookingUrl} target="_blank" rel="noreferrer" style={{ padding: "10px 20px", background: "#1e293b", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-              Open Form
-            </a>
+            <div className="w-full flex flex-wrap sm:flex-nowrap gap-2 justify-center">
+              <a 
+                href={publicBookingUrl} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex-1 min-w-[120px] text-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs sm:text-sm font-bold no-underline transition-colors"
+              >
+                Open Form
+              </a>
 
-            <button 
-              onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Book your event at our venue 🏛️\n" + publicBookingUrl)}`, "_blank")}
-              style={{ padding: "10px 20px", background: "#25D366", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-            >
-              Share on WhatsApp
-            </button>
+              <button 
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Book your event at our venue 🏛️\n" + publicBookingUrl)}`, "_blank")}
+                className="flex-1 min-w-[140px] px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white border-0 rounded-lg text-xs sm:text-sm font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+              >
+                Share on WhatsApp
+              </button>
+            </div>
           </div>
 
         </div>

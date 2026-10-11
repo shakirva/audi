@@ -321,8 +321,8 @@ export default function AccountsReports() {
   };
 
   return (
-    <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <div className="hm-report-page" style={{ padding: "clamp(12px, 3vw, 24px)", fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="print-hide flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Accounts & Finance
@@ -345,13 +345,17 @@ export default function AccountsReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
+          <div className="flex-1 min-w-[130px] flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>From:</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-700 outline-none" style={{ minWidth: 0 }} />
+          </div>
+          <div className="flex-1 min-w-[130px] flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>To:</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-transparent border-0 p-0 text-xs text-slate-700 outline-none" style={{ minWidth: 0 }} />
+          </div>
           {(startDate || endDate) && (
-            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
           )}
         </div>
         

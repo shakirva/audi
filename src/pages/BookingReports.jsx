@@ -185,7 +185,7 @@ export default function BookingReports() {
   };
 
   return (
-    <div style={{ padding: 24, fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="hm-report-page" style={{ padding: "clamp(12px, 3vw, 24px)", fontFamily: "'DM Sans', sans-serif" }}>
       <style>
         {`
           @media print {
@@ -203,14 +203,14 @@ export default function BookingReports() {
           }
         `}
       </style>
-      <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div className="print-hide flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
             Booking Reports
           </h1>
-          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Analyze booking volumes, event types, and cancellations</p>
+          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, margin: 0 }}>Analyze booking volumes, event types, and cancellations</p>
         </div>
-        <div className="w-full sm:w-auto" style={{ display: "flex", gap: 10 }}>
+        <div className="w-full sm:w-auto flex" style={{ gap: 10 }}>
           <button className="w-full sm:w-auto justify-center" 
             onClick={handleExportPDF}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#1B4332", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -229,13 +229,17 @@ export default function BookingReports() {
           <Filter size={16} /> Filters
         </div>
         
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>From:</span>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>To:</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb" }} />
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#374151", whiteSpace: "nowrap" }}>From:</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: "100%", minWidth: 0, padding: "6px 8px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb", boxSizing: "border-box" }} />
+          </div>
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#374151", whiteSpace: "nowrap" }}>To:</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: "100%", minWidth: 0, padding: "6px 8px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12, color: "#374151", outline: "none", background: "#f9fafb", boxSizing: "border-box" }} />
+          </div>
           {(startDate || endDate) && (
-            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ marginLeft: 8, padding: "4px 8px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b" }}>Clear</button>
+            <button onClick={() => { setStartDate(""); setEndDate(""); }} style={{ padding: "6px 10px", fontSize: 11, background: "#f1f5f9", border: "none", borderRadius: 6, cursor: "pointer", color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>Clear</button>
           )}
         </div>
         

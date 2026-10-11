@@ -167,10 +167,14 @@ export default function Settings() {
 
       {/* Tabs Navigation */}
       {tabs.length > 0 && (
-        <div style={{ 
-          display: "flex", gap: 8, overflowX: "auto", paddingBottom: 16, marginBottom: 24, 
-          borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, background: "#f8fafc", zIndex: 10, paddingTop: 10
-        }}>
+        <div 
+          className="no-scrollbar"
+          style={{ 
+            display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 20, 
+            borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, background: "#f8fafc", zIndex: 10, paddingTop: 10,
+            WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none"
+          }}
+        >
           {tabs.map(t => {
             const isActive = activeTab === t.id;
             return (
@@ -178,12 +182,13 @@ export default function Settings() {
                 key={t.id}
                 onClick={() => handleTabChange(t.id)}
                 style={{
-                  padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: isActive ? 700 : 600,
+                  padding: "9px 15px", borderRadius: 8, fontSize: 13, fontWeight: isActive ? 700 : 600,
                   border: "none",
                   background: isActive ? "#1B4332" : "transparent",
                   color: isActive ? "#fff" : "#475569",
                   cursor: "pointer", whiteSpace: "nowrap",
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
+                  flexShrink: 0
                 }}
               >
                 {t.label}

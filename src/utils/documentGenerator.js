@@ -11,7 +11,6 @@ const getSettings = async () => {
     return {};
   }
 };
-
 const downloadPDF = (doc, filename) => {
   robustDownloadPDF(doc, filename);
 };

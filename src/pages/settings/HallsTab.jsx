@@ -187,29 +187,25 @@ export default function HallsTab({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {halls.map((hall, idx) => (
-            <div key={idx} style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 20px",
-              background: "#f8fafc"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <span style={{ fontSize: 24 }}>{hall.icon}</span>
-                <div>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>{hall.name}</h4>
-                  <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#64748b" }}>
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50">
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+                <span className="text-2xl shrink-0">{hall.icon}</span>
+                <div className="min-w-0">
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900 m-0 mb-1 truncate">{hall.name}</h4>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                     <span>👥 {hall.capacity || "0"} Guests</span>
                     <span>•</span>
-                    <span style={{ textTransform: "capitalize" }}>{hall.pricingType ? hall.pricingType.replace("_", " ") : "Fixed"} Pricing</span>
+                    <span className="capitalize">{hall.pricingType ? hall.pricingType.replace("_", " ") : "Fixed"} Pricing</span>
                     <span>•</span>
                     <span>{hall.gstRate || 0}% GST</span>
                   </div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => handleEditHall(idx)} style={{ background: "#e0f2fe", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, color: "#0369a1", fontWeight: 600, fontSize: 13 }}>
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button onClick={() => handleEditHall(idx)} className="bg-sky-100 hover:bg-sky-200 border-0 rounded-lg cursor-pointer px-3 py-1.5 flex items-center gap-1.5 text-sky-800 font-semibold text-xs transition-colors">
                   <Edit size={14} /> Edit
                 </button>
-                <button onClick={() => handleDeleteHall(idx)} style={{ background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, color: "#dc2626", fontWeight: 600, fontSize: 13 }}>
+                <button onClick={() => handleDeleteHall(idx)} className="bg-rose-50 hover:bg-rose-100 border-0 rounded-lg cursor-pointer px-3 py-1.5 flex items-center gap-1.5 text-rose-600 font-semibold text-xs transition-colors">
                   <Trash2 size={14} /> Delete
                 </button>
               </div>
