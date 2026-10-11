@@ -624,31 +624,60 @@ button, input, select, textarea {
   .hm-crm-wrapper { padding: 24px; }
 }
 
-/* CRM KPI cards: 2 cols mobile, 4 desktop */
+/* CRM KPI cards: 2 cols mobile, 3 tablet, 6 desktop */
 .hm-crm-kpis {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
-@media (min-width: 768px) {
-  .hm-crm-kpis { grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+@media (min-width: 640px) {
+  .hm-crm-kpis {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+@media (min-width: 1100px) {
+  .hm-crm-kpis {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
 }
 
-/* CRM toolbar: stack on mobile */
+/* CRM toolbar: responsive header controls */
 .hm-crm-toolbar {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .hm-crm-toolbar {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 16px;
     margin-bottom: 24px;
   }
+}
+
+.hm-crm-filter-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.hm-crm-filter-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* Bookings toolbar: stack on mobile */

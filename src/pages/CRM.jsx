@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles, TrendingUp, X } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -23,9 +23,9 @@ const LEAD_SCORE_STYLE = {
 
 function KPISkeleton() {
   return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, width: "60%", marginBottom: 12, animation: "pulse 1.5s infinite" }} />
-      <div style={{ height: 28, background: "#f1f5f9", borderRadius: 6, width: "40%", animation: "pulse 1.5s infinite" }} />
+    <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: "12px 14px", minHeight: 74, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+      <div style={{ height: 11, background: "#f1f5f9", borderRadius: 6, width: "60%", marginBottom: 12, animation: "pulse 1.5s infinite" }} />
+      <div style={{ height: 22, background: "#f1f5f9", borderRadius: 6, width: "40%", animation: "pulse 1.5s infinite" }} />
     </div>
   );
 }
@@ -230,91 +230,219 @@ export default function CRM() {
           [1,2,3,4,5,6].map(i => <KPISkeleton key={i} />)
         ) : (
           [
-            { label: "Active Enquiries", value: activeEnquiries, color: "#0284c7", bg: "#e0f2fe" },
-            { label: "Total Enquiries", value: total, color: "#a16207", bg: "#fef08a" },
-            { label: "VIP Waitlisted", value: waitlistedCount, color: "#d97706", bg: "#fef3c7" },
-            { label: "Slot Clashes", value: clashedCount, color: "#dc2626", bg: "#fee2e2" },
-            { label: "Converted (All Time)", value: converted, color: "#166534", bg: "#dcfce7" },
-            { label: "Conversion Rate", value: `${conversionRate}%`, color: "#6b21a8", bg: "#f3e8ff" },
-          ].map((kpi, i) => (
-            <div key={i} style={{
-              flex: 1, background: "#fff", border: kpi.label === "Slot Clashes" && clashedCount > 0 ? "2px solid #fecaca" : "1px solid #eaeaea", borderRadius: 12,
-              padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 8 }}>{kpi.label}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color || "#111" }}>{kpi.value}</div>
-            </div>
-          ))
+            { label: "Active Leads", value: activeEnquiries, sub: "In pipeline", icon: Sparkles, color: "#0284c7", badgeBg: "#e0f2fe" },
+            { label: "Total Leads", value: total, sub: "All enquiries", icon: Users, color: "#6366f1", badgeBg: "#ede9fe" },
+            { label: "VIP Waitlist", value: waitlistedCount, sub: waitlistedCount > 0 ? "Queued for release" : "No waitlist", icon: Clock, color: "#d97706", badgeBg: "#fef3c7", border: waitlistedCount > 0 ? "1px solid #fde68a" : undefined },
+            { label: "Slot Clashes", value: clashedCount, sub: clashedCount > 0 ? "Action required" : "All slots clear", icon: AlertCircle, color: clashedCount > 0 ? "#dc2626" : "#64748b", badgeBg: clashedCount > 0 ? "#fee2e2" : "#f1f5f9", border: clashedCount > 0 ? "1.5px solid #fca5a5" : undefined, glow: clashedCount > 0 },
+            { label: "Converted", value: converted, sub: "Confirmed bookings", icon: CheckCircle2, color: "#166534", badgeBg: "#dcfce7" },
+            { label: "Win Rate", value: `${conversionRate}%`, sub: "Lead to booking", icon: TrendingUp, color: "#9333ea", badgeBg: "#f3e8ff" },
+          ].map((kpi, i) => {
+            const Icon = kpi.icon;
+            return (
+              <div key={i} style={{
+                background: "#fff",
+                border: kpi.border || "1px solid #e2e8f0",
+                borderRadius: 12,
+                padding: "12px 14px",
+                boxShadow: kpi.glow ? "0 2px 10px rgba(220,38,38,0.12)" : "0 1px 3px rgba(0,0,0,0.02)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: 74,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                    {kpi.label}
+                  </span>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 6,
+                    background: kpi.badgeBg, color: kpi.color,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                  }}>
+                    <Icon size={13} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color, lineHeight: 1.1 }}>
+                    {kpi.value}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, marginTop: 4 }}>
+                    {kpi.sub}
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
       {/* View Toggles & Filters */}
       <div className="hm-crm-toolbar">
-        <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 4, borderRadius: 8 }}>
-          <button onClick={() => setViewMode("board")} style={{
-            background: viewMode === "board" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "board" ? "#1B4332" : "#666", boxShadow: viewMode === "board" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <LayoutGrid size={16} /> Board
-          </button>
-          <button onClick={() => setViewMode("list")} style={{
-            background: viewMode === "list" ? "#fff" : "transparent", border: "none", borderRadius: 6,
-            padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
-            fontWeight: 600, color: viewMode === "list" ? "#1B4332" : "#666", boxShadow: viewMode === "list" ? "0 2px 4px rgba(0,0,0,0.05)" : "none"
-          }}>
-            <List size={16} /> List
-          </button>
-        </div>
-
-        {/* Waitlist Category Tabs */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          {[
-            { id: "all", label: "All Leads" },
-            { id: "clashed", label: `🚨 Slot Clashed (${clashedCount})` },
-            { id: "waitlist", label: `⏳ VIP Waitlist (${waitlistedCount})` },
-            { id: "date_released", label: `🟢 Date Released (${enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === 'Date Released').length})` },
-            { id: "standard", label: "Standard Leads" },
-          ].map(tab => (
+        {/* Left Side: View Mode + Filter Tabs */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+          {/* Segmented View Toggle */}
+          <div style={{ display: "inline-flex", background: "#f1f5f9", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0" }}>
             <button
-              key={tab.id}
-              onClick={() => setWaitlistFilter(tab.id)}
+              onClick={() => setViewMode("board")}
               style={{
+                background: viewMode === "board" ? "#fff" : "transparent",
                 border: "none",
-                borderRadius: 8,
+                borderRadius: 7,
                 padding: "6px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
                 fontSize: 12,
                 fontWeight: 700,
-                cursor: "pointer",
+                color: viewMode === "board" ? "#1B4332" : "#64748b",
+                boxShadow: viewMode === "board" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
                 transition: "all 0.15s",
-                background: waitlistFilter === tab.id ? (tab.id === 'clashed' ? '#dc2626' : tab.id === 'date_released' ? '#10b981' : tab.id === 'waitlist' ? '#d97706' : '#1B4332') : '#f1f5f9',
-                color: waitlistFilter === tab.id ? '#fff' : (tab.id === 'clashed' && clashedCount > 0 ? '#dc2626' : '#475569'),
               }}
             >
-              {tab.label}
+              <LayoutGrid size={14} /> Board
             </button>
-          ))}
+            <button
+              onClick={() => setViewMode("list")}
+              style={{
+                background: viewMode === "list" ? "#fff" : "transparent",
+                border: "none",
+                borderRadius: 7,
+                padding: "6px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 700,
+                color: viewMode === "list" ? "#1B4332" : "#64748b",
+                boxShadow: viewMode === "list" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                transition: "all 0.15s",
+              }}
+            >
+              <List size={14} /> List
+            </button>
+          </div>
+
+          <div style={{ width: 1, height: 24, background: "#e2e8f0" }} className="hm-desktop-only" />
+
+          {/* Filter Pills with Horizontal Scroll on mobile */}
+          <div className="hm-crm-filter-scroll">
+            {[
+              { id: "all", label: "All Leads", count: total },
+              { id: "waitlist", label: "VIP Waitlist", count: waitlistedCount, icon: Clock, accent: "#d97706", bgActive: "#d97706", badgeActive: "#fef3c7" },
+              { id: "clashed", label: "Slot Clashes", count: clashedCount, icon: AlertCircle, accent: "#dc2626", bgActive: "#dc2626", badgeActive: "#fee2e2", alert: clashedCount > 0 },
+              { id: "date_released", label: "Date Released", count: enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === 'Date Released').length, icon: Sparkles, accent: "#10b981", bgActive: "#10b981", badgeActive: "#dcfce7" },
+            ].map((tab) => {
+              const active = waitlistFilter === tab.id;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setWaitlistFilter(tab.id)}
+                  style={{
+                    border: active ? "none" : tab.alert ? "1px solid #fca5a5" : "1px solid #e2e8f0",
+                    borderRadius: 9,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                    transition: "all 0.15s",
+                    background: active ? (tab.bgActive || "#1B4332") : tab.alert ? "#fef2f2" : "#fff",
+                    color: active ? "#fff" : tab.alert ? "#dc2626" : "#475569",
+                    boxShadow: active ? "0 2px 6px rgba(0,0,0,0.12)" : "none",
+                  }}
+                >
+                  {TabIcon && <TabIcon size={13} style={{ color: active ? "#fff" : tab.accent }} />}
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      background: active ? "rgba(255,255,255,0.25)" : tab.alert ? "#fee2e2" : "#f1f5f9",
+                      color: active ? "#fff" : tab.alert ? "#dc2626" : "#64748b",
+                      padding: "1px 6px",
+                      borderRadius: 10,
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <Search size={16} style={{ position: "absolute", left: 12, top: 10, color: "#999" }} />
+        {/* Right Side: Search & Stage Dropdown */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", minWidth: 170, flex: "1 1 170px" }}>
+            <Search size={14} style={{ position: "absolute", left: 10, top: 10, color: "#94a3b8" }} />
             <input
               type="text"
-              placeholder="Search name or phone..."
+              placeholder="Search leads..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ padding: "8px 12px 8px 36px", border: "1px solid #ddd", borderRadius: 8, outline: "none", width: "100%", boxSizing: "border-box" }}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                padding: "7px 10px 7px 32px",
+                border: "1px solid #cbd5e1",
+                borderRadius: 8,
+                outline: "none",
+                fontSize: 12,
+                width: "100%",
+                background: "#f8fafc",
+                boxSizing: "border-box",
+                transition: "border 0.15s",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "#1B4332")}
+              onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
             />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  padding: 0,
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8, cursor: "pointer", background: "#fff", flex: "0 1 auto" }}
-          >
-            <option value="">All Stages</option>
-            {pipelineStages.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+
+          <div style={{ position: "relative" }}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                padding: "7px 12px",
+                border: "1px solid #cbd5e1",
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#334155",
+                outline: "none",
+              }}
+            >
+              <option value="">All Stages</option>
+              {pipelineStages.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -510,12 +638,29 @@ export default function CRM() {
                                     >
                                       <Edit2 size={11}/> Edit
                                     </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                                      style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                                    >
-                                      <CheckCircle2 size={11}/> Convert
-                                    </button>
+                                    {!enq.isWaitlisted ? (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                        style={{ background: "#dcfce7", color: "#166534", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                      >
+                                        <CheckCircle2 size={11}/> Convert
+                                      </button>
+                                    ) : enq.waitlistStatus === "Date Released" ? (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                        style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
+                                        title="Slot released! Convert to confirmed booking"
+                                      >
+                                        <Sparkles size={11}/> Convert
+                                      </button>
+                                    ) : (
+                                      <span
+                                        style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "3px 6px", borderRadius: 6, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}
+                                        title="Lead is currently in VIP Waitlist"
+                                      >
+                                        <Clock size={10}/> Waitlisted
+                                      </span>
+                                    )}
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleDeleteEnquiry(enq); }}
                                       style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
@@ -669,12 +814,26 @@ export default function CRM() {
                               >
                                 <Edit2 size={11}/> Edit
                               </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
-                                style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                              >
-                                <CheckCircle2 size={11}/> Convert
-                              </button>
+                              {!enq.isWaitlisted ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                  style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <CheckCircle2 size={11}/> Convert
+                                </button>
+                              ) : enq.waitlistStatus === "Date Released" ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleConvertClick(enq); }}
+                                  style={{ background: "#10b981", color: "#fff", border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, boxShadow: "0 2px 6px rgba(16,185,129,0.3)" }}
+                                  title="Slot released! Convert to confirmed booking"
+                                >
+                                  <Sparkles size={11}/> Convert
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", background: "#fef3c7", border: "1px solid #fde68a", padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <Clock size={11}/> Waitlisted
+                                </span>
+                              )}
                             </>
                           )}
                           <button
