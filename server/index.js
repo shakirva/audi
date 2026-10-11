@@ -167,6 +167,16 @@ initDB()
     } catch (e) {
       console.log("⚠️ Could not add customPrice:", e.message);
     }
+
+    // MIGRATION: Add Waitlist & Date Recovery columns to Enquiries
+    try {
+      await sequelize.query('ALTER TABLE "Enquiries" ADD COLUMN IF NOT EXISTS "isWaitlisted" BOOLEAN DEFAULT false;');
+      await sequelize.query('ALTER TABLE "Enquiries" ADD COLUMN IF NOT EXISTS "waitlistStatus" VARCHAR(50) DEFAULT \'Waiting\';');
+      await sequelize.query('ALTER TABLE "Enquiries" ADD COLUMN IF NOT EXISTS "waitlistNotes" TEXT;');
+      console.log("✅ Added Waitlist & Date Recovery columns to Enquiries table");
+    } catch (e) {
+      console.log("⚠️ Could not add Waitlist columns to Enquiries:", e.message);
+    }
     
     // FIX: Reset Enquiries that are "Booking Confirmed" but have no actual Booking
     try {

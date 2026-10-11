@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
@@ -40,6 +40,7 @@ export default function CRM() {
   const [hoveredEnq, setHoveredEnq] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [waitlistFilter, setWaitlistFilter] = useState("all"); // 'all' | 'waitlist' | 'date_released' | 'standard'
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
 
   // API state
@@ -76,6 +77,17 @@ export default function CRM() {
   const converted = enquiries.filter(e => e.status === "Booking Confirmed").length;
   const total = enquiries.length;
   const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0;
+  const waitlistedCount = enquiries.filter(e => e.isWaitlisted).length;
+  const dateReleasedCount = enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === "Date Released").length;
+
+  const filteredEnquiries = useMemo(() => {
+    return enquiries.filter(e => {
+      if (waitlistFilter === "waitlist") return e.isWaitlisted;
+      if (waitlistFilter === "date_released") return e.isWaitlisted && e.waitlistStatus === "Date Released";
+      if (waitlistFilter === "standard") return !e.isWaitlisted;
+      return true;
+    });
+  }, [enquiries, waitlistFilter]);
 
   const handleStatusChange = async (enquiryId, newStatus) => {
     try {
@@ -154,11 +166,12 @@ export default function CRM() {
       {/* KPI Cards */}
       <div className="hm-crm-kpis">
         {loading ? (
-          [1,2,3,4].map(i => <KPISkeleton key={i} />)
+          [1,2,3,4,5].map(i => <KPISkeleton key={i} />)
         ) : (
           [
             { label: "Active Enquiries", value: activeEnquiries, color: "#0284c7", bg: "#e0f2fe" },
             { label: "Total Enquiries", value: total, color: "#a16207", bg: "#fef08a" },
+            { label: "VIP Waitlisted", value: waitlistedCount, color: "#d97706", bg: "#fef3c7" },
             { label: "Converted (All Time)", value: converted, color: "#166534", bg: "#dcfce7" },
             { label: "Conversion Rate", value: `${conversionRate}%`, color: "#6b21a8", bg: "#f3e8ff" },
           ].map((kpi, i) => (
@@ -167,7 +180,7 @@ export default function CRM() {
               padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 8 }}>{kpi.label}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#111" }}>{kpi.value}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color || "#111" }}>{kpi.value}</div>
             </div>
           ))
         )}
@@ -191,6 +204,35 @@ export default function CRM() {
             <List size={16} /> List
           </button>
         </div>
+
+        {/* Waitlist Category Tabs */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {[
+            { id: "all", label: "All Leads" },
+            { id: "waitlist", label: `⏳ VIP Waitlist (${waitlistedCount})` },
+            { id: "date_released", label: `🟢 Date Released (${enquiries.filter(e => e.isWaitlisted && e.waitlistStatus === 'Date Released').length})` },
+            { id: "standard", label: "Standard Leads" },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setWaitlistFilter(tab.id)}
+              style={{
+                border: "none",
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                background: waitlistFilter === tab.id ? (tab.id === 'date_released' ? '#10b981' : tab.id === 'waitlist' ? '#d97706' : '#1B4332') : '#f1f5f9',
+                color: waitlistFilter === tab.id ? '#fff' : '#475569',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
             <Search size={16} style={{ position: "absolute", left: 12, top: 10, color: "#999" }} />
@@ -226,7 +268,7 @@ export default function CRM() {
       {viewMode === "board" && !error && (
         <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 16 }}>
           {pipelineStages.map(stage => {
-            const stageEnquiries = enquiries.filter(e => e.status === stage);
+            const stageEnquiries = filteredEnquiries.filter(e => e.status === stage);
             return (
               <div key={stage} style={{ flex: "0 0 280px", background: "#f8f9fa", borderRadius: 12, padding: 16, border: "1px solid #eaeaea" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -254,23 +296,35 @@ export default function CRM() {
                           onMouseEnter={() => setHoveredEnq(enq.id)}
                           onMouseLeave={() => setHoveredEnq(null)}
                           style={{
-                            background: getConflictStatus(enq) ? "#fffafa" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
+                            background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : getConflictStatus(enq) ? "#fffafa" : isPublic && !enq.SalesExecutive ? "#fef8ff" : "#fff", 
                             padding: "14px", borderRadius: 8, 
-                            border: getConflictStatus(enq) ? "1px solid #fecaca" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
-                            boxShadow: "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
+                            border: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "2px solid #22c55e" : enq.isWaitlisted ? "1px solid #fde68a" : getConflictStatus(enq) ? "1px solid #fecaca" : isPublic && !enq.SalesExecutive ? "1px solid #e879f9" : "1px solid #eaeaea",
+                            boxShadow: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "0 4px 12px rgba(34,197,94,0.15)" : "0 2px 4px rgba(0,0,0,0.02)", cursor: "pointer", transition: "transform 0.1s",
                             transform: hoveredEnq === enq.id ? "translateY(-2px)" : "none",
                             position: "relative"
                           }}>
                           {isPublic && !enq.SalesExecutive && (
                              <div style={{ position: "absolute", top: -8, right: -8, background: "#d946ef", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 12, boxShadow: "0 2px 4px rgba(217,70,239,0.3)" }}>NEW WEB LEAD</div>
                           )}
+                          {enq.isWaitlisted && enq.waitlistStatus === "Date Released" && (
+                            <div style={{ position: "absolute", top: -8, right: -8, background: "#10b981", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 12, boxShadow: "0 2px 8px rgba(16,185,129,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
+                              🟢 DATE RELEASED!
+                            </div>
+                          )}
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                             <span style={{ fontSize: 11, fontWeight: 800, color: "#1B4332", background: "rgba(27,67,50,0.1)", padding: "2px 6px", borderRadius: 4 }}>
                               {enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}
                             </span>
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: lss.bg, color: lss.color }}>
-                              {lss.label}
-                            </span>
+                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                              {enq.isWaitlisted && (
+                                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: enq.waitlistStatus === "Date Released" ? "#dcfce7" : "#fef3c7", color: enq.waitlistStatus === "Date Released" ? "#166534" : "#b45309" }}>
+                                  ⏳ {enq.waitlistStatus || "Waitlist"}
+                                </span>
+                              )}
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: lss.bg, color: lss.color }}>
+                                {lss.label}
+                              </span>
+                            </div>
                           </div>
                           <h4 style={{ margin: "0 0 3px", fontSize: 14, color: "#111", fontWeight: 700 }}>{name}</h4>
                           <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666" }}>
@@ -279,7 +333,7 @@ export default function CRM() {
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#999" }}>
                               <Calendar size={11} /> {enq.tentativeDate || "TBD"}
-                              {getConflictStatus(enq) && (
+                              {getConflictStatus(enq) && !enq.isWaitlisted && (
                                 <span style={{ marginLeft: 4, background: "#fee2e2", color: "#dc2626", padding: "2px 4px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
                                   ⚠️ UNAVAILABLE
                                 </span>
@@ -398,21 +452,26 @@ export default function CRM() {
                     ))}
                   </tr>
                 ))
-              ) : enquiries.map((enq, i) => {
+              ) : filteredEnquiries.map((enq, i) => {
                 const lss = LEAD_SCORE_STYLE[enq.leadScore] || LEAD_SCORE_STYLE.Warm;
                 return (
-                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s" }}
+                  <tr key={enq.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.1s", background: enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    onMouseLeave={e => e.currentTarget.style.background = enq.isWaitlisted && enq.waitlistStatus === "Date Released" ? "#f0fdf4" : "transparent"}>
                     <td style={{ padding: "12px 16px", fontWeight: 700, color: "#1B4332" }}>
-                      {enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}
+                      <div>{enq.enquiryNumber || `ENQ${String(enq.id).padStart(3,"0")}`}</div>
+                      {enq.isWaitlisted && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: enq.waitlistStatus === "Date Released" ? "#dcfce7" : "#fef3c7", color: enq.waitlistStatus === "Date Released" ? "#166534" : "#b45309", display: "inline-block", marginTop: 2 }}>
+                          {enq.waitlistStatus === "Date Released" ? "🟢 RELEASED" : "⏳ WAITLIST"}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "12px 16px", fontWeight: 600 }}>{getEnquiryName(enq)}</td>
                     <td style={{ padding: "12px 16px", color: "#666" }}>{enq.eventType}</td>
                     <td className="hm-desktop-only" style={{ padding: "12px 16px", color: "#666" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {enq.tentativeDate || "TBD"}
-                        {getConflictStatus(enq) && (
+                        {getConflictStatus(enq) && !enq.isWaitlisted && (
                           <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800 }} title="Date already booked by another confirmed enquiry">
                             ⚠️ UNAVAILABLE
                           </span>

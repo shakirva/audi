@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2, Trash2 } from "lucide-react";
+import { X, Users, Calendar, Building2, Phone, User, FileText, AlertCircle, MapPin, ChevronDown, Plus, CheckCircle2, Trash2, Clock, Sparkles } from "lucide-react";
 import { enquiriesAPI, customersAPI, settingsAPI, availabilityAPI } from "../services/api";
 import { useToast } from "./Toast";
 import SmartDatePicker from "./SmartDatePicker";
@@ -78,6 +78,8 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
     remarks: "",
     source: "",
     salesExecutiveId: "",
+    isWaitlisted: false,
+    waitlistNotes: "",
   });
 
   // When editData changes, pre-fill the form
@@ -99,13 +101,15 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         remarks: editData.remarks || "",
         source: editData.source || "",
         salesExecutiveId: editData.salesExecutiveId || (role === "Sales" && user ? user.id : ""),
+        isWaitlisted: !!editData.isWaitlisted,
+        waitlistNotes: editData.waitlistNotes || "",
       });
       setPlaceQuery(editData.enquirerArea || editData.Customer?.city || editData.place || "");
       setEventTypeQuery(editData.eventType || "");
       setUserEditedBudget(editData.budget ? true : false);
     } else if (!editData && open) {
       // Reset for new enquiry
-      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "" });
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: (role === "Sales" && user) ? user.id : "", isWaitlisted: false, waitlistNotes: "" });
       setPlaceQuery("");
       setEventTypeQuery("");
       setUserEditedBudget(false);
@@ -212,10 +216,11 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
         .then(res => {
           const avail = res.data.data;
           setAvailability(avail);
-          if (form.session) {
+          if (form.session && !form.isWaitlisted) {
             const isBooked = avail.bookedSessions?.includes(form.session) || avail.bookedSessions?.includes("Full Day") || (form.session === "Full Day" && avail.bookedSessions?.length > 0);
             if (isBooked) {
-              setForm(prev => ({ ...prev, session: "" }));
+              // Only reset if not waitlisted
+              setForm(prev => prev.isWaitlisted ? prev : ({ ...prev, session: "" }));
             }
           }
         })
@@ -310,8 +315,10 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           remarks: form.remarks || undefined,
           source: form.source || undefined,
           salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
+          isWaitlisted: !!form.isWaitlisted,
+          waitlistNotes: form.waitlistNotes || undefined,
         });
-        addToast("Enquiry updated successfully! ✏️", "success");
+        addToast(form.isWaitlisted ? "VIP Waitlist enquiry updated! ⏳" : "Enquiry updated successfully! ✏️", "success");
       } else {
         // ── CREATE MODE ── Create enquiry directly
         await enquiriesAPI.create({
@@ -330,10 +337,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
           source: form.source || undefined,
           status: "New Enquiry",
           salesExecutiveId: parseInt(form.salesExecutiveId) || undefined,
+          isWaitlisted: !!form.isWaitlisted,
+          waitlistNotes: form.waitlistNotes || undefined,
         });
+        addToast(form.isWaitlisted ? "Added to VIP Date Waitlist! ⏳ Recovery active" : "Enquiry saved successfully! 🎉", "success");
       }
 
-      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "" });
+      setForm({ name: "", phone: "", gender: "", address: "", place: "", eventType: "", tentativeDate: prefillDate, session: "", hallPreference: "", guestCount: "", budget: "", leadScore: "", remarks: "", source: "", salesExecutiveId: "", isWaitlisted: false, waitlistNotes: "" });
       setPlaceQuery("");
       onSuccess?.();
       
@@ -632,31 +642,80 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
                         isBooked = true;
                       }
                       
+                      const isSelected = form.session === s.name;
+
                       return (
                       <div
                         key={s.name}
-                        onClick={() => !isBooked && setForm(prev => ({ ...prev, session: s.name }))}
+                        onClick={() => {
+                          if (isBooked) {
+                            // If booked, select session and switch to waitlist mode
+                            setForm(prev => ({ ...prev, session: s.name, isWaitlisted: true }));
+                            addToast(`Date already booked! Switched to VIP Date Waitlist ⏳`, "info");
+                          } else {
+                            // If available, select normally and turn off waitlist if it was auto-enabled
+                            setForm(prev => ({ ...prev, session: s.name, isWaitlisted: false }));
+                          }
+                        }}
                         style={{
                           flex: 1, minWidth: 100, padding: "12px", borderRadius: 8, 
-                          border: `1.5px solid ${form.session === s.name ? "#1B4332" : "#e5e7eb"}`,
-                          background: form.session === s.name ? "#1B4332" : isBooked ? "#f1f5f9" : "#fff",
-                          color: form.session === s.name ? "#fff" : isBooked ? "#94a3b8" : "#374151",
-                          cursor: isBooked ? "not-allowed" : "pointer", textAlign: "center", transition: "all 0.2s"
+                          border: `1.5px solid ${isSelected ? (form.isWaitlisted && isBooked ? "#d97706" : "#1B4332") : isBooked ? "#fcd34d" : "#e5e7eb"}`,
+                          background: isSelected 
+                            ? (form.isWaitlisted && isBooked ? "#d97706" : "#1B4332") 
+                            : isBooked ? "#fffbeb" : "#fff",
+                          color: isSelected ? "#fff" : isBooked ? "#92400e" : "#374151",
+                          cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+                          boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.1)" : "none"
                         }}
                       >
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.name}</div>
                         {isBooked ? (
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444" }}>Booked</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: isSelected ? "#fff" : "#b45309", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                            <Clock size={10} /> {isSelected ? "Waitlisted" : "Booked (Waitlist)"}
+                          </div>
                         ) : (
-                          s.time && <div style={{ fontSize: 10, opacity: form.session === s.name ? 0.9 : 0.6 }}>{s.time}</div>
+                          s.time && <div style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.6 }}>{s.time}</div>
                         )}
                       </div>
                     )});
                   })()}
                 </div>
-                {availability.status === "Fully Booked" && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
-                    No sessions available on this date for the selected hall.
+
+                {/* VIP Smart Date Recovery Waitlist Banner */}
+                {form.session && availability.bookedSessions?.includes(form.session) && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+                    border: "1.5px solid #fde68a",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    boxShadow: "0 2px 10px rgba(217,119,6,0.06)"
+                  }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "#fef08a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Clock size={16} color="#b45309" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          🎯 Smart Date Recovery: VIP Waitlist Active
+                        </span>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: "#b45309", cursor: "pointer" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={form.isWaitlisted} 
+                            onChange={(e) => setForm(prev => ({ ...prev, isWaitlisted: e.target.checked }))} 
+                            style={{ accentColor: "#d97706", width: 14, height: 14 }}
+                          />
+                          Save to Waitlist
+                        </label>
+                      </div>
+                      <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#78350f", lineHeight: 1.4 }}>
+                        This date & session is currently booked. By saving as a <strong>VIP Waitlist Enquiry</strong>, you will receive an automatic recovery notification if the confirmed booking is ever cancelled!
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -864,8 +923,13 @@ export default function NewEnquiryModal({ open, onClose, onSuccess, prefillDate 
               Cancel
             </button>
             <button type="submit" form="new-enquiry-form" disabled={loading}
-              style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: loading ? "#9ca3af" : "linear-gradient(135deg, #1B4332, #2D6A4F)", border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, boxShadow: loading ? "none" : "0 4px 12px rgba(27,67,50,0.25)" }}>
-              {loading ? "Saving..." : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
+              style={{ 
+                flex: 2, padding: "10px 0", borderRadius: 10, 
+                background: loading ? "#9ca3af" : form.isWaitlisted ? "linear-gradient(135deg, #b45309, #d97706)" : "linear-gradient(135deg, #1B4332, #2D6A4F)", 
+                border: "none", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", color: "#fff", fontSize: 14, 
+                boxShadow: loading ? "none" : form.isWaitlisted ? "0 4px 12px rgba(217,119,6,0.3)" : "0 4px 12px rgba(27,67,50,0.25)" 
+              }}>
+              {loading ? "Saving..." : form.isWaitlisted ? "⏳ Save as VIP Waitlist Lead" : editData ? "✏️ Update Enquiry" : "✅ Save Enquiry"}
             </button>
           </div>
         </div>

@@ -49,6 +49,13 @@ const Enquiry = sequelize.define("Enquiry", {
   source: { type: DataTypes.STRING, allowNull: true },
   remarks: { type: DataTypes.TEXT, allowNull: true },
 
+  isWaitlisted: { type: DataTypes.BOOLEAN, defaultValue: false },
+  waitlistStatus: {
+    type: DataTypes.ENUM("Waiting", "Date Released", "Contacted", "Recovered", "Lost"),
+    defaultValue: "Waiting",
+  },
+  waitlistNotes: { type: DataTypes.TEXT, allowNull: true },
+
   // ── Audit fields ──
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },

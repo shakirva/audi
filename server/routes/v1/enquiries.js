@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(auth, tenantScope, subscriptionGuard);
 
 router.get("/", enquiryController.list);
+router.get("/waitlist-matches", enquiryController.getWaitlistMatches);
 router.get("/:id", enquiryController.getOne);
 router.post("/", validate(createEnquirySchema), auditLog("Create Enquiry"), enquiryController.create);
 router.put("/:id", validate(updateEnquirySchema), auditLog("Update Enquiry"), enquiryController.update);

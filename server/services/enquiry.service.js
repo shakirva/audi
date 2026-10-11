@@ -38,7 +38,7 @@ class EnquiryService {
         date: data.tentativeDate,
         session: data.session
       });
-      if (!avail.available) {
+      if (!avail.available && !data.isWaitlisted) {
         throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
       }
     }
@@ -59,6 +59,8 @@ class EnquiryService {
       throw new BadRequestError("Lost reason is required when status is Lost");
     }
 
+    const isWaitlisted = data.isWaitlisted !== undefined ? data.isWaitlisted : enquiry.isWaitlisted;
+
     if (data.hallPreference && data.tentativeDate && data.session) {
       const avail = await availabilityService.checkAvailability({
         tenantId,
@@ -66,10 +68,8 @@ class EnquiryService {
         hall: data.hallPreference,
         date: data.tentativeDate,
         session: data.session,
-        // Enquiries shouldn't block other enquiries, but if there's a booking, we throw. 
-        // We pass ignoreBookingId: null because enquiries aren't bookings anyway.
       });
-      if (!avail.available) {
+      if (!avail.available && !isWaitlisted) {
         throw new ConflictError(`This session has just been booked by another user. Please choose another session. (${avail.reason})`);
       }
     }
@@ -78,6 +78,10 @@ class EnquiryService {
       ...data,
       updatedBy,
     });
+  }
+
+  async getWaitlistMatches({ tenantId, environmentId, hall, date }) {
+    return enquiryRepository.findWaitlistMatches({ tenantId, environmentId, hall, date });
   }
 
   async deleteEnquiry(id, { tenantId, environmentId }) {

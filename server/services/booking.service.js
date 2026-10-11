@@ -332,7 +332,46 @@ class BookingService {
     if (!booking) throw new NotFoundError("Booking");
 
     const updated = await bookingRepository.update(booking, { status });
-    return { id: updated.bookingId, status: updated.status };
+
+    let waitlistMatches = [];
+    if (status === "Cancelled" && booking.date) {
+      try {
+        const { Enquiry, Customer } = require("../models");
+        const { Op } = require("sequelize");
+        // Find matching waitlisted enquiries
+        waitlistMatches = await Enquiry.findAll({
+          where: {
+            tenantId,
+            environmentId,
+            isWaitlisted: true,
+            tentativeDate: booking.date,
+            waitlistStatus: { [Op.in]: ["Waiting", "Date Released", "Contacted"] },
+            ...(booking.hall ? { hallPreference: booking.hall } : {})
+          },
+          include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }],
+          order: [["budget", "DESC"], ["createdAt", "ASC"]]
+        });
+
+        // Update their waitlistStatus to Date Released
+        if (waitlistMatches.length > 0) {
+          const matchIds = waitlistMatches.map(m => m.id);
+          await Enquiry.update(
+            { waitlistStatus: "Date Released" },
+            { where: { id: { [Op.in]: matchIds }, tenantId, environmentId } }
+          );
+        }
+      } catch (err) {
+        console.error("Smart Date Recovery match error:", err);
+      }
+    }
+
+    return { 
+      id: updated.bookingId, 
+      status: updated.status,
+      dateReleased: status === "Cancelled" ? booking.date : null,
+      hall: booking.hall,
+      waitlistMatches: waitlistMatches.map(m => m.toJSON ? m.toJSON() : m)
+    };
   }
 
   /**
@@ -360,10 +399,47 @@ class BookingService {
       await Job.destroy({ where: { bookingId: booking.id, tenantId, environmentId } });
     } catch (e) {}
 
+    // ── Check for Smart Date Recovery waitlist matches ──
+    let waitlistMatches = [];
+    if (booking.date) {
+      try {
+        const { Enquiry, Customer } = require("../models");
+        const { Op } = require("sequelize");
+        waitlistMatches = await Enquiry.findAll({
+          where: {
+            tenantId,
+            environmentId,
+            isWaitlisted: true,
+            tentativeDate: booking.date,
+            waitlistStatus: { [Op.in]: ["Waiting", "Date Released", "Contacted"] },
+            ...(booking.hall ? { hallPreference: booking.hall } : {})
+          },
+          include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }],
+          order: [["budget", "DESC"], ["createdAt", "ASC"]]
+        });
+
+        if (waitlistMatches.length > 0) {
+          const matchIds = waitlistMatches.map(m => m.id);
+          await Enquiry.update(
+            { waitlistStatus: "Date Released" },
+            { where: { id: { [Op.in]: matchIds }, tenantId, environmentId } }
+          );
+        }
+      } catch (err) {
+        console.error("Smart Date Recovery error during delete:", err);
+      }
+    }
+
     // Now delete the booking itself using the correct repository method
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
-    return { message: "Booking deleted successfully", id: bookingId };
+    return { 
+      message: "Booking deleted successfully", 
+      id: bookingId,
+      dateReleased: booking.date,
+      hall: booking.hall,
+      waitlistMatches: waitlistMatches.map(m => m.toJSON ? m.toJSON() : m)
+    };
   }
 
   /**
@@ -521,6 +597,36 @@ class BookingService {
       console.warn("Could not explicitly delete Jobs/Agreements", e);
     }
 
+    // ── Check for Smart Date Recovery waitlist matches ──
+    let waitlistMatches = [];
+    if (booking.date) {
+      try {
+        const { Enquiry, Customer } = require("../models");
+        waitlistMatches = await Enquiry.findAll({
+          where: {
+            tenantId,
+            environmentId,
+            isWaitlisted: true,
+            tentativeDate: booking.date,
+            waitlistStatus: { [Op.in]: ["Waiting", "Date Released", "Contacted"] },
+            ...(booking.hall ? { hallPreference: booking.hall } : {})
+          },
+          include: [{ model: Customer, attributes: ["id", "name", "phone", "email"] }],
+          order: [["budget", "DESC"], ["createdAt", "ASC"]]
+        });
+
+        if (waitlistMatches.length > 0) {
+          const matchIds = waitlistMatches.map(m => m.id);
+          await Enquiry.update(
+            { waitlistStatus: "Date Released" },
+            { where: { id: { [Op.in]: matchIds }, tenantId, environmentId } }
+          );
+        }
+      } catch (err) {
+        console.error("Smart Date Recovery error during safe delete:", err);
+      }
+    }
+
     // ── Delete the booking ──
     const deleted = await bookingRepository.deleteByBookingId(bookingId, { tenantId, environmentId });
     if (!deleted) throw new NotFoundError("Booking");
@@ -528,9 +634,12 @@ class BookingService {
     return {
       message: "Booking deleted successfully",
       id: bookingId,
+      dateReleased: booking.date,
+      hall: booking.hall,
       refundProcessed: totalPaid > 0 && refundAction === "refund",
       refundAmount: totalPaid > 0 && refundAction === "refund" ? totalPaid : 0,
       expensesHandled: expenses.length,
+      waitlistMatches: waitlistMatches.map(m => m.toJSON ? m.toJSON() : m)
     };
   }
 }

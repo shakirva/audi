@@ -4,6 +4,7 @@ import { Search, Plus, Filter, Calendar, MapPin, Pencil, LayoutGrid, List, Users
 import BookingDetailModal from "../components/BookingDetailModal";
 import EditBookingModal from "../components/EditBookingModal";
 import SafeDeleteModal from "../components/SafeDeleteModal";
+import SmartDateRecoveryModal from "../components/SmartDateRecoveryModal";
 import { useBookings } from "../context/BookingsContext";
 import { useRole } from "../context/RoleContext";
 import { useToast } from "../components/Toast";
@@ -20,6 +21,7 @@ export default function Bookings() {
   const [detail, setDetail] = useState(null);
   const [editBooking, setEditBooking] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
+  const [recoveryData, setRecoveryData] = useState(null); // { open, dateReleased, hall, candidates }
   const { bookings, refetch } = useBookings();
   const [settings, setSettings] = useState({});
   const [venueName, setVenueName] = useState("Our Auditorium");
@@ -449,9 +451,34 @@ export default function Bookings() {
         name={deleteTarget?.name}
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onDeleted={() => { setDeleteTarget(null); refetch?.(); }}
+        onDeleted={(res) => {
+          setDeleteTarget(null);
+          refetch?.();
+          if (res?.waitlistMatches && res.waitlistMatches.length > 0) {
+            setRecoveryData({
+              open: true,
+              dateReleased: res.dateReleased,
+              hall: res.hall,
+              candidates: res.waitlistMatches,
+            });
+          }
+        }}
         addToast={addToast}
       />
+
+      {recoveryData?.open && (
+        <SmartDateRecoveryModal
+          open={recoveryData.open}
+          dateReleased={recoveryData.dateReleased}
+          hall={recoveryData.hall}
+          candidates={recoveryData.candidates}
+          onClose={() => setRecoveryData(null)}
+          onConverted={() => {
+            setRecoveryData(null);
+            refetch?.();
+          }}
+        />
+      )}
     </div>
   );
 }

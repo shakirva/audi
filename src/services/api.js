@@ -132,6 +132,8 @@ export const enquiriesAPI = {
   create: (data) => api.post("/v1/enquiries", data),
   update: (id, data) => api.put(`/v1/enquiries/${id}`, data),
   updateStatus: (id, status) => api.put(`/v1/enquiries/${id}`, { status }),
+  getWaitlistMatches: (params) => api.get("/v1/enquiries/waitlist-matches", { params }),
+  updateWaitlistStatus: (id, waitlistStatus) => api.put(`/v1/enquiries/${id}`, { waitlistStatus }),
   remove: (id) => api.delete(`/v1/enquiries/${id}`),
 };
 

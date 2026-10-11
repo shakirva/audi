@@ -75,6 +75,21 @@ class EnquiryController {
       next(err);
     }
   }
+
+  async getWaitlistMatches(req, res, next) {
+    try {
+      const { hall, date } = req.query;
+      const result = await enquiryService.getWaitlistMatches({
+        tenantId: req.tenantId,
+        environmentId: req.environmentId,
+        hall,
+        date,
+      });
+      return sendSuccess(res, { data: result, message: "Waitlist matches fetched successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new EnquiryController();

@@ -21,6 +21,9 @@ const createEnquirySchema = z.object({
     lostReason: z.string().optional(),
     source: z.string().optional(),
     remarks: z.string().optional(),
+    isWaitlisted: z.boolean().optional(),
+    waitlistStatus: z.enum(["Waiting", "Date Released", "Contacted", "Recovered", "Lost"]).optional(),
+    waitlistNotes: z.string().optional(),
   }),
 });
 
@@ -43,6 +46,9 @@ const updateEnquirySchema = z.object({
     lostReason: z.string().optional(),
     source: z.string().optional(),
     remarks: z.string().optional(),
+    isWaitlisted: z.boolean().optional(),
+    waitlistStatus: z.enum(["Waiting", "Date Released", "Contacted", "Recovered", "Lost"]).optional(),
+    waitlistNotes: z.string().optional(),
   }),
   params: z.object({
     id: z.string().min(1, "Enquiry ID is required"),

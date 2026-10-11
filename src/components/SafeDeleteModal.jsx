@@ -56,19 +56,22 @@ export default function SafeDeleteModal({ type, id, name, open, onClose, onDelet
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      let deleteResult = null;
       if (type === "booking") {
         const d = checkData;
         const hasPayments = d?.financial?.totalPaid > 0;
         if (hasPayments || d?.financial?.totalExpenses > 0) {
-          await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction, enquiryAction, customerAction, collectionAction });
+          const res = await bookingsAPI.safeDelete(id, { reason, refundAction, refundAccount, expenseAction, enquiryAction, customerAction, collectionAction });
+          deleteResult = res?.data?.data;
         } else {
-          await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction, collectionAction });
+          const res = await bookingsAPI.safeDelete(id, { reason, refundAction: "none", expenseAction: "delete", enquiryAction, customerAction, collectionAction });
+          deleteResult = res?.data?.data;
         }
       } else if (type === "customer") await customersAPI.remove(id);
       else if (type === "collection") await paymentsAPI.remove(id);
       else await enquiriesAPI.remove(id);
       addToast?.(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`, "success");
-      onDeleted?.(); onClose();
+      onDeleted?.(deleteResult); onClose();
     } catch (err) { addToast?.(err.response?.data?.message || "Delete failed", "error"); }
     finally { setDeleting(false); }
   };
