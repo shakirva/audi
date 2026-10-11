@@ -102,6 +102,10 @@ export default function MonthlyExecutiveSummary() {
   const totalRevenue = data?.financials?.totalRevenue || 0;
   const totalExpenses = data?.financials?.totalExpenses || 0;
   const netBalance = data?.financials?.netBalance || 0;
+  const pendingBalanceAmount = data?.financials?.pendingBalanceAmount ?? totalRenderedBookingBalance;
+  const totalContractValue = data?.financials?.totalContractValue ?? totalRenderedBookingRevenue;
+  const totalAdvanceCollected = data?.financials?.totalAdvanceCollected ?? (totalContractValue - pendingBalanceAmount);
+  const bookingsWithPendingBalance = data?.financials?.bookingsWithPendingBalance ?? recentBookings.filter(b => (b.balanceAmount || 0) > 0).length;
   const operatingMargin = totalRevenue > 0 ? ((netBalance / totalRevenue) * 100).toFixed(1) : '0.0';
   const expenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0.0';
   
@@ -213,67 +217,85 @@ export default function MonthlyExecutiveSummary() {
       doc.text('1. FINANCIAL EXECUTIVE SUMMARY', 14, curY);
       curY += 5;
 
-      const kpiBoxWidth = 42.5;
+      const kpiBoxWidth = 33.5;
       const kpiBoxHeight = 22;
+      const kpiGap = 3.6;
 
       // KPI 1: Revenue
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
       doc.roundedRect(14, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
-      doc.setFontSize(7.5);
+      doc.setFontSize(7);
       doc.setTextColor(...textMuted);
       doc.setFont('helvetica', 'bold');
-      doc.text('GROSS REVENUE', 17, curY + 6);
-      doc.setFontSize(11.5);
+      doc.text('TOTAL REVENUE', 16, curY + 6);
+      doc.setFontSize(10.5);
       doc.setTextColor(27, 67, 50);
-      doc.text(formatPDFCurrency(totalRevenue), 17, curY + 14);
-      doc.setFontSize(7);
+      doc.text(formatPDFCurrency(totalRevenue), 16, curY + 13.5);
+      doc.setFontSize(6.5);
       doc.setTextColor(...textMuted);
-      doc.text(`${totalBookings} Confirmed Events`, 17, curY + 19);
+      doc.text(`${totalBookings} Events`, 16, curY + 18.5);
 
       // KPI 2: Expenses
-      const kpi2X = 14 + kpiBoxWidth + 4;
+      const kpi2X = 14 + kpiBoxWidth + kpiGap;
       doc.setFillColor(248, 250, 252);
       doc.roundedRect(kpi2X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...textMuted);
-      doc.text('TOTAL EXPENSES', kpi2X + 3, curY + 6);
-      doc.setFontSize(11.5);
-      doc.setTextColor(190, 18, 60);
-      doc.text(formatPDFCurrency(totalExpenses), kpi2X + 3, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${expenseRatio}% of Revenue`, kpi2X + 3, curY + 19);
+      doc.text('TOTAL EXPENSES', kpi2X + 2, curY + 6);
+      doc.setFontSize(10.5);
+      doc.setTextColor(190, 18, 60);
+      doc.text(formatPDFCurrency(totalExpenses), kpi2X + 2, curY + 13.5);
+      doc.setFontSize(6.5);
+      doc.setTextColor(...textMuted);
+      doc.text(`${expenseRatio}% of Rev`, kpi2X + 2, curY + 18.5);
 
       // KPI 3: Net Operating Balance
-      const kpi3X = kpi2X + kpiBoxWidth + 4;
+      const kpi3X = kpi2X + kpiBoxWidth + kpiGap;
       doc.setFillColor(240, 253, 244);
       doc.setDrawColor(167, 243, 208);
       doc.roundedRect(kpi3X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...textMuted);
-      doc.text('NET OPERATING BALANCE', kpi3X + 3, curY + 6);
-      doc.setFontSize(11.5);
-      doc.setTextColor(netBalance >= 0 ? 5 : 220, netBalance >= 0 ? 150 : 38, netBalance >= 0 ? 105 : 38);
-      doc.text(formatPDFCurrency(netBalance), kpi3X + 3, curY + 14);
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${operatingMargin}% Margin`, kpi3X + 3, curY + 19);
+      doc.text('NET BALANCE', kpi3X + 2, curY + 6);
+      doc.setFontSize(10.5);
+      doc.setTextColor(netBalance >= 0 ? 5 : 220, netBalance >= 0 ? 150 : 38, netBalance >= 0 ? 105 : 38);
+      doc.text(formatPDFCurrency(netBalance), kpi3X + 2, curY + 13.5);
+      doc.setFontSize(6.5);
+      doc.setTextColor(...textMuted);
+      doc.text(`${operatingMargin}% Margin`, kpi3X + 2, curY + 18.5);
 
-      // KPI 4: Operating Health
-      const kpi4X = kpi3X + kpiBoxWidth + 4;
+      // KPI 4: Pending Balance Due (Highlighted for Auditorium Owners)
+      const kpi4X = kpi3X + kpiBoxWidth + kpiGap;
+      doc.setFillColor(254, 243, 199);
+      doc.setDrawColor(245, 158, 11);
+      doc.roundedRect(kpi4X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
+      doc.setFontSize(7);
+      doc.setTextColor(180, 83, 9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BALANCE DUE', kpi4X + 2, curY + 6);
+      doc.setFontSize(10.5);
+      doc.setTextColor(180, 83, 9);
+      doc.text(formatPDFCurrency(pendingBalanceAmount), kpi4X + 2, curY + 13.5);
+      doc.setFontSize(6.5);
+      doc.setTextColor(180, 83, 9);
+      doc.text(`${bookingsWithPendingBalance} Pending`, kpi4X + 2, curY + 18.5);
+
+      // KPI 5: Lead Conversion
+      const kpi5X = kpi4X + kpiBoxWidth + kpiGap;
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(kpi4X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...textMuted);
-      doc.text('LEAD CONVERSION', kpi4X + 3, curY + 6);
-      doc.setFontSize(11.5);
-      doc.setTextColor(37, 99, 235);
-      doc.text(`${conversionRate}%`, kpi4X + 3, curY + 14);
+      doc.roundedRect(kpi5X, curY, kpiBoxWidth, kpiBoxHeight, 2, 2, 'FD');
       doc.setFontSize(7);
       doc.setTextColor(...textMuted);
-      doc.text(`${totalBookings} / ${totalEnquiries} Enquiries`, kpi4X + 3, curY + 19);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CONVERSION', kpi5X + 2, curY + 6);
+      doc.setFontSize(10.5);
+      doc.setTextColor(37, 99, 235);
+      doc.text(`${conversionRate}%`, kpi5X + 2, curY + 13.5);
+      doc.setFontSize(6.5);
+      doc.setTextColor(...textMuted);
+      doc.text(`${totalBookings}/${totalEnquiries} Enq`, kpi5X + 2, curY + 18.5);
 
       curY += kpiBoxHeight + 8;
 
@@ -802,11 +824,11 @@ export default function MonthlyExecutiveSummary() {
           {formatCurrency(netBalance)}
         </div>
 
-        {/* Integrated Dual Metric Bar (Inflow vs Outflow) */}
+        {/* Integrated Triple Metric Bar (Revenue, Balance Due, Expenses) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 12,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: 10,
           paddingTop: 14,
           borderTop: '1px solid rgba(255,255,255,0.12)'
         }}>
@@ -822,6 +844,34 @@ export default function MonthlyExecutiveSummary() {
             </div>
             <div style={{ fontSize: 10, color: '#86efac', fontWeight: 600, marginTop: 2 }}>
               {totalBookings} Bookings (Avg {formatCurrency(avgBookingValue)})
+            </div>
+          </div>
+
+          {/* Pending Balance Due Highlight (Auditorium Priority) */}
+          <div 
+            onClick={() => { setActiveTab('bookings'); setBookingFilter('confirmed'); }}
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.15) 100%)', 
+              padding: '10px 12px', 
+              borderRadius: 14, 
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.12)',
+              cursor: 'pointer'
+            }}
+            title="Click to view bookings with balance due"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={13} color="#fbbf24" />
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#fef08a', textTransform: 'uppercase' }}>Balance Due</span>
+              </div>
+              <ArrowUpRight size={13} color="#fbbf24" />
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fef08a' }}>
+              {formatCurrency(pendingBalanceAmount)}
+            </div>
+            <div style={{ fontSize: 10, color: '#fde68a', fontWeight: 600, marginTop: 2 }}>
+              {bookingsWithPendingBalance} Bookings Pending
             </div>
           </div>
 
@@ -841,6 +891,93 @@ export default function MonthlyExecutiveSummary() {
 
         </div>
 
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          2B. VIP AUDITORIUM PENDING BALANCE COMMAND CARD (HIGH IMPACT)
+      ────────────────────────────────────────────────────────────────────────── */}
+      <div 
+        onClick={() => { setActiveTab('bookings'); setBookingFilter('confirmed'); }}
+        style={{
+          background: 'linear-gradient(135deg, #451a03 0%, #78350f 45%, #b45309 100%)',
+          borderRadius: 20,
+          padding: '18px 20px',
+          color: '#fff',
+          boxShadow: '0 10px 30px rgba(120, 53, 15, 0.28)',
+          marginBottom: 14,
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid rgba(251, 191, 36, 0.35)',
+          cursor: 'pointer',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+        }}
+        title="Click to view pending bookings"
+      >
+        {/* Amber Ambient Glow */}
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 130, height: 130, background: 'rgba(251, 191, 36, 0.2)', borderRadius: '50%', filter: 'blur(30px)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock size={16} color="#fbbf24" />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#fef3c7' }}>
+                Pending Balance to Collect (Receivables)
+              </span>
+              <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                Auditorium Customer Payment Outstanding
+              </span>
+            </div>
+          </div>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 800,
+            background: 'rgba(251, 191, 36, 0.25)',
+            color: '#fef08a',
+            padding: '3px 10px',
+            borderRadius: 12,
+            border: '1px solid rgba(251, 191, 36, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            <Sparkles size={11} color="#fef08a" />
+            {bookingsWithPendingBalance} Bookings Pending
+          </span>
+        </div>
+
+        {/* Huge Balance Figure */}
+        <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: 800, letterSpacing: '-0.5px', color: '#fff', marginBottom: 12 }}>
+          {formatCurrency(pendingBalanceAmount)}
+        </div>
+
+        {/* Breakdown bar */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: 10,
+          paddingTop: 12,
+          borderTop: '1px solid rgba(255,255,255,0.15)'
+        }}>
+          <div style={{ background: 'rgba(0,0,0,0.18)', padding: '8px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#fde68a', textTransform: 'uppercase', display: 'block' }}>Total Contract Value</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{formatCurrency(totalContractValue)}</span>
+          </div>
+
+          <div style={{ background: 'rgba(0,0,0,0.18)', padding: '8px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#86efac', textTransform: 'uppercase', display: 'block' }}>Advance Collected</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{formatCurrency(totalAdvanceCollected)}</span>
+          </div>
+
+          <div style={{ background: 'rgba(0,0,0,0.18)', padding: '8px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#fef3c7', textTransform: 'uppercase', display: 'block' }}>Quick Action</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>View Bookings</span>
+            </div>
+            <ArrowUpRight size={16} color="#fbbf24" />
+          </div>
+        </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────────────────────────

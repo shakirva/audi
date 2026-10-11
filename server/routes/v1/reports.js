@@ -114,6 +114,19 @@ router.get("/monthly-summary", async (req, res) => {
     const cancelledBookingsList = bookings.filter(b => !!b.deletedAt || b.status === "Cancelled");
     const totalBookings = activeBookings.length;
     const cancelledBookings = cancelledBookingsList.length;
+
+    const totalContractValue = activeBookings.reduce((sum, b) => sum + (parseFloat(b.totalAmount) || 0), 0);
+    const totalAdvanceCollected = activeBookings.reduce((sum, b) => sum + (parseFloat(b.advance) || 0), 0);
+    const pendingBalanceAmount = activeBookings.reduce((sum, b) => {
+      const total = parseFloat(b.totalAmount) || 0;
+      const advance = parseFloat(b.advance) || 0;
+      return sum + Math.max(0, total - advance);
+    }, 0);
+    const bookingsWithPendingBalance = activeBookings.filter(b => {
+      const total = parseFloat(b.totalAmount) || 0;
+      const advance = parseFloat(b.advance) || 0;
+      return (total - advance) > 0;
+    }).length;
     
     const totalEnquiries = await Enquiry.count({ where: generalDateQuery });
     const newCustomers = await Customer.count({ where: generalDateQuery });
@@ -136,7 +149,15 @@ router.get("/monthly-summary", async (req, res) => {
     return res.json({
       success: true,
       data: {
-        financials: { totalRevenue, totalExpenses, netBalance },
+        financials: { 
+          totalRevenue, 
+          totalExpenses, 
+          netBalance,
+          totalContractValue,
+          totalAdvanceCollected,
+          pendingBalanceAmount,
+          bookingsWithPendingBalance
+        },
         collections: { upi: upiCollected, bank: bankCollected, cash: cashCollected },
         operations: { totalBookings, cancelledBookings, totalEnquiries, newCustomers },
         analytics: { halls: hallData, eventTypes: eventTypeData },
