@@ -292,8 +292,8 @@ export default function Calendar() {
                 onClick={() => { if (!isDisabled) setSelected(day === selected ? null : day); }}
                 style={{
                   borderRadius: 8,
-                  padding: "5px 4px 5px",
-                  minHeight: 52,
+                  padding: "6px 5px",
+                  minHeight: 48,
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   background: isBlocked ? "repeating-linear-gradient(135deg, #f9fafb, #f9fafb 4px, #e5e7eb 4px, #e5e7eb 8px)"
                     : isSelected ? "#1B4332" 
@@ -307,7 +307,7 @@ export default function Calendar() {
                   transition: "all 0.15s ease",
                   opacity: isBlocked ? 0.65 : isPast ? 0.55 : 1,
                   display: "flex",
-                  flexDirection: "column",
+                  alignItems: "center",
                   justifyContent: "space-between",
                   boxShadow: isSelected ? "0 4px 12px rgba(27,67,50,0.25)" : "none",
                 }}
@@ -347,41 +347,6 @@ export default function Calendar() {
                     <span style={{ fontSize: 8, fontWeight: 800, color: "#9ca3af" }}>🚫</span>
                   )}
                 </div>
-
-                {/* Day content: Clean indicator dots / event count without text clutter */}
-                {!isBlocked && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 12, marginTop: 2 }}>
-                    {dayBookings.length > 0 ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                        {dayBookings.slice(0, 3).map((b, bi) => {
-                          const dotColor = b.status === "Confirmed" ? (isSelected ? "#fff" : "#16a34a")
-                            : b.status === "Pending Payment" ? (isSelected ? "#fef08a" : "#d97706")
-                            : (isSelected ? "#bae6fd" : "#2563eb");
-                          return (
-                            <span 
-                              key={bi} 
-                              style={{ 
-                                width: 5, 
-                                height: 5, 
-                                borderRadius: "50%", 
-                                background: dotColor,
-                                display: "inline-block"
-                              }} 
-                              title={`${b.customerName} (${b.status})`}
-                            />
-                          );
-                        })}
-                        {dayBookings.length > 3 && (
-                          <span style={{ fontSize: 7, fontWeight: 800, color: isSelected ? "rgba(255,255,255,0.8)" : "#64748b" }}>
-                            +{dayBookings.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ height: 6 }} />
-                    )}
-                  </div>
-                )}
               </div>
             );
           })}
@@ -509,10 +474,6 @@ export default function Calendar() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}>
               <span style={{ fontSize: 11, color: "#15803d", fontWeight: 600 }}>Confirmed</span>
               <span style={{ fontSize: 12, fontWeight: 800, color: "#15803d" }}>{monthStats.confirmed}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#fef9c3", borderRadius: 6, border: "1px solid #fde047" }}>
-              <span style={{ fontSize: 11, color: "#a16207", fontWeight: 600 }}>Pending</span>
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#a16207" }}>{monthStats.pending}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#dbeafe", borderRadius: 6, border: "1px solid #bfdbfe" }}>
               <span style={{ fontSize: 11, color: "#1d4ed8", fontWeight: 600 }}>Enquiry</span>
