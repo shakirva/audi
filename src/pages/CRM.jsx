@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles, TrendingUp, X, MessageSquare } from "lucide-react";
+import { Users, Filter, Plus, Search, Calendar, ChevronRight, LayoutGrid, List, CheckCircle2, RefreshCw, AlertCircle, Trash2, Edit2, XCircle, Clock, Sparkles, TrendingUp, X, MessageSquare, Send } from "lucide-react";
 import { enquiriesAPI } from "../services/api";
 import { useToast } from "../components/Toast";
 import NewEnquiryModal from "../components/NewEnquiryModal";
