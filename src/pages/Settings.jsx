@@ -67,6 +67,7 @@ export default function Settings() {
   
   const [eventTypes, setEventTypes] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [places, setPlaces] = useState(["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"]);
   const [reminderDays, setReminderDays] = useState([3, 7]);
   const [reminderBeforeDays, setReminderBeforeDays] = useState([3, 7]);
   const [reminderTiming, setReminderTiming] = useState("after");
