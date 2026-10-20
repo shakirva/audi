@@ -139,7 +139,8 @@ class SettingsService {
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
       "bookingPrefix", "receiptPrefix", "logoUrl", "legalName", "bankName", "accountName", 
-      "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode"
+      "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode",
+      "reminderDays", "reminderBeforeDays", "reminderTiming"
     ];
     
     const updateData = {};

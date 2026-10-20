@@ -67,8 +67,9 @@ export default function Settings() {
   
   const [eventTypes, setEventTypes] = useState([]);
   const [sessions, setSessions] = useState([]);
-  const [places, setPlaces] = useState(["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"]);
   const [reminderDays, setReminderDays] = useState([3, 7]);
+  const [reminderBeforeDays, setReminderBeforeDays] = useState([3, 7]);
+  const [reminderTiming, setReminderTiming] = useState("after");
 
   const [galleryItems, setGalleryItems] = useState([]);
   const [dbUsers, setDbUsers] = useState([]);
@@ -108,7 +109,9 @@ export default function Settings() {
       if (data.eventTypes) setEventTypes(data.eventTypes);
       if (data.sessions) setSessions(data.sessions);
       if (data.places && data.places.length > 0) setPlaces(data.places);
-      if (data.reminderDays && data.reminderDays.length > 0) setReminderDays(data.reminderDays);
+      if (data.reminderDays && Array.isArray(data.reminderDays)) setReminderDays(data.reminderDays);
+      if (data.reminderBeforeDays && Array.isArray(data.reminderBeforeDays)) setReminderBeforeDays(data.reminderBeforeDays);
+      if (data.reminderTiming) setReminderTiming(data.reminderTiming);
       if (data.moduleAccess) setModuleAccess(data.moduleAccess);
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -239,6 +242,8 @@ export default function Settings() {
             sessions={sessions} setSessions={setSessions}
             places={places} setPlaces={setPlaces}
             reminderDays={reminderDays} setReminderDays={setReminderDays}
+            reminderBeforeDays={reminderBeforeDays} setReminderBeforeDays={setReminderBeforeDays}
+            reminderTiming={reminderTiming} setReminderTiming={setReminderTiming}
             addToast={addToast}
           />
         )}

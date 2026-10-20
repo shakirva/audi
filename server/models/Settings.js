@@ -40,6 +40,8 @@ const Settings = sequelize.define("Settings", {
   expenseCategories: { type: DataTypes.JSONB, defaultValue: ["Staff Salaries", "Maintenance", "Utilities", "Catering Prep", "Miscellaneous"] },
   places: { type: DataTypes.JSONB, defaultValue: ["Kannur", "Thalassery", "Iritty", "Kuthuparamba", "Payyanur"] },
   reminderDays: { type: DataTypes.JSONB, defaultValue: [3, 7] },
+  reminderBeforeDays: { type: DataTypes.JSONB, defaultValue: [3, 7] },
+  reminderTiming: { type: DataTypes.STRING, defaultValue: "after" }, // 'before', 'after', 'both'
   
   managerRevenueEnabled: { type: DataTypes.BOOLEAN, defaultValue: true },
   

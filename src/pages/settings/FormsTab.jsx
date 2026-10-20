@@ -50,7 +50,9 @@ export default function FormsTab({
   eventTypes, setEventTypes,
   sessions, setSessions,
   places, setPlaces,
-  reminderDays, setReminderDays,
+  reminderDays = [3, 7], setReminderDays,
+  reminderBeforeDays = [3, 7], setReminderBeforeDays,
+  reminderTiming = "after", setReminderTiming,
   addToast
 }) {
   const { confirm } = useConfirm();
@@ -295,25 +297,49 @@ export default function FormsTab({
     }
   };
 
-  // --- Reminder Add ---
+  // --- Reminder Handlers (Before & After Event) ---
   const [newReminderDay, setNewReminderDay] = useState("");
-  const handleAddReminder = async () => {
-    const d = parseInt(newReminderDay, 10);
+  const [newReminderBeforeDay, setNewReminderBeforeDay] = useState("");
+
+  const handleToggleTiming = async (timing) => {
+    if (await handleSaveData({ reminderTiming: timing })) {
+      setReminderTiming(timing);
+      const label = timing === "both" ? "Before & After Event" : timing === "before" ? "Before Event" : "After Event";
+      addToast(`Reminder timing set to ${label}.`, "success");
+    }
+  };
+
+  const handleAddReminder = async (timing = "after") => {
+    const isBefore = timing === "before";
+    const val = isBefore ? newReminderBeforeDay : newReminderDay;
+    const d = parseInt(val, 10);
     if (!d || d < 1 || d > 365) return;
-    if (reminderDays.includes(d)) return;
     
-    const sorted = [...reminderDays, d].sort((a, b) => a - b);
-    if (await handleSaveData({ reminderDays: sorted })) {
-      setReminderDays(sorted);
-      setNewReminderDay("");
+    const currentList = isBefore ? (reminderBeforeDays || []) : (reminderDays || []);
+    if (currentList.includes(d)) return;
+    
+    const sorted = [...currentList, d].sort((a, b) => a - b);
+    const key = isBefore ? "reminderBeforeDays" : "reminderDays";
+    if (await handleSaveData({ [key]: sorted })) {
+      if (isBefore) {
+        setReminderBeforeDays(sorted);
+        setNewReminderBeforeDay("");
+      } else {
+        setReminderDays(sorted);
+        setNewReminderDay("");
+      }
       addToast("Reminder schedule updated.", "success");
     }
   };
 
-  const handleDeleteReminder = async (day) => {
-    const sorted = reminderDays.filter(d => d !== day);
-    if (await handleSaveData({ reminderDays: sorted })) {
-      setReminderDays(sorted);
+  const handleDeleteReminder = async (day, timing = "after") => {
+    const isBefore = timing === "before";
+    const currentList = isBefore ? (reminderBeforeDays || []) : (reminderDays || []);
+    const sorted = currentList.filter(d => d !== day);
+    const key = isBefore ? "reminderBeforeDays" : "reminderDays";
+    if (await handleSaveData({ [key]: sorted })) {
+      if (isBefore) setReminderBeforeDays(sorted);
+      else setReminderDays(sorted);
       addToast("Reminder removed.", "success");
     }
   };
@@ -504,30 +530,204 @@ export default function FormsTab({
 
       {/* REMINDERS SECTION */}
       <div style={cardSt}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CalendarClock size={18} color="#d97706" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CalendarClock size={18} color="#d97706" />
+              </div>
+              <h3 style={sectionTitle}>Automated Reminder Schedule</h3>
+            </div>
+            <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Configure automated payment balance reminder intervals for your bookings.</p>
           </div>
-          <h3 style={sectionTitle}>Automated Reminder Schedule</h3>
+
+          {/* Timing Toggle (Before / After / Both) */}
+          <div style={{ display: "inline-flex", background: "#f1f5f9", padding: 4, borderRadius: 10, border: "1px solid #cbd5e1", gap: 4 }}>
+            {[
+              { id: "before", label: "Before Event", icon: "⏳" },
+              { id: "after", label: "After Event", icon: "⌛" },
+              { id: "both", label: "Both (Before & After)", icon: "🔄" },
+            ].map(t => {
+              const active = reminderTiming === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleToggleTiming(t.id)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: active ? "#1B4332" : "transparent",
+                    color: active ? "#fff" : "#475569",
+                    boxShadow: active ? "0 2px 6px rgba(27,67,50,0.25)" : "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span>{t.icon}</span>
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Number of days after an event to send automated payment reminders.</p>
-        
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-          {reminderDays.map(d => (
-            <div key={d} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{d} Days</span>
-              <button onClick={() => handleDeleteReminder(d)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", color: "#ef4444" }}>
-                <X size={16} />
+
+        {/* Informational banner */}
+        <div style={{ 
+          background: reminderTiming === "before" ? "#eff6ff" : reminderTiming === "both" ? "#f5f3ff" : "#fff7ed", 
+          border: `1px solid ${reminderTiming === "before" ? "#bfdbfe" : reminderTiming === "both" ? "#ddd6fe" : "#fed7aa"}`, 
+          borderRadius: 10, 
+          padding: "10px 14px", 
+          fontSize: 12, 
+          fontWeight: 600,
+          color: reminderTiming === "before" ? "#1e40af" : reminderTiming === "both" ? "#6d28d9" : "#c2410c",
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "center",
+          gap: 8
+        }}>
+          <span>💡</span>
+          <span>
+            {reminderTiming === "before" && "Active Mode: Reminders alert customers with pending balances BEFORE their upcoming event date."}
+            {reminderTiming === "after" && "Active Mode: Reminders alert customers with pending balances AFTER their event date for post-event settlement."}
+            {reminderTiming === "both" && "Active Mode: Reminders alert customers BOTH before upcoming events (advance/due collection) and after events (final settlement)."}
+          </span>
+        </div>
+
+        {/* BEFORE EVENT SCHEDULE */}
+        {(reminderTiming === "before" || reminderTiming === "both") && (
+          <div style={{ 
+            background: "#f8fafc", 
+            border: "1px solid #e2e8f0", 
+            borderRadius: 12, 
+            padding: 16, 
+            marginBottom: reminderTiming === "both" ? 16 : 0 
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>⏳</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Before Event Schedule</span>
+                <span style={{ fontSize: 11, fontWeight: 700, background: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: 12 }}>
+                  {(reminderBeforeDays || []).length} Alert{ (reminderBeforeDays || []).length !== 1 ? 's' : '' }
+                </span>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 12px 0" }}>
+              Number of days before an event to flag pending balance reminders.
+            </p>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+              {(reminderBeforeDays || []).length === 0 ? (
+                <span style={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>No before-event intervals added yet.</span>
+              ) : (
+                (reminderBeforeDays || []).map(d => (
+                  <div key={d} style={{ display: "flex", alignItems: "center", gap: 8, background: "#eff6ff", border: "1px solid #bfdbfe", padding: "6px 14px", borderRadius: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>{d} Days Before</span>
+                    <button 
+                      type="button"
+                      onClick={() => handleDeleteReminder(d, "before")} 
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", color: "#ef4444" }}
+                      title="Remove"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input 
+                type="number" 
+                min="1" 
+                max="365" 
+                value={newReminderBeforeDay} 
+                onChange={e => setNewReminderBeforeDay(e.target.value)} 
+                onKeyDown={e => { if (e.key === "Enter") handleAddReminder("before"); }} 
+                placeholder="Days" 
+                style={{ ...iStyle, width: 90, textAlign: "center" }} 
+              />
+              <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>days before event</span>
+              <button 
+                type="button"
+                onClick={() => handleAddReminder("before")} 
+                style={{ padding: "8px 16px", borderRadius: 8, background: "#1e293b", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              >
+                + Add Before
               </button>
             </div>
-          ))}
-        </div>
-        
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <input type="number" min="1" max="365" value={newReminderDay} onChange={e => setNewReminderDay(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleAddReminder(); }} placeholder="Days" style={{ ...iStyle, width: 100, textAlign: "center" }} />
-          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>days after event</span>
-          <button onClick={handleAddReminder} style={{ padding: "10px 20px", borderRadius: 8, background: "#1e293b", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
-        </div>
+          </div>
+        )}
+
+        {/* AFTER EVENT SCHEDULE */}
+        {(reminderTiming === "after" || reminderTiming === "both") && (
+          <div style={{ 
+            background: "#f8fafc", 
+            border: "1px solid #e2e8f0", 
+            borderRadius: 12, 
+            padding: 16 
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>⌛</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>After Event Schedule</span>
+                <span style={{ fontSize: 11, fontWeight: 700, background: "#ffedd5", color: "#c2410c", padding: "2px 8px", borderRadius: 12 }}>
+                  {(reminderDays || []).length} Alert{ (reminderDays || []).length !== 1 ? 's' : '' }
+                </span>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 12px 0" }}>
+              Number of days after an event to flag pending balance reminders.
+            </p>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+              {(reminderDays || []).length === 0 ? (
+                <span style={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>No after-event intervals added yet.</span>
+              ) : (
+                (reminderDays || []).map(d => (
+                  <div key={d} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff7ed", border: "1px solid #fed7aa", padding: "6px 14px", borderRadius: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#c2410c" }}>{d} Days After</span>
+                    <button 
+                      type="button"
+                      onClick={() => handleDeleteReminder(d, "after")} 
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", color: "#ef4444" }}
+                      title="Remove"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input 
+                type="number" 
+                min="1" 
+                max="365" 
+                value={newReminderDay} 
+                onChange={e => setNewReminderDay(e.target.value)} 
+                onKeyDown={e => { if (e.key === "Enter") handleAddReminder("after"); }} 
+                placeholder="Days" 
+                style={{ ...iStyle, width: 90, textAlign: "center" }} 
+              />
+              <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>days after event</span>
+              <button 
+                type="button"
+                onClick={() => handleAddReminder("after")} 
+                style={{ padding: "8px 16px", borderRadius: 8, background: "#1e293b", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              >
+                + Add After
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* --- MODALS --- */}

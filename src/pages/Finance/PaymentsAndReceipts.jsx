@@ -89,7 +89,23 @@ export default function PaymentsAndReceipts() {
     }
     
     const venueName = settings?.venueName || "Our Auditorium";
-    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your upcoming event '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\nPlease arrange the payment at your earliest convenience. Thank you!`;
+    const eventDate = new Date(b.date);
+    eventDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - eventDate) / (1000 * 60 * 60 * 24));
+    
+    let eventRelation = "upcoming event";
+    let actionPrompt = "Please arrange the payment before your event date. Thank you!";
+    if (diff > 0) {
+      eventRelation = "recent event";
+      actionPrompt = "Please arrange the payment at your earliest convenience. Thank you!";
+    } else if (diff === 0) {
+      eventRelation = "event scheduled for today";
+      actionPrompt = "Please settle the pending payment today. Thank you!";
+    }
+
+    const msg = `Hello ${b.customerName},\n\nThis is a gentle reminder regarding your ${eventRelation} '${b.eventType}' at ${venueName} on ${new Date(b.date).toLocaleDateString("en-IN")}.\n\nYour current pending balance is ₹${balance.toLocaleString()}.\n\n${actionPrompt}`;
     
     const num = (b.whatsapp || b.phone || "").replace(/\D/g, "");
     if (num) {

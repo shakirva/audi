@@ -93,9 +93,10 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
       "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
-      "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode"
+      "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode",
+      "reminderDays", "reminderBeforeDays", "reminderTiming"
     ];
-    const jsonbFields = ["halls", "blackoutDates", "notifications", "gallery", "eventTypes", "sessions", "expenseCategories", "places", "moduleAccess"];
+    const jsonbFields = ["halls", "blackoutDates", "notifications", "gallery", "eventTypes", "sessions", "expenseCategories", "places", "moduleAccess", "reminderDays", "reminderBeforeDays"];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) settings[key] = req.body[key];
     });

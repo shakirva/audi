@@ -142,7 +142,7 @@ ssh venueza-vps "
     sudo nginx -t
 " || exit 1
 
-# 6. Atomic Switch and PM2 Restart
+# 6. Atomic Switch and PM2 Restart (via ecosystem config)
 echo "🔄 Switching current release and restarting PM2..."
 ssh venueza-vps "
     set -e
@@ -154,17 +154,26 @@ ssh venueza-vps "
     # Atomic switch
     ln -sfn $RELEASE_PATH $TARGET_DIR/current
 
-    cd $TARGET_DIR/current/server
+    export COMMIT_SHA=\"$COMMIT_SHA\"
+    export RELEASE_ID=\"$RELEASE_ID\"
+    export RELEASE_TIMESTAMP=\"$TIMESTAMP\"
     
-    export COMMIT_SHA="$COMMIT_SHA"
-    export RELEASE_ID="$RELEASE_ID"
-    export RELEASE_TIMESTAMP="$TIMESTAMP"
-    
-    # Always delete and recreate PM2 process to pick up the new directory CWD
-    if pm2 show $PM2_PROCESS > /dev/null 2>&1; then
-        pm2 delete $PM2_PROCESS
+    # Use ecosystem config for proper restart policies
+    # (max_memory_restart, exponential backoff, auto-restart etc.)
+    ECOSYSTEM=\"$TARGET_DIR/ecosystem.config.cjs\"
+    if [ -f \"\$ECOSYSTEM\" ]; then
+        if pm2 show $PM2_PROCESS > /dev/null 2>&1; then
+            pm2 delete $PM2_PROCESS
+        fi
+        cd $TARGET_DIR && pm2 start ecosystem.config.cjs --only $PM2_PROCESS
+    else
+        # Fallback: start directly if ecosystem not present
+        cd $TARGET_DIR/current/server
+        if pm2 show $PM2_PROCESS > /dev/null 2>&1; then
+            pm2 delete $PM2_PROCESS
+        fi
+        pm2 start index.js --name $PM2_PROCESS
     fi
-    pm2 start index.js --name $PM2_PROCESS
     pm2 save
 
 " || exit 1

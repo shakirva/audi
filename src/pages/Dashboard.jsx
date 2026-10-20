@@ -95,6 +95,66 @@ const eventDistData = [
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
+const filterPaymentReminders = (bookings, settingsData) => {
+  const reminderDays = settingsData.reminderDays || [3, 7];
+  const reminderBeforeDays = settingsData.reminderBeforeDays || [3, 7];
+  const reminderTiming = settingsData.reminderTiming || "after";
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  return bookings.filter(b => {
+    if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry' || b.status === 'Completed' || b.status === 'Closed') return false;
+
+    const total = Number(b.totalAmount) || 0;
+    const paid = (Number(b.advance) || 0) + (Number(b.depositAmount) || 0);
+    const balance = Math.max(0, total - paid);
+    if (balance <= 0) return false;
+
+    const eventDate = new Date(b.date);
+    eventDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((todayDate - eventDate) / (1000 * 60 * 60 * 24));
+    // diffDays > 0: event was in the past (after event)
+    // diffDays < 0: event is in future (before event)
+    // diffDays === 0: event is today
+
+    // Check EVENT TODAY
+    if (diffDays === 0) {
+      b._reminderType = "today";
+      b._daysCount = 0;
+      return true;
+    }
+
+    // Check BEFORE EVENT (event in future, diffDays < 0)
+    if (diffDays < 0 && (reminderTiming === "before" || reminderTiming === "both")) {
+      const daysUntil = Math.abs(diffDays);
+      if (reminderBeforeDays.length > 0) {
+        const maxBefore = Math.max(...reminderBeforeDays);
+        if (daysUntil <= maxBefore) {
+          b._reminderType = "before";
+          b._daysCount = daysUntil;
+          return true;
+        }
+      }
+    }
+
+    // Check AFTER EVENT (event in past, diffDays > 0)
+    if (diffDays > 0 && (reminderTiming === "after" || reminderTiming === "both")) {
+      if (reminderDays.length > 0) {
+        const minAfter = Math.min(...reminderDays);
+        if (diffDays >= minAfter) {
+          b._reminderType = "after";
+          b._daysCount = diffDays;
+          return true;
+        }
+      }
+    }
+
+    return false;
+  });
+};
+
 const PaymentRemindersSection = ({ reminders }) => {
   if (!reminders) return null;
 
@@ -116,30 +176,57 @@ const PaymentRemindersSection = ({ reminders }) => {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
           {reminders.map(b => {
-            const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0);
-          const evtDateStr = new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const customerPhone = b.phone || b.Customer?.phone || "";
-          const msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your recent event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${bal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
-          const whatsappUrl = `https://wa.me/${customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
+            const bal = (Number(b.totalAmount) || 0) - (Number(b.advance) || 0) - (Number(b.depositAmount) || 0);
+            const actualBal = Math.max(0, bal);
+            const evtDateStr = new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const customerPhone = b.phone || b.Customer?.phone || "";
+            
+            const isBefore = b._reminderType === "before";
+            const isToday = b._reminderType === "today";
 
-          return (
-            <div key={b.id} style={{ background: "#fff7ed", padding: 16, borderRadius: 16, border: "1px solid #fdba74", display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>{b.customerName}</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#c2410c" }}>{b.eventType} • {evtDateStr}</div>
+            let timingLabel = "";
+            let timingBadgeStyle = {};
+            let msg = "";
+
+            if (isToday) {
+              timingLabel = "🚨 Event Today";
+              timingBadgeStyle = { background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca" };
+              msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder that your event (${b.eventType}) is scheduled for today (${evtDateStr}) at ${b.hall}. You have a pending balance of Rs. ${actualBal.toLocaleString('en-IN')}. Please arrange payment today. Thank you!`;
+            } else if (isBefore) {
+              timingLabel = `⏳ In ${b._daysCount} Day${b._daysCount !== 1 ? 's' : ''}`;
+              timingBadgeStyle = { background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe" };
+              msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your upcoming event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${actualBal.toLocaleString('en-IN')}. Please arrange payment before your event date. Thank you!`;
+            } else {
+              timingLabel = `⌛ ${b._daysCount} Day${b._daysCount !== 1 ? 's' : ''} Ago`;
+              timingBadgeStyle = { background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa" };
+              msg = `Hi ${b.customerName || 'Valued Customer'}, this is a gentle reminder regarding your recent event (${b.eventType}) on ${evtDateStr} at ${b.hall}. You have a pending balance of Rs. ${actualBal.toLocaleString('en-IN')}. Please arrange the payment at your earliest convenience. Thank you!`;
+            }
+
+            const whatsappUrl = `https://wa.me/${customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
+
+            return (
+              <div key={b.id} style={{ background: isBefore ? "#f8fafc" : isToday ? "#fff5f5" : "#fff7ed", padding: 16, borderRadius: 16, border: `1px solid ${isBefore ? "#cbd5e1" : isToday ? "#fecaca" : "#fdba74"}`, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{b.customerName}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 12, ...timingBadgeStyle }}>
+                        {timingLabel}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>{b.eventType} • {evtDateStr} • {b.hall}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Balance</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#ef4444" }}>₹{actualBal.toLocaleString('en-IN')}</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Balance</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#ef4444" }}>₹{bal.toLocaleString('en-IN')}</div>
-                </div>
+                <a href={whatsappUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#22c55e", color: "#fff", textDecoration: "none", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, transition: "background 0.2s" }}>
+                  <MessageCircle size={16} /> Send WhatsApp Reminder
+                </a>
               </div>
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#22c55e", color: "#fff", textDecoration: "none", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, transition: "background 0.2s" }}>
-                <MessageCircle size={16} /> Send WhatsApp Reminder
-              </a>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
     </div>
@@ -208,27 +295,8 @@ function ExecutiveCockpit() {
       const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
       
-      // Compute Payment Reminders based on configured reminder days
-      const activeReminders = allBookings.filter(b => {
-        if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry' || b.status === 'Completed' || b.status === 'Closed') return false;
-        
-        const total = Number(b.totalAmount) || 0;
-        const paid = Number(b.advance) || 0;
-        const balance = total - paid;
-        if (balance <= 0) return false;
-        
-        const eventDate = new Date(b.date);
-        eventDate.setHours(0,0,0,0);
-        const todayDate = new Date();
-        todayDate.setHours(0,0,0,0);
-        
-        const diffTime = todayDate - eventDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (reminderDays.length === 0) return false;
-        const minDays = Math.min(...reminderDays);
-        return diffDays >= minDays;
-      });
+      // Compute Payment Reminders based on configured reminder days (before/after/both)
+      const activeReminders = filterPaymentReminders(allBookings, settingsData);
       setPaymentReminders(activeReminders);
 
       // Compute upcoming bookings (future dates)
@@ -991,26 +1059,7 @@ function ReceptionCockpit() {
       });
       setEvents(todaysEvents);
       
-      const activeReminders = filteredBookings.filter(b => {
-        if (!b.date || b.status === 'Cancelled' || b.status === 'Enquiry' || b.status === 'Completed' || b.status === 'Closed') return false;
-        
-        const total = Number(b.totalAmount) || 0;
-        const paid = Number(b.advance) || 0;
-        const balance = total - paid;
-        if (balance <= 0) return false;
-        
-        const eventDate = new Date(b.date);
-        eventDate.setHours(0,0,0,0);
-        const todayDate = new Date();
-        todayDate.setHours(0,0,0,0);
-        
-        const diffTime = todayDate - eventDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (reminderDays.length === 0) return false;
-        const minDays = Math.min(...reminderDays);
-        return diffDays >= minDays;
-      });
+      const activeReminders = filterPaymentReminders(filteredBookings, settingsData);
       setPaymentReminders(activeReminders);
 
       setEnquiries(filteredEnquiries);

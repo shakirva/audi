@@ -153,12 +153,14 @@ initDB()
       // Ignored - usually means it already exists
     }
 
-    // MIGRATION: Add reminderDays to Settings
+    // MIGRATION: Add reminderDays, reminderBeforeDays, reminderTiming to Settings
     try {
       await sequelize.query('ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "reminderDays" JSONB DEFAULT \'[3, 7]\'::jsonb;');
-      console.log("✅ Added reminderDays to Settings table");
+      await sequelize.query('ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "reminderBeforeDays" JSONB DEFAULT \'[3, 7]\'::jsonb;');
+      await sequelize.query('ALTER TABLE "Settings" ADD COLUMN IF NOT EXISTS "reminderTiming" VARCHAR(20) DEFAULT \'after\';');
+      console.log("✅ Added reminderDays, reminderBeforeDays, reminderTiming to Settings table");
     } catch (e) {
-      console.log("⚠️ Could not add reminderDays:", e.message);
+      console.log("⚠️ Could not add reminder settings columns:", e.message);
     }
     // MIGRATION: Add customPrice to Subscriptions
     try {
