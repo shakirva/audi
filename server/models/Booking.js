@@ -24,6 +24,7 @@ const Booking = sequelize.define("Booking", {
     references: { model: "Enquiries", key: "id" },
   },
   bookingId: { type: DataTypes.STRING },
+  billNumber: { type: DataTypes.STRING, allowNull: true },
   customerName: { type: DataTypes.STRING, allowNull: false }, // Used as "Enquired By"
   bookedBy: { type: DataTypes.STRING, allowNull: true },
   bookingParty: { type: DataTypes.STRING, allowNull: true },
@@ -117,6 +118,7 @@ const Booking = sequelize.define("Booking", {
   indexes: [
     { fields: ["tenantId", "environmentId"], name: "idx_bookings_tenant_env" },
     { unique: true, fields: ["bookingId", "tenantId", "environmentId"], name: "idx_bookings_id_tenant_env" },
+    { fields: ["billNumber", "tenantId", "environmentId"], name: "idx_bookings_bill_number" },
   ],
 });
 

@@ -619,9 +619,11 @@ export const generateInvoice = async (data, action = "download") => {
   doc.setFont("helvetica", "bold");
   doc.text("Tax Invoice Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(`Tax Invoice No: ${booking.bookingId || booking.id}`, 120, 62);
+  const invoiceNo = booking.billNumber || (booking.status === "Closed" ? (booking.bookingId || booking.id) : `DRAFT-${booking.bookingId || booking.id}`);
+  doc.text(`Tax Invoice No: ${invoiceNo}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
   doc.text(`Date: ${data.invoiceDate ? formatDate(data.invoiceDate) : formatDate(new Date())}`, 120, 74);
+  doc.text(`Booking Ref: ${booking.bookingId || booking.id}`, 120, 80);
 
   const facilities = Array.isArray(booking.facilities) ? booking.facilities : [];
   
@@ -757,7 +759,7 @@ export const generateInvoice = async (data, action = "download") => {
   if (action === "preview") {
     window.open(doc.output('bloburl'), '_blank');
   } else {
-    downloadPDF(doc, `Tax_Invoice_${booking.bookingId || booking.id || "001"}.pdf`);
+    downloadPDF(doc, `Tax_Invoice_${invoiceNo || booking.billNumber || booking.bookingId || "001"}.pdf`);
   }
   } catch (err) {
     console.error(err);

@@ -137,8 +137,13 @@ export default function BookingFinancialDashboard() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "#0f172a", lineHeight: 1.2 }}>Booking Financial Center</h1>
             <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-              {data.booking.bookingId}
+              Ref: {data.booking.bookingId}
             </span>
+            {data.booking.status === "Closed" && (data.booking.billNumber || data.booking.bookingId) && (
+              <span style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                Bill No: {data.booking.billNumber || data.booking.bookingId}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 14, color: "#64748b", marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
             <span>Customer: <strong style={{ color: "#334155" }}>{data.booking.Customer?.name}</strong></span>

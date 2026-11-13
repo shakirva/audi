@@ -157,12 +157,14 @@ export default function BookingReports() {
     doc.text(`Upcoming: ${upcoming}`, 100, 40);
     doc.text(`Cancelled: ${cancelled} (${cancelRate}%)`, 140, 40);
 
-    const tableColumn = ["Date", "ID", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
+    const tableColumn = ["Date", "Booking Ref", "Bill No", "Customer", "Event", "Hall", "Status", "Advance", "Total"];
     const tableRows = [];
 
     filteredBookings.forEach(b => {
       const date = new Date(b.date || b.createdAt).toLocaleDateString();
-      const id = b.bookingId || "N/A";
+      const bookingRef = b.bookingId || "N/A";
+      const isClosed = b.status === "Closed";
+      const billNo = isClosed ? (b.billNumber || b.bookingId || "—") : "—";
       const name = b.Customer?.name || b.customerName || "N/A";
       const event = b.eventType || "N/A";
       const hall = b.hall || "N/A";
@@ -170,7 +172,7 @@ export default function BookingReports() {
       const adv = b.advance ? `Rs ${b.advance}` : "0";
       const total = b.totalAmount ? `Rs ${b.totalAmount}` : "0";
       
-      tableRows.push([date, id, name, event, hall, status, adv, total]);
+      tableRows.push([date, bookingRef, billNo, name, event, hall, status, adv, total]);
     });
 
     autoTable(doc, {
@@ -350,7 +352,8 @@ export default function BookingReports() {
             <thead>
               <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>
                 <th style={{ padding: "12px 20px", fontWeight: 600 }}>Date</th>
-                <th style={{ padding: "12px 20px", fontWeight: 600 }}>ID</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Booking Ref</th>
+                <th style={{ padding: "12px 20px", fontWeight: 600 }}>Bill No</th>
                 <th style={{ padding: "12px 20px", fontWeight: 600 }}>Customer</th>
                 <th style={{ padding: "12px 20px", fontWeight: 600 }}>Event / Hall</th>
                 <th style={{ padding: "12px 20px", fontWeight: 600 }}>Status</th>
@@ -361,12 +364,14 @@ export default function BookingReports() {
             <tbody>
               {filteredBookings.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "#9ca3af" }}>No bookings found for this period</td>
+                  <td colSpan="8" style={{ padding: "24px", textAlign: "center", color: "#9ca3af" }}>No bookings found for this period</td>
                 </tr>
               ) : (
                 filteredBookings.map((b, i) => {
                   const date = new Date(b.date || b.createdAt).toLocaleDateString();
-                  const id = b.bookingId || "N/A";
+                  const bookingRef = b.bookingId || "N/A";
+                  const isClosed = b.status === "Closed";
+                  const billNo = isClosed ? (b.billNumber || b.bookingId || "—") : "—";
                   const name = b.Customer?.name || b.customerName || "N/A";
                   const event = b.eventType || "N/A";
                   const hall = b.hall || "N/A";
@@ -378,13 +383,23 @@ export default function BookingReports() {
                   let statusBg = "#f3f4f6";
                   let statusColor = "#4b5563";
                   if (status === "Completed") { statusBg = "#dcfce7"; statusColor = "#059669"; }
+                  else if (status === "Closed") { statusBg = "#dcfce7"; statusColor = "#15803d"; }
                   else if (status === "Cancelled") { statusBg = "#fef2f2"; statusColor = "#dc2626"; }
                   else if (status === "Confirmed" || status === "Upcoming") { statusBg = "#eff6ff"; statusColor = "#2563eb"; }
                   
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }} className="hover:bg-gray-50">
                       <td style={{ padding: "12px 20px", color: "#374151" }}>{date}</td>
-                      <td style={{ padding: "12px 20px", color: "#6b7280", fontSize: 12 }}>{id}</td>
+                      <td style={{ padding: "12px 20px", color: "#6b7280", fontSize: 12 }}>{bookingRef}</td>
+                      <td style={{ padding: "12px 20px", fontSize: 12 }}>
+                        {isClosed ? (
+                          <span style={{ padding: "3px 8px", borderRadius: 4, fontWeight: 700, background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" }}>
+                            {billNo}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#9ca3af" }}>—</span>
+                        )}
+                      </td>
                       <td style={{ padding: "12px 20px", color: "#111827", fontWeight: 500 }}>{name}</td>
                       <td style={{ padding: "12px 20px", color: "#4b5563" }}>{event}<br/><span style={{ fontSize: 11, color: "#9ca3af" }}>{hall}</span></td>
                       <td style={{ padding: "12px 20px" }}>
@@ -403,7 +418,7 @@ export default function BookingReports() {
             {filteredBookings.length > 0 && (
               <tfoot style={{ background: "#f9fafb", borderTop: "2px solid #e5e7eb" }}>
                 <tr>
-                  <td colSpan="4" style={{ padding: "16px 20px" }}></td>
+                  <td colSpan="5" style={{ padding: "16px 20px" }}></td>
                   <td style={{ padding: "16px 20px", fontWeight: 700, color: "#374151", textAlign: "right" }}>
                     Grand Totals:
                   </td>

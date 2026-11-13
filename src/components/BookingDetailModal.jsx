@@ -41,7 +41,8 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
           
           <div class="details">
             <div class="details-col">
-              <p><strong>Booking ID:</strong> ${booking.bookingId || booking.id || "N/A"}</p>
+              <p><strong>Booking Ref:</strong> ${booking.bookingId || booking.id || "N/A"}</p>
+              ${booking.status === "Closed" && (booking.billNumber || booking.bookingId) ? `<p><strong>Bill No:</strong> ${booking.billNumber || booking.bookingId}</p>` : ""}
               <p><strong>Customer Name:</strong> ${booking.customerName || "N/A"}</p>
               <p><strong>Phone:</strong> ${booking.phone || "N/A"}</p>
             </div>

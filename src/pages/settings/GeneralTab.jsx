@@ -78,11 +78,18 @@ export default function GeneralTab({
             onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
         </div>
         <div>
-          <label style={labelSt}>🔢 Booking ID Prefix</label>
-          <input name="bookingPrefix" value={venue.bookingPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. BK, LGE, etc."
+          <label style={labelSt}>🔢 Booking Reference Prefix</label>
+          <input name="bookingPrefix" value={venue.bookingPrefix} onChange={handleVenueChange} style={iStyle} placeholder="e.g. BKG, BK, etc."
             onFocus={e => e.target.style.borderColor = "#1B4332"}
             onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
-          <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Used when auto-generating new Booking IDs (e.g. {venue.bookingPrefix || "BK"}001)</p>
+          <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Used for reservation reference IDs (e.g. {venue.bookingPrefix || "BKG"}001)</p>
+        </div>
+        <div>
+          <label style={labelSt}>📑 Tax Bill / Invoice Prefix</label>
+          <input name="billPrefix" value={venue.billPrefix || ""} onChange={handleVenueChange} style={iStyle} placeholder="e.g. KT_26-27, BILL, etc."
+            onFocus={e => e.target.style.borderColor = "#1B4332"}
+            onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Official Tax Bill numbers issued strictly for Closed bookings (e.g. {venue.billPrefix || "BILL"}001)</p>
         </div>
         <div>
           <label style={labelSt}>🧾 Receipt ID Prefix</label>

@@ -37,6 +37,9 @@ router.get("/", auth, tenantScope, subscriptionGuard, async (req, res) => {
     const mapped = bookings.map(b => ({
       id: b.bookingId,
       _id: b.id,
+      bookingId: b.bookingId,
+      billNumber: b.status === "Closed" ? (b.billNumber || null) : null,
+      invoiceStatus: b.invoiceStatus,
       customerName: b.customerName,
       phone: b.phone,
       eventType: b.eventType,
@@ -126,6 +129,9 @@ router.get("/:id", auth, tenantScope, subscriptionGuard, async (req, res) => {
       } 
     });
     if (!booking) return res.status(404).json({ error: "Booking not found" });
+    if (booking.status !== "Closed") {
+      booking.billNumber = null;
+    }
     res.json(booking);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch booking" });

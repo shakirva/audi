@@ -103,7 +103,7 @@ class SettingsService {
         const brandingFields = [
           "logoUrl", "venueName", "ownerName", "location", "phone", "email",
           "gstin", "legalName", "bankName", "accountName", "accountNumber", "ifscCode",
-          "bookingPrefix", "receiptPrefix"
+          "bookingPrefix", "billPrefix", "receiptPrefix"
         ];
         
         brandingFields.forEach(field => {
@@ -138,7 +138,7 @@ class SettingsService {
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
-      "bookingPrefix", "receiptPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "bookingPrefix", "billPrefix", "receiptPrefix", "logoUrl", "legalName", "bankName", "accountName", 
       "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode",
       "reminderDays", "reminderBeforeDays", "reminderTiming"
     ];

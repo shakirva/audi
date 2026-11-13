@@ -56,7 +56,7 @@ export default function Settings() {
 
   const [venue, setVenue] = useState({
     name: "", owner: "", location: "", phone: "", email: "", gstin: "",
-    bookingPrefix: "BK", receiptPrefix: "PAY", logoUrl: "",
+    bookingPrefix: "BK", billPrefix: "BILL", receiptPrefix: "PAY", logoUrl: "",
     legalName: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "",
     allowPastDateBooking: false, gstMode: "inclusive",
   });
@@ -99,7 +99,7 @@ export default function Settings() {
       setVenue({
         name: data.venueName || "", owner: data.ownerName || "", location: data.location || "",
         phone: data.phone || "", email: data.email || "", gstin: data.gstin || "",
-        bookingPrefix: data.bookingPrefix || "BK", receiptPrefix: data.receiptPrefix || "PAY",
+        bookingPrefix: data.bookingPrefix || "BK", billPrefix: data.billPrefix || "BILL", receiptPrefix: data.receiptPrefix || "PAY",
         logoUrl: data.logoUrl || "", legalName: data.legalName || "", bankName: data.bankName || "",
         accountName: data.accountName || "", accountNumber: data.accountNumber || "", ifscCode: data.ifscCode || "",
         allowPastDateBooking: data.allowPastDateBooking || false, gstMode: data.gstMode || "inclusive",
@@ -146,7 +146,7 @@ export default function Settings() {
     try {
       await settingsAPI.update({ 
         venueName: venue.name, ownerName: venue.owner, location: venue.location, phone: venue.phone, email: venue.email, 
-        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix, receiptPrefix: venue.receiptPrefix,
+        gstin: venue.gstin, bookingPrefix: venue.bookingPrefix, billPrefix: venue.billPrefix, receiptPrefix: venue.receiptPrefix,
         logoUrl: venue.logoUrl, legalName: venue.legalName, bankName: venue.bankName, accountName: venue.accountName, accountNumber: venue.accountNumber, ifscCode: venue.ifscCode 
       });
       setVenueInfo({ name: venue.name, subtitle: "Auditorium", owner: venue.owner, logoUrl: venue.logoUrl });

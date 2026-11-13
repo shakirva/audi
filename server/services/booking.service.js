@@ -36,6 +36,7 @@ class BookingService {
         ...bData,
         id: bData.bookingId,
         _id: bData.id,
+        billNumber: bData.status === "Closed" ? (bData.billNumber || null) : null,
       };
     });
 
@@ -48,6 +49,9 @@ class BookingService {
   async getBooking(bookingId, { tenantId, environmentId }) {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
     if (!booking) throw new NotFoundError("Booking");
+    if (booking.status !== "Closed") {
+      booking.billNumber = null;
+    }
     return booking;
   }
 
@@ -249,6 +253,11 @@ class BookingService {
       }
     });
 
+    if (data.status === "Closed" && !booking.billNumber) {
+      updateData.billNumber = await this.generateNextBillNumber(tenantId, environmentId);
+      updateData.invoiceStatus = "Generated";
+    }
+
     const updated = await bookingRepository.update(booking, updateData);
 
     // Rebuild the accounting journal entry (Customer Outstanding ↔ Hall Booking Income)
@@ -331,7 +340,13 @@ class BookingService {
     const booking = await bookingRepository.findByBookingId(bookingId, { tenantId, environmentId });
     if (!booking) throw new NotFoundError("Booking");
 
-    const updated = await bookingRepository.update(booking, { status });
+    const updatePayload = { status };
+    if (status === "Closed" && !booking.billNumber) {
+      updatePayload.billNumber = await this.generateNextBillNumber(tenantId, environmentId);
+      updatePayload.invoiceStatus = "Generated";
+    }
+
+    const updated = await bookingRepository.update(booking, updatePayload);
 
     let waitlistMatches = [];
     if (status === "Cancelled" && booking.date) {
@@ -443,6 +458,51 @@ class BookingService {
   }
 
   /**
+   * Helper: Generate next sequential official Tax Billing Number for a tenant & environment.
+   * Strictly invoked ONLY when a booking transitions to 'Closed' or when final Tax Invoice is generated.
+   */
+  async generateNextBillNumber(tenantId, environmentId) {
+    const { Booking, Settings } = require("../models");
+    const { Op } = require("sequelize");
+
+    let prefix = "BILL";
+    if (Settings) {
+      const settings = await Settings.findOne({ where: { tenantId, environmentId } });
+      if (settings) {
+        if (settings.billPrefix) {
+          prefix = settings.billPrefix;
+        } else if (settings.bookingPrefix) {
+          prefix = settings.bookingPrefix;
+        }
+      }
+    }
+
+    // Find highest existing billNumber starting with prefix for this tenant & environment
+    const lastBilled = await Booking.findOne({
+      where: {
+        tenantId,
+        environmentId,
+        billNumber: { [Op.like]: `${prefix}%` },
+      },
+      order: [["id", "DESC"]],
+      attributes: ["billNumber"],
+      paranoid: false,
+    });
+
+    let nextNum = 1;
+    if (lastBilled && lastBilled.billNumber) {
+      let idPart = lastBilled.billNumber;
+      if (idPart.startsWith(prefix)) {
+        idPart = idPart.substring(prefix.length);
+      }
+      const match = idPart.match(/\d+$/);
+      if (match) nextNum = parseInt(match[0], 10) + 1;
+    }
+
+    return `${prefix}${String(nextNum).padStart(3, "0")}`;
+  }
+
+  /**
    * Generate Final Tax Invoice
    */
   async generateInvoice(idParam, { tenantId, environmentId }) {
@@ -465,9 +525,15 @@ class BookingService {
       throw new Error("Cannot generate final invoice while outstanding balance exists.");
     }
 
+    let billNumber = booking.billNumber;
+    if (!billNumber) {
+      billNumber = await this.generateNextBillNumber(tenantId, environmentId);
+    }
+
     const updated = await bookingRepository.update(booking, {
       invoiceStatus: "Generated",
       status: "Closed", // Mark Financially Closed
+      billNumber,
     });
 
     return updated;

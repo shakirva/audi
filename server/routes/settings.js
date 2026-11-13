@@ -92,7 +92,7 @@ router.put("/", auth, requireRole("Owner", "Manager", "Tester"), tenantScope, su
       "venueName", "ownerName", "location", "phone", "email", "gstin",
       "halls", "blackoutDates", "notifications", "managerRevenueEnabled",
       "gallery", "eventTypes", "sessions", "expenseCategories", "places",
-      "bookingPrefix", "logoUrl", "legalName", "bankName", "accountName", 
+      "bookingPrefix", "billPrefix", "receiptPrefix", "logoUrl", "legalName", "bankName", "accountName", 
       "accountNumber", "ifscCode", "allowPastDateBooking", "gstMode",
       "reminderDays", "reminderBeforeDays", "reminderTiming"
     ];
