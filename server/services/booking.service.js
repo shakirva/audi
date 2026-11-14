@@ -98,6 +98,13 @@ class BookingService {
       console.error("Failed to create customer for booking:", e);
     }
 
+    let billNumber = null;
+    let invoiceStatus = "Pending";
+    if (data.status === "Closed") {
+      billNumber = await this.generateNextBillNumber(tenantId, environmentId);
+      invoiceStatus = "Generated";
+    }
+
     const booking = await bookingRepository.create({
       tenantId,
       environmentId,
@@ -117,6 +124,8 @@ class BookingService {
       advance: 0, // Will be updated by paymentService
       totalAmount: Number(data.totalAmount) || 0,
       status: data.status || "Enquiry",
+      billNumber,
+      invoiceStatus,
       notes: data.notes || "",
       // Extended Contract Fields
       brideName: data.brideName || "",
@@ -256,6 +265,8 @@ class BookingService {
     if (data.status === "Closed" && !booking.billNumber) {
       updateData.billNumber = await this.generateNextBillNumber(tenantId, environmentId);
       updateData.invoiceStatus = "Generated";
+    } else if (data.status && data.status !== "Closed" && booking.billNumber) {
+      updateData.billNumber = null;
     }
 
     const updated = await bookingRepository.update(booking, updateData);
@@ -344,6 +355,8 @@ class BookingService {
     if (status === "Closed" && !booking.billNumber) {
       updatePayload.billNumber = await this.generateNextBillNumber(tenantId, environmentId);
       updatePayload.invoiceStatus = "Generated";
+    } else if (status !== "Closed" && booking.billNumber) {
+      updatePayload.billNumber = null;
     }
 
     const updated = await bookingRepository.update(booking, updatePayload);
@@ -477,28 +490,33 @@ class BookingService {
       }
     }
 
-    // Find highest existing billNumber starting with prefix for this tenant & environment
-    const lastBilled = await Booking.findOne({
+    // Find all closed bookings with a billNumber starting with prefix for this tenant & environment
+    const billedBookings = await Booking.findAll({
       where: {
         tenantId,
         environmentId,
+        status: "Closed",
         billNumber: { [Op.like]: `${prefix}%` },
       },
-      order: [["id", "DESC"]],
       attributes: ["billNumber"],
       paranoid: false,
     });
 
-    let nextNum = 1;
-    if (lastBilled && lastBilled.billNumber) {
-      let idPart = lastBilled.billNumber;
-      if (idPart.startsWith(prefix)) {
-        idPart = idPart.substring(prefix.length);
+    let maxNum = 0;
+    for (const b of billedBookings) {
+      if (b.billNumber && b.billNumber.startsWith(prefix)) {
+        const numPart = b.billNumber.substring(prefix.length);
+        const match = numPart.match(/\d+/);
+        if (match) {
+          const val = parseInt(match[0], 10);
+          if (!isNaN(val) && val > maxNum) {
+            maxNum = val;
+          }
+        }
       }
-      const match = idPart.match(/\d+$/);
-      if (match) nextNum = parseInt(match[0], 10) + 1;
     }
 
+    const nextNum = maxNum + 1;
     return `${prefix}${String(nextNum).padStart(3, "0")}`;
   }
 

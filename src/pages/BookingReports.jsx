@@ -164,7 +164,7 @@ export default function BookingReports() {
       const date = new Date(b.date || b.createdAt).toLocaleDateString();
       const bookingRef = b.bookingId || "N/A";
       const isClosed = b.status === "Closed";
-      const billNo = isClosed ? (b.billNumber || b.bookingId || "—") : "—";
+      const billNo = isClosed && b.billNumber ? b.billNumber : "—";
       const name = b.Customer?.name || b.customerName || "N/A";
       const event = b.eventType || "N/A";
       const hall = b.hall || "N/A";
@@ -371,7 +371,7 @@ export default function BookingReports() {
                   const date = new Date(b.date || b.createdAt).toLocaleDateString();
                   const bookingRef = b.bookingId || "N/A";
                   const isClosed = b.status === "Closed";
-                  const billNo = isClosed ? (b.billNumber || b.bookingId || "—") : "—";
+                  const billNo = isClosed && b.billNumber ? b.billNumber : "—";
                   const name = b.Customer?.name || b.customerName || "N/A";
                   const event = b.eventType || "N/A";
                   const hall = b.hall || "N/A";
@@ -392,9 +392,9 @@ export default function BookingReports() {
                       <td style={{ padding: "12px 20px", color: "#374151" }}>{date}</td>
                       <td style={{ padding: "12px 20px", color: "#6b7280", fontSize: 12 }}>{bookingRef}</td>
                       <td style={{ padding: "12px 20px", fontSize: 12 }}>
-                        {isClosed ? (
+                        {isClosed && b.billNumber ? (
                           <span style={{ padding: "3px 8px", borderRadius: 4, fontWeight: 700, background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" }}>
-                            {billNo}
+                            {b.billNumber}
                           </span>
                         ) : (
                           <span style={{ color: "#9ca3af" }}>—</span>

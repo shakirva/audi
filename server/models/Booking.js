@@ -85,6 +85,7 @@ const Booking = sequelize.define("Booking", {
       if (!booking.bookingId) {
         // Fetch Settings for prefix
         const Settings = sequelize.models.Settings;
+        const { Op } = require("sequelize");
         let prefix = "BK";
         if (Settings) {
           const settings = await Settings.findOne({ where: { tenantId: booking.tenantId, environmentId: booking.environmentId } });
@@ -93,24 +94,32 @@ const Booking = sequelize.define("Booking", {
           }
         }
         
-        // Find highest existing bookingId (including soft-deleted) to guarantee uniqueness
-        const lastBooking = await Booking.findOne({
-          where: { tenantId: booking.tenantId, environmentId: booking.environmentId },
-          order: [["id", "DESC"]],
+        // Find all existing bookings starting with this prefix (including soft-deleted)
+        const existingBookings = await Booking.findAll({
+          where: {
+            tenantId: booking.tenantId,
+            environmentId: booking.environmentId,
+            bookingId: { [Op.like]: `${prefix}%` }
+          },
           attributes: ["bookingId"],
-          paranoid: false, // include soft-deleted records
+          paranoid: false,
         });
 
-        let nextNum = 1;
-        if (lastBooking && lastBooking.bookingId) {
-          let idPart = lastBooking.bookingId;
-          if (idPart.startsWith(prefix)) {
-            idPart = idPart.substring(prefix.length);
+        let maxNum = 0;
+        for (const b of existingBookings) {
+          if (b.bookingId && b.bookingId.startsWith(prefix)) {
+            const numPart = b.bookingId.substring(prefix.length);
+            const match = numPart.match(/\d+/);
+            if (match) {
+              const val = parseInt(match[0], 10);
+              if (!isNaN(val) && val > maxNum) {
+                maxNum = val;
+              }
+            }
           }
-          const match = idPart.match(/\d+$/);
-          if (match) nextNum = parseInt(match[0], 10) + 1;
         }
 
+        const nextNum = maxNum + 1;
         booking.bookingId = `${prefix}${String(nextNum).padStart(3, "0")}`;
       }
     }

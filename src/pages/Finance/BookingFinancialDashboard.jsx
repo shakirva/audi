@@ -139,9 +139,9 @@ export default function BookingFinancialDashboard() {
             <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
               Ref: {data.booking.bookingId}
             </span>
-            {data.booking.status === "Closed" && (data.booking.billNumber || data.booking.bookingId) && (
+            {data.booking.status === "Closed" && data.booking.billNumber && (
               <span style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0", padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-                Bill No: {data.booking.billNumber || data.booking.bookingId}
+                Bill No: {data.booking.billNumber}
               </span>
             )}
           </div>

@@ -619,7 +619,7 @@ export const generateInvoice = async (data, action = "download") => {
   doc.setFont("helvetica", "bold");
   doc.text("Tax Invoice Details:", 120, 55);
   doc.setFont("helvetica", "normal");
-  const invoiceNo = booking.billNumber || (booking.status === "Closed" ? (booking.bookingId || booking.id) : `DRAFT-${booking.bookingId || booking.id}`);
+  const invoiceNo = booking.billNumber || (booking.status === "Closed" ? "PENDING-BILL" : `DRAFT-${booking.bookingId || booking.id}`);
   doc.text(`Tax Invoice No: ${invoiceNo}`, 120, 62);
   doc.text(`Status: ${outstanding <= 0 ? "PAID" : "DUE"}`, 120, 68);
   doc.text(`Date: ${data.invoiceDate ? formatDate(data.invoiceDate) : formatDate(new Date())}`, 120, 74);

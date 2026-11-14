@@ -42,7 +42,7 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
           <div class="details">
             <div class="details-col">
               <p><strong>Booking Ref:</strong> ${booking.bookingId || booking.id || "N/A"}</p>
-              ${booking.status === "Closed" && (booking.billNumber || booking.bookingId) ? `<p><strong>Bill No:</strong> ${booking.billNumber || booking.bookingId}</p>` : ""}
+              ${booking.status === "Closed" && booking.billNumber ? `<p><strong>Bill No:</strong> ${booking.billNumber}</p>` : ""}
               <p><strong>Customer Name:</strong> ${booking.customerName || "N/A"}</p>
               <p><strong>Phone:</strong> ${booking.phone || "N/A"}</p>
             </div>
@@ -135,9 +135,19 @@ export default function BookingDetailModal({ booking, onClose, onEdit, onDelete 
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#a16207", background: "#fef08a", padding: "6px 12px", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#a16207" }} />
-                {(booking.status || "Draft").toUpperCase()}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#a16207", background: "#fef08a", padding: "6px 12px", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#a16207" }} />
+                  {(booking.status || "Draft").toUpperCase()}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", background: "#f1f5f9", padding: "6px 10px", borderRadius: 8 }}>
+                  Ref: {booking.bookingId || booking.id}
+                </span>
+                {booking.status === "Closed" && booking.billNumber && (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#065f46", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "6px 10px", borderRadius: 8 }}>
+                    Bill No: {booking.billNumber}
+                  </span>
+                )}
               </div>
               <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px", wordBreak: "break-word", lineHeight: 1.2 }}>{booking.eventType}</h2>
               <p style={{ margin: "6px 0 0", fontSize: 15, color: "#64748b", fontWeight: 600, wordBreak: "break-word" }}>{booking.customerName} • {new Date(booking.date).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}</p>
